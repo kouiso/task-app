@@ -20,10 +20,10 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 
 ## 始める前の前提
 
-- Day 24 のユーザー一覧ページが表示できる（詳細ボタンの遷移先は今日つくるため押すと404になる）
-- 管理者ユーザーと一般ユーザーの両方で確認できる
-- 編集対象にする練習用ユーザーが1人以上いる
-- URL の `[id]` 部分は実際のユーザーIDに置き換えて確認する
+- Day 24 のユーザー一覧ページが表示できます（詳細ボタンの遷移先は今日つくるため押すと404になります）
+- 管理者ユーザーと一般ユーザーの両方で確認できます
+- 編集対象にする練習用ユーザーが1人以上います
+- URL の `[id]` 部分は実際のユーザーIDに置き換えて確認します
 
 ## なぜこれを作るのか
 
@@ -69,42 +69,43 @@ flowchart TD
 |-------------|------|------|
 | 動的ルーティング `[id]`<br>**読み方**:<br>どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
 | `notFound()`<br>**読み方**:<br>ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
-| server wrapper（サーバー側で動く入口）<br>**読み方**:<br>サーバー ラッパー | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
+| server wrapper<br>**読み方**:<br>— | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
 | `await params`<br>**読み方**:<br>アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
-| `useEffect`<br>**読み方**:<br>ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
+| `useEffect`<br>**読み方**:<br>ユーズエフェクト | 取得したユーザー情報をフォームの値へ反映するために使うフック | 荷物が届いたら自動で棚に並べる係 |
 | useForm + zod（復習）<br>**読み方**:<br>— | フォーム管理＋バリデーション（Day 14 参照） | 記入用紙のルール自動チェック |
 | 権限チェック<br>**読み方**:<br>けんげんチェック | ユーザーの役割によって表示を変える | 社員証の種類によって入れる部屋を変える |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容・触るファイル・成功状態 | 所要時間 |
+| ステップ | 作業内容・触るファイル・成功状態 | 読む時間の目安 |
 |---------|-------------------------------------|---------|
-| Step 0 | **作業内容**: user.ts に getById / update を追記する<br>**触るファイル**: `src/server/api/routers/user.ts`<br>**成功状態**: ユーザーを取得・更新できる | 16分 |
-| Step 1 | **作業内容**: 動的ルーティングの仕組みを理解する<br>**触るファイル**: 概念説明のみ<br>**成功状態**: URLのIDと表示するユーザーの対応を説明できる | 5分 |
+| Step 0 | **作業内容**: user.ts に getById / update を追記する<br>**触るファイル**: `src/server/api/routers/user.ts`<br>**成功状態**: getByIdとupdateを追加し、型検査が通る | 16分 |
+| Step 1 | **作業内容**: 動的ルーティングの仕組みを理解する<br>**触るファイル**: 概念説明のみ<br>**成功状態**: URLと[id]フォルダの対応を説明できる | 5分 |
 | Step 2 | **作業内容**: ユーザー詳細ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/page.tsx`<br>**成功状態**: server wrapper のファイルが存在する | 5分 |
 | Step 3 | **作業内容**: URLからユーザーIDを取得してデータを取得<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: ユーザー名が表示される | 7分 |
 | Step 4 | **作業内容**: グリッドレイアウトで詳細情報を表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 2カラムレイアウトで表示 | 7分 |
-| Step 5 | **作業内容**: プロジェクト一覧とタスクテーブルを表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: バッジとテーブルが表示される | 7分 |
+| Step 5 | **作業内容**: プロジェクト一覧とタスクテーブルを表示<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: プロジェクトとタスクのリンクが表示される | 7分 |
 | Step 6 | **作業内容**: 権限チェックで編集ボタンを出し分ける<br>**触るファイル**: `src/app/user/[id]/user-detail-client.tsx`<br>**成功状態**: 管理者・本人のみ編集ボタンが見える | 5分 |
-| Step 7 | **作業内容**: 編集ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/edit/page.tsx` と `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 2ファイルが存在する | 5分 |
-| Step 8 | **作業内容**: zodスキーマとuseFormでデータを同期する<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: フォームにデータが入る | 7分 |
-| Step 9 | **作業内容**: ロール選択・アクティブ状態の切り替え<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: ドロップダウンとチェックボックスが動く | 7分 |
+| Step 7 | **作業内容**: 編集ページのファイルを作成<br>**触るファイル**: `src/app/user/[id]/edit/page.tsx` と `edit/user-edit-client.tsx`<br>**成功状態**: 2ファイルが存在する | 5分 |
+| Step 8 | **作業内容**: zodスキーマとuseFormでデータを同期する<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 入力欄とform.registerの記述が揃う | 7分 |
+| Step 9 | **作業内容**: ロール選択・アクティブ状態の切り替え<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: SelectとCheckboxの値・変更処理が書けている | 7分 |
 | Step 10 | **作業内容**: 保存機能を実装して完成<br>**触るファイル**: `src/app/user/[id]/edit/user-edit-client.tsx`<br>**成功状態**: 保存ボタンでDBが更新される | 5分 |
 
 表の Step 3 以降が `page.tsx` ではなく `user-detail-client.tsx` を指しているのは
 `page.tsx` を server wrapper（サーバー側で動く入口）にしてあるためです。
-画面の状態を持つコードは `use client` の付いたファイルにしか書けません。
-`page.tsx` に `useQuery` を書くとサーバー側で実行され、必ずエラーになります。
+この章の `page.tsx` は Server Component なので、画面の状態を扱う `useQuery` を直接呼べません。
+`useQuery` は、`'use client'` を付けた `user-detail-client.tsx` で呼びます。
+`page.tsx` というファイル名が理由ではありません。`page.tsx` の先頭に `'use client'` を書いて Client Component にすれば、`page.tsx` でも `useQuery` を呼べます。
 
-**合計時間**: 約76分です。
+**読む時間の合計（仮）**: 約76分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: user.ts に getById / update を追記する（16分）
+### Step 0: user.ts に getById / update を追記する（読む目安: 16分）
 
 **ゴール**: Day 24・Day 25 で作った `src/server/api/routers/user.ts` に、`getById` と `update` を追記します。今日は UI で動的ルーティングを学びますがその前に「ユーザー詳細を返す入口」と「編集内容を保存する出口」を完成させます。
 
@@ -112,18 +113,22 @@ flowchart TD
 
 最初に import 群を完成形へ置き換えます。`getById` の未完了タスク絞り込みに使う `TASK_STATUS` が今日の追加分です。
 
+`Prisma` はDBのエラー型を実行中に判定するため、通常の `import` で読み込みます。
+
 ```typescript
 // filepath: src/server/api/routers/user.ts（import 群の完成形）
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
+import { createPasswordSchema } from '@/lib/password';
 import { prisma } from '@/lib/prisma';
-import { createSession } from '@/lib/session';
+import { createSession, type SessionUser } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
+import { isUserEmailUniqueConstraintError } from './_helpers/user-email-conflict';
 ```
 
 Day 25 で書いた `profileUpdateSchema` の前へ、管理者または本人が使う更新入力を追加します。
@@ -207,6 +212,11 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              project: {
+                members: {
+                  some: { userId: ctx.session.userId },
+                },
+              },
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -214,7 +224,7 @@ const userUpdateSchema = z
       });
 ```
 
-`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外します。さらに、閲覧者が現在所属しているプロジェクトだけに絞ります。担当者本人や管理者であっても、現在所属していないプロジェクトのタスクをこの画面から読めないようにするためです。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -259,7 +269,7 @@ const userUpdateSchema = z
       if (data.role !== undefined || data.isActive !== undefined) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'roleとisActiveは変更できません',
+          message: 'ロールとアクティブ状態は変更できません',
         });
       }
     }
@@ -281,25 +291,53 @@ const userUpdateSchema = z
     }
     if (data.isActive !== undefined) {
       updateData.isActive = data.isActive;
+      updateData.sessionVersion = { increment: 1 };
     }
 ```
 
-ここは「渡された項目だけを更新対象に足す」段階です。空文字や `undefined` を無理にまとめて送らず、存在する項目だけ 1 本ずつ加えています。Day 25 の `updateProfile` で作った `updateData` と同じ考え方です。
+ここは「渡された項目だけを更新対象に足す」段階です。空文字や `undefined` を無理にまとめて送らず、存在する項目だけ 1 本ずつ加えています。管理者が `isActive` を更新したときは、アカウント無効化・再有効化に伴い `sessionVersion` を `increment: 1` します。無効化前に取得された古いトークンが再有効化時に復活して悪用されるのを防ぐためです。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
-    return await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        ...USER_DETAIL_SELECT,
-        updatedAt: true,
-      },
-    });
+    try {
+      return await prisma.user.update({
+        where: {
+          id,
+          ...(data.isActive !== undefined
+            ? { sessionVersion: { lt: POSTGRES_INTEGER_MAX } }
+            : {}),
+        },
+        data: updateData,
+        select: {
+          ...USER_DETAIL_SELECT,
+          updatedAt: true,
+        },
+      });
+```
+
+`isActive` を更新する際は `sessionVersion: { lt: POSTGRES_INTEGER_MAX }` の上限チェックを行います。数値あふれを防ぐための安全策です。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        if (data.isActive !== undefined) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'セッションを更新できません。管理者にお問い合わせください',
+          });
+        }
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+      throw err;
+    }
   }),
 ```
 
-更新後は画面がすぐに描画し直せるよう `USER_DETAIL_SELECT` と `updatedAt` を返します。ここまでで `update` は完成です。
+更新後は画面がすぐに描画し直せるよう `USER_DETAIL_SELECT` と `updatedAt` を返します。更新時点で対象が存在しない場合、DBは `P2025` を返します。`isActive` 変更時の `P2025` は版数あふれの可能性があるため `CONFLICT` を返し、通常の未発見時は `NOT_FOUND` に変換します。その他のエラーは投げ直します。ここまでで `update` は完成です。
 
 #### 0-3. 追記後の user.ts 全体を確認する
 
@@ -316,14 +354,14 @@ const userUpdateSchema = z
 順番も 完成版と同じです。`root.ts` の `user: userRouter` は Day 24 ですでに登録済みなので今日も root の追記はありません。
 
 **確認ポイント**:
-- `src/server/api/routers/user.ts` に `getById` と `update` を 完成版と同じ位置へ追記できた
-- `getById` が「本人または ADMIN」、`update` が「本人更新 / 他人更新」で分岐している
-- Day 24〜29 の積み上がりで `userRouter` の5手続きが揃った
-- `npx tsc --noEmit` で型エラーが出ていない
+- `src/server/api/routers/user.ts` に `getById` と `update` を 完成版と同じ位置へ追記できました
+- `getById` が「本人または ADMIN」、`update` が「本人更新 / 他人更新」で分岐しています
+- Day 24〜29 の積み上がりで `userRouter` の5手続きが揃いました
+- `npx tsc --noEmit` で型エラーが出ていません
 
-### Step 1: 動的ルーティングの仕組みを理解する（5分）
+### Step 1: 動的ルーティングの仕組みを理解する（読む目安: 5分）
 
-**ゴール**: Next.js の `[id]` フォルダがどんな魔法をしているか理解します。
+**ゴール**: URLのどの部分を `[id]` フォルダが受け取るか説明できるようになります。
 
 Next.js ではフォルダ名を `[id]` のように**角括弧で囲む**と、そのフォルダ名が「変数」になります。URLの対応する部分が自動的にその変数に入ります。
 
@@ -346,6 +384,8 @@ src/app/user/[id]/page.tsx
 
 `[id]` の `id` という名前は自由に決められます。`[userId]` でも `[username]` でも OK です。ただしコード内で読み取るときも同じ名前を使います。
 
+次のコードはURLとファイルの対応を説明する例です。ここでは入力せず、ファイルは Step 2 で作成します。
+
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
 // このファイルは /user/なんでも というすべてのURLに対応する
@@ -356,15 +396,15 @@ export default function UserDetailPage() {
 }
 ```
 
-この段階であえて `params` を受け取らないのはまず「このファイルが呼ばれているか」だけを確かめたいからです。角括弧のフォルダ名は全角と半角を間違えても見た目でほとんど区別が付きません。中身まで書いてから404が出るとフォルダ名とコードのどちらが原因か切り分けられません。文字を1行返すだけにしておけば画面に文字が出た時点でフォルダ名は正しいと確定します。
+この例は `params` を受け取らず、どのIDのURLでも「ユーザー詳細ページ」という文字を返します。実際にユーザーごとの情報を表示するにはURLのIDを読み取る処理も必要です。Step 2 でその処理を書きます。
 
 **確認ポイント**:
-- 動的ルーティングは「角括弧 `[]` でフォルダ名を囲む」ことで実現する
-- 1つのファイルで無数のURLに対応できる仕組みだと理解した
+- 動的ルーティングは「角括弧 `[]` でフォルダ名を囲む」ことで実現します
+- 1つのファイルで無数のURLに対応できる仕組みだと理解しました
 
 ---
 
-### Step 2: ユーザー詳細ページのファイルを作成する（5分）
+### Step 2: ユーザー詳細ページのファイルを作成する（読む目安: 5分）
 
 **ゴール**: 必要なフォルダとファイルを作成し、まず骨組みを作ります。
 
@@ -381,7 +421,7 @@ src/app/user/
 
 `[id]` の下にさらに `edit/` を置くのはURLの入れ子とフォルダの入れ子を同じ形にそろえるためです。`/user/abc123` は `[id]/page.tsx` が受け持ち、`/user/abc123/edit` は `[id]/edit/page.tsx` が受け持ちます。編集ページ側でも同じ `[id]` の値を読めるので詳細から編集へIDを持ち回す仕組みを別に作る必要はありません。
 
-Step 1 で作った仮の `page.tsx` を、次のコードへ置き換えます。この入口は認証・認可・404をブラウザへ渡す前に判定します。この教材では、この役目を持つ入口を server wrapper と呼びます。
+作成した `page.tsx` に、次のコードを書きます。この入口は認証・認可・404をブラウザへ渡す前に判定します。この教材では、この役目を持つ入口を server wrapper と呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
@@ -459,14 +499,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 または DB の `users` テーブルで確認できます。
 
 **確認ポイント**:
-- `src/app/user/[id]/page.tsx` ファイルが作成できた
-- `src/app/user/[id]/page.tsx` が server wrapper になり、`trpc.user.getById` を先に呼んでいる
-- 未ログイン・権限なし・未発見・想定外エラーの4つを別々に扱っている
-- この時点ではブラウザで開かず、次の Step へ進む
+- `src/app/user/[id]/page.tsx` ファイルが作成できました
+- `src/app/user/[id]/page.tsx` が server wrapper になり、`trpc.user.getById` を先に呼んでいます
+- 未ログイン・権限なし・未発見・想定外エラーの4つを別々に扱っています
+- この時点ではブラウザで開かず、次の Step へ進みます
 
 ---
 
-### Step 3: URLからユーザーIDを取得してデータを取得する（7分）
+### Step 3: URLからユーザーIDを取得してデータを取得する（読む目安: 7分）
 
 **ゴール**: `user-detail-client.tsx` でユーザーを取得し、読み込み・権限拒否・未発見・通信失敗を画面で区別します。
 
@@ -547,7 +587,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   const notFound = isUserError && httpStatusOf(userError) === 404;
 ```
 
-`queryErrors` に2本の失敗を集めるのは、どちらが401や403でも前回のユーザーデータを隠すためです。ログアウト後もキャッシュに残る場合があります。前回の内容を拒否画面の裏に残してはいけません。
+`queryErrors` に2本の失敗を集めます。どちらかが401または403なら、前回のユーザーデータを隠すためです。ログアウト後もキャッシュが残ることはあります。その内容を拒否画面の裏に残してはいけません。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -572,7 +612,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   }
 ```
 
-読み込み中だけスピナーを表示します。`hasRequiredData` は、失敗した問い合わせに前回のデータが残っているかを確かめます。片方でも失敗してデータがなければ `false` になります。取得済みデータがないまま失敗した場合は次の分岐へ進み、失敗の理由とあわせて操作ボタンを表示します。
+読み込み中だけスピナーを表示します。取得済みデータがないまま失敗した場合は、次の分岐へ進んで理由と操作を表示します。これで通信が終わった後に待ち続ける状態を防ぎます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -598,7 +638,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
           </p>
 ```
 
-最初の `<p>` は失敗の見出しです。4つの状態を1文に絞って太字で出すのは、まず何が起きたのか一瞬で読み取れるようにするためです。続くブロックで対処方法の説明文とボタンを足します。
+最初の早期リターンで表示する見出しをエラー別に切り替えます。ログイン切れ、権限不足、未発見、通信失敗を同じ文言にすると、読者が次に何をすればよいか判断できないためです。
 
 ```tsx
 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
@@ -624,7 +664,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
               }
 ```
 
-説明文では失敗の理由ごとに次の行動を変えています。ログイン期限切れなら再ログイン、権限不足なら管理者・本人限定であること、404ならURLや削除の可能性を伝えます。続くブロックで404の場合だけ戻り先を分ける処理を書きます。
+案内文の下に、その状態から離れるためのボタンを置きます。401と403は取得を繰り返しても成功しないので、再試行ではなくログイン画面またはダッシュボードへ移動させます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
@@ -652,7 +692,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
           </Button>
 ```
 
-ボタンの文言も失敗の理由に合わせて切り替えます。404のときだけ管理者をユーザー一覧へ戻すのは、一般ユーザーにはユーザー一覧画面が存在しないためです。最後のブロックでこの早期リターンを閉じて、本人判定の準備をします。
+未発見の場合は、管理者ならユーザー一覧、一般ユーザーならダッシュボードへ戻します。その他の取得失敗だけを `refetchRequiredData` に渡し、同じ認可失敗を無意味に繰り返さない形にします。
 
 ```tsx
 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
@@ -706,13 +746,13 @@ npm run dev
 URL から `getById` までの経路がつながっています。
 
 **確認ポイント**:
-- 存在するユーザーIDでアクセスするとユーザー名が表示される
-- 完成版では存在しないIDは Step 2 の `page.tsx` が404へ流す
-- 読み込み中はスピナーが表示される
+- 存在するユーザーIDでアクセスするとユーザー名が表示されます
+- 完成版では存在しないIDは Step 2 の `page.tsx` が404へ流します
+- 読み込み中はスピナーが表示されます
 
 ---
 
-### Step 4: グリッドレイアウトで詳細情報を表示する（7分）
+### Step 4: グリッドレイアウトで詳細情報を表示する（読む目安: 7分）
 
 **ゴール**: 戻るボタン・サイドバー・メインコンテンツの2カラムレイアウトで表示します。
 
@@ -744,11 +784,9 @@ import { ActiveStatusBadge, UserRoleBadge }
 import { formatDateOnly } from '@/lib/date';
 ```
 
-`Button` はこの Step でも使います。Step 3 で取り込み済みなので行を増やしません。同じ名前の `import` が2行あると `Duplicate identifier 'Button'` で型検査が止まります。
-
 日付の道具が2種類あることに気付いたでしょうか。`format` は時刻まで持っている値を日本語の表記に直すもので登録日と最終更新日に使います。`formatDateOnly` は期限のように「日付だけ」の値に使います。期限は時刻を持たない約束で保存してあるため時刻として読み直すと表示が1日ずれます。混ぜて使わないよう、最初から両方を取り込んでおきます。`ActiveStatusBadge` と `UserRoleBadge` を自作せず取り込むのは一覧ページと同じ色と文言をそのまま使うためです。
 
-12列グリッド（`md:grid-cols-12`）で左4列・右8列に分割します。`return` 文を書き換えます。
+12列グリッド（`md:grid-cols-12`）で左4列・右8列に分割します。`return` 文を書き換えます。まず、Step 3 で残した前回データを表示するときの警告を置きます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
@@ -761,38 +799,31 @@ import { formatDateOnly } from '@/lib/date';
             className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
           >
             <span>最新のユーザー情報を取得できませんでした。前回取得時の内容です。</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={refetchRequiredData}
-              disabled={requiredFetching}
-            >
+            <Button type="button" variant="outline" size="sm"
+              onClick={refetchRequiredData} disabled={requiredFetching}>
               再試行
             </Button>
           </div>
         )}
 ```
 
-`{hasFetchError && (...)}` が Step 3 で予告した警告です。再取得だけが失敗して前回のデータが残っている場合は Step 3 の早期リターンを通らずここへ来ます。内容は消さずに「前回取得時の内容です」と断ります。`refetchRequiredData` で取り直す入口も添えます。`requiredFetching` の間はボタンを押せなくして二重の再取得を防ぎます。Step 3 で定義したこの2つの値の使い道はここです。
-
-続けて戻るボタンと、左右のカラムを入れる枠を書きます。
+取得に失敗しても前回データが残っている場合だけ警告を出します。「再試行」は Step 3 の `refetchRequiredData` を使うので、現在のユーザーと表示対象のユーザーをまとめて取り直します。
 
 ```tsx
-        {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
+{/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/profile')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'プロフィールに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
 ```
 
-戻るボタンを画面の先頭に置いているのはこの詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンで一覧へ帰れません。`router.push('/user')` と行き先を書いておけばどこから来ても同じ場所へ戻せます。最後の `md:grid-cols-12` で12列の枠を開き、この中に左右のカラムを入れていきます。
+戻るボタンを画面の先頭に置いているのはこの詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンで元の画面へ帰れません。管理者はユーザー一覧へ戻し、一般ユーザーは自分のプロフィールへ戻します。一般ユーザーには権限のない `/user` を行き先にしないため、`isAdmin` で行き先と文言を切り替えます。最後の `md:grid-cols-12` で12列の枠を開き、この中に左右のカラムを入れていきます。
 
 左カラムにアバターとユーザー基本情報を置きます。
 
@@ -925,30 +956,25 @@ import { formatDateOnly } from '@/lib/date';
 中身が空のまま右カラムを置くのは`4` と `8` を足して12列になっているかを今のうちに確かめるためです。数が合っていないと右のカラムが左の下へ回り込みます。カードを入れてからその崩れに気付くと原因が列の数なのかカードの幅なのか切り分ける手間が増えます。今なら右側に空きスペースが見えるかどうかだけで判断できます。ブラウザの幅を狭めて縦積みに変わることも、ここで一緒に確かめます。
 
 **確認ポイント**:
-- PCサイズのブラウザで左にアバター、右にスペースが表示される
-- スマホサイズに縮小すると縦に並ぶ
-- アバターが未設定のユーザーでは名前の頭文字が表示される
-- 「ユーザー一覧に戻る」ボタンが表示される
+- PCサイズのブラウザで左にアバター、右にスペースが表示されます
+- スマホサイズに縮小すると縦に並びます
+- アバターが未設定のユーザーでは名前の頭文字が表示されます
+- 管理者には「ユーザー一覧に戻る」、一般ユーザーには「プロフィールに戻る」ボタンが表示されます
 
 ---
 
-### Step 5: プロジェクト一覧とタスクテーブルを表示する（7分）
+### Step 5: プロジェクト一覧とタスクテーブルを表示する（読む目安: 7分）
 
-**ゴール**: 参加プロジェクトをバッジで、担当タスクをテーブルで表示します。
+**ゴール**: 参加プロジェクトと担当タスクを、キーボードでも開けるリンクとして表示します。
 
-必要なコンポーネントをインポートします。最初に Step 4 で書いた `card` の行を次の1行に置き換えてください。`CardHeader` と `CardTitle` を足すだけなので行は増やしません。
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
-```
-
-置き換えずに新しい行として足すと `Card` と `CardContent` の取り込みが2回になります。`Duplicate identifier 'Card'` で型検査が止まります。次のブロックはどれもこのファイルで初めて使う部品です。ファイル先頭のインポート部分に追加してください。
+必要なコンポーネントをインポートします。Step 4 で追加した `Card` の import には `CardHeader` と `CardTitle` を足し、次の1行へ置き換えてください。その他の import はファイル先頭へ追加します。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
+import Link from 'next/link';
 import { StatusBadge } from '@/component/task/status-badge';
 import { Badge } from '@/component/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
 import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
@@ -959,7 +985,7 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 
 ステータス表示は `StatusBadge` に任せます。このコンポーネントが status に応じたラベルと色を内部で決めるため、この画面でバッジの見た目を組み立てる必要はありません。優先度は `getPriorityBadgeVariant` で色の種類だけを選び、ラベルは `TASK_PRIORITY_LABELS` から引きます。
 
-右カラムに「参加プロジェクト」カードを追加します。バッジを押すとそのプロジェクトのページへ移動できるようにします。所属を見て気になったプロジェクトへ、URL を打ち直さずに行けます。
+右カラムに「参加プロジェクト」カードを追加します。プロジェクト名をリンクにすると、マウスだけでなくキーボードでも移動できます。所属を見て気になったプロジェクトへ、URL を打ち直さずに行けます。
 
 ```tsx
             {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
@@ -972,33 +998,35 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
                 {user.projects && user.projects.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {user.projects.map((member) => (
-                      <Badge
+                      <Link
                         key={member.id}
-                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
-                        style={{ backgroundColor: member.project.color }}
 ```
 
-クリックイベントはバッジ1つずつに付けます。文字色を `text-white` で固定しているのでDay 10 で明るい色を選んだプロジェクトはこのバッジの文字が読みにくくなります。暗めの色を選んでおくとこの画面でも文字が残ります。上のコードブロックは `<Badge` のタグを開いたまま終わっています。続けて次の属性を書きます。
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx
-// Badge のクリックでプロジェクトページに遷移
-                        onClick={() =>
-                          router.push(
-                            `/project?projectId=${member.project.id}`
-                          )
-                        }
-```
-
-`router.push` はページを読み込み直さずに URL だけを切り替える移動のしかたです。`?projectId=` にプロジェクトの ID を付けているので移動先のプロジェクト画面はどれを開けばよいかを URL から読み取れます。
-
-この時点では `<Badge` のタグがまだ閉じていないので画面は出ません。残りを閉じるところまで一気に書きます。`onClick` の下へ続けてください。
+`Link` の開始タグへ、移動先と見た目を続けます。`href` の `?projectId=` にプロジェクト ID を付けると、移動先は開くプロジェクトを URL から読み取れます。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
+                        href={`/project?projectId=${member.project.id}`}
+                        className={
+                          'inline-flex items-center gap-2 rounded-md border px-3 py-1 ' +
+                          'text-sm text-foreground hover:bg-muted'
+                        }
                       >
+                        <span
+                          aria-hidden="true"
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: member.project.color }}
+                        />
+```
+
+プロジェクトカラーは文字の背景ではなく、小さな丸にだけ使います。名前はテーマに合わせた `text-foreground` で表示するため、白や黄色のプロジェクトカラーでも読めます。
+
+この時点では `<Link>` がまだ閉じていないので画面は出ません。残りを閉じるところまで続けてください。
+
+```tsx
+                        {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
                         {member.project.name}
-                      </Badge>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -1015,11 +1043,10 @@ import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 `return (` は Step 4 で閉じてあるためファイルはこの時点で通ります。
 
 **確認ポイント**:
-- 右カラムに「参加プロジェクト」のカードが出る
-- バッジにカーソルを合わせると指の形のポインターに変わる
+- 右カラムに「参加プロジェクト」のカードが出ます
+- `Tab` キーでプロジェクト名へ移動し、`Enter` キーでプロジェクトを開けます
 
-
-Tailwind CSS では動的な色をクラスで指定できないため`style={{ backgroundColor: member.project.color }}` でプロジェクトカラーを適用しています。
+Tailwind CSS では動的な色をクラスで指定できないため、色見本の丸だけ `style={{ backgroundColor: member.project.color }}` でプロジェクトカラーを適用しています。
 
 「担当中のタスク」カードをテーブル形式で追加します。テーブルのヘッダー部分です。
 
@@ -1045,22 +1072,21 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 
 **確認ポイント**: テーブルヘッダーに「タイトル」「ステータス」「優先度」「期限」の4列が表示されることを確認してください。
 
-`TableHeader` の直後に `TableBody` を追加します。各タスク行はクリックでタスク詳細に遷移します。
+`TableHeader` の直後に `TableBody` を追加します。各タスクのタイトルをリンクにして、タスク詳細へ移動できるようにします。
 
 ```tsx
 {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
 {/* タスクテーブルのボディ部分 */}
                     <TableBody>
                       {user.assignedTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() =>
-                            router.push(`/task?taskId=${task.id}`)
-                          }
-                        >
+                        <TableRow key={task.id}>
                           <TableCell className="font-medium">
-                            {task.title}
+                            <Link
+                              href={`/task?taskId=${task.id}`}
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              {task.title}
+                            </Link>
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={task.status} />
@@ -1072,7 +1098,7 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
                           </TableCell>
 ```
 
-`onClick` を `TableRow` そのものに付けているのでタイトルの文字だけでなく行のどこを押してもタスク詳細へ移動します。`hover:bg-muted/50` で指を乗せた行の色が変わるのは押せる場所だと目で分かるようにするためです。`key={task.id}` は Day 09 のカード一覧と同じ役目で、React が行の入れ替わりを追うための印です。
+リンクにするのはタイトルだけです。`TableRow` にクリック処理を付けると、マウスでは移動できてもキーボードの `Tab` キーでは行を選べません。`Link` ならタイトルへ移動して `Enter` キーで開けます。`key={task.id}` は Day 09 のカード一覧と同じ役目で、React が行の入れ替わりを追うための印です。
 
 期限列の表示とカードの閉じタグを追加します。日付がない場合は `-` を表示します。
 
@@ -1106,25 +1132,26 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 ![ユーザー詳細ページ。赤枠①が参加プロジェクトのカード、赤枠②が担当中のタスクのカード](./screenshots/day29/user-detail-projects-tasks.png)
 
 **確認ポイント**:
-- プロジェクトバッジがカラフルに（テキストは白で）表示される
-- バッジをクリックするとプロジェクトページに遷移する
-- タスクの行をクリックするとタスク詳細に遷移する
-- プロジェクト・タスクがないユーザーには「ありません」メッセージが出る
+- プロジェクトカラーが名前の横の丸に表示されます
+- `Tab` と `Enter` でプロジェクト名のリンクを開けます
+- `Tab` と `Enter` でタスク名のリンクを開けます
+- プロジェクト・タスクがないユーザーには「ありません」メッセージが出ます
 
 ---
 
-### Step 6: 権限チェックで編集ボタンを出し分ける（5分）
+### Step 6: 権限チェックで編集ボタンを出し分ける（読む目安: 5分）
 
 **ゴール**: 管理者または本人のみに編集ボタンを表示します。
 
-まずインポートを直します。Step 4 で書いた `lucide-react` の行を次の1行に置き換えてください。`Pencil` を足すだけなので行は増やしません。
+まずインポートを追加します。
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
+// Pencil を追加（ArrowLeft, Calendar, Mail は Step 4 で追加済み）
 ```
 
-置き換えずに新しい行として足すと `ArrowLeft` などの取り込みが2回になります。`Duplicate identifier 'ArrowLeft'` で型検査が止まります。アイコンはすべて `lucide-react` から取り込むので1行にまとめておくとこのファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
+アイコンはすべて `lucide-react` から取り込むので行を増やさず Step 4 で書いた行へ `Pencil` を足します。まとめて1行にしておくとこのファイルが使うアイコンを1か所で見渡せます。ボタンを置く場所は左カラムの下端です。プロフィールを読んでから操作へ進む順番になります。
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx */}
@@ -1145,21 +1172,21 @@ import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 
 | 条件 | 結果 |
 |------|------|
-| 管理者 + 他人のプロフィール | ボタン表示される |
-| 管理者 + 自分のプロフィール | ボタン表示される |
-| 一般ユーザー + 自分のプロフィール | ボタン表示される |
-| 一般ユーザー + 他人のプロフィール | そもそもページにアクセスできない（サーバーが FORBIDDEN を返す） |
+| 管理者 + 他人のプロフィール | ボタンが表示されます |
+| 管理者 + 自分のプロフィール | ボタンが表示されます |
+| 一般ユーザー + 自分のプロフィール | ボタンが表示されます |
+| 一般ユーザー + 他人のプロフィール | そもそもページにアクセスできません（サーバーが FORBIDDEN を返します） |
 
 > 一般ユーザーが他人のユーザーIDで `/user/他人のid` にアクセスすると`getById` の権限チェックで FORBIDDEN エラーになり、データが取得できません。「ボタンが非表示」ではなく「ページ自体が表示されない」という設計です。
 
 **確認ポイント**:
-- 管理者でログインするとどのユーザーページにも「編集」ボタンが表示される
-- 一般ユーザーで自分のページを見るとボタンが表示される
-- 一般ユーザーで他人のIDにアクセスすると「このユーザーを見る権限がありません」のカード（Step 2 の server wrapper）が出て、データが表示されない
+- 管理者でログインするとどのユーザーページにも「編集」ボタンが表示されます
+- 一般ユーザーで自分のページを見るとボタンが表示されます
+- 一般ユーザーで他人のIDにアクセスすると「このユーザーを見る権限がありません」のカードが表示され、ユーザー情報は表示されません
 
 ---
 
-### Step 7: 編集ページのファイルを作成する（5分）
+### Step 7: 編集ページのファイルを作成する（読む目安: 5分）
 
 **ゴール**: `/user/[id]/edit` の入口とフォームの骨組みを作り、取得失敗で待ち続けない画面にします。
 
@@ -1189,7 +1216,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     const trpcError = getTRPCErrorFromUnknown(error);
 ```
 
-`getById` を `try` で囲むのは、権限エラーを種類別に画面へ振り分けるためです。tRPC の例外は `getTRPCErrorFromUnknown` で `code` を取り出すと、UNAUTHORIZED・NOT_FOUND・FORBIDDEN を確実に見分けられます。
+編集側の server wrapper は、URLのIDを client へ渡す前に `getById` を呼びます。画面の表示後に client だけで権限を確かめると、拒否される人にもフォームの枠が一瞬表示されるからです。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -1215,7 +1242,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-UNAUTHORIZED はログイン画面へ、NOT_FOUND は404ページへ送ります。FORBIDDEN だけ画面内のカードで返すのは、詳細ページと同じ拒否画面にそろえて利用者を迷わせないためです。それ以外のエラーは `throw` で上位へ委ねます。
+拒否画面はユーザーがとれる行動を明示します。他人の実在IDと存在しないIDで同じ表示にすると、権限のない人が画面の違いからユーザーの実在を推測できません。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -1237,7 +1264,7 @@ UNAUTHORIZED はログイン画面へ、NOT_FOUND は404ページへ送ります
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -1330,6 +1357,25 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       retry: shouldRetryUserQuery,
     },
   );
+```
+
+一般ユーザーが他人を開いた場合は `enabled` が `false` になり、対象データを取りに行きません。サーバー側の先行確認も同じアクセスを拒否します。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
+
+  const submitContextRef = useRef({
+    targetUserId: userId,
+    user,
+    canEditUser,
+    canManageAccount,
+  });
+  submitContextRef.current = {
+    targetUserId: userId,
+    user,
+    canEditUser,
+    canManageAccount,
+  };
 
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
@@ -1340,7 +1386,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   const notFound = isUserError && httpStatusOf(userError) === 404;
 ```
 
-一般ユーザーが他人を開いた場合は `enabled` が `false` になり、対象データを取りに行きません。サーバー側の先行確認も同じアクセスを拒否します。client の分岐は画面遷移後の再取得やログイン期限切れにも備えます。
+`submitContextRef` には最新のURLのID、取得した利用者、権限をひとまとめに保存します。画面Aで作られた送信処理が画面Bへ移動した後に遅れて呼ばれても、AのIDへBの入力値を送らないためです。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
@@ -1366,7 +1412,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 ```
 
-スピナーを出すのは query が動いている間だけです。`requiredLoading` が本人以外では `isUserLoading` を数えないのは、権限のない利用者の対象データを取りに行かない `enabled` の条件とそろえるためです。取得が終わってデータがない場合は次のエラー画面へ進みます。
+スピナーを出すのは query が動いている間だけです。取得が終わってデータがない場合は次のエラー画面へ進みます。取得済みかどうかを `isLoading` だけではなく必須データの有無と一緒に判定します。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
@@ -1392,7 +1438,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
           <p className="mb-6 text-sm text-muted-foreground">
 ```
 
-詳細ページと同じく、見出しの `<p>` で何が起きたかを先に伝えます。編集画面では文言を「編集する権限」に変えている点だけが異なります。続くブロックで説明文とボタンの分岐を書きます。
+この分岐では、取得に必要なデータがそろわない状態をまとめて画面から外します。原因に応じた見出しを出します。入力フォームやキャッシュされた個人情報を、拒否画面の裏に残さないためです。
 
 ```tsx
 {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
@@ -1421,10 +1467,10 @@ export function UserEditClient({ userId }: UserEditClientProps) {
               }
 ```
 
-ボタンの行き先は詳細ページの分岐と同じですが、404では `isAdmin` だけを見て戻り先を決めます。編集画面では権限がない時点で対象データを取っていないため、本人判定に使う `user` がここには無いからです。
+状態ごとの行き先をボタンのラベルと合わせます。たとえば「ログイン画面へ」と表示しながら再取得すると、押した結果と文言が食い違います。見出し、説明、ボタンの3つを1つの状態としてそろえます。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
               refetchRequiredData();
             }}
             disabled={requiredFetching}
@@ -1448,7 +1494,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 401と403ではキャッシュに前回データがあってもフォームを隠します。初回の通信失敗は再読み込みを案内します。500相当の一時失敗でも前回データが残っている場合はフォームを保ち、後で追加する警告を表示します。
 
 ```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
+{/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
   if (!canEditUser) {
     return (
       <AppLayout>
@@ -1469,7 +1515,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 ```
 
-サーバー側で拒否済みでも client にも同じカードを置きます。ページ表示後に権限が変わったり、ログイン期限が切れたりした場合にも、フォームを出さずに済ませるためです。
+この分岐は client 側の二重チェックです。server wrapper が先に拒否しますが、画面を開いた後にセッションや権限が変わる場合もあります。ブラウザ側でも `canEditUser` を確かめ、フォーム本体へ進ませません。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
@@ -1543,18 +1589,18 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 }
 ```
 
-フォームの本体はまだ空のままです。先に戻るボタンとカードの枠だけを確定させるのは、権限エラーの分岐がすべて終わってから入力欄を足すほうが、エラー表示とフォームのどちらが壊れたかを切り分けやすいためです。
+戻るボタンとフォームの枠をここで閉じると、Step 7 の時点でもJSX全体の対応関係を確かめられます。後続の Step 8〜10 では `CardContent` の中だけをフォームに置き換えます。ページ全体の閉じタグに触れず進められます。
 
 **確認ポイント**:
-- 存在しないユーザーIDでは、権限のある人だけ `notFound()` の404になる
-- 権限のない一般ユーザーでは、実在ID・存在しないIDのどちらでも同じ拒否画面になる
-- 初回取得失敗では再読み込み、401ではログイン、403ではダッシュボードへのボタンが出る
-- 読み込み中だけスピナーが表示され、取得失敗後に回り続けない
-- 「戻る」ボタンで詳細ページに戻れる
+- 存在しないユーザーIDでは、権限のある人だけ `notFound()` の404になります
+- 権限のない一般ユーザーは、実在IDと存在しないIDのどちらを開いても同じ拒否画面になります
+- 初回取得失敗では再読み込み、401ではログイン、403ではダッシュボードへのボタンが出ます
+- 読み込み中だけスピナーが表示され、取得失敗後に回り続けません
+- 「戻る」ボタンで詳細ページに戻れます
 
 ---
 
-### Step 8: zodスキーマとuseFormでデータを同期する（7分）
+### Step 8: zodスキーマとuseFormでデータを同期する（読む目安: 7分）
 
 **ゴール**: react-hook-form + zod でフォームを管理し、サーバーデータを自動入力します。
 
@@ -1563,26 +1609,36 @@ zod スキーマと `useForm` は Step 7 で
 `z.infer` で型が自動生成されていることを
 確認してください。
 
-`useEffect` + `form.reset` でサーバーデータが届いたらフォームに反映します。
+`useEffect` + `form.reset` でサーバーデータが届いたらフォームに反映します。同じ利用者の再取得では入力途中の項目を守り、まだ触っていない項目だけを最新値へ更新します。
 
-次のコードは `UserEditClient` 関数内の `useQuery` の直後へ入れます。Step 7 の3つの早期リターンより前です。フックは描画ごとに同じ順番で呼ぶため条件分岐の後ろへ置かないでください。
+次のコードは `UserEditClient` 関数内へ入れます。位置は Step 7 の `submitContextRef.current = { ... };` の代入直後、`const queryErrors =` の直前です。この位置では `user` の取得処理が先に書かれているため、effectの依存配列で `user` を参照できます。早期リターンより前に置き、描画ごとにフックを同じ順番で呼びます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-  // サーバーデータでフォームを初期化
+  const { dirtyFields } = form.formState;
+  const dirtyFieldsRef = useRef(dirtyFields);
+  dirtyFieldsRef.current = dirtyFields;
+  const hydratedUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (user) {
-      form.reset({
-        name: user.name ?? '',
-        avatar: user.avatar ?? '',
-        role: user.role,
-        isActive: user.isActive,
-      });
+      const sameUser = hydratedUserIdRef.current === user.id;
+      form.reset(
+        {
+          name: user.name ?? '',
+          avatar: user.avatar ?? '',
+          role: user.role,
+          isActive: user.isActive,
+        },
+        sameUser && Object.keys(dirtyFieldsRef.current).length > 0
+          ? { keepDirtyValues: true } : undefined,
+      );
+      hydratedUserIdRef.current = user.id;
     }
   }, [user, form]);
 ```
 
-`user` データは非同期に取得されるためコンポーネント表示時はまだ `undefined` です。`[user]` 依存配列によりデータ到着時に `form.reset` が自動実行されフォームが埋まります。
+`dirtyFields`（利用者が変更した項目の記録）を読むと、`keepDirtyValues` が入力途中の値を守れます。`dirtyFieldsRef` は再取得の effect を増やさずに最新の記録を参照するための箱です。初回表示と別の利用者への移動では全項目を入れ直します。同じ利用者の再取得では変更した項目を残し、未変更のロールや有効状態などをサーバーの最新値へ更新します。
 
 **確認ポイント**: ファイルを保存してエラーが出ないことを確認してください。
 
@@ -1686,13 +1742,13 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
 **確認ポイント**:
-- `<form onSubmit={form.handleSubmit(onSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
-- 名前欄に `{...form.register('name')}` が入っている
-- メールアドレスの欄だけ `register` を使わず `value={user.email}` と `disabled` になっている
+- `<form onSubmit={form.handleSubmit(onSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けています
+- 名前欄に `{...form.register('name')}` が入っています
+- メールアドレスの欄だけ `register` を使わず `value={user.email}` と `disabled` になっています
 
 ---
 
-### Step 9: ロール選択・アクティブ状態の切り替えを実装する（7分）
+### Step 9: ロール選択・アクティブ状態の切り替えを実装する（読む目安: 7分）
 
 **ゴール**: Select でロールを選び、Checkbox でアクティブ状態を切り替えられるようにします。
 
@@ -1728,11 +1784,7 @@ import { isUserRole, USER_ROLE_LABELS }
   from '@/lib/constant/roles';
 ```
 
-**確認ポイント**: 取り込んだ部品の名前が赤くなっていないことを確認してください。`</form>` はこのあと書くのでこの時点では閉じタグが足りないというエラーが残ります。
-
-次の `useMutation` は `UserEditClient` 関数内の、3つの早期リターンより前へ追加します。読み込み中にも同じ順番でフックを呼ぶ必要があるためです。
-
-`useMutation` は Step 10 で追加します。
+**確認ポイント**: 取り込んだ部品の名前が赤くなっていないことを確認してください。`</form>` はこのあと書くのでこの時点では閉じタグが足りないというエラーが残ります。`useMutation` は Step 10 で追加します。
 
 アバターURL入力欄の直後に、ロール選択とアクティブ切り替えを追加します。ここがフォームの末尾になります。
 
@@ -1758,7 +1810,7 @@ import { isUserRole, USER_ROLE_LABELS }
                   onValueChange={(value) => {
                     if (isUserRole(value)) {
                       form.setValue(
-                        'role', value);
+                        'role', value, { shouldDirty: true });
                     }
                   }}
                   disabled={
@@ -1770,7 +1822,7 @@ import { isUserRole, USER_ROLE_LABELS }
                   </SelectTrigger>
 ```
 
-ここだけ `register` を使わず、`value` と `onValueChange` の2つで `useForm` へつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので`register` が待っている `onChange` が発生しないからです。代わりに `form.setValue` で値を書き戻します。選択肢の中身は次のブロックで足すのでいまは開いたままにしておきます。
+ここだけ `register` を使わず、`value` と `onValueChange` の2つで `useForm` へつないでいます。`shouldDirty: true` は選んだロールを変更済みの項目として記録します。再取得時の `keepDirtyValues` がその選択を保持するために必要です。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので`register` が待っている `onChange` が発生しないからです。代わりに `form.setValue` で値を書き戻します。選択肢の中身は次のブロックで足すのでいまは開いたままにしておきます。
 
 ```tsx
 {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
@@ -1807,7 +1859,7 @@ import { isUserRole, USER_ROLE_LABELS }
                     (checked) =>
                       form.setValue(
                         'isActive',
-                        checked === true)}
+                        checked === true, { shouldDirty: true })}
                   disabled={
                     updateUser.isPending} />
                 <Label htmlFor="isActive">
@@ -1815,7 +1867,7 @@ import { isUserRole, USER_ROLE_LABELS }
               </div>
 ```
 
-`checked` と `onCheckedChange` の組み方は上の `Select` とそろえてあります。`form.watch('isActive')` で今の値を映し、切り替わったら `form.setValue` で書き戻す形です。どの入力欄にも `disabled={updateUser.isPending}` を付けているのは保存中に値を変えられると送った内容と画面に見えている内容が食い違うからです。
+`checked` と `onCheckedChange` の組み方は上の `Select` とそろえてあります。ここでも `shouldDirty: true` を渡し、再取得で入力途中の有効状態を上書きしないようにします。`form.watch('isActive')` で今の値を映し、切り替わったら `form.setValue` で書き戻す形です。どの入力欄にも `disabled={updateUser.isPending}` を付けているのは保存中に値を変えられると送った内容と画面に見えている内容が食い違うからです。
 
 ```tsx
   {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
@@ -1834,13 +1886,13 @@ import { isUserRole, USER_ROLE_LABELS }
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
 **確認ポイント**:
-- ロール選択の `SelectItem` に「ユーザー」「管理者」の2つが書けている
-- `Select` の `value` に現在のロールが渡っている
-- `Checkbox` に `checked` と `onCheckedChange` が書けている
+- ロール選択の `SelectItem` に「ユーザー」「管理者」の2つが書けています
+- `Select` の `value` に現在のロールが渡っています
+- `Checkbox` に `checked` と `onCheckedChange` が書けています
 
 ---
 
-### Step 10: 保存機能を実装して完成（5分）
+### Step 10: 保存機能を実装して完成（読む目安: 5分）
 
 **ゴール**: 保存ボタンを押すとtRPCでDBが更新され、詳細ページに戻るところまで作ります。
 
@@ -1848,28 +1900,24 @@ Day 25 で学んだ `useMutation` パターンを使い、保存処理を実装�
 
 `useMutation` は `UserEditClient` 関数内の早期リターンより前へ追加します。読み込み中や取得失敗時も、フックは毎回同じ順番で呼ぶ必要があるためです。
 
-まずインポートを直します。Step 7 で書いた `lucide-react` の行を次の1行に置き換えてください。`AlertCircle` を足すだけなので行は増やしません。
-
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-import { AlertCircle, ArrowLeft } from 'lucide-react';
-```
-
-置き換えずに新しい行として足すと `ArrowLeft` の取り込みが2回になります。型検査で `Duplicate identifier 'ArrowLeft'` のエラーが出ます。アイコンの取り込みは Step 6 と同じく1行にまとめます。次のブロックはこのファイルで初めて使う部品です。ファイル先頭のインポート部分に追加してください。
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle }
   from '@/component/ui/alert';
+// ArrowLeft は既にインポート済みなので AlertCircle を追加
 ```
 
 `Alert` を足すのは保存に失敗した理由を画面に残すためです。この後に書く `onError` のトーストは数秒で消えるので目を離している間に失敗すると読者は何が起きたか分かりません。消えない場所にも同じ内容を出しておきます。
 
 **確認ポイント**: 取り込んだ部品の名前が赤くなっていないことを確認してください。`</form>` はこのあと書くのでこの時点では閉じタグが足りないというエラーが残ります。
 
+`api.useUtils()` で、更新後に再取得する4つの query の呼び出し口を用意します。`updateUser` と同じく早期リターンより前へ置いてください。
+
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
   const utils = api.useUtils();
+
   const updateUser =
     api.user.update.useMutation({
       onSuccess: async () => {
@@ -1893,21 +1941,42 @@ import { Alert, AlertDescription, AlertTitle }
     });
 ```
 
-先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` は覚えている結果に「古い」という印を付ける命令です。いま画面に出ている分はすぐ取り直されます。取り直しが終わるまでは前の結果がそのまま表示されます。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
+`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
   // zodバリデーション済みの値で送信
   const onSubmit =
     (values: UserEditFormValues) => {
+      const submitContext =
+        submitContextRef.current;
+      if (
+        !submitContext.user
+        || !submitContext.canEditUser
+        || submitContext.targetUserId !== userId
+        || submitContext.user.id !== userId
+      ) return;
+
       updateUser.mutate({
         id: userId,
         name: values.name,
         avatar: values.avatar
           || null,
-        ...(canManageAccount
-          ? { role: values.role,
-              isActive: values.isActive }
+```
+
+URLの `userId`、最新の送信対象ID、取得済みの `user.id` の3つがそろわない場合は送信しません。画面遷移と送信が重なっても、別の利用者に入力値を送らないための確認です。
+
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
+        ...(submitContext.canManageAccount
+          && values.role
+            !== submitContext.user.role
+          ? { role: values.role }
+          : {}),
+        ...(submitContext.canManageAccount
+          && values.isActive
+            !== submitContext.user.isActive
+          ? { isActive: values.isActive }
           : {}),
       });
     };
@@ -1915,7 +1984,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 **確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くのでこの時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは`</form>` を書き終えた Step 10 の最後で確かめます。
 
-サーバー側の `update` ルーターは自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `null` に変換しています。`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、すでに登録されている画像を消せません。
+サーバー側の `update` ルーターは自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。管理者が他人を編集する場合も、読み込んだ値から変えた `role` と `isActive` だけを追加します。同じ値を送り直すと、名前だけの更新でセッション版数を増やしたり、別の管理者が変更した有効状態を古いフォームから戻したりするためです。`avatar` の空文字は `null` に変換し、登録済みの画像を消せる送信にします。
 
 エラー表示ブロックをチェックボックスの下に追加します。
 
@@ -1964,18 +2033,18 @@ import { Alert, AlertDescription, AlertTitle }
 キャンセル側の `type="button"` は書き忘れると事故になる1行です。`<button>` はフォームの中に置くと何も指定しない限り送信ボタンとして扱われます。つまり `type` を書かずにいるとキャンセルを押した瞬間に保存が走ります。取り消すつもりの操作が保存になるので読者は自分が何をしたのか分かりません。2つのボタンに `disabled={updateUser.isPending}` を付けているのも同じ考え方で、保存中の連打で同じ更新が二重に飛ぶのを止めます。
 
 **確認ポイント**:
-- フォームに変更を加えて「更新」をクリックするとトースト通知が表示される
-- 保存成功後、詳細ページへ戻り変更内容が反映されている
-- 保存中はボタンが「更新中...」に変わりグレーアウトする
-- 「キャンセル」をクリックすると詳細ページに戻る（変更は保存されない）
-- `npm run dev` でエラーが出ない
-- 編集ページを開くとフォームにユーザーの名前が自動入力されている
-- アバターURLを入力するとプレビューがリアルタイムで変わる
-- メールアドレスの入力欄がグレーアウトして編集できない
-- 自分のページを開いたときはロールとアクティブの欄が出ない
-- 管理者で他人のページを開くとロールとアクティブの欄が出る
-- ロール選択には「ユーザー」「管理者」が並ぶ
-- アクティブのチェックボックスは ON/OFF を切り替えられる
+- フォームに変更を加えて「更新」をクリックするとトースト通知が表示されます
+- 保存成功後、詳細ページへ戻り変更内容が反映されています
+- 保存中はボタンが「更新中...」に変わりグレーアウトします
+- 「キャンセル」をクリックすると詳細ページに戻ります（変更は保存されません）
+- `npm run dev` でエラーが出ません
+- 編集ページを開くとフォームにユーザーの名前が自動入力されています
+- アバターURLを入力するとプレビューがリアルタイムで変わります
+- メールアドレスの入力欄がグレーアウトして編集できません
+- 自分のページを開いたときはロールとアクティブの欄が出ません
+- 管理者で他人のページを開くとロールとアクティブの欄が出ます
+- ロール選択には「ユーザー」「管理者」が並びます
+- アクティブのチェックボックスは ON/OFF を切り替えられます
 
 ロールとアクティブの欄は `canManageAccount`（`isAdmin && !isOwnProfile`）の中にあります。一般ユーザーには欄そのものが出ず、送信データにも `role` と `isActive` が入りません。サーバーの `FORBIDDEN` は最後の守りで、画面からは届かない形になっています。
 
@@ -2064,17 +2133,17 @@ submitUserEditForm(
 
 **このコードの問題点**:
 
-- `as UserEditFormValues` は「そういう型だと信じる」だけで、実際の値は検証していない
-- `role: 'OWNER'` や `isActive: 'yes'` のような値でも、クライアント側では通ってしまう
+- `as UserEditFormValues` は「そういう型だと信じる」だけで、実際の値は検証していません
+- `role: 'OWNER'` や `isActive: 'yes'` のような値でも、クライアント側では通ってしまいます
 - フォーム項目が増えると型と実行時チェックのズレに気づきにくい
-- `isAdmin` だけで分岐すると、管理者が自分を編集するときも `role` と `isActive` を送り、サーバーから `FORBIDDEN` が返る
+- `isAdmin` だけで分岐すると、管理者が自分を編集するときも `role` と `isActive` を送り、サーバーから `FORBIDDEN` が返ります
 
 #### After（プロが書くコード）
 
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
-import type { UserRole } from '@/lib/constant/roles';
+import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
@@ -2094,13 +2163,13 @@ type UpdateUserInput = {
   role?: UserRole;
   isActive?: boolean;
 };
-
 ```
 
 `UpdateUserInput` の `avatar` は `null` を受け取れるようにします。空欄を `undefined` にすると既存画像を更新しない意味になるため、画像を削除するリクエストには `null` が必要です。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+
 type UpdateUserMutation = {
   mutate: (input: UpdateUserInput) => void;
 };
@@ -2157,7 +2226,7 @@ submitUserEditForm(
 
 **このコードの強み**:
 
-- zod が実行時にも値を検証するのでフォーム外から変な値が来ても止められる
+- zod が実行時にも値を検証するのでフォーム外から変な値が来ても止められます
 - `z.infer` で TypeScript の型をスキーマから作るため型とバリデーションがズレにくい
 - 管理者が他人を編集するときだけ
   `role` / `isActive` を送るルールと、
@@ -2170,7 +2239,7 @@ submitUserEditForm(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。断片を貼り重ねる作業が11個の Step にまたがったので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。`user.ts` は Day 24 と Day 25 で書いた中身がそのまま残るため今日足した部分だけを載せます。残り4つは今日作ったファイルなのでDay 29 終了時点の全文です。
+今日は5つのファイルを触りました。断片を貼り重ねる作業が11個の Step にまたがったので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。`user.ts` には Day 24 と Day 25 の処理を含め、Day 29 終了時点のファイル全体を載せます。他の4ファイルも全文です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2182,30 +2251,25 @@ submitUserEditForm(
 
 ### `src/server/api/routers/user.ts`
 
-**import 群の完成形**:
+これまでに作った手続きへ、今日の `getById` と `update` を加えた最終形です。スキーマとルーターの一部だけを貼り替えると宣言順や閉じ括弧を崩しやすいため、既存内容をファイル全体で置き換えてください。
 
+<!-- pdf-book-layout: break-before-oversized-complete-copy -->
+<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: import 群
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
+import { createPasswordSchema } from '@/lib/password';
 import { prisma } from '@/lib/prisma';
-import { createSession } from '@/lib/session';
+import { createSession, type SessionUser } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
-```
+import { isUserEmailUniqueConstraintError } from './_helpers/user-email-conflict';
 
-今日の追加は `TASK_STATUS` の1行だけです。`getById` が担当タスクを絞り込むときに使います。ここを取り込まずに `'DONE'` と文字列で書くと綴りを間違えても TypeScript は黙ったままで絞り込みだけが効かなくなります。他の9行は Day 24 と Day 25 で入れたものなので手元に無い行があればその日の Step へ戻ってください。
-
-**userUpdateSchema**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: userUpdateSchema
 const userUpdateSchema = z
   .object({
     id: z.string().cuid(),
@@ -2216,39 +2280,81 @@ const userUpdateSchema = z
   })
   .refine(
     ({ name, avatar, role, isActive }) =>
-      name !== undefined ||
-      avatar !== undefined ||
-      role !== undefined ||
-      isActive !== undefined,
+      name !== undefined || avatar !== undefined || role !== undefined || isActive !== undefined,
     '更新する項目を1つ以上指定してください',
   );
-```
 
-`id` 以外の4項目すべてに `.optional()` が付いているので項目ごとの検査だけでは `{ id }` だけの送信も通ってしまいます。それを許すと何も変えない更新が DB まで届き、`updatedAt` だけが動いたレコードが残ります。末尾の `.refine` は項目単位では表せない「4つのうち1つは入っていること」を最後に足すための書き方です。
+const profileUpdateSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url().optional().nullable(),
+});
 
-**getById の権限判定**:
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: createPasswordSchema('新しいパスワードは8文字以上で入力してください'),
+});
 
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: getById の権限判定
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+
+async function tryReissueSession(path: string, user: SessionUser): Promise<boolean> {
+  try {
+    await createSession(user);
+    return true;
+  } catch {
+    console.error('[auth] session reissue failed', {
+      event: 'auth.session_reissue_failed',
+      path,
+      userId: user.id,
+    });
+    return false;
+  }
+}
+
+export const userRouter = createTRPCRouter({
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+
+      if (input?.role) {
+        where.role = input.role;
+      }
+
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
+      // 本人またはADMINのみ他ユーザーの詳細情報にアクセス可能
       if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'この操作を行う権限がありません',
         });
       }
-```
 
-`adminProcedure` を使わず `protectedProcedure` の中で判定しているのは本人なら自分の詳細を見られる必要があるからです。管理者専用にすると一般ユーザーは自分のページさえ開けません。判定に使うのが `ctx.session` の中身であるところも要点です。`input` の値で判定すると送信内容を書き換えるだけで誰でも管理者を名乗れます。
-
-**getById が返す基本情報とプロジェクト**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: getById が返す基本情報とプロジェクト
       const user = await prisma.user.findUnique({
         where: { id: input.id },
         select: {
@@ -2266,15 +2372,6 @@ const userUpdateSchema = z
               },
             },
           },
-```
-
-`select` に列を並べる形にしてあるのでパスワードのハッシュのような返してはいけない列が混ざりません。`USER_DETAIL_SELECT` を展開しているのは一覧と詳細で同じ列の組み合わせを使い回すためです。`projects` の下がもう1段深いのは参加情報の中間テーブルを経由してプロジェクト本体へたどる形になっているからです。
-
-**getById が返す担当タスク**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: getById が返す担当タスク
           assignedTasks: {
             select: {
               id: true,
@@ -2287,20 +2384,17 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              project: {
+                members: {
+                  some: { userId: ctx.session.userId },
+                },
+              },
             },
             orderBy: { dueDate: 'asc' },
           },
         },
       });
-```
 
-完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
-
-**getById の見つからない場合**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: getById の見つからない場合
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -2310,51 +2404,28 @@ const userUpdateSchema = z
 
       return user;
     }),
-```
 
-`findUnique` は見つからないとき例外ではなく `null` を返します。そのまま返すと画面側は「読み込み中」と「存在しない」を区別できません。`NOT_FOUND` へ変換しておくと画面側は届いたエラーの種類で分岐できます。
-
-**update の他人を更新するときの権限判定**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: update の権限判定
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
     if (id !== ctx.session.userId) {
+      // 他ユーザーを更新する場合はセッションのroleでADMIN判定
       if (ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: '管理者権限が必要です',
         });
       }
-```
-
-`getById` と判定の材料をそろえてあるので閲覧できる相手と更新できる相手の基準がずれません。片方だけ `input` の値で判定していると見ることはできないのに更新だけ通る、という抜け道が生まれます。`const { id, ...data } = input` で `id` を切り離しているのは次のブロックで残りの4項目だけを扱いたいからです。
-
-**update の自分を更新するときの制限**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: 自分を更新するときの制限
     } else {
+      // 自分のプロフィール更新の場合、roleとisActiveは変更不可
       if (data.role !== undefined || data.isActive !== undefined) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'roleとisActiveは変更できません',
+          message: 'ロールとアクティブ状態は変更できません',
         });
       }
     }
-```
 
-本人の更新では名前とアバターだけを許して `role` と `isActive` を断ります。ここが無いと一般ユーザーが送信内容へ `role` を足すだけで管理者になれます。画面側の Step 9 でも入力欄そのものを出さない作りにしていますが画面に出ていないことは送れないことと違います。最後に断るのはこの4行です。
-
-**update が更新する項目の組み立て**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: 更新する項目の組み立て
     const updateData: Prisma.UserUpdateInput = {};
     if (data.name !== undefined) {
       updateData.name = data.name;
@@ -2367,36 +2438,207 @@ const userUpdateSchema = z
     }
     if (data.isActive !== undefined) {
       updateData.isActive = data.isActive;
+      updateData.sessionVersion = { increment: 1 };
     }
-```
 
-届いた項目だけを `updateData` に加えます。この教材の Prisma 6 では`undefined` の項目は更新されず、`null` は値を消す指示です。判定を `!== undefined` にそろえると`isActive` の `false` も変更として受け取れます。
-
-**update の書き込みと戻り値**:
-
-```typescript
-// filepath: src/server/api/routers/user.ts
-// 完成版: update の書き込みと戻り値
-    return await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        ...USER_DETAIL_SELECT,
-        updatedAt: true,
-      },
-    });
+    try {
+      return await prisma.user.update({
+        where: {
+          id,
+          ...(data.isActive !== undefined ? { sessionVersion: { lt: POSTGRES_INTEGER_MAX } } : {}),
+        },
+        data: updateData,
+        select: {
+          ...USER_DETAIL_SELECT,
+          updatedAt: true,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        if (data.isActive !== undefined) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'セッションを更新できません。管理者にお問い合わせください',
+          });
+        }
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+      throw err;
+    }
   }),
+
+  updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.session.userId;
+
+    if (input.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: input.email,
+          id: { not: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に使用されています',
+        });
+      }
+    }
+
+    const updateData: Prisma.UserUpdateInput = {
+      name: input.name,
+      email: input.email,
+    };
+    if (input.avatar !== undefined) {
+      updateData.avatar = input.avatar;
+    }
+
+    const updatedUser = await prisma.user
+      .update({
+        where: {
+          id: userId,
+          sessionVersion: ctx.session.version,
+          isActive: true,
+        },
+        data: updateData,
+        select: {
+          ...USER_DETAIL_SELECT,
+          updatedAt: true,
+        },
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'セッションが無効になりました。再度ログインしてください',
+          });
+        }
+        if (isUserEmailUniqueConstraintError(err)) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'このメールアドレスは既に使用されています',
+          });
+        }
+        throw err;
+      });
+
+    const sessionReissued =
+      input.email === ctx.session.email ||
+      (await tryReissueSession('user.updateProfile', {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        version: ctx.session.version,
+      }));
+
+    return { ...updatedUser, success: true, sessionReissued };
+  }),
+
+  changePassword: protectedProcedure
+    .input(changePasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.userId;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { password: true, isActive: true, sessionVersion: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'セッションが無効になりました。再度ログインしてください',
+        });
+      }
+
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      if (user.sessionVersion !== ctx.session.version) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'セッションが無効になりました。再度ログインしてください',
+        });
+      }
+
+      if (!user.password) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'パスワードが設定されていません',
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: '現在のパスワードが正しくありません',
+        });
+      }
+
+      if (ctx.session.version === POSTGRES_INTEGER_MAX) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'セッションを更新できません。管理者にお問い合わせください',
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+      const updated = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          sessionVersion: ctx.session.version,
+          password: user.password,
+          isActive: true,
+        },
+        data: {
+          password: hashedPassword,
+          sessionVersion: { increment: 1 },
+        },
+      });
+
+      if (updated.count !== 1) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'セッションが無効になりました。再度ログインしてください',
+        });
+      }
+
+      const sessionReissued = await tryReissueSession('user.changePassword', {
+        id: userId,
+        email: ctx.session.email,
+        role: ctx.session.role,
+        version: ctx.session.version + 1,
+      });
+
+      return {
+        success: true,
+        sessionReissued,
+        message: 'パスワードを変更しました',
+      };
+    }),
+});
 ```
 
-更新した中身をそのまま返しているので画面側は保存の直後に新しい値を持てます。もう一度取りに行く必要がありません。`updatedAt` を含めているのは詳細ページの最終更新日をこの値で描き替えられるようにするためです。ここで全列を返さず `select` で絞るのは`getById` と返す形をそろえて画面側の型を1つに保つためです。
+`getById` は本人または管理者かを対象検索より先に判定し、権限のある人だけユーザー情報を取得します。`update` は他人の編集を管理者に限り、本人編集では `role` と `isActive` を拒否します。画面側の表示制御だけに頼らず、データを書き換える直前にも同じ境界を置いています。
 
 ### `src/app/user/[id]/page.tsx`
 
-**認証・認可の先行確認**:
+詳細ページの入口は認証・認可・未発見を描画前に分けます。エラーごとの分岐を途中で欠かさないよう、既存内容をファイル全体で置き換えてください。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
-// 完成版: 認証・認可の先行確認
 import { getTRPCErrorFromUnknown } from '@trpc/server';
 import { notFound, redirect } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -2417,15 +2659,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     await trpc.user.getById({ id });
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
-```
-
-`await params` を忘れると Promise に `id` がないという型エラーになります。`getById` を先に呼ぶことで、対象の存在を調べる前に認証と認可を適用できます。
-
-**エラーごとの行き先**:
-
-```tsx
-// filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
-// 完成版: エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
     if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
@@ -2434,27 +2667,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
               <CardContent className="pt-6">
-                <h1 className="text-2xl font-bold mb-2">
-                  アクセス権限がありません
-                </h1>
-                <p className="text-muted-foreground">
-                  このユーザーを見る権限がありません
-                </p>
+                <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
+                <p className="text-muted-foreground">このユーザーを見る権限がありません</p>
               </CardContent>
             </Card>
           </div>
         </AppLayout>
       );
     }
-```
-
-401・403・404を別々に扱うため、ログインし直すべき人とURLを直すべき人へ異なる案内を出せます。403は実在するIDと存在しないIDで同じ表示になります。
-
-**client 部品への受け渡し**:
-
-```tsx
-// filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
-// 完成版: client 部品への受け渡し
     throw error;
   }
 
@@ -2462,30 +2682,22 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 }
 ```
 
-想定外の失敗は元のエラーを投げ直し、成功時だけ client 部品へIDを渡します。500相当の障害を404へ変えないため、原因を追える状態が残ります。
+`UNAUTHORIZED` はログイン画面、`NOT_FOUND` は404、`FORBIDDEN` は拒否画面へ分けます。分類できない失敗は投げ直し、Day 26の `error.tsx` に処理を任せます。
 
 ### `src/app/user/[id]/user-detail-client.tsx`
 
-**外部ライブラリの import**:
+このファイルは取得状態の分岐と詳細画面を1つの部品として完成させます。途中だけを置き換えると、query の状態変数と表示側の分岐が食い違います。ここではファイル全体をコピーし、既存内容を置き換えてください。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 外部ライブラリの import
 'use client';
 
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-```
-
-`'use client'` が1行目にあるのは、このファイルがブラウザ側で動く部品だという宣言です。この行が無いと `useRouter` が使えません。アイコンを4つとも1行にまとめてあるのは`lucide-react` からの取り込みを2行に分けると Biome が1行へ直すからです。`Pencil` は Step 6 で足した4つ目です。
-
-**プロジェクト内の部品の import**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { StatusBadge } from '@/component/task/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -2510,15 +2722,6 @@ import { formatDateOnly } from '@/lib/date';
 import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
-```
-
-日付の道具が `format` と `formatDateOnly` の2つある理由がここで一番大事です。`format` は時刻を持つ値へ使い、`formatDateOnly` は期限のような日付だけの値へ使います。取り違えると期限の表示が地域によって1日ずれます。`@/lib/query-error` からの4つは取得の失敗を「ログイン切れ」「権限なし」「見つからない」「一時的な通信失敗」へ分けるための道具です。バッジ類を自作せず取り込んでいるのはDay 24 の一覧と同じ色と文言をそのまま使うためです。
-
-**リトライ判定と props**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: リトライ判定と props
 const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
   httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
@@ -2526,15 +2729,6 @@ interface UserDetailClientProps {
   userId: string;
 }
 
-```
-
-`shouldRetryUserQuery` を自分で作るのはユーザー取得だけ再試行の条件が1つ違うからです。`shouldRetryQuery` は一時的な通信失敗だけをやり直しますが、404（ユーザーが存在しない）は何度聞き直しても同じ答えです。`httpStatusOf(error) !== 404` を先に確かめて、404以外なら共通の判定へ渡します。
-
-**2つのデータ取得**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 2つのデータ取得
 export function UserDetailClient({ userId }: UserDetailClientProps) {
   const router = useRouter();
 
@@ -2559,15 +2753,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     { enabled: userId.length > 0, retry: shouldRetryUserQuery },
   );
 
-```
-
-取得が2本あるのは見ている本人と表示する相手が別物だからです。`currentUser` は編集ボタンを出すかどうかの判断に使い、`user` は画面に描く中身です。6つの値を別名で受け取るのは、下の分岐で「どちらが」「どう失敗したか」を個別に見るためです。`isLoading` は初回取得中、`isFetching` は再取得中も含む状態です。再試行ボタンを連打できないようにするには後者も必要です。
-
-**エラーの分類**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: エラーの分類
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
     isUserError ? userError : null,
@@ -2581,15 +2766,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   const requiredLoading = isCurrentUserLoading || isUserLoading;
   const requiredFetching = isCurrentUserFetching || isUserFetching;
 
-```
-
-`queryErrors` に2本の失敗をまとめるのは、どちらが401や403でも画面を閉じるためです。`authFailed`・`forbidden`・`notFound` の3つに分けることで「ログインし直せばよい」「権限が無い」「存在しない」を出し分けられます。`hasRequiredData` は、失敗した問い合わせに前回のデータが残っているかを確かめます。片方でも失敗してデータがなければ `false` になります。後続の `!currentUser` と `!user` でも確認するため、両方のデータがそろったときだけ詳細を表示します。
-
-**再取得と読み込み中の早期リターン**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 再取得と読み込み中の早期リターン
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     void refetchUser();
@@ -2603,15 +2779,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     );
   }
 
-```
-
-`refetchRequiredData` で2本まとめて取り直すのは、再試行ボタンを押した人が「どちらを取り直すか」を考えなくてよいようにするためです。読み込み中はスピナーだけを出します。失敗の種類がもう決まっているときはスピナーではなく次の拒否画面へ進ませるので、`!authFailed && !forbidden && !notFound` が条件に入っています。
-
-**拒否画面を出す条件**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面を出す条件
   if (
     authFailed ||
     forbidden ||
@@ -2620,15 +2787,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     !currentUser ||
     !user
   ) {
-```
-
-拒否画面へ進む条件は5つあります。`authFailed`・`forbidden`・`notFound` は失敗の種類が決まった状態です。`hasFetchError && !hasRequiredData` は再試行しても届かず手元にも前回のデータが無い状態、`!currentUser`・`!user` は失敗ではないのに中身が無い状態です。どれか1つでも当てはまれば詳細画面は描きません。
-
-**拒否画面のメッセージ**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面のメッセージ
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -2650,15 +2808,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   ? '削除されたか、URLが正しくない可能性があります。'
                   : '通信状況を確認して、再読み込みしてください。'}
           </p>
-```
-
-見出しと説明文を分けてあるのは「何が起きたか」と「次に何をすればよいか」を読み分けられるようにするためです。どちらも失敗の種類ごとに文言を変えます。権限が無い人には「管理者または本人のみ」と断り、見つからないときは「削除されたかURLが違う」可能性を伝えます。原因の分からない失敗だけ再読み込みを案内します。
-
-**拒否画面のボタンの分岐**:
-
-```tsx
-          {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 拒否画面のボタンの分岐 */}
           <Button
             type="button"
             onClick={() => {
@@ -2678,15 +2827,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             }}
             disabled={requiredFetching}
           >
-```
-
-ボタンは1つですが押した先は失敗の種類で変わります。ログイン切れは `/login`、権限不足は `/dashboard` へ戻します。404のときだけ `currentUser?.role` を見て、管理者はユーザー一覧へ、それ以外はダッシュボードへ分けます。一般ユーザーにはユーザー一覧画面が無いからです。どれにも当てはまらない失敗は `refetchRequiredData` で取り直します。
-
-**ボタンのラベルと拒否画面の閉じタグ**:
-
-```tsx
-            {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-            {/* 完成版: ボタンのラベルと拒否画面の閉じタグ */}
             {authFailed
               ? 'ログイン画面へ'
               : forbidden
@@ -2702,30 +2842,12 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     );
   }
 
-```
-
-ラベルも行き先と同じ分岐で切り替えます。「再読み込み」と書くのは通信失敗のときだけです。`disabled={requiredFetching}` で再取得中は押せなくしてあるので、連打して同じ通信を何本も投げることはありません。
-
-**権限フラグと画面の開始**:
-
-```tsx
-// filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 権限フラグと画面の開始
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === user.id;
 
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
-```
-
-ここまで来たとき `currentUser` と `user` は両方そろっています。比べる相手が `userId` ではなく `user.id` になっているところが要点です。`userId` はURLに打ち込まれた文字列で、まだ誰のものとも決まっていません。`user.id` はサーバーが `getById` で認めた本物のIDです。名前を2つ付けておくとStep 6 の表示条件が `(isAdmin || isOwnProfile)` の1行で読めます。
-
-**取得失敗の警告バナー**:
-
-```tsx
-        {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 取得失敗の警告バナー */}
         {hasFetchError && (
           <div
             role="alert"
@@ -2743,37 +2865,19 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             </Button>
           </div>
         )}
-```
-
-`hasFetchError` のままここへ来られるのは、前回取得済みのデータが両方残っている場合だけです。一覧を隠す代わりに、黄色の帯で「前回の内容です」と伝えて再試行ボタンを置きます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。
-
-**戻るボタンとグリッドの開始**:
-
-```tsx
-        {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 戻るボタンとグリッドの開始 */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/profile')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'プロフィールに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
           <div className="md:col-span-4 space-y-6">
             <Card>
               <CardContent style={{ paddingTop: '2.5rem' }}>
-```
-
-戻るボタンを自分で置いているのはこの詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンでは一覧へ行けません。`md:grid-cols-12` に `md:` が付いているので狭い画面では左右に割らず上下へ積まれます。スマートフォンの幅で12列を横に割ると1列がどちらも読めない幅になります。
-
-**左カラムのアバターとバッジ**:
-
-```tsx
-                {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムのアバターとバッジ */}
                 <div className="text-center mb-6">
                   <Avatar className="w-24 h-24 mx-auto mb-4">
                     {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
@@ -2788,15 +2892,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </div>
                 </div>
 
-```
-
-`user.avatar` と `user.name` はどちらもデータベース側で空を許している列です。`{user.avatar && ...}` で囲まないとURLの無い人のページで行き先の無い画像を読み込もうとして枠が壊れます。`user.name?.[0]` の `?.` を外すと名前未設定のユーザーのページが Day 26 で作ったエラー画面へ切り替わります。`user.name || user.email` は名前が無い人をメールアドレスで呼ぶための代わりです。
-
-**左カラムのメールアドレス**:
-
-```tsx
-                {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムのメールアドレス */}
                 <Separator className="my-4" />
 
                 <div className="space-y-4 text-sm">
@@ -2807,15 +2902,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       <p>{user.email}</p>
                     </div>
                   </div>
-```
-
-`Separator` を1本挟むのは線の上と下で情報の性質が変わるからです。上は名前とバッジで誰かを示し、下はメールと日付でその人の属性を並べます。線が無いと縦に9行続くだけになり、目の休む場所がありません。ここで決めた「アイコン・小さい見出し・値」の形を、下の2つがそのまま繰り返します。
-
-**左カラムの登録日**:
-
-```tsx
-                  {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: 左カラムの登録日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2829,15 +2915,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       </p>
                     </div>
                   </div>
-```
-
-表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。値が無いときに `-` を出すのは見出しだけが値なしで残る状態を避けるためです。空欄だと読み込みが終わっていないのか、そもそも値が無いのかを読者が判断できません。`-` は「確かめたうえで空だった」という返事になります。
-
-**左カラムの最終更新日**:
-
-```tsx
-                  {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: 左カラムの最終更新日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2853,15 +2930,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </div>
                 </div>
 
-```
-
-最終更新日を画面に出しておくとStep 10 の保存が本当に届いたかを自分で確かめられます。`updatedAt` はレコードが更新されるたびに DB 側で書き換わる列だからです。トーストは数秒で消えるので通知が出ただけでは証拠になりません。末尾の `</div>` はメールから最終更新日までを囲んでいた枠を閉じています。
-
-**左カラムの編集ボタン**:
-
-```tsx
-                {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムの編集ボタン */}
                 {(isAdmin || isOwnProfile) && (
                   <>
                     <Separator className="my-4" />
@@ -2874,15 +2942,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             </Card>
           </div>
 
-```
-
-ボタンを左カラムの下端へ置いたのはプロフィールを読んでから操作へ進む順番にするためです。`<>` で `Separator` とボタンをまとめてあるので権限が無い人には線も出ません。条件を外すと一般ユーザーにも他人のページの編集ボタンが見えます。押した先はサーバーが断りますが押せると思わせる表示そのものが誤解の元です。
-
-**右カラムの参加プロジェクトのバッジ**:
-
-```tsx
-          {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 参加プロジェクトのバッジ */}
           <div className="md:col-span-8 space-y-6">
             <Card>
               <CardHeader>
@@ -2892,25 +2951,23 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                 {user.projects && user.projects.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {user.projects.map((member) => (
-                      <Badge
+                      <Link
                         key={member.id}
-                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
-                        style={{ backgroundColor: member.project.color }}
-                        onClick={() => router.push(`/project?projectId=${member.project.id}`)}
+                        href={`/project?projectId=${member.project.id}`}
+                        className={
+                          'inline-flex items-center gap-2 rounded-md border px-3 py-1 ' +
+                          'text-sm text-foreground hover:bg-muted'
+                        }
                       >
+                        <span
+                          aria-hidden="true"
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: member.project.color }}
+                        />
                         {member.project.name}
-                      </Badge>
+                      </Link>
                     ))}
                   </div>
-```
-
-プロジェクトをバッジで、タスクを表で出しているのは比べる項目の数が違うからです。プロジェクトは名前だけなので横へ流し、タスクは4つの項目を並べて縦に読ませます。背景色を `className` ではなく `style` で当てているのはTailwind CSS がその場で決まる色をクラス名として作れないからです。`md:col-span-8` の `8` は左の `4` と足して12になる数です。
-
-**右カラムのプロジェクトが無い場合**:
-
-```tsx
-                {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: プロジェクトが無い場合 */}
                 ) : (
                   <p className="text-muted-foreground text-sm">
                     参加しているプロジェクトはありません
@@ -2919,15 +2976,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
               </CardContent>
             </Card>
 
-```
-
-`) : (` から下が、参加プロジェクトが0件の人に出る表示です。ここを書かないと入ったばかりの人のページだけ見出しの下が空白になります。空白は「読み込みに失敗した」とも読めるので確かめた結果として文章を1行置きます。
-
-**右カラムの担当タスクの見出し**:
-
-```tsx
-            {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-            {/* 完成版: 担当タスクの見出し */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">担当中のタスク</CardTitle>
@@ -2943,23 +2991,17 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                         <TableHead>期限</TableHead>
                       </TableRow>
                     </TableHeader>
-```
-
-`CardContent` へ `p-0` を付けてあるのは表の枠線とカードの内側の余白が二重になるのを防ぐためです。`assignedTasks` が無い人でも `&&` のおかげで表を描こうとして止まることはありません。
-
-**右カラムのタスク行**:
-
-```tsx
-                    {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                    {/* 完成版: タスク行 */}
                     <TableBody>
                       {user.assignedTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => router.push(`/task?taskId=${task.id}`)}
-                        >
-                          <TableCell className="font-medium">{task.title}</TableCell>
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/task?taskId=${task.id}`}
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              {task.title}
+                            </Link>
+                          </TableCell>
                           <TableCell>
                             <StatusBadge status={task.status} />
                           </TableCell>
@@ -2973,15 +3015,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       ))}
                     </TableBody>
                   </Table>
-```
-
-`onClick` を `TableRow` そのものへ付けているので行のどこを押してもタスク詳細へ移動します。タイトルの文字だけを押せる形にすると押せる場所が細くなって当てにくくなります。`hover:bg-muted/50` で色が変わるのは押せる場所だと目で分かるようにするためです。期限だけ `format` を使わず `formatDateOnly` に任せているのは、`dueDate` が時刻を UTC の0時にそろえて保存してあるからです。`new Date()` で読み直して各自の時計へ合わせるとUTC より西の地域では前日にずれます。
-
-**右カラムのタスクが無い場合**:
-
-```tsx
-                {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: タスクが無い場合 */}
                 ) : (
                   <div className="p-6 text-muted-foreground text-sm">
                     担当中のタスクはありません
@@ -2989,15 +3022,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                 )}
               </CardContent>
             </Card>
-```
-
-タスクが0件の人にも「担当中のタスクはありません」と1行置きます。`p-6` で表のときと同じだけ内側へ余白を取ってあるので、枠の中で文字だけが端へ寄りません。末尾の `</Card>` で右カラムの2枚目のカードを閉じています。
-
-**全体の閉じタグ**:
-
-```tsx
-          {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 全体の閉じタグ */}
           </div>
         </div>
       </div>
@@ -3006,15 +3030,15 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 }
 ```
 
-閉じタグが4段続くのは右カラム・グリッド・中央寄せの箱・全体のレイアウトを順にたたんでいるからです。数を1つ間違えるとエラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときはここの段の数だけを先に数え直してください。
+`getCurrentUser` と `getById` のどちらが失敗しても、401・403・404・一時的な取得失敗を別々に扱います。401・403ではキャッシュ済みの詳細を隠し、500相当の再取得失敗では前回の内容を残して再試行できるようにしています。正常時は権限を確認したユーザーだけが詳細と編集ボタンへ進めます。
 
 ### `src/app/user/[id]/edit/page.tsx`
 
-**認証・認可の先行確認**:
+編集URLは詳細ページを経由せず直接開けるため、編集側にも同じserver wrapperが必要です。既存内容をファイル全体で置き換えてください。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
-// 完成版: 認証・認可の先行確認
 import { getTRPCErrorFromUnknown } from '@trpc/server';
 import { notFound, redirect } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -3035,15 +3059,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     await trpc.user.getById({ id });
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
-```
-
-編集URLを直接開かれても、詳細ページと同じ `getById` で認証と認可を先に適用します。詳細画面から来たという前提には頼りません。
-
-**エラーごとの行き先**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
-// 完成版: エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
     if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
@@ -3052,27 +3067,14 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
           <div className="container mx-auto max-w-md mt-8">
             <Card>
               <CardContent className="pt-6">
-                <h1 className="text-xl font-bold mb-2">
-                  アクセス権限がありません
-                </h1>
-                <p className="text-muted-foreground">
-                  管理者または本人のみユーザー編集が可能です
-                </p>
+                <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
+                <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
               </CardContent>
             </Card>
           </div>
         </AppLayout>
       );
     }
-```
-
-権限がある人にだけ未発見の404を返します。権限のない人にはIDの実在を知らせず、編集できる条件を画面に残します。
-
-**client 部品への受け渡し**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
-// 完成版: client 部品への受け渡し
     throw error;
   }
 
@@ -3080,33 +3082,24 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 }
 ```
 
-成功したときだけ編集フォームを描画します。分類していないエラーは `error.tsx` に届くように投げ直します。
+詳細側と同じ `getById` を使うことで、一般ユーザーが他人の実在IDと存在しないIDを開いた場合に同じ拒否画面を返します。成功したときだけ編集用clientへIDを渡します。
 
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
-**外部ライブラリの import**:
+このファイルはフォームの状態、取得失敗時の行き先、保存処理をまとめて完成させます。分割した断片を貼り継ぐとフックの順序や閉じタグを崩しやすいため、既存内容をファイル全体で置き換えてください。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 外部ライブラリの import
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
-```
-
-`zodResolver` はzod で書いた検査ルールを `useForm` へつなぐ継ぎ手です。これが無いと `useForm` は実際の入力を検査せず、名前を空のまま送信してもその場で止まりません。サーバーへ届いてから断られるので押した場所と赤字の出る場所が離れます。読者は原因を追いにくくなります。`useEffect` と `toast` はフォームの初期値の流し込みと保存結果の通知に使います。
-
-**プロジェクト内の部品の import**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -3128,29 +3121,11 @@ import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@
 import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
-```
-
-`@/lib/constant/roles` からの3つを1行に集めているのは同じ場所からの取り込みを何本も並べるとエラーになるからです。`isUserRole` は Step 9 の型ガード、`USER_ROLE` は初期値、`USER_ROLE_LABELS` は選択肢の文言に使います。`@/lib/query-error` の4つは詳細ページと同じく、取得の失敗を種類別に分ける道具です。`normalizeAvatarValue` は空欄を送る形へ整える関数です。
-
-**リトライ判定とロールの定数**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: リトライ判定とロールの定数
 const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
   httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
-```
-
-`shouldRetryUserQuery` は詳細ページと同じで、404は再試行しても結果が変わらないため外します。`USER_ROLE_VALUES` へ `as const` を付けているのは `z.enum` へ渡す値を「USERかADMINだけ」の型へ絞るためです。普通の文字列の配列のまま渡すとロールの型がゆるいまま残ります。
-
-**zod スキーマと型**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: zod スキーマと型
 const userEditSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
@@ -3159,15 +3134,6 @@ const userEditSchema = z.object({
 });
 type UserEditFormValues = z.infer<typeof userEditSchema>;
 
-```
-
-`avatar` に `.or(z.literal(''))` を足してあるのは任意の項目として空欄も許すためです。`.url()` だけにすると何も入れていない人が保存できません。`z.infer` で型を作っているので入力の形を2か所に書く必要がありません。スキーマを直せば型も追いかけて変わるため検査と型の食い違いが起きません。
-
-**props と useForm の初期値**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: props と useForm の初期値
 interface UserEditClientProps {
   userId: string;
 }
@@ -3184,16 +3150,11 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       isActive: true,
     },
   });
+  const { dirtyFields } = form.formState;
+  const dirtyFieldsRef = useRef(dirtyFields);
+  dirtyFieldsRef.current = dirtyFields;
+  const hydratedUserIdRef = useRef<string | null>(null);
 
-```
-
-`defaultValues` を埋めておくのはサーバーからデータが届く前にフォームが1度描かれるからです。ここを省くと初期状態が定まらず、入力欄が管理下に入ったかどうかの判定が期待どおりになりません。中身は下の `form.reset` で本物のデータへ差し替わるのでこの値が使われるのは最初の一瞬だけです。
-
-**現在ユーザーの取得と権限フラグ**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 現在ユーザーの取得と権限フラグ
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
@@ -3206,15 +3167,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   const isOwnProfile = currentUser?.id === userId;
   const canEditUser = isAdmin || isOwnProfile;
   const canManageAccount = isAdmin && !isOwnProfile;
-```
-
-真偽値を2段に分けてあるのが要点です。`canEditUser` はページへ入れる権限、`canManageAccount` はロールとアクティブ状態を触れる権限です。後者に `!isOwnProfile` が入っているので管理者が自分の権限を自分で下げる操作が塞がれます。
-
-**編集対象の取得**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 編集対象の取得
   const {
     data: user,
     isLoading: isUserLoading,
@@ -3229,16 +3181,9 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       retry: shouldRetryUserQuery,
     },
   );
+  const submitContextRef = useRef({ targetUserId: userId, user, canEditUser, canManageAccount });
+  submitContextRef.current = { targetUserId: userId, user, canEditUser, canManageAccount };
 
-```
-
-`enabled` で権限を確かめてから取得するため入れない人の画面では通信そのものが起きません。`!!currentUser` が条件に入っているのは `currentUser` が届く前に `canEditUser` を確定できないからです。`retry: shouldRetryUserQuery` は詳細ページと同じく、存在しないユーザーを何度も聞き直さないためです。
-
-**保存する mutation**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 保存する mutation
   const utils = api.useUtils();
 
   const updateUser = api.user.update.useMutation({
@@ -3258,54 +3203,47 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     },
   });
 
-```
-
-`invalidate` が4つ並ぶのは同じ人の情報を4か所が別々に覚えているからです。詳細の `getById`、一覧の `getAll`、サイドバーへ名前を出す `getCurrentUser`、そしてセッションです。1つ書き忘れると名前を変えたのにサイドバーだけ古いまま残ります。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面の移動までたどり着きます。
-
-**フォームへ値を流し込む useEffect**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: フォームへ値を流し込む useEffect
   useEffect(() => {
     if (user) {
-      form.reset({
-        name: user.name ?? '',
-        avatar: user.avatar ?? '',
-        role: user.role,
-        isActive: user.isActive,
-      });
+      const sameUser = hydratedUserIdRef.current === user.id;
+      form.reset(
+        {
+          name: user.name ?? '',
+          avatar: user.avatar ?? '',
+          role: user.role,
+          isActive: user.isActive,
+        },
+        sameUser && Object.keys(dirtyFieldsRef.current).length > 0
+          ? { keepDirtyValues: true }
+          : undefined,
+      );
+      hydratedUserIdRef.current = user.id;
     }
   }, [user, form]);
 
-```
-
-`form.reset` を `useEffect` の中へ入れているのは`user` の到着が最初の描画より後になるからです。描画の途中で値を書き換えるとReact が同じ描画を繰り返します。`?? ''` で空を空文字へ寄せているのは入力欄に `null` を渡すとブラウザが警告を出すからです。`reset` は初期値そのものを置き換えるのでこの後の取り消し操作もサーバーの値へ戻ります。
-
-**送信する値の組み立て**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 送信する値の組み立て
   const handleSubmit = (values: UserEditFormValues) => {
+    const submitContext = submitContextRef.current;
+    if (
+      !submitContext.user ||
+      !submitContext.canEditUser ||
+      submitContext.targetUserId !== userId ||
+      submitContext.user.id !== userId
+    )
+      return;
     updateUser.mutate({
       id: userId,
       name: values.name,
       avatar: normalizeAvatarValue(values.avatar),
-      // 管理者でも本人編集時は role/isActive を送らない
-      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
+      // 同じ値を送り直すと別の管理者による更新を古いフォームで巻き戻すためです。
+      ...(submitContext.canManageAccount && values.role !== submitContext.user.role
+        ? { role: values.role }
+        : {}),
+      ...(submitContext.canManageAccount && values.isActive !== submitContext.user.isActive
+        ? { isActive: values.isActive }
+        : {}),
     });
   };
 
-```
-
-`canManageAccount` で分岐して項目ごと落としているのはStep 0 の `update` が本人編集で `role` を受け取ると `FORBIDDEN` を返すからです。値を `undefined` にするのではなく、項目そのものを送らない形にします。`normalizeAvatarValue` は空文字を `null` へ寄せます。空文字をそのまま送るとサーバー側の `.url()` が断り、値を送らないと登録済みの画像が消せません。
-
-**エラーの分類**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: エラーの分類
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
     isUserError ? userError : null,
@@ -3319,15 +3257,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   const requiredLoading = isCurrentUserLoading || (canEditUser && isUserLoading);
   const requiredFetching = isCurrentUserFetching || isUserFetching;
 
-```
-
-詳細ページと同じ5つの判定です。違いは `requiredLoading` だけで、`canEditUser &&` を足してあるのは入れない人の `user` 取得が `enabled` で止まっているためです。動かない通信の読み込みを待っても読み込み中のまま止まります。
-
-**再取得と読み込み中の早期リターン**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 再取得と読み込み中の早期リターン
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     if (canEditUser) void refetchUser();
@@ -3341,15 +3270,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-```
-
-`refetchRequiredData` は `canEditUser` のときだけ `user` も取り直します。権限の無い人の画面では `user` の取得が `enabled` で止まっているので取り直す対象がありません。読み込み中で、失敗の種類がまだ決まっていない間はスピナーを出します。
-
-**拒否画面の条件とメッセージ**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面の条件とメッセージ
   if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData) || !currentUser) {
     return (
       <AppLayout>
@@ -3372,15 +3292,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                   ? '削除されたか、URLが正しくない可能性があります。'
                   : '通信状況を確認して、再読み込みしてください。'}
           </p>
-```
-
-詳細ページと同じ分岐です。`!currentUser` まで含めてあるのは読み込みが終わっても中身が空の場合があるからです。そのまま下へ進むと `currentUser?.role` がずっと `undefined` のままで権限の判定が必ず「権限なし」へ倒れ、ログイン済みの本人にまで拒否画面が出ます。メッセージは「見る」ではなく「編集する」権限の文言になっています。
-
-**拒否画面のボタンの分岐**:
-
-```tsx
-          {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 拒否画面のボタンの分岐 */}
           <Button
             type="button"
             onClick={() => {
@@ -3400,15 +3311,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             }}
             disabled={requiredFetching}
           >
-```
-
-行き先の分け方も詳細ページと同じです。404のとき管理者をユーザー一覧へ戻すのは一般ユーザーにはユーザー一覧画面が無いからです。ここでは `isAdmin` を使っているので `currentUser` が無い途中の状態でも安全に `false` へ倒れます。
-
-**ボタンのラベルと拒否画面の閉じタグ**:
-
-```tsx
-            {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-            {/* 完成版: ボタンのラベルと拒否画面の閉じタグ */}
             {authFailed
               ? 'ログイン画面へ'
               : forbidden
@@ -3424,15 +3326,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-```
-
-ラベルも行き先と同じ分岐で切り替えます。「再読み込み」と書くのは通信失敗のときだけです。
-
-**権限が無い場合の拒否画面**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 権限が無い場合の拒否画面
   if (!canEditUser) {
     return (
       <AppLayout>
@@ -3448,15 +3341,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-```
-
-ここへ来るのは失敗ではなく権限が無いと確定した場合だけです。サーバーのエラーを見せずに、自分でこの画面を返しています。ページ側の `edit/page.tsx` が先に断った場合と同じ見た目にしてあるので、どちらが止めても読者には同じ画面が出ます。
-
-**編集対象のデータが無い場合**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 編集対象のデータが無い場合
   if (!user) {
     return (
       <AppLayout>
@@ -3475,15 +3359,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
     );
   }
 
-```
-
-失敗が確定していないのに `user` が無い場合の保険です。この分岐より下では `user.email` へ直接触るため、ここを通さないと型が値の無い可能性を指摘し続けます。スピナーではなく文章とボタンを出すのは、読み込みが終わった後でもここへ来る場合があるからです。
-
-**画面の開始と警告バナー**:
-
-```tsx
-// filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 画面の開始と警告バナー
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md mt-8 mb-8">
@@ -3504,15 +3379,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             </Button>
           </div>
         )}
-```
-
-前回取得済みのデータが残っているときは、フォームを隠さず黄色の帯で知らせます。「入力内容は保持されています」と書くのは、入力の途中で再取得に失敗しても打った文字は消えないことを先に伝えるためです。
-
-**戻るボタンとカードの枠**:
-
-```tsx
-        {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 戻るボタンとカードの枠 */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
@@ -3527,15 +3393,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             <CardTitle>ユーザー編集</CardTitle>
           </CardHeader>
           <CardContent>
-```
-
-横幅を `max-w-md` に絞ってあるのは入力欄が横に伸びすぎると視線の動く距離が長くなるからです。詳細ページは一覧を並べるので `max-w-6xl` でしたがフォームは1列で読ませます。戻る先を `/user/${userId}` にしているので編集をやめた人は一覧ではなく元の詳細ページへ帰ります。
-
-**フォームの開始とアバターのプレビュー**:
-
-```tsx
-            {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-            {/* 完成版: フォームの開始とアバターのプレビュー */}
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
@@ -3546,15 +3403,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 </Avatar>
               </div>
 
-```
-
-`form.watch` はその項目の今の値を読み出して変わるたびに描き直させる書き方です。だからURLを1文字打つごとにプレビューが差し替わります。`handleSubmit` という名前が2つ出てきますが、外側の `form.handleSubmit` が react-hook-form の検査付き送信で、内側がこのファイルで定義した送信処理です。`handleSubmit` が呼ばれるのは zod の検査を全部通った後だけです。
-
-**名前の入力欄**:
-
-```tsx
-              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 名前の入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前{' '}
@@ -3573,15 +3421,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 )}
               </div>
 
-```
-
-`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下へ入ります。`register` は `name`・`onChange`・`onBlur`・`ref` を渡し、入力値を読み取れるようにします。エラーの文言を `form.formState.errors` から読んでいるので文章はスキーマ側にだけ置けます。`{' '}` は「名前」と `*` の間の空白を保つ書き方で、JSX はタグの直前の空白を削ってしまうからです。
-
-**メールアドレスとアバターURLの入力欄**:
-
-```tsx
-              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: メールアドレスとアバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">メールアドレス</Label>
                 <Input id="email" value={user.email} disabled />
@@ -3599,15 +3438,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 />
               </div>
 
-```
-
-メールの欄だけ `register` を使わず `disabled` にしてあるのは送信の対象から外しているからです。ログインに使う値なのでここで気軽に書き換えられると本人が締め出されます。それでも欄ごと消さないのはいま誰を編集しているのかを画面で確かめられるようにするためです。開くページを間違えたことに、その場で気付けます。
-
-**ロール選択の入口**:
-
-```tsx
-              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: ロール選択の入口 */}
               {canManageAccount && (
                 <>
                   <div className="space-y-2">
@@ -3616,7 +3446,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                       value={form.watch('role')}
                       onValueChange={(value) => {
                         if (isUserRole(value)) {
-                          form.setValue('role', value);
+                          form.setValue('role', value, { shouldDirty: true });
                         }
                       }}
                       disabled={updateUser.isPending}
@@ -3624,15 +3454,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                       <SelectTrigger id="role">
                         <SelectValue placeholder="ロールを選択" />
                       </SelectTrigger>
-```
-
-ここだけ `register` を使わず、`value` と `onValueChange` の2つでつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので`register` が待っている `onChange` が起きないからです。`isUserRole` で確かめてから渡すのは`onValueChange` が渡す値の型が `string` までしか絞られないためです。`canManageAccount` で囲んでいるので本人の編集画面にはこの欄自体が出ません。
-
-**ロールの選択肢**:
-
-```tsx
-                      {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-                      {/* 完成版: ロールの選択肢 */}
                       <SelectContent>
                         {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
                           <SelectItem key={value} value={value}>
@@ -3643,20 +3464,11 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                     </Select>
                   </div>
 
-```
-
-選択肢を `USER_ROLE_LABELS` から作っているのでロールを1つ増やしたときにこの画面を直す必要がありません。文言も定数側にあるため一覧の表示とこの選択肢で呼び名が食い違いません。ここへ `<SelectItem value="USER">ユーザー</SelectItem>` と手書きすると増やしたロールだけ選べない状態になります。
-
-**アクティブ状態の切り替え**:
-
-```tsx
-                  {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: アクティブ状態の切り替え */}
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="isActive"
                       checked={form.watch('isActive')}
-                      onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
+                      onCheckedChange={(checked) => form.setValue('isActive', checked === true, { shouldDirty: true })}
                       disabled={updateUser.isPending}
                     />
                     <Label htmlFor="isActive">アクティブ</Label>
@@ -3664,15 +3476,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 </>
               )}
 
-```
-
-`checked === true` と書くのは`onCheckedChange` が `'indeterminate'` という文字列を渡す場合があるからです。この文字列は真として扱われるので比較を省くと中途半端な状態が「オン」として保存されます。すべての入力欄に `disabled={updateUser.isPending}` を付けているのは保存中に値を変えられると送った内容と画面の見た目が食い違うからです。
-
-**保存の失敗を残すアラート**:
-
-```tsx
-              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 保存の失敗を残すアラート */}
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3681,15 +3484,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 </Alert>
               )}
 
-```
-
-トーストと同じ内容をここへも出すのはトーストが数秒で消えるからです。目を離している間に失敗すると通知を見逃した読者には何も起きなかったように見えます。`Alert` はフォームの中に残り続けるので後から画面へ戻っても理由が読めます。
-
-**送信ボタンとキャンセルボタン**:
-
-```tsx
-              {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 送信ボタンとキャンセルボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={updateUser.isPending}>
                   {updateUser.isPending ? '更新中...' : '更新'}
@@ -3705,15 +3499,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                 </Button>
               </div>
             </form>
-```
-
-キャンセル側の `type="button"` は書き忘れると事故になる1行です。`<button>` はフォームの中に置くと指定が無ければ送信ボタンとして扱われます。つまり `type` を省くとキャンセルを押した瞬間に保存が走ります。取り消すつもりの操作が保存になるので読者は自分が何をしたのか分かりません。
-
-**全体の閉じタグ**:
-
-```tsx
-          {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 全体の閉じタグ */}
           </CardContent>
         </Card>
       </div>
@@ -3722,31 +3507,82 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 }
 ```
 
-`</form>` を閉じた後、カードの中身・カード・中央寄せの箱・全体のレイアウトを順にたたみます。Step 9 と Step 10 の途中では「閉じタグが足りない」というエラーが出続けていましたがこの6行でそれが消えます。エラーが残る場合は`</>` と `)}` の組が1つ足りていないところを探してください。
+`canEditUser` は編集ページへ入れるかを決め、`canManageAccount` はロールとアクティブ状態を送れるかを決めます。`submitContextRef` は最新の対象ID、取得データ、権限を保存し、画面遷移前の送信処理が別の利用者へ値を送るのを防ぎます。保存時は空のアバターURLを `normalizeAvatarValue` で `null` に変えます。管理者が他人を編集する場合も、読み込んだ値から変えた `role` と `isActive` だけを送ります。
 
 ## 今日のまとめ
 
 今日で管理者向けのユーザー管理機能が完成しました。詳細表示・編集・権限チェックまで実装し、あなたのタスク管理アプリは本格的なチーム管理ツールになりました。
 動的ルーティングでURLから情報を読み取り、権限に基づいてUIを切り替える方法を学びました。
 
-- [ ] `[id]` の動的ルーティングで URL からユーザー ID を取り出せた
-- [ ] server wrapper と client component の役割を分けて書けた
-- [ ] `form.reset` でサーバーのデータをフォームの初期値にできた
-- [ ] 管理者と本人で編集できる項目が変わることを確かめた
-- [ ] 保存後に詳細ページへ戻り、更新後の値が出ることを確かめた
+- [ ] `[id]` の動的ルーティングで URL からユーザー ID を取り出せました
+- [ ] server wrapper と client component の役割を分けて書けました
+- [ ] 初回と別ユーザーでは全項目を初期化し、同じユーザーの再取得では入力途中の項目を保持できました
+- [ ] 管理者と本人で編集できる項目が変わることを確かめました
+- [ ] 保存後に詳細ページへ戻り、更新後の値が出ることを確かめました
 
 ---
 
 ## つまずきポイント
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| ページが404になる | `[id]`フォルダ名のブラケットが全角になっている | 半角の`[id]`でフォルダを作り直す |
-| `await params` の `id` が `undefined` になる | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
-| フォームの初期値が空になる | Step 8 の `useEffect` で `form.reset` を呼んでいない | `useEffect(() => { if (user) form.reset({ ... }); }, [user, form])` が書けているか確認する |
-| 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
-| 更新後に古いデータが表示される | tRPC のキャッシュが残っている | `onSuccess` で user/auth を invalidate してから詳細へ戻る |
-| `FORBIDDEN`エラーが表示される | 本人更新で `role`・`isActive` を送信している | `canManageAccount` が true のときだけ送信する |
+#### ページが404になる
+
+**原因**
+
+`[id]`フォルダ名の角括弧が全角のためです。
+
+**解決方法**
+
+半角の`[id]`でフォルダを作り直してください。
+
+#### `await params` の `id` が `undefined` になる
+
+**原因**
+
+フォルダ名の括弧内と `params` のキー名が一致していないためです。
+
+**解決方法**
+
+`[userId]` なら `params.userId`、`[id]` なら `params.id` を読んでください。
+
+#### フォームの初期値が空になる
+
+**原因**
+
+Step 8 の `useEffect` で初回の `form.reset` が動いていないためです。
+
+**解決方法**
+
+`hydratedUserIdRef` と `dirtyFields` を用意し、Step 8 の `useEffect` が書けているか確認してください。別の利用者では全項目を初期化し、同じ利用者では `keepDirtyValues` を使います。
+
+#### 権限チェックが効かない
+
+**原因**
+
+開いているのが他人のページで、現在のデータベース上のロールが ADMIN でないためです。`USER_ROLE.ADMIN` の実値は `'ADMIN'` なので、文字列と定数のどちらで比較しても値が同じなら判定結果は変わりません。サーバーは保護された API を呼ぶたびに最新のロールをデータベースから読み、`user.getById` と `user.update` で「本人または ADMIN」かを判定します。
+
+**解決方法**
+
+まず URL のユーザー ID と `getCurrentUser` の `id` を比べ、本人のページか確認してください。他人のページなら、`getCurrentUser` の `role` が `'ADMIN'` である必要があります。ロールを変更した直後に画面の表示が古い場合は、ページを再読み込みして `getCurrentUser` を取得し直します。それでもサーバーが拒否する場合は、データベース上のそのユーザーの `role` と、開いている対象 ID を確認します。最新のロールは API ごとに読み直されるため、ロールの反映だけを理由に再ログインする必要はありません。
+
+#### 更新後に古いデータが表示される
+
+**原因**
+
+tRPC のキャッシュが残っているためです。
+
+**解決方法**
+
+`onSuccess` で user/auth を invalidate してから詳細へ戻ってください。
+
+#### `FORBIDDEN`エラーが表示される
+
+**原因**
+
+本人更新で `role`・`isActive` を送信しているためです。
+
+**解決方法**
+
+`canManageAccount` が `true` で、読み込んだ値から変更した項目だけ送信してください。画面遷移直前の送信にも備えます。`submitContextRef` の `targetUserId` と現在の URL の ID が一致することも確認します。
 
 ---
 
@@ -3767,35 +3603,72 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ## 全体のデータフロー振り返り
 
+処理を3つに分けると、画面を開く前の判定、フォームへの反映、保存後の移動を追いやすくなります。エラーが出た場所も、この3つのどこかに絞って確認できます。
+
+### URLから表示するユーザーを決める
+
 ```mermaid
 sequenceDiagram
-    participant URL as ブラウザURL
-    participant Server as server page.tsx
-    participant Client as client component
-    participant tRPC as user.getById / update
+    participant Server
+    participant API as getById
     participant DB as PostgreSQL
+    participant Client
 
-    URL->>Server: /user/abc123/edit にアクセス
-    Server->>Server: await params → id = "abc123"
-    Server->>tRPC: getById({ id })（先行認可）
-    tRPC->>DB: 本人か管理者か確認後、必要列を取得
-    DB-->>tRPC: ユーザーデータ / 未発見
-    tRPC-->>Server: 成功 / FORBIDDEN / NOT_FOUND
-    Server->>Client: 成功時だけ userId を渡す
-    Client->>tRPC: getById({ id })（表示用の再取得）
-    tRPC-->>Client: user オブジェクト
-    Client->>Client: useEffect → form.reset(userのデータ)
-    Note over Client: フォームに自動入力
-    Client->>Client: ユーザーが編集（register / watch）
-    Client->>tRPC: update({ id, name, role, ... })
-    Note over tRPC: 権限チェック（本人はrole/isActive変更不可）
-    tRPC->>DB: UPDATE users SET ...
-    DB-->>tRPC: 更新完了
-    tRPC-->>Client: onSuccess 発火
-    Client->>URL: /user/abc123 に遷移
+    Server->>Server: await params
+    Note over Server: URL の id を取得
+    Server->>API: getById
+    Note over API: ログイン<br/>本人・管理者を確認
+    API->>DB: ユーザーを検索
+    DB-->>API: データ / 未発見
+    API-->>Server: 成功 / エラー
+    Note over API: UNAUTHORIZED<br/>FORBIDDEN<br/>NOT_FOUND
+    Server->>Client: 成功時だけ<br/>userId を渡す
 ```
 
-この図を上から下へたどると今日書いたコードが1本の線でつながります。server wrapper が最初の `getById` でログイン・権限・未発見を分け、通過したときだけ client が表示用データを再取得します。戻りはフォームの値が `update` に乗り、DB の更新後に `onSuccess` が詳細ページへ遷移させる経路です。表示が変わらないときは、先行認可、再取得、フォーム同期、更新のどこで値が止まったかを確かめます。
+server wrapper は最初の `getById` で本人・管理者・未発見を分けます。成功した場合だけ `userId` を client component に渡すため、権限のない人には編集フォームを表示しません。
+
+### 取得した値をフォームへ入れる
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as getById
+
+    Client->>API: getById({ id })
+    API-->>Client: user オブジェクト
+    alt 初回表示・別の利用者
+        Client->>Client: form.reset(user)
+        Note over Client: 全項目を初期化
+    else 同じ利用者の再取得
+        Client->>Client: reset(user, keepDirtyValues)
+        Note over Client: 入力途中を守り未変更項目を更新
+    end
+    Client->>Client: register / watch で編集
+```
+
+client component は表示用のデータを再取得します。初回と別の利用者では全項目を入れ直します。同じ利用者では入力途中の項目を残し、未変更項目だけを取得結果へ更新します。`register` と `watch` はその後の編集をフォームの値として扱います。
+
+### 更新を許可して詳細ページへ戻る
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as update
+    participant DB as PostgreSQL
+
+    Client->>API: update({ id, name, ... })
+    alt 本人が role / isActive を送信
+        API-->>Client: FORBIDDEN
+    else 許可された更新
+        API->>DB: UPDATE users
+        DB-->>API: 更新完了
+        API-->>Client: onSuccess
+        Client->>Client: user / auth を invalidate
+        Client->>Client: /user/abc123 へ遷移
+    end
+```
+
+本人は名前とアバターを更新できます。管理者は `role` と `isActive` も更新できます。成功後は `onSuccess` で user/auth のキャッシュを無効にし、詳細ページへ戻ります。表示が変わらないときは、先行認可、再取得、フォーム同期、更新のどこで値が止まったかを確かめます。
 
 ---
 
@@ -3803,9 +3676,9 @@ sequenceDiagram
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. `page.tsx` と画面側の両方で `getById` を呼んでいます。2回問い合わせるのはなぜで、存在しないIDを打ち込まれたとき返り方はどうなりますか。**
+**Q1. server wrapper と client component が `getById` を1回ずつ呼びます。2回呼ぶのはなぜですか。**
 
-A. `page.tsx` の呼び出しは描画前の検査で、ログイン切れ・権限不足・存在しないIDを画面を描く前にさばきます。通ったときだけ `UserDetailClient` が表示用にもう一度 `getById` を呼びます。`getById` は権限の確認をDBの照会より先に行うので、一般ユーザーには存在するIDと存在しないIDのどちらにも同じ「権限がありません」が返り、外からIDの実在を言い当てることはできません。404が返るのは権限チェックを通過した本人と管理者だけです。
+A. server wrapper は画面を描く前に認証・認可・未発見を分けるために呼びます。client component は通過後のデータをキャッシュに載せます。画面から再読み込みできる状態を作るためです。両方とも同じ `getById` の認可を通るので、権限のない人に対象の実在を先に知らせません。代わりに同じデータを2回取得する通信コストがかかります。
 
 **Q2. 一般ユーザーが他人の `/user/他人のid` を開くと編集ボタンが消えるだけですか。**
 

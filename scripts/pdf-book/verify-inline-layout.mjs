@@ -7,18 +7,26 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  loadMarginOutlineAssets,
+  outlineDecorativeMargins,
+  titleFromVivliostyleArgs,
+} from './decorative-margin-outline.mjs';
+
 const SCHEMA_VERSION = 1;
 const FONT_EPSILON_PT = 0.01;
 const GEOMETRY_EPSILON_PX = 0.25;
 const PAGE_CONTENT_SELECTOR = '[data-vivliostyle-page-area-container="true"]';
 const PAGE_CONTAINER_SELECTOR = '[data-vivliostyle-page-container="true"]';
 const PAGE_BOX_SELECTOR = '[data-vivliostyle-page-box="true"]';
+const SAFE_TABLE_ID = /^pdf-table-[0-9a-f]{12}-[0-9]{5}$/;
 
 /* manifest schema_version 1:
    document_id: 冊子を一意に表す文字列
    minimum_font_size_pt: 8（固定）
    page_content_selector: 上の固定セレクタ
-   entries[]: { id, expected_text, source_order, context: "flow" | "table" }
+   entries[]: { id, expected_text, source_order, context: "flow" | "table", allow_line_wrap?: true }
+   THEAD内のcodeだけは pagination_role と source-derived table_cell identity を持てる。
    data-pdf-inline-id は pre 外の inline code だけへ付け、entries と1対1にする。 */
 
 const PINNED_FILES = Object.freeze({
@@ -85,6 +93,7 @@ export function validateManifest(manifest) {
   }
   const ids = new Set();
   const orders = new Set();
+  const headerIdentities = new Set();
   for (const entry of manifest.entries) {
     if (!entry || typeof entry.id !== 'string' || entry.id.length === 0) {
       throw new Error('manifest entry.idが必要です');
@@ -103,6 +112,50 @@ export function validateManifest(manifest) {
     orders.add(entry.source_order);
     if (entry.context !== 'flow' && entry.context !== 'table') {
       throw new Error(`manifest contextはflow/tableのみです: ${entry.id}`);
+    }
+    if (
+      entry.allow_line_wrap !== undefined &&
+      (entry.allow_line_wrap !== true || entry.context !== 'table')
+    ) {
+      throw new Error(`manifest allow_line_wrapはtableのtrueのみです: ${entry.id}`);
+    }
+    if (entry.pagination_role !== undefined && entry.pagination_role !== 'repeating_table_header') {
+      throw new Error(`manifest pagination_roleが不正です: ${entry.id}`);
+    }
+    if (entry.pagination_role === 'repeating_table_header') {
+      const cell = entry.table_cell;
+      if (
+        entry.context !== 'table' ||
+        !cell ||
+        !SAFE_TABLE_ID.test(cell.table_id ?? '') ||
+        cell.section !== 'thead' ||
+        cell.tag !== 'TH' ||
+        ![cell.row_index, cell.cell_index, cell.column_index].every(
+          (value) => Number.isInteger(value) && value >= 0,
+        ) ||
+        !Number.isInteger(cell.code_index) ||
+        cell.code_index < 0 ||
+        ![cell.row_span, cell.column_span].every((value) => Number.isInteger(value) && value > 0)
+      ) {
+        throw new Error(`manifest repeating table header identityが不正です: ${entry.id}`);
+      }
+      const identity = [
+        cell.table_id,
+        cell.section,
+        cell.row_index,
+        cell.cell_index,
+        cell.column_index,
+        cell.row_span,
+        cell.column_span,
+        cell.tag,
+        cell.code_index,
+      ].join('|');
+      if (headerIdentities.has(identity)) {
+        throw new Error(`manifest repeating table header identityが重複しています: ${entry.id}`);
+      }
+      headerIdentities.add(identity);
+    } else if (entry.table_cell !== undefined) {
+      throw new Error(`manifest table_cellにはpagination_roleが必要です: ${entry.id}`);
     }
   }
   return manifest;
@@ -129,6 +182,74 @@ export function verifyPinnedToolchain(toolchainDir, pins = PINNED_FILES) {
   return { modules, verified };
 }
 
+export function repeatedHeaderIssues(entry, items) {
+  if (entry.pagination_role !== 'repeating_table_header') return [];
+  const issues = [];
+  const pagesSeen = new Set();
+  const identityFields = [
+    'table_id',
+    'section',
+    'row_index',
+    'cell_index',
+    'column_index',
+    'row_span',
+    'column_span',
+    'tag',
+    'code_index',
+  ];
+  const sameIdentity = (left, right) =>
+    left && right && identityFields.every((field) => left[field] === right[field]);
+  const first = items[0];
+  const near = (left, right) =>
+    Number.isFinite(left) &&
+    Number.isFinite(right) &&
+    Math.abs(left - right) <= GEOMETRY_EPSILON_PX;
+  const columnsEqual = (left, right) =>
+    Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    left.every(
+      (column, index) =>
+        column.column_index === right[index].column_index &&
+        near(column.left, right[index].left) &&
+        near(column.right, right[index].right) &&
+        near(column.width, right[index].width),
+    );
+  for (const item of items) {
+    if (!sameIdentity(item.table_cell, entry.table_cell)) {
+      issues.push({
+        reason: 'repeated_header_identity_mismatch',
+        expected: entry.table_cell,
+        actual: item.table_cell,
+        page_index: item.page_index,
+      });
+    }
+    if (pagesSeen.has(item.page_index)) {
+      issues.push({ reason: 'repeated_header_same_page', page_index: item.page_index });
+    }
+    pagesSeen.add(item.page_index);
+    if (
+      first &&
+      (item.font_family !== first.font_family ||
+        !near(item.font_size_pt, first.font_size_pt) ||
+        !near(item.cell_content_rect?.left, first.cell_content_rect?.left) ||
+        !near(item.cell_content_rect?.right, first.cell_content_rect?.right) ||
+        !near(item.cell_content_rect?.width, first.cell_content_rect?.width) ||
+        !near(item.table_geometry?.rect?.left, first.table_geometry?.rect?.left) ||
+        !columnsEqual(item.table_geometry?.columns, first.table_geometry?.columns))
+    ) {
+      issues.push({
+        reason: 'repeated_header_visual_identity_mismatch',
+        page_index: item.page_index,
+      });
+    }
+  }
+  if (items.some((item, index) => index > 0 && item.page_index <= items[index - 1].page_index)) {
+    issues.push({ reason: 'repeated_header_page_order_invalid' });
+  }
+  return issues;
+}
+
 function auditPaginatedDom(manifest, constants) {
   const {
     fontEpsilonPt,
@@ -137,6 +258,73 @@ function auditPaginatedDom(manifest, constants) {
     pageContainerSelector,
     pageContentSelector,
   } = constants;
+  const repeatedIssues = (entry, items) => {
+    if (entry.pagination_role !== 'repeating_table_header') return [];
+    const issues = [];
+    const pagesSeen = new Set();
+    const identityFields = [
+      'table_id',
+      'section',
+      'row_index',
+      'cell_index',
+      'column_index',
+      'row_span',
+      'column_span',
+      'tag',
+      'code_index',
+    ];
+    const sameIdentity = (left, right) =>
+      left && right && identityFields.every((field) => left[field] === right[field]);
+    const first = items[0];
+    const near = (left, right) =>
+      Number.isFinite(left) &&
+      Number.isFinite(right) &&
+      Math.abs(left - right) <= geometryEpsilonPx;
+    const columnsEqual = (left, right) =>
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every(
+        (column, index) =>
+          column.column_index === right[index].column_index &&
+          near(column.left, right[index].left) &&
+          near(column.right, right[index].right) &&
+          near(column.width, right[index].width),
+      );
+    for (const item of items) {
+      if (!sameIdentity(item.table_cell, entry.table_cell)) {
+        issues.push({
+          reason: 'repeated_header_identity_mismatch',
+          expected: entry.table_cell,
+          actual: item.table_cell,
+          page_index: item.page_index,
+        });
+      }
+      if (pagesSeen.has(item.page_index)) {
+        issues.push({ reason: 'repeated_header_same_page', page_index: item.page_index });
+      }
+      pagesSeen.add(item.page_index);
+      if (
+        first &&
+        (item.font_family !== first.font_family ||
+          !near(item.font_size_pt, first.font_size_pt) ||
+          !near(item.cell_content_rect?.left, first.cell_content_rect?.left) ||
+          !near(item.cell_content_rect?.right, first.cell_content_rect?.right) ||
+          !near(item.cell_content_rect?.width, first.cell_content_rect?.width) ||
+          !near(item.table_geometry?.rect?.left, first.table_geometry?.rect?.left) ||
+          !columnsEqual(item.table_geometry?.columns, first.table_geometry?.columns))
+      ) {
+        issues.push({
+          reason: 'repeated_header_visual_identity_mismatch',
+          page_index: item.page_index,
+        });
+      }
+    }
+    if (items.some((item, index) => index > 0 && item.page_index <= items[index - 1].page_index)) {
+      issues.push({ reason: 'repeated_header_page_order_invalid' });
+    }
+    return issues;
+  };
   const px = (value) => Number.parseFloat(value) || 0;
   const round = (value) => Math.round(value * 1000) / 1000;
   const rectJson = (rect) => ({
@@ -201,12 +389,14 @@ function auditPaginatedDom(manifest, constants) {
   const proseLayout = (root) => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const characters = [];
+    const unmeasured = [];
     let nodeIndex = 0;
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const parent = node.parentElement;
       const currentNodeIndex = nodeIndex;
       nodeIndex += 1;
       if (!parent || parent.closest('code,pre,script,style')) continue;
+      const fontSizePt = round((px(getComputedStyle(parent).fontSize) * 72) / 96);
       let offset = 0;
       for (const character of [...node.data]) {
         const startOffset = offset;
@@ -218,9 +408,13 @@ function auditPaginatedDom(manifest, constants) {
         const rect = unionRects(
           [...range.getClientRects()].filter((item) => item.width > 0 && item.height > 0),
         );
-        if (!rect) continue;
+        if (!rect) {
+          if (root.matches('td,th')) unmeasured.push({ character, rect: null });
+          continue;
+        }
         characters.push({
           character,
+          font_size_pt: fontSizePt,
           japanese: /[\u3040-\u30ff\u3400-\u9fff々〆ヵヶー]/u.test(character),
           node_index: currentNodeIndex,
           node_path: domPath(parent, root),
@@ -252,7 +446,7 @@ function auditPaginatedDom(manifest, constants) {
       line.bottom = Math.max(line.bottom, character.rect.bottom);
       line.characters.push(character);
     }
-    return lines
+    const measuredLines = lines
       .sort((a, b) => a.top - b.top)
       .map((line, lineIndex) => {
         const ordered = [...line.characters].sort(
@@ -285,6 +479,7 @@ function auditPaginatedDom(manifest, constants) {
           dom_text_ranges: ranges,
           characters: ordered.map((item) => ({
             character: item.character,
+            font_size_pt: item.font_size_pt,
             japanese: item.japanese,
             node_index: item.node_index,
             start_offset: item.start_offset,
@@ -293,6 +488,15 @@ function auditPaginatedDom(manifest, constants) {
           })),
         };
       });
+    return [
+      ...measuredLines,
+      ...unmeasured.map((character, index) => ({
+        line_index: measuredLines.length + index,
+        text: character.character,
+        characters: [character],
+        rect: null,
+      })),
+    ];
   };
   const flowMeasurement = (code, pageArea) => {
     const trail = [];
@@ -376,15 +580,6 @@ function auditPaginatedDom(manifest, constants) {
           rect: rectJson(currentCell.getBoundingClientRect()),
           content_rect: rectJson(contentRect(currentCell)),
           box: boxMetrics(currentCell),
-          text: currentCell.textContent,
-          font_size_px: px(getComputedStyle(currentCell).fontSize),
-          has_prose: (() => {
-            const prose = currentCell.cloneNode(true);
-            for (const node of prose.querySelectorAll('code,pre')) {
-              node.remove();
-            }
-            return Boolean(prose.textContent.trim());
-          })(),
           prose_lines: proseLayout(currentCell),
         });
         columnIndex += columnSpan;
@@ -564,8 +759,6 @@ function auditPaginatedDom(manifest, constants) {
     flow_content_bounds: { status: 'pass', dimensions: 'horizontal' },
     cell_content_bounds: { status: 'pass' },
     page_content_bounds: { status: 'pass' },
-    table_prose_cell_bounds: { status: 'pass' },
-    table_prose_page_bounds: { status: 'pass' },
     sibling_cell_overlap: { status: 'pass' },
     clipping_ancestors: { status: 'pass' },
     post_pdf_text_and_geometry: {
@@ -574,47 +767,8 @@ function auditPaginatedDom(manifest, constants) {
     },
   };
 
-  // ページ分割で thead が複写されると、同じ識別子の観測が断片ごとに現れる。
-  // 表・セル位置・文字列が一致する観測は同一論理セルの複写なので、
-  // ページ分割による断片化とは区別して数える。
-  const isRepeatedTableCellObservation = (items) => {
-    const signatures = items.map((item) => {
-      const geometry = item?.table_geometry;
-      const identity = geometry?.identity;
-      const target = geometry?.target;
-      const columns = geometry?.columns;
-      if (
-        identity?.status !== 'supported' ||
-        typeof identity.kind !== 'string' ||
-        typeof identity.value !== 'string' ||
-        !target ||
-        !Array.isArray(columns) ||
-        columns.some((column) => !column || typeof column !== 'object')
-      ) {
-        return null;
-      }
-      return JSON.stringify([
-        item.text,
-        identity.kind,
-        identity.value,
-        target.row_index,
-        target.cell_index,
-        target.column_index,
-        target.row_span,
-        target.column_span,
-        columns.map((column) => [column.column_index, column.width]),
-        item.code_rect?.width,
-      ]);
-    });
-    const pages = new Set(items.map((item) => item.page_index));
-    return (
-      pages.size === items.length &&
-      signatures.every((signature) => signature !== null && signature === signatures[0])
-    );
-  };
-
   for (const [pageIndex, page] of pages.entries()) {
-    for (const code of page.querySelectorAll('code,span.pdf-table-latin')) {
+    for (const code of page.querySelectorAll('code')) {
       if (code.closest('pre')) {
         if (code.hasAttribute('data-pdf-inline-id')) {
           violations.push({
@@ -643,9 +797,28 @@ function auditPaginatedDom(manifest, constants) {
       const lineRects = [...code.getClientRects()];
       const fontSizePx = px(getComputedStyle(code).fontSize);
       const fontSizePt = (fontSizePx * 72) / 96;
+      const fontFamily = getComputedStyle(code).fontFamily;
       const flowGeometry =
         entry?.context === 'flow' && pageArea ? flowMeasurement(code, pageArea) : null;
       const tableGeometry = entry?.context === 'table' ? tableMeasurement(cell, pageArea) : null;
+      const target = tableGeometry?.target ?? null;
+      const section = cell?.closest('thead,tbody,tfoot');
+      const tableCell =
+        cell && target
+          ? {
+              table_id: tableGeometry?.identity?.value ?? null,
+              section: section?.tagName.toLowerCase() ?? 'table',
+              row_index: target.row_index,
+              cell_index: target.cell_index,
+              column_index: target.column_index,
+              row_span: target.row_span,
+              column_span: target.column_span,
+              tag: cell.tagName,
+              code_index: [...cell.querySelectorAll('code')]
+                .filter((candidate) => !candidate.closest('pre'))
+                .indexOf(code),
+            }
+          : null;
       const item = {
         id,
         page_index: pageIndex,
@@ -654,11 +827,13 @@ function auditPaginatedDom(manifest, constants) {
         code_rect: rectJson(codeRect),
         code_box: boxMetrics(code),
         font_size_pt: round(fontSizePt),
+        font_family: fontFamily,
         cell_content_rect: cell ? rectJson(contentRect(cell)) : null,
         page_content_rect: pageArea ? rectJson(contentRect(pageArea)) : null,
         physical_page_box: pageGeometry[pageIndex] ?? null,
         flow_geometry: flowGeometry,
         table_geometry: tableGeometry,
+        table_cell: tableCell,
       };
       const items = observed.get(id) ?? [];
       items.push(item);
@@ -674,7 +849,7 @@ function auditPaginatedDom(manifest, constants) {
           actual: code.textContent,
         });
       }
-      if (lineRects.length !== 1) {
+      if (lineRects.length !== 1 && entry?.allow_line_wrap !== true) {
         violations.push({
           check: 'single_line',
           id,
@@ -763,13 +938,71 @@ function auditPaginatedDom(manifest, constants) {
     const items = observed.get(entry.id) ?? [];
     if (items.length === 0)
       violations.push({ check: 'manifest_coverage', id: entry.id, reason: 'missing_id' });
-    if (items.length > 1 && !isRepeatedTableCellObservation(items)) {
+    if (items.length > 1 && entry.pagination_role !== 'repeating_table_header') {
       violations.push({
         check: 'single_line',
         id: entry.id,
         reason: 'multiple_paginated_fragments',
         count: items.length,
       });
+    }
+    if (entry.pagination_role === 'repeating_table_header') {
+      for (const repeatedIssue of repeatedIssues(entry, items)) {
+        violations.push({
+          check: 'manifest_coverage',
+          id: entry.id,
+          ...repeatedIssue,
+        });
+      }
+    }
+  }
+  const repeatedByTable = new Map();
+  for (const entry of manifest.entries.filter(
+    (candidate) => candidate.pagination_role === 'repeating_table_header',
+  )) {
+    const values = repeatedByTable.get(entry.table_cell.table_id) ?? [];
+    values.push(entry);
+    repeatedByTable.set(entry.table_cell.table_id, values);
+  }
+  for (const [tableId, entries] of repeatedByTable) {
+    const expectedPages = new Set();
+    for (const [pageIndex, page] of pages.entries()) {
+      const fragments = page.querySelectorAll(`table[data-pdf-table-id="${tableId}"]`);
+      if (fragments.length > 1) {
+        violations.push({
+          check: 'manifest_coverage',
+          table_id: tableId,
+          page_index: pageIndex,
+          reason: 'repeated_table_fragment_same_page',
+          count: fragments.length,
+        });
+      }
+      if (fragments.length > 0) expectedPages.add(pageIndex);
+    }
+    for (const entry of entries) {
+      const actualPages = new Set((observed.get(entry.id) ?? []).map((item) => item.page_index));
+      for (const pageIndex of expectedPages) {
+        if (!actualPages.has(pageIndex)) {
+          violations.push({
+            check: 'manifest_coverage',
+            id: entry.id,
+            table_id: tableId,
+            page_index: pageIndex,
+            reason: 'repeated_header_fragment_coverage_missing',
+          });
+        }
+      }
+      for (const pageIndex of actualPages) {
+        if (!expectedPages.has(pageIndex)) {
+          violations.push({
+            check: 'manifest_coverage',
+            id: entry.id,
+            table_id: tableId,
+            page_index: pageIndex,
+            reason: 'repeated_header_fragment_coverage_extra',
+          });
+        }
+      }
     }
   }
   const expectedOrder = [...manifest.entries]
@@ -803,59 +1036,15 @@ function auditPaginatedDom(manifest, constants) {
   // コードを含まない表も目視対象に残す。計測件数だけで表の可読性を合格にしない。
   const tableInventory = new Map();
   for (const [pageIndex, page] of pages.entries()) {
-    for (const table of page.querySelectorAll('table[data-pdf-table-id]')) {
-      const id = table.dataset.pdfTableId;
+    for (const table of page.querySelectorAll('table')) {
+      const id =
+        table.dataset.pdfTableId || table.id || `unmarked:${pageIndex}:${domPath(table, page)}`;
       const cell = table.rows[0]?.cells[0];
       const pageArea = table.closest(pageContentSelector);
       const geometry =
         cell && pageArea
           ? tableMeasurement(cell, pageArea)
           : { status: 'unsupported', reason: 'table_cell_or_page_area_missing' };
-      if (!cell || !pageArea || !Array.isArray(geometry.cells)) {
-        checks.table_prose_cell_bounds.status = 'unsupported';
-        checks.table_prose_page_bounds.status = 'unsupported';
-        violations.push({
-          check: 'table_prose_cell_bounds',
-          table_id: id,
-          page_index: pageIndex,
-          reason: 'table_cell_or_page_area_missing',
-        });
-      } else {
-        for (const measuredCell of geometry.cells) {
-          const characters = measuredCell.prose_lines.flatMap((line) => line.characters);
-          const outsideCell = characters.filter((character) =>
-            outside(character.rect, measuredCell.content_rect, geometryEpsilonPx),
-          );
-          if (outsideCell.length > 0) {
-            checks.table_prose_cell_bounds.status = 'fail';
-            violations.push({
-              check: 'table_prose_cell_bounds',
-              table_id: id,
-              page_index: pageIndex,
-              row_index: measuredCell.row_index,
-              cell_index: measuredCell.cell_index,
-              cell_content_rect: measuredCell.content_rect,
-              characters: outsideCell,
-            });
-          }
-          const pageContentRect = rectJson(contentRect(pageArea));
-          const outsidePage = characters.filter((character) =>
-            outside(character.rect, pageContentRect, geometryEpsilonPx),
-          );
-          if (outsidePage.length > 0) {
-            checks.table_prose_page_bounds.status = 'fail';
-            violations.push({
-              check: 'table_prose_page_bounds',
-              table_id: id,
-              page_index: pageIndex,
-              row_index: measuredCell.row_index,
-              cell_index: measuredCell.cell_index,
-              page_content_rect: pageContentRect,
-              characters: outsidePage,
-            });
-          }
-        }
-      }
       const fragments = tableInventory.get(id) ?? [];
       fragments.push({
         page_index: pageIndex,
@@ -868,55 +1057,17 @@ function auditPaginatedDom(manifest, constants) {
   const expectedTableIds = Array.isArray(manifest.tables)
     ? manifest.tables.map((table) => table.id)
     : null;
-  const stackedInventory = new Map();
-  for (const [pageIndex, page] of pages.entries()) {
-    for (const section of page.querySelectorAll('section[data-pdf-source-table]')) {
-      const sourceOrder = Number(section.dataset.pdfSourceTable);
-      const fragments = stackedInventory.get(sourceOrder) ?? [];
-      fragments.push({
-        page_index: pageIndex,
-        cells: [...section.querySelectorAll('dt,dd')].map((cell) => ({
-          role: cell.tagName.toLowerCase(),
-          // 同じ行に属するセルが別ページへ散らばっていないか、後から照合するための行番号
-          row: cell.closest('[data-pdf-stacked-row]')?.dataset.pdfStackedRow ?? null,
-          content_rect: rectJson(contentRect(cell)),
-          font_size_px: px(getComputedStyle(cell).fontSize),
-          text: cell.textContent,
-        })),
-      });
-      stackedInventory.set(sourceOrder, fragments);
-    }
-  }
-  const missingTableIds = expectedTableIds?.filter((id) => !tableInventory.has(id)) ?? null;
-  if (missingTableIds?.length) {
-    // 欠けた表は測れんので未対応にする。ただし別の表で見つけたはみ出しの fail は残す。
-    // 上書きすると summary.failed_checks が 0 に数えられ、はみ出しが集計から消える
-    for (const check of [checks.table_prose_cell_bounds, checks.table_prose_page_bounds]) {
-      if (check.status !== 'fail') check.status = 'unsupported';
-    }
-    for (const id of missingTableIds) {
-      violations.push({
-        check: 'table_prose_cell_bounds',
-        table_id: id,
-        reason: 'expected_table_missing',
-      });
-    }
-  }
   return {
     ready_state: globalThis.coreViewer?.readyState ?? null,
     page_count: pages.length,
     page_geometry: pageGeometry,
     checks,
     observed: [...observed.entries()].map(([id, items]) => ({ id, items })),
-    stacked_inventory: [...stackedInventory.entries()].map(([source_order, fragments]) => ({
-      source_order,
-      fragments,
-    })),
     table_inventory: {
       scope: 'measurement_only_requires_layout_and_readability_review',
       expected_count: expectedTableIds?.length ?? null,
       observed_count: tableInventory.size,
-      missing_ids: missingTableIds,
+      missing_ids: expectedTableIds?.filter((id) => !tableInventory.has(id)) ?? null,
       unexpected_ids: expectedTableIds
         ? [...tableInventory.keys()].filter((id) => !expectedTableIds.includes(id))
         : null,
@@ -924,6 +1075,97 @@ function auditPaginatedDom(manifest, constants) {
     },
     violations,
   };
+}
+
+export function verifyTableProseBounds(dom) {
+  const checks = {
+    table_prose_measurement: { status: 'pass' },
+    table_prose_cell_bounds: { status: 'pass' },
+    table_prose_page_bounds: { status: 'pass' },
+  };
+  const violations = [];
+  const validRect = (rect) =>
+    rect &&
+    ['left', 'top', 'right', 'bottom'].every((key) => Number.isFinite(rect[key])) &&
+    rect.right > rect.left &&
+    rect.bottom > rect.top;
+  const outside = (inner, outer) =>
+    inner.left < outer.left - GEOMETRY_EPSILON_PX ||
+    inner.top < outer.top - GEOMETRY_EPSILON_PX ||
+    inner.right > outer.right + GEOMETRY_EPSILON_PX ||
+    inner.bottom > outer.bottom + GEOMETRY_EPSILON_PX;
+  const fail = (check, context, reason, extra = {}) => {
+    checks[check].status = 'fail';
+    violations.push({ check, ...context, reason, ...extra });
+  };
+  const inventory = dom?.table_inventory;
+  if (!Array.isArray(inventory?.tables)) {
+    fail('table_prose_measurement', {}, 'table_inventory_missing');
+    return { checks, violations };
+  }
+  for (const id of inventory.missing_ids ?? []) {
+    fail('table_prose_measurement', { table_id: id }, 'expected_table_missing');
+  }
+  for (const table of inventory.tables) {
+    const context = { table_id: table.id };
+    if (!Array.isArray(table.fragments) || table.fragments.length === 0) {
+      fail('table_prose_measurement', context, 'table_fragments_missing');
+      continue;
+    }
+    for (const fragment of table.fragments) {
+      const fragmentContext = { ...context, page_index: fragment.page_index };
+      if (!validRect(fragment.page_content_rect)) {
+        fail('table_prose_measurement', fragmentContext, 'page_content_geometry_missing');
+      }
+      if (!Array.isArray(fragment.geometry?.cells) || fragment.geometry.cells.length === 0) {
+        fail('table_prose_measurement', fragmentContext, 'table_cells_missing');
+        continue;
+      }
+      for (const cell of fragment.geometry.cells) {
+        const cellContext = {
+          ...fragmentContext,
+          row_index: cell.row_index,
+          cell_index: cell.cell_index,
+        };
+        if (!validRect(cell.content_rect)) {
+          fail('table_prose_measurement', cellContext, 'cell_content_geometry_missing');
+        }
+        if (!Array.isArray(cell.prose_lines)) {
+          fail('table_prose_measurement', cellContext, 'prose_lines_missing');
+          continue;
+        }
+        for (const line of cell.prose_lines) {
+          if (!Array.isArray(line.characters) || line.characters.length === 0) {
+            fail('table_prose_measurement', cellContext, 'prose_characters_missing');
+            continue;
+          }
+          for (const character of line.characters) {
+            const characterContext = {
+              ...cellContext,
+              line_index: line.line_index,
+              character: character.character,
+            };
+            if (!validRect(character.rect)) {
+              fail('table_prose_measurement', characterContext, 'prose_character_geometry_missing');
+              continue;
+            }
+            for (const [check, bound] of [
+              ['table_prose_cell_bounds', cell.content_rect],
+              ['table_prose_page_bounds', fragment.page_content_rect],
+            ]) {
+              if (validRect(bound) && outside(character.rect, bound)) {
+                fail(check, characterContext, 'prose_character_outside_content', {
+                  character_rect: character.rect,
+                  content_rect: bound,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return { checks, violations };
 }
 
 export function assertHookCount(count) {
@@ -951,12 +1193,28 @@ export async function main(argv = process.argv, environment = process.env) {
   if (!manifestPath || !reportPath || !toolchainDir) {
     throw new Error('PDF_BOOK_INLINE_LAYOUT_MANIFEST/REPORT/TOOLCHAIN_DIRが必要です');
   }
+  const marginGlyphMapPath = environment.PDF_BOOK_MARGIN_OUTLINE_GLYPHS;
+  const marginFontPath = environment.PDF_BOOK_MARGIN_OUTLINE_FONT;
+  const marginSourcePath = environment.PDF_BOOK_MARGIN_OUTLINE_SOURCE;
+  const marginAssetCount = [marginGlyphMapPath, marginFontPath, marginSourcePath].filter(
+    Boolean,
+  ).length;
+  if (![0, 3].includes(marginAssetCount)) {
+    throw new Error('PDF_BOOK_MARGIN_OUTLINE_GLYPHS/FONT/SOURCEはすべて必要です');
+  }
   let report = baseReport(manifestPath, reportPath);
   try {
     const manifest = validateManifest(readJson(manifestPath, 'inline layout manifest'));
     const toolchain = verifyPinnedToolchain(toolchainDir);
+    const expectedTitle = marginGlyphMapPath ? titleFromVivliostyleArgs(argv) : null;
+    const marginAssets = marginGlyphMapPath
+      ? loadMarginOutlineAssets(marginGlyphMapPath, marginFontPath, marginSourcePath, expectedTitle)
+      : null;
     report.document_id = manifest.document_id;
     report.toolchain = { status: 'pass', files: toolchain.verified };
+    report.margin_outline = marginAssets
+      ? { status: 'pending', provenance: marginAssets.provenance }
+      : { status: 'disabled' };
     const resolver = createRequire(path.join(toolchain.modules, '.inline-layout-resolver.cjs'));
     const puppeteerEntry = resolver.resolve('puppeteer-core');
     const puppeteer = await import(pathToFileURL(puppeteerEntry));
@@ -991,6 +1249,9 @@ export async function main(argv = process.argv, environment = process.env) {
         pageContainerSelector: PAGE_CONTAINER_SELECTOR,
         pageContentSelector: PAGE_CONTENT_SELECTOR,
       });
+      const proseAudit = verifyTableProseBounds(dom);
+      Object.assign(dom.checks, proseAudit.checks);
+      dom.violations.push(...proseAudit.violations);
       const failedChecks = Object.values(dom.checks).filter(
         (check) => check.status === 'fail',
       ).length;
@@ -1012,6 +1273,30 @@ export async function main(argv = process.argv, environment = process.env) {
       atomicWriteJson(reportPath, report);
       if (domFailed)
         throw new Error(`inline layout DOM監査に失敗しました: ${dom.violations.length}件`);
+      if (marginAssets) {
+        try {
+          const conversion = await this.evaluate(
+            outlineDecorativeMargins,
+            marginAssets.map,
+            expectedTitle,
+          );
+          report.margin_outline = {
+            status: 'pass',
+            provenance: marginAssets.provenance,
+            conversion,
+          };
+          atomicWriteJson(reportPath, report);
+        } catch (error) {
+          report.result = 'margin_outline_fail';
+          report.margin_outline = {
+            status: 'fail',
+            provenance: marginAssets.provenance,
+            error: error.message,
+          };
+          atomicWriteJson(reportPath, report);
+          throw error;
+        }
+      }
       return originalPdf.call(this, options);
     };
     const cliEntry = path.join(toolchain.modules, '@vivliostyle', 'cli', 'dist', 'cli.js');

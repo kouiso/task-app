@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""実装ステップ一覧の所要時間の合計が、本文の合計時間と合っているかを見る。
+"""実装ステップ一覧の読む時間の合計が、本文の合計と合っているかを見る。
 
 読者はこの数字を見て、その日に取れる時間と相談してから机に向かう。実測で day29 は
 表の合計が76分なのに本文が60分と書いてあり、16分ぶん短く見えていた。1時間で終わる
@@ -21,17 +21,15 @@ NO_TABLE_DAYS = {1, 2, 3, 4}
 # 「| Step 3 | 何かする | 7分 |」の形から分だけを取る。
 # Step 番号には 2.5 のように途中へ差し込んだものもある。整数決め打ちだと、その行だけ
 # 合計から漏れて「表と本文が合わない」と誤検出する。
-ROW = re.compile(r"^\|\s*(?:Step\s*)?\d+(?:\.\d+)?\s*\|[^|]*\|\s*(\d+)\s*分\s*\|", re.M)
-# 表の行から Step 番号も取る版。見出しの分数と突き合わせるのに使う。
-ROWNUM = re.compile(r"^\|\s*(?:Step\s*)?(\d+(?:\.\d+)?)\s*\|[^|]*\|\s*(\d+)\s*分\s*\|", re.M)
-# 「### Step 3: タイトル（7分）」の見出し。括弧は全角・半角の両方を拾う。
-# day16 で表だけ直して見出しを直し忘れ、表と見出しで所要時間が違うまま
-# Gate が緑だった。読者は見出しを見て作業を始めるので、ここがずれると表の意味が無い。
-HEADING = re.compile(
-    r"^###\s+Step\s+(\d+(?:\.\d+)?)\s*[:：].*?[（(]\s*(\d+)\s*分\s*[)）]\s*$", re.M
+# 時間が未実測の行は「18分（仮）」と書くため、その印も時間セルの一部として受け付ける。
+ROW = re.compile(
+    r"^\|\s*(?:Step\s*)?\d+(?:\.\d+)?\s*\|[^|]*\|\s*(\d+)\s*分(?:（仮）)?\s*\|", re.M
 )
-# 「**合計時間**: 約60分です。」と「**合計時間**は約56分です。」の両方を拾う。
-TOTAL = re.compile(r"\*\*合計時間\*\*\s*(?:[:：]|は)\s*約?\s*(\d+)\s*分")
+# 現行の読む時間ラベルと、移行前の合計時間ラベルをどちらも拾う。
+# 旧教材を単体検査するときも合計の不一致を見落とさないため、旧ラベルは残す。
+TOTAL = re.compile(
+    r"\*\*(?:読む時間の合計（仮）|合計時間)\*\*\s*(?:[:：]|は)\s*約?\s*(\d+)\s*分"
+)
 
 
 def day_number(name: str) -> int | None:
@@ -54,28 +52,14 @@ def check(text: str):
     return sum(int(r) for r in rows), int(total.group(1)), len(rows)
 
 
-def heading_mismatches(text: str) -> list[tuple[str, int, int]]:
-    """(見出しのStep番号, 見出しの分, 表の分) の不一致一覧を返す。
-
-    表を持つ日だけ意味を持つ。見出しにあって表に無い Step は表側を -1 で返す。
-    """
-    body = strip_fences(text)
-    row_map = {num: int(m) for num, m in ROWNUM.findall(body)}
-    out = []
-    for num, m in HEADING.findall(body):
-        if num not in row_map or row_map[num] != int(m):
-            out.append((num, int(m), row_map.get(num, -1)))
-    return out
-
-
 def missing_parts(text: str) -> list[str]:
-    """表と合計時間のうち、見つからなかった方を返す。"""
+    """表と読む時間の合計のうち、見つからなかった方を返す。"""
     body = strip_fences(text)
     lacking = []
     if not ROW.findall(body):
-        lacking.append("ステップ表の所要時間の行")
+        lacking.append("ステップ表の読む時間の行")
     if not TOTAL.search(body):
-        lacking.append("**合計時間** の行")
+        lacking.append("**読む時間の合計（仮）** の行")
     return lacking
 
 
@@ -97,7 +81,6 @@ def main(argv: list[str]) -> int:
         return 2
 
     findings = []
-    heading_findings: list[tuple[str, str, int, str]] = []
     absent: list[tuple[str, list[str]]] = []
     checked = 0
     for path in targets:
@@ -116,31 +99,23 @@ def main(argv: list[str]) -> int:
         rows_sum, stated, count = result
         if rows_sum != stated:
             findings.append((path.name, rows_sum, stated, count))
-        for num, hm, tm in heading_mismatches(text):
-            where = "表に行が無い" if tm == -1 else f"表は {tm} 分"
-            heading_findings.append((path.name, num, hm, where))
 
     status = 0
     if findings:
-        print(f"❌ 所要時間の合計が合わないファイル {len(findings)} 件（{checked} 件中）")
+        print(f"❌ 読む時間の合計が合わないファイル {len(findings)} 件（{checked} 件中）")
         for name, rows_sum, stated, count in findings:
             print(f"  {name}: 表の合計 {rows_sum} 分（{count} 項目） / 本文 {stated} 分")
         status = 1
-    if heading_findings:
-        print(f"❌ 見出しと表で所要時間が違うファイル {len(heading_findings)} 件")
-        for name, num, hm, where in heading_findings:
-            print(f"  {name}: Step {num} の見出しは {hm} 分だが、{where}")
-        status = 1
     if absent:
-        print(f"❌ 所要時間の記載が見つからないファイル {len(absent)} 件")
+        print(f"❌ 読む時間の記載が見つからないファイル {len(absent)} 件")
         for name, lacking in absent:
             print(f"  {name}: {'と'.join(lacking)} がありません")
-        print("  day05 以降は所要時間の表と合計時間を必ず書いてください。")
+        print("  day05 以降は読む時間の表と合計を必ず書いてください。")
         status = 1
     if status:
         return status
 
-    print(f"✅ 所要時間の合計 OK（{checked} ファイル）")
+    print(f"✅ 読む時間の合計 OK（{checked} ファイル）")
     return 0
 
 

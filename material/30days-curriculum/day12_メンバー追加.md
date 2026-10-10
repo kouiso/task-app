@@ -25,25 +25,25 @@ Day 11 ではプロジェクトの編集・削除機能を実装しました。`
 ### メンバー管理の構造
 
 ```mermaid
-flowchart TD
-    A[page.tsx] -->|props| B[ProjectDetailView]
+flowchart TB
+    A["page.tsx<br/>state と API 呼び出し"] -->|props| B[ProjectDetailView]
     B --> C[メンバー一覧表示]
-    B --> D[メンバー追加ボタン]
-    D -->|onAddMemberClick| A
-    A --> E[メンバー追加ダイアログ]
-    E --> F[api.project.addMember]
-    C --> G[削除ボタン]
-    G -->|onRemoveMember| A
-    A --> H[DeleteConfirmDialog]
-    H --> I[api.project.removeMember]
+    C --> D[削除ボタン]
+    D -->|onRemoveMember| E["page.tsx<br/>callback を受け取る"]
+    E --> F[DeleteConfirmDialog]
+    F --> G[api.project.removeMember]
+    B --> H[メンバー追加ボタン]
+    H -->|onAddMemberClick| I["page.tsx<br/>callback を受け取る"]
+    I --> J[メンバー追加ダイアログ]
+    J --> K[api.project.addMember]
 
     style A fill:#e3f2fd
     style B fill:#fff3e0
-    style F fill:#e8f5e9
-    style I fill:#ffebee
+    style G fill:#ffebee
+    style K fill:#e8f5e9
 ```
 
-図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバック（親から子へ渡しておいて子の中で押されたときに呼び戻される関数）です。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
+図の上部にある `page.tsx` から `ProjectDetailView` へ渡す矢印が props です。追加・削除ボタンから「`page.tsx` callback を受け取る」へ進む矢印がコールバックです。図に3回出る `page.tsx` は同じファイルで、処理の戻り先を分けて描いています。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
 
 ### やること / やらないこと
 
@@ -83,11 +83,11 @@ src/
 
 `roles.ts` にはロール定数・ラベル・権限・型ガードがまとまっています。ここでは定義一覧を見つつ、**Day 12 で使う `project.ts` のAPIが実際に何を許可しているか** に合わせて整理します。
 
-| エクスポート | 型 | 用途 |
-|-------------|-----|------|
-| `PROJECT_MEMBER_ROLE` | `as const` オブジェクト | `OWNER`, `ADMIN`, `MEMBER`, `VIEWER` |
-| `PROJECT_MEMBER_ROLE_LABELS` | `Record<ProjectMemberRole, string>` | 日本語ラベル（オーナー等） |
-| `isProjectMemberRole()` | 型ガード関数 | `value` が有効なロールか判定 |
+| エクスポート | 型・用途 |
+|-------------|----------|
+| `PROJECT_MEMBER_ROLE` | **型**: `as const` オブジェクト<br>**用途**: `OWNER`, `ADMIN`, `MEMBER`, `VIEWER` |
+| `PROJECT_MEMBER_ROLE_LABELS` | **型**: `Record<ProjectMemberRole, string>`<br>**用途**: 日本語ラベル（オーナー等） |
+| `isProjectMemberRole()` | **型**: 型ガード関数<br>**用途**: `value` が有効なロールか判定 |
 
 #### `project.ts` で実際に通る操作
 
@@ -102,29 +102,30 @@ src/
 
 > `roles.ts` には `canEdit` という権限定義がありますが`project.ts` の `update` API は `canManageMembers` を見ています。そのため**プロジェクト編集もOWNER/ADMINだけ** が実行できます。教材を読むときは「定義ファイルの理論値」ではなく、「サーバーがどの権限で判定しているか」を確認するのが大切です。
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
-| Step 2 | ProjectDetailViewに渡す値を `page.tsx` に用意する | 7分 |
+| Step 2 | ProjectDetailViewのpropsを確認する | 4分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
 | Step 4 | メンバー追加ダイアログのUIを作る | 7分 |
 | Step 5 | メンバー追加APIを呼ぶ | 5分 |
 | Step 6 | メンバー削除を実装する | 7分 |
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
+| Step 9 | 書き込み失敗時の画面を整える | 20分 |
 
-**合計時間**: 約69分です。
+**読む時間の合計（仮）**: 約86分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: メンバー管理APIを `project.ts` に追加する（20分）
+### Step 0: メンバー管理APIを `project.ts` に追加する（読む目安: 20分）
 
 追加するのは `getAvailableUsers`、`addMember`、`removeMember`、`updateMemberRole` の4つです。
 
@@ -152,6 +153,8 @@ src/
 
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
+
+候補一覧を返す前に権限を確認します。管理権限のない利用者がこのAPIを直接呼んだ場合は、候補の名前やメールアドレスを返さず `FORBIDDEN` で止めます。
 
 `userId_projectId` で引くとプロジェクトとユーザーの組で1件だけを狙って取れます。メンバーが何人いても取ってくる行は1つなので人数が増えても速度が変わりません。`assertMemberPermission` は渡した配列の中に `canManageMembers` を持つロールが1つも無ければ `FORBIDDEN` を投げて処理を止める関数です。自分がこのプロジェクトのメンバーでなければ `userMember` は `null` になり、空配列を渡すことになるのでそこで止まります。この候補一覧には社内ユーザーの名前とメールアドレスが並ぶためメンバーを管理できる人以外には返しません。
 
@@ -192,17 +195,27 @@ flowchart TB
 
 #### 0-2. addMember（オーナー付与の制限と重複チェック）
 
-`addMember` に使う入力スキーマをまず定義します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行は**書き換え**ます。`projectMemberRoleSchema` も一緒に取り込む形へ直してください。新しい行を足すのではありません。
+Day 11 の update / delete で行ロックを追加したため、`Prisma` はすでに値として読み込んでいます。次の1行がファイル先頭にあることを確認し、重複して追加しないでください。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（import群を確認）
+import { Prisma } from '@prisma/client';
+```
+
+`Prisma.sql` を使う最初の日は Day 11 です。Day 12 では import を変更せず、メンバー管理の3手続きでも同じ値を使います。
+
+続けて入力スキーマを準備します。`project.ts` にはすでに `import { USER_SELECT } from './_helpers/select';` という行があります。この1行も**書き換え**ます。`projectMemberRoleSchema` を一緒に取り込む形へ直してください。新しい行を足すのではありません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// （既存の import { USER_SELECT }
-// from './_helpers/select'; を
+// （既存の import { USER_SELECT } from './_helpers/select'; を
 // この行に置き換える）
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
 
-同じファイルから2回に分けて取り込まず1行へまとめるのは後から読む人が「どちらの行が生きているのか」を毎回確かめなくて済むようにするためです。`projectMemberRoleSchema` は `_helpers/select.ts` にある、ロールとして許される4つの文字列を表す zod スキーマです。画面側の `isProjectMemberRole` も同じ4つを指しているので選択肢に出る値とサーバーが受け付ける値はずれません。続けてこの行を使う入力の形を決めます。次のブロックだけは「（続き）」と書いてありますがルーターの**外**、`projectUpdateSchema` の下へ貼ります。`});` の1行上へ入れるとルーターの中に入ってしまい、英語のエラーで止まります。
+同じファイルから2回に分けて取り込まず1行へまとめると、どちらの行が必要なのか迷いません。`projectMemberRoleSchema` は `_helpers/select.ts` にある、ロールとして許される4つの文字列を表す zod スキーマです。画面側の `isProjectMemberRole` も同じ4つを指すため、選択肢とサーバーの受付値がそろいます。
+
+次の入力スキーマはルーターの**外**、`projectUpdateSchema` の下へ貼ります。ルーターを閉じる `});` の1行上へ入れるとルーターの中に入るため、型エラーになります。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -213,101 +226,20 @@ const projectMemberSchema = z.object({
 });
 ```
 
-`role` に `.default(PROJECT_MEMBER_ROLE.MEMBER)` が付いているのはロールを指定しなかったときにタスクの作成・編集を担当する MEMBER として追加するためです。ここまで準備できたら`getAvailableUsers` の下に `addMember` を追加します。
+`role` に初期値があるため、ロールを省略した追加は MEMBER になります。ここまで準備できたら `getAvailableUsers` の下へ `addMember` を置きます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
+// （続き）
   addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
-    const userMember = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: ctx.session.userId,
-          projectId: input.projectId,
-        },
-      },
-    });
+    return await prisma.$transaction(async (tx) => {
+      // 権限変更と同じプロジェクト行をロックし、追加直前の権限だけを判定に使う。
+      // ロック外のOWNER判定を使うと、降格後でも新しいOWNERを追加できる経路が残る。
+      await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+      );
 
-    assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-```
-
-ここまでは他の手続きと同じ「自分の権限を確認する」流れです。`canManageMembers` は OWNER と ADMIN の両方が持っています。ここから先は2段階のチェックです。1段階目は「自分にメンバーを追加する権限があるか」、2段階目は「自分に、そのロールまで付与する権限があるか」です。前者を通っても後者は別に確認します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-    // OWNERロールの付与はOWNERのみに限定する。
-    // canManageMembersを持つADMINによる権限昇格を防ぐため。
-    if (
-      input.role === PROJECT_MEMBER_ROLE.OWNER &&
-      userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'オーナー権限の付与はオーナーのみ可能です',
-      });
-    }
-```
-
-`canManageMembers` はメンバーを管理する権限であって「新しいオーナーを作ってよい」権限ではありません。この `if` が無いとADMIN のユーザーが自分の別アカウントを OWNER として追加できます。
-
-画面のロール選択には OWNER が出てきません。ただし `addMember` は API なので画面を通さずに直接呼べます。呼ぶ側を塞いでも、受け取る側で止めていなければ通ります。
-
-追加できたらその別アカウントでログインし、元の OWNER を同じやり方で外せます。プロジェクトの持ち主が入れ替わります。上の `if` があれば最初の追加が `FORBIDDEN` で止まります。
-
-続けてすでにメンバーでないかを確認します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-    const existing = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: input.userId,
-          projectId: input.projectId,
-        },
-      },
-    });
-
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このユーザーは既にプロジェクトのメンバーです',
-      });
-    }
-```
-
-`findUnique` が行を返してきたらそのユーザーはすでにこのプロジェクトのメンバーです。`CONFLICT` は「入力の書式ではなく、いまのデータの状態とぶつかっている」ことを表すコードなので`BAD_REQUEST` とは分けています。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。ここで止めなければ次の `create` が `userId_projectId` の一意制約に当たります。一意制約はデータベース側の決まりです。同じ組の行を2つ作ろうとした書き込みを拒否します。拒否されると Prisma は例外（処理を途中で打ち切って呼び出し元へ投げ返すエラー）を投げます。その例外は tRPC のエラーとして画面側へ返ります。ただし Day 12 の画面にはこのエラーを表示する処理がありません。追加のダイアログは開いたまま残ります。利用者には何が起きたのか分かりません。
-
-重複していなければ実際にメンバーとして追加します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-    return await prisma.projectMember.create({
-      data: input,
-      include: {
-        user: {
-          select: USER_SELECT,
-        },
-      },
-    });
-  }),
-```
-
-`addMember` で一番大事なのは追加する前に「もうすでにメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
-
-#### 0-3. removeMember（最後のOWNERは消せない）
-
-`addMember` の下に追加します。まず入力の形と、自分の権限を確認します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-  removeMember: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string().cuid(),
-        userId: z.string().cuid(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
+      const userMember = await tx.projectMember.findUnique({
         where: {
           userId_projectId: {
             userId: ctx.session.userId,
@@ -319,76 +251,34 @@ const projectMemberSchema = z.object({
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-削除でも、最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので`canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますがこのチェックはボタンの有無とは関係なく毎回動きます。
+`$transaction`（複数のDB操作をひとまとまりとして扱う機能）は、途中でエラーになったとき中の変更をすべて取り消します。ただし、トランザクションで囲むだけでは同時に届いた処理の順番までは決まりません。
 
-続けて削除対象のメンバーが実際に存在するかを確認します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      const member = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      if (!member) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'メンバーが見つかりません',
-        });
-      }
-```
-
-自分の権限と削除対象の存在を確認できたらaddMember と同じ2段階チェックです。1段階目は「自分にメンバーを削除する権限があるか」（`canManageMembers`）、2段階目は「削除対象が OWNER なら自分も OWNER か」です。`canManageMembers` があってもOWNER の削除だけは別に確認します。
+そこで最初にプロジェクトの行を `FOR UPDATE` でロックします。行ロック（同じ行を変更する処理を一時的に待たせる機能）を取ると、同じプロジェクトのメンバー操作は先の処理が終わってから次へ進みます。操作する本人のロールをロック後に読み直すため、待っている間に降格された人が古いOWNER権限で追加することも防げます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      // OWNERメンバーの削除はOWNERのみに限定する。
-      // ADMINによるオーナー排除を防ぐため。
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+      // OWNERロールの付与はOWNERのみに限定する。
+      // canManageMembersを持つADMINによる権限昇格を防ぐため。
       if (
-        member.role === PROJECT_MEMBER_ROLE.OWNER &&
+        input.role === PROJECT_MEMBER_ROLE.OWNER &&
         userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
       ) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'オーナーの削除はオーナーのみ可能です',
+          message: 'オーナー権限の付与はオーナーのみ可能です',
         });
       }
 ```
 
-`canManageMembers` を持つ ADMIN は普通のメンバーを削除できますがOWNER を削除できてしまうとADMIN が邪魔なオーナーを外して実質的にプロジェクトを乗っ取れます。削除対象が OWNER のときだけ、削除する側も OWNER であることを確認します。
-
-続けて削除してよいかの最終チェックです。削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
+`canManageMembers` は OWNER と ADMIN が持ちます。しかし、OWNERを新しく作る権限までADMINへ渡すと、別アカウントをOWNERとして追加して元のOWNERを外せます。だからOWNER付与だけは、操作する本人もOWNERかを別に確認します。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
-        const ownerCount = await prisma.projectMember.count({
-          where: {
-            projectId: input.projectId,
-            role: PROJECT_MEMBER_ROLE.OWNER,
-          },
-        });
+// filepath: src/server/api/routers/project.ts
+// （続き）
 
-        if (ownerCount === 1) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'プロジェクト唯一のオーナーは削除できません',
-          });
-        }
-      }
-```
-
-1人しかいない場合は削除を止めます。OWNER が0人になるとプロジェクトの削除とアーカイブを実行できる人がいなくなります。名前の変更やメンバー追加は ADMIN にも許可されています。MEMBER や VIEWER を削除するときはこの人数チェックを通りません。
-
-チェックを抜けたら実際に削除します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      await prisma.projectMember.delete({
+      const existing = await tx.projectMember.findUnique({
         where: {
           userId_projectId: {
             userId: input.userId,
@@ -397,20 +287,171 @@ const projectMemberSchema = z.object({
         },
       });
 
-      return { success: true };
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このユーザーは既にプロジェクトのメンバーです',
+        });
+      }
+```
+
+画面が候補を取得してから追加ボタンを押すまでに、別の人が先に同じユーザーを追加する場合があります。プロジェクト行をロックしているため、同じ `addMember` が2件届いたときは後の処理が待ち、先の追加後に重複を読み直して `CONFLICT` になります。データベースの `userId_projectId` 一意制約も最後の防御として残ります。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+      return await tx.projectMember.create({
+        data: input,
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+```
+
+追加、権限確認、重複確認はすべて同じ `tx` を使います。途中で失敗した場合は追加を残しません。最後の `});` はトランザクション、次の `}),` は `addMember` を閉じています。
+
+#### 0-3. removeMember（最後のOWNERは消せない）
+
+`addMember` の下に追加します。削除も同じプロジェクト行をロックしてから、現在の権限を確認します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().cuid(),
+        userId: z.string().cuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await prisma.$transaction(async (tx) => {
+        // プロジェクト行をロックして、OWNERの削除・降格を同じプロジェクト内で直列化する。
+        // ロックなしだとOWNERが2人のときに
+        // 双方の削除が人数2を見て通り、
+        // OWNERが0人になる経路がある。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
+```
+
+追加と削除が別々の行をロックすると、削除側だけがOWNER人数を古い状態で読む余地が残ります。3つのメンバー変更手続きが同じ `projects.id` をロックすることが大切です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+ロックを取ったあとに操作する本人を読みます。MEMBER と VIEWER は対象メンバーを調べる前に `FORBIDDEN` となるため、内部のメンバー情報を外へ漏らしません。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+        const member = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!member) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
+          });
+        }
+```
+
+削除対象を同じ `tx` で読みます。対象が存在しない場合は、データベースの削除例外へ進む前に `NOT_FOUND` を返します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+        // OWNERメンバーの削除はOWNERのみに限定する。
+        // ADMINによるオーナー排除を防ぐため。
+        if (
+          member.role === PROJECT_MEMBER_ROLE.OWNER &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナーの削除はオーナーのみ可能です',
+          });
+        }
+```
+
+ADMIN は通常メンバーを外せますが、OWNERを外せるのはOWNERだけです。これを分けないとADMINがOWNERを排除して、プロジェクトの管理権限を奪えます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+        if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーは削除できません',
+            });
+          }
+        }
+```
+
+最後のOWNERがいなくなると、OWNERだけに許可したプロジェクト削除やアーカイブを誰も実行できません。ロック後に人数を数えるので、2人のOWNERを別々のリクエストで同時に削除しようとしても、後の処理は先の削除後の人数を読みます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
+        await tx.projectMember.delete({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        return { success: true };
+      });
     }),
 ```
 
-`delete` にも `userId_projectId` を渡すので消えるのは「このプロジェクトの、このユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。最後の `return { success: true }` は削除には返せる中身が無いための返事です。Step 6 で書く画面側はこれを受け取った時点で `getById` を取り直し、消えたメンバーが一覧から居なくなったことを表示へ反映します。
+削除まで同じ `tx` を使います。別のプロジェクトにある同じユーザーの参加行やユーザー本体は削除されません。
 
 #### 0-4. updateMemberRole（ロール変更の手続きを用意する）
 
-`removeMember` の下に追加します。`ProjectDetailView` の中にはメンバーのロールを変えるセレクトボックスがあります。これは Step 2 で書く `handleUpdateMemberRole` から呼ばれ、その先でこの `updateMemberRole` procedure を叩きます。先にサーバー側の手続きを用意してStep 2 のクライアント側とつなげます。
-
-まず自分の権限を確認します。
+`removeMember` の下へ追加します。ロール変更はOWNERの昇格と降格の両方を扱うため、削除と同じ行ロックを使います。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
+// （続き）
   updateMemberRole: protectedProcedure
     .input(
       z.object({
@@ -420,23 +461,39 @@ const projectMemberSchema = z.object({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+      return await prisma.$transaction(async (tx) => {
+        // removeMember と同じくプロジェクト行をロックして、
+        // OWNER人数の確認と更新を直列化する。
+        // 異なる経路（削除・降格）が同じロックを取ることで、どの順でも最後のOWNERが残る。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
 
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここから先は `prisma.$transaction` の中で処理します。たとえば「対象メンバーを検索した直後に、別のリクエストが同じメンバーを削除してしまう」ようなタイミングのズレが起きると存在しないメンバーを更新しようとしてデータが壊れかねません。`$transaction` は複数の読み書きを1つのまとまりにして途中で失敗したときに全部を取り消す仕組みです。中の処理では `prisma` の代わりに、引数で渡された `tx` を使います。
+`removeMember` と `updateMemberRole` が同じプロジェクト行をロックするため、削除と降格が同時に届いても片方ずつ進みます。トランザクションは失敗時の取り消し、行ロックは同じプロジェクトに届いた処理の直列化を担当します。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      return await prisma.$transaction(async (tx) => {
+// filepath: src/server/api/routers/project.ts
+// （続き）
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+操作する本人のロールもロック後に読み直します。待っている間にOWNERから降格されていれば、その後のOWNER変更は `FORBIDDEN` で止まります。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
         const targetMember = await tx.projectMember.findUnique({
           where: {
             userId_projectId: {
@@ -454,10 +511,12 @@ const projectMemberSchema = z.object({
         }
 ```
 
-続けて権限昇格を防ぐチェックです。`addMember` は「OWNERとして追加できるか」、`removeMember` は「OWNERを削除できるか」を見ました。`updateMemberRole` は「ロールを変える」1つの操作の中に、昇格（誰かをOWNERにする）と降格（OWNERを他のロールに変える）の両方が起こり得ます。
+変更対象が存在しない場合は `NOT_FOUND` を返します。ここまでの取得はすべて同じ `tx` を使い、ロック後に読んだ状態だけで次の判定へ進みます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
+// （続き）
+
         // OWNERロールの付与・剥奪はOWNERのみに限定する。
         // ADMINによる権限昇格・オーナー降格を防ぐため。
         if (
@@ -470,15 +529,15 @@ const projectMemberSchema = z.object({
             message: 'オーナー権限の変更はオーナーのみ可能です',
           });
         }
+
+        if (
 ```
 
-`input.role === OWNER`（誰かを新しくOWNERにしようとしている＝昇格）と `targetMember.role === OWNER`（今OWNERの人のロールを変えようとしている＝降格）を `||` でつないでいます。昇格と降格のどちらであっても「実行する本人がOWNERか」を同じ条件で確認したいからです。2つの操作を別々のif文で分けず1つにまとめ、チェック漏れを防いでいます。どちらの操作も、実行する本人がOWNERでなければ止めます。
-
-最後に`removeMember` の「最後のOWNERは削除できない」と対になる保護です。
+`input.role === OWNER` は昇格、`targetMember.role === OWNER` は降格です。どちらも実行する本人がOWNERでなければ止めます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-        if (
+// filepath: src/server/api/routers/project.ts
+// （続き）
           targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
           input.role !== PROJECT_MEMBER_ROLE.OWNER
         ) {
@@ -496,17 +555,17 @@ const projectMemberSchema = z.object({
             });
           }
         }
-```
 
-この `count` を `$transaction` の中で数えているのには理由があります。外で数えると「OWNERは2人いる」と分かった直後に別のリクエストがもう1人を降格させ、書き込みが終わったときにはOWNERが0人という結果になり得ます。数えるところから書き換えるところまでを1つのまとまりに閉じると途中で失敗したときに片方だけ実行された状態が残りません。ただしこれで同時に届いた2つのリクエストまで整理できるわけではありません。PostgreSQL の初期設定（同時に走る処理をどこまで隔てるかの設定）では2つのリクエストが同時に「OWNERは2人いる」と数えたうえで、それぞれ別の人を降格させることが起こり得ます。そこまで塞ぐには数える前にプロジェクトの行を押さえるか、データベース側に「OWNERは1人以上」という決まりを持たせます。今日はまとまりで囲うところまでにします。
-
-唯一の OWNER を他のロールに降格させるとプロジェクトを削除・アーカイブできる人がいなくなります。名前の変更やメンバー追加は ADMIN でもできますがOWNER 専用の操作は代行できません。チェックを通ったら更新します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
         return await tx.projectMember.update({
           where: {
             userId_projectId: {
+```
+
+対象がOWNERから別のロールへ変わるときだけOWNER人数を数えます。`removeMember` と同じロックの内側なので、削除と降格のどちらが先でも、後の処理は更新済みの人数を読み、最後の1人を残します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （続き）
               userId: input.userId,
               projectId: input.projectId,
             },
@@ -524,22 +583,21 @@ const projectMemberSchema = z.object({
     }),
 ```
 
-更新の相手を `userId_projectId` という2つの列の組で指定しているのは`ProjectMember` にはこの組み合わせで一意になる約束が付いているためです。`userId` だけで探すとその人が複数のプロジェクトに参加していたときどの行を直せばよいか決まりません。
+更新まで同じ `tx` を使います。`userId_projectId` の組で指定するため、別のプロジェクトにある同じユーザーのロールは変わりません。
 
-`prisma` ではなく `tx` を使っているのはこの更新が同じトランザクション（複数の操作をひとまとまりとして扱い、途中で失敗したら全部なかったことにする仕組み）の中にあるからです。手前で数えたオーナーの人数と、この書き換えを1つのまとまりとして扱います。別々に実行すると数えたあと書き換えるまでの隙間に他の人が役割を変え、オーナーが0人になる余地が残ります。
-
-最後の `});` で `projectRouter` 全体を閉じます。
+ここで追加した3つの手続きは `projectRouter` の内側にあります。ファイル末尾に元からある `});` は削除せず、ルーター全体を閉じる行として残してください。
 
 **確認ポイント**:
-- `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` を追加した
-- `addMember` の重複チェック、`removeMember` の最後のOWNER保護、それぞれ「なぜ必要か」を説明できる
-- `addMember` のOWNER付与制限、`removeMember` のOWNER削除制限、それぞれADMINによる権限昇格をどう防いでいるか説明できる
-- `updateMemberRole` が昇格・降格の両方をどう防いでいるか説明できる
-- `npx tsc --noEmit` で型エラーが出ていない
+- `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` を追加しました。
+- `Prisma` を値として読み込んでいます。
+- 3つのメンバー変更手続きが同じプロジェクト行を最初にロックします。
+- トランザクションの取り消しと行ロックの直列化を区別して説明できます。
+- 呼出者の権限、対象、OWNER人数、書き込みの順番を説明できます。
+- `npx tsc --noEmit` で型エラーが出ていません。
 
 ---
 
-### Step 1: プロジェクト詳細ビューの接続を確認する（6分）
+### Step 1: プロジェクト詳細ビューの接続を確認する（読む目安: 6分）
 
 **ゴール**: Day 11 でつないだ詳細画面の配線を確認し、詳細ページが開くことを確かめます。
 
@@ -586,7 +644,7 @@ const {
 } = api.project.getById.useQuery(
   { id: selectedProject ?? '' },
   {
-    enabled: !!selectedProject,
+    enabled: !authExpired && !!selectedProject,
     retry: shouldRetryProjectQuery,
   },
 );
@@ -595,9 +653,9 @@ const {
 詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
 
 **確認ポイント**:
-- `@/component/project/project-detail-view` からのインポートが1行だけある
-- `handleProjectClick` / `handleDetailClose` / `getById.useQuery` の3つが在る
-- `onClick={handleProjectClick}` が `ProjectCard` に渡されている
+- `@/component/project/project-detail-view` からのインポートが1行だけあります。
+- `handleProjectClick` / `handleDetailClose` / `getById.useQuery` の3つが在ります。
+- `onClick={handleProjectClick}` が `ProjectCard` に渡されています。
 
 プロジェクトカードをクリックして詳細ページが表示されることを確認しましょう。
 
@@ -607,36 +665,36 @@ const {
 
 ---
 
-### Step 2: ProjectDetailViewに渡す値を `page.tsx` に用意する（7分）
+### Step 2: ProjectDetailViewのpropsを作る（読む目安: 4分）
 
-**ゴール**: `ProjectDetailView` が受け取る props を確認して渡す値を `page.tsx` に用意します。書き足すのは import・ロール変更の mutation とハンドラー・権限の計算・state の4つです。既存のコードでは `<ProjectDetailView>` タグだけを書き換えます。
+**ゴール**: `ProjectDetailView` がどのようなpropsを受け取るか決めます。
 
-`ProjectDetailView` は配布済みの部品なので今日は中身を書きません。
-まず props の型を確認して親ページから渡す値の形をそろえます。
-型を先に確かめておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
+`ProjectDetailView` は独立したコンポーネントとして作ります。
+まず props の型定義を決めて親ページから渡す値の形をそろえます。
+型を先に決めておくとこのあとハンドラーを足すときにどの引数が来るのかを毎回さかのぼって確認せずに済みます。
 
-| props | 型 | 役割 |
-|-------|-----|------|
-| `projectDetail` | <code>ProjectDetail \| null \| undefined</code> | 表示するプロジェクトデータ |
-| `onBack` | `() => void` | 一覧画面に戻る |
-| `onAddMemberClick` | `() => void` | メンバー追加ダイアログを開く |
-| `onRemoveMember` | `(userId: string) => void` | メンバー削除処理を実行 |
-| `onUpdateMemberRole` | `(userId: string, role: ProjectMemberRole) => void` | メンバーのロール変更を実行 |
-| `onArchive` | `(projectId: string, isArchived: boolean) => void` | アーカイブ切り替え |
-| `canManageMembers` | `boolean` | メンバー管理ボタンの表示可否 |
-| `canArchive` | `boolean` | アーカイブボタンの表示可否 |
-
-**確認ポイント**:
-- 8つのpropsが定義されている
-- `onRemoveMember` は `userId` を引数に取る
-- `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝える
-
-Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**表の確認はここまでです。この下からは `page.tsx` の5か所を編集します。4か所は書き足し、最後の1か所は既存コードの書き換えです。**
+| prop・型・役割 |
+|----------------|
+| **`projectDetail`**<br>**型**: <code>ProjectDetail &#124; null &#124; undefined</code><br>**役割**: 表示するプロジェクトのデータです。 |
+| **`onBack`**<br>**型**: `() => void`<br>**役割**: 一覧画面に戻ります。 |
+| **`onAddMemberClick`**<br>**型**: `() => void`<br>**役割**: メンバー追加ダイアログを開きます。 |
+| **`onRemoveMember`**<br>**型**: `(userId: string) => void`<br>**役割**: メンバーの削除処理を実行します。 |
+| **`onUpdateMemberRole`**<br>**型**: `(userId: string, role: ProjectMemberRole) => void`<br>**役割**: メンバーのロール変更を実行します。 |
+| **`onArchive`**<br>**型**: `(projectId: string, isArchived: boolean) => void`<br>**役割**: アーカイブ状態を切り替えます。 |
+| **`canManageMembers`**<br>**型**: `boolean`<br>**役割**: メンバー管理ボタンを表示するかどうかを表します。 |
+| **`canArchive`**<br>**型**: `boolean`<br>**役割**: アーカイブボタンを表示するかどうかを表します。 |
 
 **確認ポイント**:
-- `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておく
+- 8つのpropsが定義されています。
+- `onRemoveMember` は `userId` を引数に取ります。
+- `canManageMembers` / `canArchive` はボタンの表示可否をコンポーネントに伝えます。
 
-`ProjectDetailView` は権限フラグとロール変更ハンドラーも受け取ります。描画より前に、それらが使うインポートと関数を先に用意します。まずロール関連のインポートを、ファイル冒頭のインポート群に追加してください。
+Day 11 では `onRemoveMember` に `() => {}`（何もしない関数）を渡しています。Step 6 で `handleRemoveMember` へ差し替えます。**ここでは確認するだけで、コードの追加は不要です。**
+
+**確認ポイント**:
+- `onRemoveMember={() => {}}` が Step 6 で `handleRemoveMember` に変わることを覚えておきます。
+
+`ProjectDetailView` は権限フラグとロール変更ハンドラーも受け取ります。描画より前に、それらが使うインポートと関数を先に用意します。Day 11 で追加した、ファイル冒頭の `@/lib/constant/roles` からのインポート文を確認します。その文全体を、次のコードへ置き換えてください。既存の3つの名前を残し、ロールの表示名と型を加えます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -652,11 +710,9 @@ import {
 
 `hasPermission` は「そのロールがこの操作を許されているか」を返す関数、`isProjectMemberRole` は文字列が正しいロールかを確かめる型ガードです。どちらもサーバーと同じ `@/lib/constant/roles` から取り込むのでフロントとサーバーで判定基準がずれません。
 
-プロジェクト名とアーカイブ済みかどうかは詳細画面にも出る値です。そのため Day 11 Step 3 の `updateMutation` は `onSuccess` で `getAll` に加えて `getById` も取り直しています。Day 11 Step 7 の `archiveMutation` と `unarchiveMutation` も同じです。ここで書き換えるものはありません。
+Day 11で作った更新・アーカイブ処理は、そのまま使います。`updateMutation` は送信した `variables.id` を `refreshProject` へ渡し、通信開始時の対象だけを更新します。`archiveMutation` と `unarchiveMutation` は同じIDを `refreshProject` と `leaveSubmittedDetail` へ渡します。通信中に別の詳細を開いた場合、遅れて届いた成功結果が今の画面を閉じないための処理です。
 
-確認はStep 8のアーカイブ操作で行います。アーカイブ後に同じプロジェクトを開き直して解除できれば成功です。ボタンが切り替わらない場合は Day 11 Step 7 の両方の `onSuccess` に `void utils.project.getById.invalidate()` があるかを確認してください。
-
-Day 11 では `invalidate()` の前に `void` を付けました。今日のコードは付けずに書いています。この教材には `void` を付けた行と付けない行が混ざっています。どちらも `await` が無いので取り直しを待たずに次の行へ進みます。Day 11 で書いた `void` は消さなくて構いません。
+この3つのmutationの `onSuccess` は書き換えません。引数なしの `getById.invalidate()` や `selectedProject` を使う形へ戻すと、Day 11で追加した対象IDとsession番号の確認が失われます。Step 8では、アーカイブ後に一覧へ戻り、同じプロジェクトを開き直して解除できることを確認します。
 
 続いてロール変更の mutation とハンドラーを `handleArchive` の並びに追加します。
 
@@ -688,11 +744,11 @@ const handleUpdateMemberRole = (
 
 `handleUpdateMemberRole` は `ProjectDetailView` 内のロール変更セレクトボックスから呼ばれ、Step 0 で書いた `updateMemberRole` procedure を叩きます。成功したら `getById` を再取得してロール表示を更新します。これらを描画より前に置くことで、この後の Step でも型エラーが出ません。
 
-ボタンの表示可否は `page.tsx` 側で先に計算して`boolean` で渡します。ログインユーザー自身のプロジェクト内ロールから権限を求めます。`projectDetail` を読むので `getById` の `useQuery` より後ろで、描画の `return` より前に置いてください。
+ボタンの表示可否は `page.tsx` 側で先に計算して`boolean` で渡します。ログインユーザー自身のプロジェクト内ロールから権限を求めます。Step 1 で確認した `getById.useQuery` を閉じる `);` の直後、`createMutation` の前に置いてください。分岐の `return` より前に置く位置でもあります。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ログインユーザーの権限を求める（getById の直後）
+// ログインユーザーの権限を求める（returnより前）
 const currentMember = projectDetail?.members
   ?.find((m) => m.userId === currentUser?.id);
 const currentMemberRole =
@@ -709,6 +765,8 @@ const canArchiveProject = currentMemberRole
   ? hasPermission(currentMemberRole, 'canArchive')
   : false;
 ```
+
+ここで求めた2つの真偽値は、詳細画面に管理ボタンとアーカイブボタンを表示するか決めるために使います。
 
 権限判定を `ProjectDetailView` の内部ではなく `page.tsx` で行うのはサーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
 
@@ -745,17 +803,19 @@ Day 11 で仮の値を置いた `onAddMemberClick`、`onUpdateMemberRole`、`can
 />
 ```
 
+`ProjectDetailView` は権限を判定せず、受け取った `canManageMembers` と `canArchive` に従ってボタンを表示します。
+
 **確認ポイント**:
-- `ProjectDetailView` に8つのpropsを渡している
-- `onAddMemberClick` `onUpdateMemberRole` `canManageMembers` `canArchive` の4つがDay 11 の仮の値から変わっている
-- `<ProjectDetailView` で始まるタグがファイル内に1つだけである
-- URLパラメータがある場合のみ表示される
+- `ProjectDetailView` に8つのpropsを渡しています。
+- `onAddMemberClick` `onUpdateMemberRole` `canManageMembers` `canArchive` の4つがDay 11 の仮の値から変わっています。
+- `<ProjectDetailView` で始まるタグがファイル内に1つだけあります。
+- URLパラメータがある場合のみ表示されます。
 
 > メンバー一覧の表示は `ProjectDetailView` の内部で行われます。`page.tsx` はデータ取得・権限計算・イベントハンドラーの定義を担当し、UIの詳細は独立コンポーネントに任せます。`handleUpdateMemberRole` は上で定義済みなのでこの描画で型エラーは出ません。
 
 ---
 
-### Step 3: メンバー追加用のstateを準備する（6分）
+### Step 3: メンバー追加用のstateを準備する（読む目安: 6分）
 
 **ゴール**: メンバー追加フォーム用のstateを準備します。ロール定数・型ガード（`PROJECT_MEMBER_ROLE` / `isProjectMemberRole` / `ProjectMemberRole` 型など）のインポートは Step 2 で追加済みなのでここでは state だけを足します。
 
@@ -778,11 +838,11 @@ const [newMemberRole, setNewMemberRole] =
 
 **確認ポイント**:
 - `newMemberUserId` と `newMemberRole` でフォームの値を管理
-- `newMemberRole` の型が `ProjectMemberRole` になっている
+- `newMemberRole` の型が `ProjectMemberRole` になっています。
 
 > メンバー追加フォームはフィールドが2つだけなので`react-hook-form` を使わずシンプルな `useState` で管理します。フォームが複雑になったら Day 10 で学んだ `react-hook-form + zod` パターンに移行できます。
 
-追加可能なユーザー一覧を取得します。Step 2 で置いた権限計算の直後に追加してください。`enabled` が `canManageMembers` を使うので、この順番でないと宣言前の参照で型エラーになります。
+追加可能なユーザー一覧を取得します。Step 2 で書いた `canArchiveProject` の宣言を閉じる `: false;` の直後、`createMutation` の前に追加してください。`canManageMembers` を宣言したあとに置くため、宣言前参照の型エラーを防げます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -791,22 +851,24 @@ const { data: availableUsers } =
   api.project.getAvailableUsers.useQuery(
     { projectId: selectedProject ?? '' },
     {
-      enabled: !!selectedProject && canManageMembers,
+      enabled: !authExpired && !!selectedProject && canManageMembers,
       retry: shouldRetryProjectQuery,
     },
   );
 ```
 
-候補をサーバー側で絞っておくと画面は返ってきた配列をそのまま並べるだけで済みます。ユーザー全員を返して画面側で除外する作りにすると参加済みの人を判別するために既存メンバーの一覧も別に持たなければなりません。`enabled` はプロジェクトを開き、かつメンバー管理権限がある場合だけ候補を取得する設定です。MEMBERやVIEWERが詳細を開いただけで403を発生させません。`retry` は権限エラーを繰り返さないための指定です。
+`enabled` で候補一覧APIの呼び出しを、認証が有効で管理権限もある場合に絞ります。MEMBERやVIEWERが詳細を開いただけで、許可されていない候補取得を送らないためです。
+
+候補をサーバー側で絞っておくと画面は返ってきた配列をそのまま並べるだけで済みます。ユーザー全員を返して画面側で除外する作りにすると参加済みの人を判別するために既存メンバーの一覧も別に持たなければなりません。`enabled` は認証が有効な状態でプロジェクトを開き、かつメンバー管理権限がある場合だけ候補を取得する設定です。MEMBERやVIEWERが詳細を開いただけで403を発生させません。`retry` は権限エラーを繰り返さないための指定です。
 
 **確認ポイント**:
-- `getAvailableUsers` はプロジェクト未参加のユーザーだけを返す
-- `enabled` で未選択時のリクエストを防いでいる
-- このファイルの実装が終わったら、`npx tsc --noEmit` で型エラーがないことを確認する
+- `getAvailableUsers` はプロジェクト未参加のユーザーだけを返します。
+- `enabled` で未選択時のリクエストを防いでいます。
+- このファイルの実装が終わったら、`npx tsc --noEmit` で型エラーがないことを確認します。
 
 ---
 
-### Step 4: メンバー追加ダイアログのUIを作る（7分）
+### Step 4: メンバー追加ダイアログのUIを作る（読む目安: 7分）
 
 **ゴール**: ユーザーを選択してプロジェクトに追加するダイアログのUIを構築します。
 
@@ -837,9 +899,9 @@ import {
 `Label` はこのダイアログでも使いますがDay 09 でアーカイブ切り替えのスイッチ用にインポート済みです。もう一度書かず、そのまま使ってください。
 
 **確認ポイント**:
-- `@/component/ui/dialog` から Dialog 系コンポーネントを一括インポートしている
-- `Select` 系も同じく `@/component/ui/` から取得している
-- `@/component/ui/label` からのインポートが1行だけある
+- `@/component/ui/dialog` から Dialog 系コンポーネントを一括インポートしています。
+- `Select` 系も同じく `@/component/ui/` から取得しています。
+- `@/component/ui/label` からのインポートが1行だけあります。
 
 メンバー追加ダイアログは `ProjectDetailView` の分岐内に配置します。まずダイアログのヘッダー部分です。
 
@@ -861,7 +923,7 @@ import {
 ```
 
 **確認ポイント**:
-- `Dialog` の `open` / `onOpenChange` でダイアログ開閉を制御している
+- `Dialog` の `open` / `onOpenChange` でダイアログ開閉を制御しています。
 
 `open` に `memberDialogOpen` という state を渡しているので`setMemberDialogOpen(true)` で開き、閉じる操作は `onOpenChange` が受け取って state を戻します。`DialogHeader` は見出しのまとまりで、`DialogTitle` が「メンバー追加」という題名、`DialogDescription` が操作の説明文を担当します。利用者はこの2つを読んで、何をする画面かを開いた瞬間に判断できます。
 
@@ -888,7 +950,7 @@ import {
 ```
 
 **確認ポイント**:
-- `Select` の `value` / `onValueChange` で `useState` と直接接続している
+- `Select` の `value` / `onValueChange` で `useState` と直接接続しています。
 - `Controller` ラッパーは不要（シンプルなstateで十分）
 
 `value` に `newMemberUserId` を渡すことで、いま選ばれているユーザーが常に state と同じになります。`onValueChange` は選択が変わるたびに `setNewMemberUserId` を呼ぶので画面の表示と state がずれません。フィールドが1つだけならこの直接つなぐ形の方が `react-hook-form` を挟むより追いやすくなります。
@@ -914,7 +976,7 @@ SelectContent 内にユーザー候補を表示します。
 ```
 
 **確認ポイント**:
-- 名前がない場合はメールアドレスを表示する
+- 名前がない場合はメールアドレスを表示します。
 - `availableUsers` はプロジェクト未参加ユーザーのみ
 
 `user.name || user.email` としているのは名前を登録していないユーザーでも空欄にせず、必ず何かを画面に出すためです。`key={user.id}` はReact が候補の並びを追跡するための目印です。これを省くと候補の増減時に表示が入れ替わってしまいます。
@@ -940,8 +1002,8 @@ SelectContent 内にユーザー候補を表示します。
 ```
 
 **確認ポイント**:
-- `isProjectMemberRole` 型ガードで安全にロールを検証している
-- 不正な値が `setNewMemberRole` に渡されることを防いでいる
+- `isProjectMemberRole` 型ガードで安全にロールを検証しています。
+- 不正な値が `setNewMemberRole` に渡されることを防いでいます。
 
 `Select` が渡してくる `value` はただの文字列で、`ProjectMemberRole` 型である保証はありません。`isProjectMemberRole` を通った値だけを `setNewMemberRole` に渡すので想定外の文字列が state に入りません。ただしこの型ガードは型安全のための入力補助であって防御の本体ではありません。不正なロール値はメンバー追加APIのサーバー側で zod スキーマが拒否します。クライアントのチェックを外されてもサーバーが最後の砦として弾く作りです。
 
@@ -972,8 +1034,8 @@ SelectContent 内にユーザー候補を表示します。
 ```
 
 **確認ポイント**:
-- OWNER が選択肢から除外されている
-- `PROJECT_MEMBER_ROLE_LABELS` から動的に選択肢を生成している
+- OWNER が選択肢から除外されています。
+- `PROJECT_MEMBER_ROLE_LABELS` から動的に選択肢を生成しています。
 
 > OWNERはUIの選択肢から除外しています。さらにサーバー側でも権限チェックがあるため二重に保護されています。
 
@@ -1004,8 +1066,8 @@ SelectContent 内にユーザー候補を表示します。
 `handleAddMember` を書いたあとで次の2点を確かめます。
 
 **確認ポイント**:
-- ユーザー未選択時は「メンバー追加」ボタンが `disabled` になる
-- キャンセルボタンでダイアログが閉じる
+- ユーザー未選択時は「メンバー追加」ボタンが `disabled` になります。
+- キャンセルボタンでダイアログが閉じます。
 
 `disabled={!newMemberUserId}` にしているのはユーザーを選ばないまま追加すると誰を追加するのか決まらずサーバー側でエラーになるためです。ボタンを押せるのはユーザーを1人選んだあとだけにして無効な操作を最初から避けています。
 
@@ -1016,13 +1078,13 @@ SelectContent 内にユーザー候補を表示します。
 
 ---
 
-### Step 5: メンバー追加APIを呼ぶ（5分）
+### Step 5: メンバー追加APIを呼ぶ（読む目安: 5分）
 
 **ゴール**: 選択したユーザーをプロジェクトに追加するmutation（データを変更するAPI呼び出し）とハンドラーを実装します。
 
 **実装**:
 
-mutation を既存の mutation 群の末尾に追加してください。
+mutation を既存の mutation 群の末尾に追加してください。ここでは成功経路を先に接続し、失敗時の表示と入力保持はStep 9で完成形へ置き換えます。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1051,8 +1113,8 @@ const addMemberMutation =
 ```
 
 **確認ポイント**:
-- 成功時に `getAll`・`getById`・`getAvailableUsers` のキャッシュを更新している
-- `setNewMemberUserId('')` と `setNewMemberRole()` でフォームを初期値に戻している
+- 成功時に `getAll`・`getById`・`getAvailableUsers` のキャッシュを更新しています。
+- `setNewMemberUserId('')` と `setNewMemberRole()` でフォームを初期値に戻しています。
 
 `onSuccess` で `invalidate` を呼ぶと`getById` が持っている古いデータに印が付き、tRPC が裏で取り直します。追加したメンバーはこの取り直しの結果として一覧に現れます。`invalidate` を書き忘れるとサーバーには追加できているのに画面のメンバー一覧が増えず、手で再読み込みするまで誰も気づけません。`getAvailableUsers` にも印を付けているのはStep 3 で取得した候補一覧が古いままだといま追加した人がもう一度候補に並び、選んで送信すると `addMember` の重複チェックに引っかかってエラーになるからです。フォームの初期化を同じ `onSuccess` に置いているのは次にダイアログを開いたとき前回選んだユーザーが残っていると押し間違いで同じ人をもう一度追加しようとするからです。
 
@@ -1075,13 +1137,13 @@ const handleAddMember = () => {
 
 **確認ポイント**:
 - `selectedProject` と `newMemberUserId` の両方を確認してから送信
-- state の値をそのまま mutation に渡している
+- state の値をそのまま mutation に渡しています。
 
 ここまでで、メンバー追加ができました。メンバー削除は Step 6 で実装します。まずはプロジェクトにメンバーを追加して一覧に反映されることを確認してみましょう。
 
 ---
 
-### Step 6: メンバー削除を実装する（7分）
+### Step 6: メンバー削除を実装する（読む目安: 7分）
 
 **ゴール**: メンバーをプロジェクトから外す処理を、確認ダイアログ付きで実装します。
 
@@ -1103,10 +1165,10 @@ const [removeMemberTargetId,
 ダイアログの開閉と、どのメンバーを消すかの2つを別のstateに分けます。対象のuserIdを取っておかないと、確認ボタンを押したときに誰を消せばよいか分からなくなるためです。
 
 **確認ポイント**:
-- Day 11 のプロジェクト削除と同じパターンを使っている
-- `removeMemberTargetId` に削除対象のuserIdを保持する
+- Day 11 のプロジェクト削除と同じパターンを使っています。
+- `removeMemberTargetId` に削除対象のuserIdを保持します。
 
-mutation と handler を追加します。`addMemberMutation` の直下に書いてください。
+mutation と handler を追加します。`addMemberMutation` の直下に書いてください。確認ボタンの即時クローズはStep 9で成功後だけ閉じる形へ直します。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1130,8 +1192,8 @@ const removeMemberMutation =
 ```
 
 **確認ポイント**:
-- 成功時に `getById` キャッシュを更新してメンバー一覧を再取得している
-- `getAvailableUsers` も更新して外した人を候補一覧へ戻している
+- 成功時に `getById` キャッシュを更新してメンバー一覧を再取得しています。
+- `getAvailableUsers` も更新して外した人を候補一覧へ戻しています。
 
 追加のときと同じ `getById.invalidate` を呼んでいるのはメンバー一覧の出どころが `getById` の1か所だからです。追加のときと同じく `getAvailableUsers` にも印を付けます。外した人はもう未参加なので候補へ戻るはずですが印を付けないと候補一覧が古いままで外した人をもう一度追加できません。Day 11 で `projectDetail` を `getById` から受け取る形にしたので詳細のメンバー一覧はここから取り直します。一覧カードにも人数が出るため、`getAll` にも古い印を付けます。`removeMember` が返すのは Step 0 で書いた `{ success: true }` だけですが画面が欲しいのは更新後のメンバー一覧なので返り値を使わず取り直す形にしています。
 
@@ -1149,8 +1211,8 @@ const handleRemoveMember = (
 Day 11 から残っている `<ProjectDetailView` の props も直します。`onRemoveMember={() => {}}` を `onRemoveMember={handleRemoveMember}` へ差し替えてください。
 
 **確認ポイント**:
-- `onRemoveMember` が `() => {}` から `handleRemoveMember` に変わっている
-- 直接 `mutate` を呼ばず、まず確認ダイアログを開いている
+- `onRemoveMember` が `() => {}` から `handleRemoveMember` に変わっています。
+- 直接 `mutate` を呼ばず、まず確認ダイアログを開いています。
 
 `if (viewingDetail)` の分岐の中に `DeleteConfirmDialog` を配置します。Step 4 で置いたメンバー追加ダイアログの `</Dialog>` の直後、この分岐の `</AppLayout>` の直前です。一覧側の `</AppLayout>` の直前には Day 11 のプロジェクト削除ダイアログがあるのでそちらと間違えないでください。
 
@@ -1179,9 +1241,9 @@ Day 11 から残っている `<ProjectDetailView` の props も直します。`o
 ```
 
 **確認ポイント**:
-- `onConfirm` で `selectedProject` と `removeMemberTargetId` の両方を確認している
-- `title` でメンバー削除専用のメッセージを表示している
-- 貼った場所が `if (viewingDetail)` の分岐の中である
+- `onConfirm` で `selectedProject` と `removeMemberTargetId` の両方を確認しています。
+- `title` でメンバー削除専用のメッセージを表示しています。
+- 貼った場所は `if (viewingDetail)` の分岐の中です。
 
 | `window.confirm()` | `DeleteConfirmDialog` |
 |--------------------|-----------------------|
@@ -1201,7 +1263,7 @@ Day 11 から残っている `<ProjectDetailView` の props も直します。`o
 
 ---
 
-### Step 7: サーバー側の権限チェックを理解する（5分）
+### Step 7: サーバー側の権限チェックを理解する（読む目安: 5分）
 
 **ゴール**: フロントエンドとバックエンドの権限チェックの仕組みを理解します。
 
@@ -1230,10 +1292,12 @@ sequenceDiagram
     S-->>U: FORBIDDEN（最後の砦）
 ```
 
+画面でボタンを隠してもAPIは直接呼べます。サーバー側の `assertMemberPermission` が権限不足を `FORBIDDEN` で止める最後の確認です。
+
 **確認ポイント**:
-- Step 0 で書いた `addMember` を見て`'canManageMembers'` でメンバー管理権限をチェックしていることを確認した
-- 同じ `canManageMembers` が `removeMember` / `updateMemberRole` / `update` にも使われていることを確認した
-- `archive` / `unarchive` は Day 11 で書いた `canArchive` で判定され、OWNERだけが通ることを確認した
+- Step 0 で書いた `addMember` を見て`'canManageMembers'` でメンバー管理権限をチェックしていることを確認しました。
+- 同じ `canManageMembers` が `removeMember` / `updateMemberRole` / `update` にも使われていることを確認しました。
+- `archive` / `unarchive` は Day 11 で書いた `canArchive` で判定され、OWNERだけが通ることを確認しました。
 
 #### フロントエンドとバックエンドの権限チェック比較
 
@@ -1248,19 +1312,17 @@ sequenceDiagram
 
 権限がなかった場合どうなるか、テストシナリオで確認してみましょう。MEMBER権限のユーザーでメンバー追加やプロジェクト更新を試みるとサーバーからエラーが返されます。メッセージは `この操作を実行する権限がありません` です。VIEWERも同様です。さらにADMIN権限のユーザーはメンバー管理やプロジェクト更新はできますがアーカイブ / アーカイブ解除はできません。
 
-この試し方をするときは画面の見え方に注意してください。サーバーはエラーを返しますが
-今日の時点では画面に何も出ません。ボタンを押しても一覧が変わらないだけです。
-この操作のエラー表示は今日のコードには含まれていません。
-失敗した理由はDevTools の Network タブで対象の通信を選び、Response のメッセージを確認してください。
+画面は管理権限のない利用者にメンバー操作のボタンを表示しません。Day 11からある更新・削除・アーカイブ操作が失敗した場合は、固定の通知が出ます。Step 9の置き換え後はメンバー操作も同じ分類関数を使います。どの操作でもサーバーの生の例外文は表示しません。
 
 **確認ポイント**:
-- 権限がない場合は `FORBIDDEN` エラーが返される
-- 画面には何も出ず、操作が反映されないだけになる
-- フロントとバックの二重防御になっている
+- 権限がない操作はサーバー側で `FORBIDDEN` になります。
+- 画面は権限に応じて操作ボタンを隠します。
+- 失敗時は固定の通知を表示し、成功したように一覧を変えません。
+- フロントとバックの二重防御になっています。
 
 ---
 
-### Step 8: 動作確認（6分）
+### Step 8: 動作確認（読む目安: 6分）
 
 **ゴール**: メンバー管理の全機能をテストシナリオに沿って確認します。
 
@@ -1272,10 +1334,10 @@ sequenceDiagram
 npm run dev
 ```
 
-画面を開いたらOWNER として参加しているアカウントでログインしてから先へ進んでください。ログイン中のユーザーのロールによってメンバー追加ボタンが出るかどうかが変わります。MEMBER でログインすると追加ボタンそのものが現れないのでシナリオ1の手順2から先を試せません。
+開発サーバーは前の Day から使っている3000番のものを続けて使います。起動したらOWNER として参加しているアカウントでログインしてから先へ進んでください。ログイン中のユーザーのロールによってメンバー追加ボタンが出るかどうかが変わります。MEMBER でログインすると追加ボタンそのものが現れないのでシナリオ1の手順2から先を試せません。
 
 **確認ポイント**:
-- 開発サーバーのターミナルにエラーが出ていない
+- 開発サーバーがエラーなく起動しました。
 
 #### テストシナリオ 1: メンバー追加
 
@@ -1302,8 +1364,7 @@ npm run dev
 
 #### テストシナリオ 3: アーカイブと解除
 
-Day 11 で書いた `handleArchive` を、ここで初めて実際に押せます。Day 11 で
-`projectDetail` にデータが入り、詳細画面が出るところまで作ったからです。
+Day 11 に続けて、アーカイブと解除を確認します。
 
 **練習用のプロジェクトを1つ作ってから始めてください。**「新規プロジェクト」から
 名前は「アーカイブの練習」などで構いません。作り方は Day 10 でやったとおりです。
@@ -1334,11 +1395,11 @@ Day 13 のタスク一覧でプロジェクトの絞り込みを試すときに�
 なお進行中とアーカイブ済みを1つの画面に並べる形は Day 27 で作ります。そこでは同じ値を `showArchived ? undefined : false` に変えて絞り込み自体を外します。
 
 **確認ポイント**:
-- 全3シナリオが期待通りに動作する
-- アーカイブと解除が同じボタンで切り替わる
-- メンバー追加後、メンバー一覧が自動更新される
-- OWNERの削除ボタンが無効化されている
-- ロールが日本語で表示される（オーナー、管理者、メンバー、閲覧者）
+- 全3シナリオが期待通りに動作します。
+- アーカイブと解除が同じボタンで切り替わります。
+- メンバー追加後、メンバー一覧が自動更新されます。
+- OWNERの削除ボタンが無効化されています。
+- ロールが日本語で表示されます（オーナー、管理者、メンバー、閲覧者）。
 
 ---
 
@@ -1356,23 +1417,61 @@ Day 13 のタスク一覧でプロジェクトの絞り込みを試すときに�
 
 **覚えておきたいこと**: 元の型の一部だけを使うなら `Pick` を選びます。
 
+### Step 9: 書き込みの失敗を画面へ返す（読む目安: 20分）
+
+ここまでのStepでは、Day 11の通信対象を守る処理を残したまま、メンバー操作を1つずつ接続しました。最後に8つの書き込み操作へ同じ失敗処理を加えます。通信切断など結果が分からない失敗を自動で再送せず、失敗時は入力や削除対象を残します。
+
+`src/lib/project-write-error.ts` は教材のscaffold（最初に配布される土台）に含まれています。見つからない場合は `scripts/_lib-base/project-write-error.ts` を `src/lib/project-write-error.ts` へコピーします。`query-error.ts` も同じく `scripts/_lib-base/` が復元元です。Day 10で作った `ProjectDialog` は `isPending` と非同期送信に対応済みなので、書き換えません。
+
+このStepでは短いコードを既存箇所へ足しません。後ろの「完成コード全体」にある **`### src/app/project/page.tsx` の見出しから、次の `### 最終確認` の直前まで**を使います。その範囲にある41個のコードブロックを掲載順につなげ、手元の `src/app/project/page.tsx` 全体を置き換えて保存してください。各ブロック先頭の `filepath` 行もコードの一部です。
+
+置き換え後、このStepへ戻って次を確認します。
+
+**確認ポイント**:
+
+- 8つのmutationが `retry: false` と操作別の `onError` を持ちます。
+- 作成・編集・追加・2つの削除は、成功後だけダイアログと対象をリセットします。
+- `refreshProject` と `leaveSubmittedDetail` が送信時のIDとsession番号（Day 11で「世代」と呼んだ番号）を使います。
+- `ProjectDialog` に `isPending`、3つの削除確認に `closeOnConfirm={false}` を渡します。
+- 認証切れ後は新しい書き込みと自動再取得を止めます。
+- 結果不明の失敗を自動で再送しません。
+- アーカイブ表示のスイッチをONにすると、Day 12ではアーカイブ済みだけを表示します。
+
+確認が終わったら、開発サーバーを動かしているターミナルで Ctrl+C を押して停止します。同じプロジェクトのフォルダで次のコマンドを実行してください。開発サーバーとビルドはどちらも `.next`（Next.js の生成ファイルを保存するフォルダ）へ書き込むので、同時には動かしません。
+
+```bash
+# filepath: ターミナル
+npm run build
+```
+
+コマンドがエラーなく最後まで終了したら、開発サーバーを起動します。
+
+```bash
+# filepath: ターミナル
+npm run dev
+```
+
+開発サーバーが起動したら、Step 8の3シナリオをもう一度行います。ビルドが通っても、メンバーの追加や削除が画面へ反映されるかも確認します。書き込み成功時の表示も変わっていないことを確かめます。
+
 ## 完成コード全体
 
-今日は2つのファイルを触りました。Step 0 でサーバー側の手続きを4つ書き、Step 1 から Step 6 で画面側の配線を足しています。貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば書いた断片が1つのファイルへどう収まったかを確かめられます。
+今日は2つのファイルを触りました。Step 0 の `project.ts` とStep 9の `page.tsx` は、各見出しから次の同じ深さの見出しまでにあるコードブロックを掲載順につなげたものが全文です。手元の同名ファイル全体を置き換えます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/project.ts` | プロジェクトとメンバーを扱う手続き一式 | Step 0 |
-| `src/app/project/page.tsx` | 詳細表示・メンバー追加・メンバー削除の配線 | Step 1〜Step 6 |
+| `src/app/project/page.tsx` | 詳細表示・メンバー操作・8つの書き込み失敗処理 | Step 1〜Step 9 |
 
 ### `src/server/api/routers/project.ts`
 
-**インポート**:
+Day 11 の現在の update / delete を保ったまま、メンバー取得・追加・削除・ロール変更を加えた全文です。完成コードを旧版で上書きすると、ロック後の権限確認が消えるため、この順序どおりにつなげます。
+
+この見出しのコードブロックを掲載順につなげます。途中で括弧が閉じていない区切りもあるため、最後の `});` までを1つのファイルとして保存してください。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: インポート
-import type { Prisma } from '@prisma/client';
+// 完成版: Day 12 終了時点の project router
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
@@ -1381,15 +1480,7 @@ import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
-```
 
-取り込んでいる道具は3系統に分かれます。`Prisma` と `prisma` はデータベースを扱う側、`TRPCError` と `createTRPCRouter` は手続きを組み立てる側、`z` は入力を検査する側です。`assertMemberPermission` と `projectMemberRoleSchema` は今日足した2行で、Step 0 の 0-2 で `USER_SELECT` と1行にまとめました。同じファイルからの取り込みを1行に寄せておくと後から読む人がどちらの行が生きているかを毎回確かめずに済みます。
-
-**プロジェクト作成の入力スキーマ**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: プロジェクト作成の入力スキーマ
 const projectCreateSchema = z.object({
   name: z.string().min(1, 'プロジェクト名は必須です'),
   description: z.string().optional(),
@@ -1399,16 +1490,15 @@ const projectCreateSchema = z.object({
     .default(DEFAULT_PROJECT_COLOR),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-});
 ```
 
-Day 10 で書いた作成用のスキーマです。`color` に `.regex(/^#[0-9A-F]{6}$/i)` を付けているのは色の指定を6桁の16進表記だけに限るためです。ここを素通しにすると画面から送られた任意の文字列がそのまま `style` に入ります。色は反映されず、意味を持たない値だけがデータベースに残ります。
+作成時の名前、色、日付を検査する規則です。`Prisma` は後ろのSQLロックで実行時にも使うので、型だけの import へ戻しません。役割の入力規則も共通の定義から取り込みます。
 
-**プロジェクト更新の入力スキーマ**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: プロジェクト更新の入力スキーマ
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+});
+
 const projectUpdateSchema = z.object({
   id: z.string().cuid(),
   name: z.string().min(1).optional(),
@@ -1421,52 +1511,63 @@ const projectUpdateSchema = z.object({
   startDate: z.string().datetime().optional().nullable(),
   endDate: z.string().datetime().optional().nullable(),
 });
+
 ```
 
-更新側は `id` 以外がすべて `.optional()` です。名前だけを変えたいときに説明や色まで毎回送らせない形にしています。`description` と日付に `.nullable()` が付いているのは値を空に戻す操作と、項目を送らない操作を区別するためです。`null` は消す指示、未送信は触らない指示になります。
-
-**メンバー追加の入力スキーマ**:
+更新では日付の未指定と削除を区別します。`undefined` は保存済みの値を維持し、`null` は日付を消す指定です。スキーマを閉じたら、期間の前後関係を確認する関数とメンバー入力のスキーマを続けて定義します。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: メンバー追加の入力スキーマ
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+const assertProjectDateOrder = (startDate: Date | null, endDate: Date | null) => {
+  if (startDate && endDate && startDate > endDate) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '終了日は開始日以降の日付にしてください',
+    });
+  }
+};
+
 const projectMemberSchema = z.object({
   projectId: z.string().cuid(),
   userId: z.string().cuid(),
   role: projectMemberRoleSchema.default(PROJECT_MEMBER_ROLE.MEMBER),
-});
 ```
 
-今日追加したスキーマです。`role` の `.default(PROJECT_MEMBER_ROLE.MEMBER)` によりロールを指定せずに呼ばれたときはタスクの作成・編集を担当する MEMBER として扱われます。省略時に強い権限が付く作りにすると指定を忘れただけで管理者が増えます。
+更新の項目は未指定と値を消す `null` を分けます。メンバー追加はプロジェクトID、利用者ID、役割を検査し、役割が省略された場合はメンバーにします。
 
-**アーカイブ切り替えの共通関数**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: アーカイブ切り替えの共通関数
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+});
+
 const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
-  const userMember = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    // メンバー変更と同じ行を先にロックし、待機中に確定した現在の権限を確認する。
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    const userMember = await tx.projectMember.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
 
-  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+    assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
 
-  return await prisma.project.update({
-    where: { id: projectId },
-    data: { isArchived },
+    return await tx.project.update({
+      where: { id: projectId },
+      data: { isArchived },
+    });
+```
+
+アーカイブ共通処理はプロジェクト行をロックした後に、現在の本人の参加行を読みます。`canArchive` を確認して同じトランザクションで保存するため、先に降格が確定すれば古いオーナー権限で更新しません。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
   });
 };
-```
 
-Day 11 で書いた関数です。`archive` と `unarchive` は `isArchived` に渡す値しか違わないので権限確認と更新をここへまとめてあります。片方だけ権限確認を書き忘れる事故が起きないのは2つの手続きが同じ関数を通るからです。
-
-**getAll の入力**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAll の入力
 export const projectRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1478,21 +1579,19 @@ export const projectRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-```
-
-`createTRPCRouter({` から始まる大きなオブジェクトがこのファイルの本体です。以降の手続きはすべてこの中に並びます。`getAll` の入力は一番外側にも `.optional()` が付いているので条件を渡さずに呼び出せます。
-
-**getAll の検索条件**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAll の検索条件
       const where: Prisma.ProjectWhereInput = {};
 
       if (input?.userId && input.userId !== ctx.session.userId) {
         if (ctx.session.role !== USER_ROLE.ADMIN) {
           throw new TRPCError({
             code: 'FORBIDDEN',
+```
+
+アーカイブ共通処理を閉じ、一覧取得の入力規則と検索条件を作ります。他の利用者のIDが指定された場合は、アプリの管理者かを確かめる分岐へ進みます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
             message: '管理者権限が必要です',
           });
         }
@@ -1507,20 +1606,19 @@ export const projectRouter = createTRPCRouter({
           some: { userId: input.userId },
         };
       }
-```
 
-`userId` を指定して他人のプロジェクトを見ようとした場合だけ、管理者かどうかを確かめます。指定が無ければ自分がメンバーのものへ自動で絞ります。ここで `where.members` を組み立てておくとこの後の `findMany` は条件の中身を知らずに実行できます。
-
-**getAll の関連データ**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAll の関連データ
       if (input?.isArchived !== undefined) {
         where.isArchived = input.isArchived;
       }
 
       return await prisma.project.findMany({
+```
+
+本人または管理者が指定した利用者の参加行で一覧を絞ります。アーカイブ条件も、値が送られた場合だけ加えます。未指定なら進行中とアーカイブ済みの両方を対象にします。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
         where,
         include: {
           members: {
@@ -1530,15 +1628,6 @@ export const projectRouter = createTRPCRouter({
               },
             },
           },
-```
-
-`isArchived` は `undefined` かどうかで判定しています。`false` は「進行中だけ」という意味を持つ値なので`if (input?.isArchived)` の形で判定すると進行中の指定が無視されます。`members` の中で `user` を取っているのは一覧カードにメンバーのアイコンを並べるためです。
-
-**getAll のタスクと並び順**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAll のタスクと並び順
           tasks: {
             select: {
               id: true,
@@ -1548,16 +1637,15 @@ export const projectRouter = createTRPCRouter({
         },
         orderBy: { createdAt: 'desc' },
       });
-    }),
 ```
 
-`tasks` は `select` で `id` と `status` だけに絞っています。一覧カードが必要なのは進捗の割合を出すための件数であってタスクの本文ではありません。ここで全項目を取るとプロジェクトが増えたときに運ぶデータだけが膨らみます。
+一覧の取得にはメンバーの表示情報と、タスクのID・状態を含めます。カードの人数や進捗を描くために、プロジェクトごとの追加問い合わせを増やさない形です。新しいプロジェクトから並べます。
 
-**getById の取得**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getById の取得
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+    }),
+
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1576,20 +1664,19 @@ export const projectRouter = createTRPCRouter({
               assignee: {
                 select: USER_SELECT,
               },
+```
+
+詳細取得はIDを指定し、メンバーとタスクの担当者を含めて読みます。この区切りではまだ返しません。存在確認と本人の閲覧権限は次の区切りで判定します。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
             },
             orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
           },
         },
       });
-```
 
-詳細画面はメンバーとタスクを1つの画面に出すので`include` で両方を一度に取ります。別々の手続きに分けると通信は2回になります。そのぶん、片方だけ古い内容を表示する瞬間ができます。`members` の中の `user` に `role: true` を足しているのは詳細画面がユーザー全体の役割も表示するためです。
-
-**getById の存在確認と権限確認**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getById の存在確認と権限確認
       if (!project) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -1603,16 +1690,15 @@ export const projectRouter = createTRPCRouter({
       );
 
       return project;
-    }),
 ```
 
-`findUnique` は見つからないときに例外ではなく `null` を返すので自分で `NOT_FOUND` を投げます。権限は取得した `members` から自分の行だけを `filter` で抜き出して確かめます。他人のプロジェクトの `id` を直接指定されてもこの1か所で止まります。
+詳細のタスクを表示位置と作成日時で並べます。対象が無ければ `NOT_FOUND` です。対象があっても本人の参加行で `canView` を確認してから返すので、未参加の利用者へ詳細を返しません。
 
-**getAvailableUsers の権限確認**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAvailableUsers の権限確認
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+    }),
+
   getAvailableUsers: protectedProcedure
     .input(z.object({ projectId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1626,19 +1712,18 @@ export const projectRouter = createTRPCRouter({
       });
 
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-```
 
-候補一覧には社内ユーザーの名前とメールアドレスが並ぶのでメンバーを管理できる人以外には返しません。自分がメンバーでなければ `userMember` は `null` になり、空配列を渡した時点で `assertMemberPermission` が処理を止めます。
-
-**getAvailableUsers の検索**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: getAvailableUsers の検索
       return await prisma.user.findMany({
         where: {
           isActive: true,
           projects: {
+```
+
+追加候補の取得には、本人の `canManageMembers` が必要です。管理できない利用者が直接APIを呼んでも、ユーザー一覧を返す前に拒みます。候補は有効なユーザーへ絞ります。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
             none: {
               projectId: input.projectId,
             },
@@ -1648,40 +1733,35 @@ export const projectRouter = createTRPCRouter({
         orderBy: { name: 'asc' },
       });
     }),
-```
 
-`projects: { none: { projectId } }` は「このプロジェクトに1件も紐づいていないユーザー」という条件です。Day 09 の `getAll` で使った `some` の逆で、未参加の人だけが残ります。`isActive: true` を足しているので退会済みのユーザーは候補に出ません。
-
-**create の入力の組み立て**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: create の入力の組み立て
   create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const startDate = input.startDate ? new Date(input.startDate) : null;
+    const endDate = input.endDate ? new Date(input.endDate) : null;
+    assertProjectDateOrder(startDate, endDate);
+
     const createData: Prisma.ProjectCreateInput = {
       name: input.name,
       color: input.color,
-      startDate: input.startDate ? new Date(input.startDate) : null,
-      endDate: input.endDate ? new Date(input.endDate) : null,
+      startDate,
+      endDate,
       members: {
         create: {
           userId: ctx.session.userId,
           role: PROJECT_MEMBER_ROLE.OWNER,
+```
+
+参加済みのユーザーを追加候補から外し、名前順で返します。後半の作成処理では、作成者のオーナー参加行もプロジェクトと一緒に作り、作成直後から管理できる状態にします。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
         },
       },
     };
     if (input.description) {
       createData.description = input.description;
     }
-```
 
-Day 10 で書いた作成の手続きです。`members.create` で、作った本人を OWNER として同時に登録します。プロジェクトだけ先に作って後からメンバーを足す形にすると途中で失敗したときに誰も操作できないプロジェクトが残ります。
-
-**create の保存**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: create の保存
     return await prisma.project.create({
       data: createData,
       include: {
@@ -1694,104 +1774,25 @@ Day 10 で書いた作成の手続きです。`members.create` で、作った�
         },
       },
     });
-  }),
 ```
 
-`include` でメンバーとユーザーを一緒に返しているのは画面が作成直後のカードをそのまま描けるようにするためです。返り値に含めておくと作成のあとで一覧を取り直すまでの間も表示が欠けません。
+作成データには入力された説明だけを加えます。保存したプロジェクトとメンバーの表示情報を返すため、作成後の画面で名前などを使えます。ここで作成処理が閉じます。
 
-**update の対象取得と権限確認**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: update の対象取得と権限確認
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+  }),
+
   update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    const project = await prisma.project.findUnique({
-      where: { id },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
-        },
-      },
-    });
-
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-
-    assertMemberPermission(project.members, 'canManageMembers');
-```
-
-Day 11 で書いた更新の手続きです。`members` を `where: { userId: ctx.session.userId }` で絞って取っているので返ってくる配列は自分の行だけになります。`assertMemberPermission` に渡すのはこの配列で、`canManageMembers` を持たないロールはここで止まります。
-
-**update の変更項目の組み立て**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: update の変更項目の組み立て
-    const updateData: Prisma.ProjectUpdateInput = {};
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-    if (data.description !== undefined) {
-      updateData.description = data.description;
-    }
-    if (data.color !== undefined) {
-      updateData.color = data.color;
-    }
-    if (data.isArchived !== undefined) {
-      assertMemberPermission(project.members, 'canArchive');
-      updateData.isArchived = data.isArchived;
-    }
-    if (data.startDate !== undefined) {
-      updateData.startDate = data.startDate ? new Date(data.startDate) : null;
-    }
-    if (data.endDate !== undefined) {
-      updateData.endDate = data.endDate ? new Date(data.endDate) : null;
-    }
-```
-
-`isArchived` の変更には `canArchive` も確認します。名前や説明を変更できる ADMIN でも、アーカイブは許可されていないためです。
-
-すべての項目を `!== undefined` で確かめてから `updateData` へ移しています。渡された項目だけを書き換えたいので未送信の項目はそのまま残す形にしてあります。日付は文字列で届くため`new Date(...)` を通してから保存します。
-
-**update の保存**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: update の保存
-    return await prisma.project.update({
-      where: { id },
-      data: updateData,
-      include: {
-        members: {
-          include: {
-            user: {
-              select: USER_SELECT,
-            },
-          },
-        },
-      },
-    });
-  }),
-```
-
-更新後もメンバーとユーザーを一緒に返します。画面側は返ってきた値をそのまま表示に使えるので更新のたびに別の取得を挟まずに済みます。
-
-**delete の対象取得**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: delete の対象取得
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const project = await prisma.project.findUnique({
-        where: { id: input.id },
+    return await prisma.$transaction(async (tx) => {
+      // メンバーの降格・削除と同じ行を先にロックして、更新直前の権限を判定する。
+      await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${id} FOR UPDATE`,
+      );
+      const project = await tx.project.findUnique({
+        where: { id },
         include: {
           members: {
             where: { userId: ctx.session.userId },
@@ -1800,135 +1801,145 @@ Day 11 で書いた更新の手続きです。`members` を `where: { userId: ct
       });
 
       if (!project) {
+```
+
+更新は対象IDを変更内容から分け、メンバー変更と同じプロジェクト行をロックします。取得後に本人の現在の参加行を確認するため、降格が先に確定した場合は古い役割で通りません。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'プロジェクトが見つかりません',
         });
       }
+
+      assertMemberPermission(project.members, 'canManageMembers');
+
+      const updateData: Prisma.ProjectUpdateInput = {};
+      if (data.name !== undefined) {
+        updateData.name = data.name;
+      }
+      if (data.description !== undefined) {
+        updateData.description = data.description;
+      }
+      if (data.color !== undefined) {
+        updateData.color = data.color;
+      }
+      if (data.isArchived !== undefined) {
+        assertMemberPermission(project.members, 'canArchive');
 ```
 
-Day 11 で書いた削除の手続きです。削除でも、まず対象が存在するかを確かめます。存在しない `id` に対して `delete` を呼ぶとPrisma の例外がそのまま外へ出ます。利用者の画面には日本語の説明を持たないエラーだけが並びます。
+対象が無ければ更新を止めます。現在の `canManageMembers` を確認し、送られた名前・説明・色だけを変更データへ入れます。アーカイブ状態には、さらに `canArchive` が必要です。
 
-**delete のオーナー限定チェックと削除**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: delete のオーナー限定チェックと削除
-      // canDeleteはタスク削除の権限でADMINにも付与されているため、
-      // プロジェクト削除はOWNER限定で明示チェック
-      const userMember = project.members[0];
-      if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        updateData.isArchived = data.isArchived;
+      }
+      const startDate =
+        data.startDate === undefined
+          ? project.startDate
+          : data.startDate
+            ? new Date(data.startDate)
+            : null;
+      const endDate =
+        data.endDate === undefined ? project.endDate : data.endDate ? new Date(data.endDate) : null;
+      if (data.startDate !== undefined || data.endDate !== undefined) {
+        assertProjectDateOrder(startDate, endDate);
+      }
+      if (data.startDate !== undefined) {
+        updateData.startDate = startDate;
+      }
+      if (data.endDate !== undefined) {
+        updateData.endDate = endDate;
       }
 
-      await prisma.project.delete({
-        where: { id: input.id },
+```
+
+ここで比較するのは更新後に保存される2つの日付です。片方を削除した場合は、2つの日付がそろわないため順序を検査しません。更新内容が決まったら、プロジェクトを保存してメンバー情報も取得します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+      return await tx.project.update({
+        where: { id },
+        data: updateData,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+```
+
+日付は未指定なら触らず、`null` なら消し、値があれば `Date` へ変換します。権限を確認したトランザクションでプロジェクトを更新し、メンバーの表示情報も返します。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        },
+      });
+    });
+  }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await prisma.$transaction(async (tx) => {
+        // 降格が先に確定した場合に古いOWNER権限で削除しないよう、
+        // メンバー変更と同じプロジェクト行を先にロックする。
+        const projects = await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.id} FOR UPDATE`,
+        );
+        if (projects.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'プロジェクトが見つかりません',
+          });
+        }
+```
+
+更新処理を閉じた後に、プロジェクト削除を定義します。削除はメンバー変更と同じ行をロックし、対象が消えていれば `NOT_FOUND` で止めます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        const currentMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: { userId: ctx.session.userId, projectId: input.id },
+          },
+          select: { role: true },
+        });
+        // canDeleteはADMINのタスク削除も含むため、プロジェクトはOWNERだけに限る。
+        if (!currentMember || currentMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'この操作を実行する権限がありません',
+          });
+        }
+        await tx.project.delete({ where: { id: input.id } });
       });
       return { success: true };
     }),
-```
 
-プロジェクトの削除だけは `assertMemberPermission` を使わず、`role !== OWNER` を直接見ています。`canDelete` はタスク削除の権限として ADMIN にも付いているのでその権限を流用するとプロジェクトごと消せる人が増えてしまいます。
-
-**addMember の権限確認**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: addMember の権限確認
   addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
-    const userMember = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: ctx.session.userId,
-          projectId: input.projectId,
-        },
-      },
-    });
-
-    assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+    return await prisma.$transaction(async (tx) => {
 ```
 
-ここから今日書いた手続きです。`userId_projectId` は2つの列を組にした一意キーで、プロジェクトとユーザーの組で1行だけを狙って取れます。メンバーが何人いても取ってくる行は1つなので人数が増えても速度が変わりません。
+削除直前の本人の役割がオーナーの場合だけ、プロジェクトを削除します。タスク削除と権限を共用すると管理者にも広がるため、オーナーを直接判定します。後半からメンバー追加のトランザクションが始まります。
 
-**addMember のオーナー付与の制限**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: addMember のオーナー付与の制限
-    // OWNERロールの付与はOWNERのみに限定する。
-    // canManageMembersを持つADMINによる権限昇格を防ぐため。
-    if (
-      input.role === PROJECT_MEMBER_ROLE.OWNER &&
-      userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'オーナー権限の付与はオーナーのみ可能です',
-      });
-    }
-```
-
-`canManageMembers` はメンバーを管理する権限であって新しいオーナーを作ってよい権限ではありません。この確認が無いとADMIN が自分の別アカウントを OWNER として追加できます。画面のロール選択に OWNER は出てきませんが`addMember` は API なので画面を通さずに直接呼べます。上の `if` があればその呼び出しが `FORBIDDEN` で止まります。
-
-**addMember の重複確認**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: addMember の重複確認
-    const existing = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: input.userId,
-          projectId: input.projectId,
-        },
-      },
-    });
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+      // 権限変更と同じプロジェクト行をロックし、追加直前の権限だけを判定に使う。
+      // ロック外のOWNER判定を使うと、降格後でも新しいOWNERを追加できる経路が残る。
+      await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+      );
 
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このユーザーは既にプロジェクトのメンバーです',
-      });
-    }
-```
-
-画面側の `getAvailableUsers` は未参加のユーザーだけを候補に出しますが候補を取ってからボタンを押すまでの間に別の人が先に追加していることがあります。`CONFLICT` を返すのは入力の書式ではなく今のデータの状態とぶつかっているためです。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。
-
-**addMember の追加**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: addMember の追加
-    return await prisma.projectMember.create({
-      data: input,
-      include: {
-        user: {
-          select: USER_SELECT,
-        },
-      },
-    });
-  }),
-```
-
-`data: input` と書けるのは入力スキーマの3項目が `ProjectMember` の列とそのまま対応しているからです。`include` でユーザーを一緒に返すので画面は追加された人の名前をすぐ表示できます。
-
-**removeMember の入力と権限確認**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の入力と権限確認
-  removeMember: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string().cuid(),
-        userId: z.string().cuid(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
+      const userMember = await tx.projectMember.findUnique({
         where: {
           userId_projectId: {
             userId: ctx.session.userId,
@@ -1938,84 +1949,27 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
       });
 
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-```
 
-削除でも最初に見るのは自分の権限です。MEMBER と VIEWER はこの1行で止まり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。
-
-**removeMember の対象確認**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の対象確認
-      const member = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      if (!member) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'メンバーが見つかりません',
-        });
-      }
-```
-
-削除する相手が実際にこのプロジェクトのメンバーかを確かめます。この行がないと存在しない組み合わせに対する `delete` がデータベース側の例外になります。取得した `member` はこの後のオーナー判定にも使います。
-
-**removeMember のオーナー削除の制限**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember のオーナー削除の制限
-      // OWNERメンバーの削除はOWNERのみに限定する。
-      // ADMINによるオーナー排除を防ぐため。
+      // OWNERロールの付与はOWNERのみに限定する。
+      // canManageMembersを持つADMINによる権限昇格を防ぐため。
       if (
-        member.role === PROJECT_MEMBER_ROLE.OWNER &&
+```
+
+メンバー追加はプロジェクト行を先にロックし、現在の本人の `canManageMembers` を確認します。管理者によるオーナーへの昇格を止める条件は、次の区切りへ続きます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        input.role === PROJECT_MEMBER_ROLE.OWNER &&
         userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
       ) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'オーナーの削除はオーナーのみ可能です',
+          message: 'オーナー権限の付与はオーナーのみ可能です',
         });
       }
-```
 
-ADMIN は普通のメンバーを外せますがOWNER まで外せると邪魔なオーナーを排除して実質的にプロジェクトを奪えます。削除対象が OWNER のときだけ、削除する側も OWNER かを確かめます。
-
-**removeMember の最後のオーナーの保護**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の最後のオーナーの保護
-      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
-        const ownerCount = await prisma.projectMember.count({
-          where: {
-            projectId: input.projectId,
-            role: PROJECT_MEMBER_ROLE.OWNER,
-          },
-        });
-
-        if (ownerCount === 1) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'プロジェクト唯一のオーナーは削除できません',
-          });
-        }
-      }
-```
-
-OWNER が0人になるとプロジェクトの削除とアーカイブを実行できません。名前の変更やメンバー追加は ADMIN にも許可されています。数えるのは対象が OWNER のときだけなのでMEMBER や VIEWER の削除ではこの問い合わせをしません。
-
-**removeMember の削除**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の削除
-      await prisma.projectMember.delete({
+      const existing = await tx.projectMember.findUnique({
         where: {
           userId_projectId: {
             userId: input.userId,
@@ -2024,17 +1978,151 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         },
       });
 
-      return { success: true };
-    }),
+      if (existing) {
+        throw new TRPCError({
 ```
 
-`delete` にも `userId_projectId` を渡すので消えるのはこのプロジェクトのこのユーザーを表す1行だけです。ユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。返す中身が無いので `{ success: true }` を返し、画面側は受け取った時点で `getById` を取り直します。
+オーナーを追加できるのは、現在の本人もオーナーの場合だけです。さらに対象ユーザーが参加済みかを調べます。同じプロジェクトへ同じ人を重ねて登録しないためです。
 
-**updateMemberRole の入力と権限確認**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の入力と権限確認
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+          code: 'CONFLICT',
+          message: 'このユーザーは既にプロジェクトのメンバーです',
+        });
+      }
+
+      return await tx.projectMember.create({
+        data: input,
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().cuid(),
+```
+
+対象が参加済みなら `CONFLICT` で止めます。未参加なら参加行を作り、表示用のユーザー情報を返します。末尾からメンバー削除の入力規則が始まります。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        userId: z.string().cuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await prisma.$transaction(async (tx) => {
+        // プロジェクト行をロックして、OWNERの削除・降格を同じプロジェクト内で直列化する。
+        // ロックなしだとOWNERが2人のときに
+        // 双方の削除が人数2を見て通り、
+        // OWNERが0人になる経路がある。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
+
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+```
+
+メンバー削除は対象のプロジェクトIDとユーザーIDを受け取ります。ロール変更と同じプロジェクト行をロックしてから本人の参加行を読むため、同時の削除や降格も順番に判定します。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+
+        const member = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!member) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
+          });
+```
+
+本人の `canManageMembers` を確認してから削除対象の参加行を探します。対象はユーザーIDとプロジェクトIDの組で決めるので、別のプロジェクトの参加行を消しません。無ければ `NOT_FOUND` です。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+        }
+
+        // OWNERメンバーの削除はOWNERのみに限定する。
+        // ADMINによるオーナー排除を防ぐため。
+        if (
+          member.role === PROJECT_MEMBER_ROLE.OWNER &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナーの削除はオーナーのみ可能です',
+          });
+        }
+
+        if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+```
+
+オーナーを外せるのは、操作する本人もオーナーの場合だけです。対象がオーナーなら人数を数え、最後のオーナーを残すための確認へ進みます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーは削除できません',
+            });
+          }
+        }
+
+        await tx.projectMember.delete({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        return { success: true };
+```
+
+オーナーが1人だけなら `BAD_REQUEST` で削除を拒みます。オーナーが複数いる場合や対象が他の役割の場合は、対象の参加行を削除します。プロジェクト行のロックを持ったまま人数を判定するため、同時操作で最後のオーナーを失いません。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+      });
+    }),
+
   updateMemberRole: protectedProcedure
     .input(
       z.object({
@@ -2044,26 +2132,32 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+      return await prisma.$transaction(async (tx) => {
+        // removeMember と同じくプロジェクト行をロックして、
+        // OWNER人数の確認と更新を直列化する。
+        // 異なる経路（削除・降格）が同じロックを取ることで、どの順でも最後のOWNERが残る。
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
 
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+        const userMember = await tx.projectMember.findUnique({
 ```
 
-ロール変更の入力は `role` に `projectMemberRoleSchema` を使い、許される4つの文字列だけを受け付けます。画面側の `isProjectMemberRole` も同じ4つを指しているので選択肢に出る値とサーバーの受け付ける値はそろいます。
+ロール変更は変更先の役割も入力で検査します。メンバー削除と同じプロジェクト行をロックしてから本人の参加行を読むため、どちらの経路でも最後のオーナーを残す人数確認が順番に行われます。
 
-**updateMemberRole のトランザクションと対象確認**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole のトランザクションと対象確認
-      return await prisma.$transaction(async (tx) => {
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+
         const targetMember = await tx.projectMember.findUnique({
           where: {
             userId_projectId: {
@@ -2074,20 +2168,19 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         });
 
         if (!targetMember) {
+```
+
+ロールを変更する本人の `canManageMembers` を確認し、対象の参加行をプロジェクトIDとユーザーIDで探します。別のプロジェクトの役割を変えないためです。対象の不在処理は次の区切りへ続きます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'メンバーが見つかりません',
           });
         }
-```
 
-`$transaction` は複数の読み書きを1つのまとまりにして途中で失敗したときに全部を取り消す仕組みです。中では `prisma` の代わりに引数の `tx` を使います。対象を探した直後に別のリクエストがその行を消してもまとまりごと取り消されるので中途半端な結果が残りません。
-
-**updateMemberRole のオーナー権限の変更制限**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole のオーナー権限の変更制限
         // OWNERロールの付与・剥奪はOWNERのみに限定する。
         // ADMINによる権限昇格・オーナー降格を防ぐため。
         if (
@@ -2100,16 +2193,15 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
             message: 'オーナー権限の変更はオーナーのみ可能です',
           });
         }
+
+        if (
 ```
 
-`input.role === OWNER` は誰かを新しく OWNER にする昇格、`targetMember.role === OWNER` は今の OWNER を別のロールへ変える降格です。どちらも実行する本人が OWNER かを問いたいので2つを `||` でつないで1つの条件にまとめています。別々の `if` に分けると片方だけ確認を書き忘れる余地が生まれます。
+対象が無ければ `NOT_FOUND` で止めます。オーナーへの昇格とオーナーからの降格は、操作する本人もオーナーの場合だけ許します。管理者がオーナーを奪ったり排除したりするのを防ぎます。
 
-**updateMemberRole の最後のオーナーの保護**:
 
 ```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の最後のオーナーの保護
-        if (
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
           targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
           input.role !== PROJECT_MEMBER_ROLE.OWNER
         ) {
@@ -2127,17 +2219,16 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
             });
           }
         }
-```
 
-`count` を `$transaction` の中で数えているのは数えてから書き換えるまでの隙間を減らすためです。外で数えると2人いると分かった直後に別のリクエストがもう1人を降格させ、書き終えたときには0人になり得ます。ただし同時に届いた2つのリクエストまではこの囲いだけでは整理できません。
-
-**updateMemberRole の更新**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の更新
         return await tx.projectMember.update({
           where: {
+```
+
+対象がオーナーで、変更先が他の役割なら、残るオーナー人数を調べます。1人だけの場合は降格を拒みます。それ以外の変更では更新へ進むので、通常のメンバー同士の役割変更にもこの処理を使えます。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
             userId_projectId: {
               userId: input.userId,
               projectId: input.projectId,
@@ -2154,18 +2245,17 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         });
       });
     }),
-```
 
-更新の相手を `userId_projectId` の組で指定しているのは`ProjectMember` がこの2列の組で一意になる約束を持っているからです。`userId` だけで探すとその人が複数のプロジェクトに参加していたときにどの行を直すか決まりません。`prisma` ではなく `tx` を使うのは手前で数えた人数とこの書き換えを1つのまとまりに保つためです。
-
-**archive と unarchive**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: archive と unarchive
   archive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
+```
+
+対象の参加行に指定された役割を保存し、ユーザーの表示情報と一緒に返します。ここでロール変更が閉じ、アーカイブの入口が始まります。
+
+
+```typescript
+// filepath: src/server/api/routers/project.ts（同じファイルの続き）
       return await setArchiveStatus(ctx.session.userId, input.id, true);
     }),
 
@@ -2177,29 +2267,21 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 });
 ```
 
-Day 11 で書いた2つの手続きです。中身は共通関数へ渡す `true` と `false` の違いだけになっています。最後の `});` が `projectRouter` 全体を閉じる行で、今日追加した4つの手続きもすべてこの内側に並びます。
+アーカイブは `true`、解除は `false` を共通処理へ渡します。どちらもロック後の現在の権限を確認する同じ処理を使います。ここでルーターを閉じます。
+
 
 ### `src/app/project/page.tsx`
 
-**クライアント宣言と外部ライブラリのインポート**:
+Day 12 全 Step を反映した完成版です。各フェンスを上から順番につなげ、手元のファイル全体を置き換えてください。アーカイブ表示は、ONならアーカイブ済みだけを取得するDay 12の段階を保っています。
 
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx
-// 完成版: クライアント宣言と外部ライブラリのインポート
 'use client';
 
 import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
-```
-
-`'use client'` はこのファイルをブラウザ側で動く部品として扱う宣言です。App Router のページは既定でサーバー側だけで動くためこの1行が無いと `useState` を書いた時点でエラーになります。`useSearchParams` は URL の `?` 以降を読む道具で、Day 11 で入れた詳細画面の切り替えに使います。
-
-**自作コンポーネントのインポートの前半**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 自作コンポーネントのインポートの前半
+import { Suspense, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDetailView } from '@/component/project/project-detail-view';
@@ -2216,17 +2298,14 @@ import {
 } from '@/component/ui/dialog';
 import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
-```
-
-`ProjectDetailView` は Day 11 Step 9 で、`Label` は Day 09 で足したものです。Step 4 で足したのが `Dialog` 系です。並びがアルファベット順になっているのは`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても手で直す必要はありません。
-
-**自作コンポーネントのインポートの後半**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 自作コンポーネントのインポートの後半
 import {
   Select,
+```
+
+これは完成版の 1〜24 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -2242,70 +2321,189 @@ import {
 } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
-```
-
-エラー判定の関数と再試行条件は、画面部品の import に続けます。認証・権限・存在しないIDを通信失敗と分けるためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-import {
-  httpStatusOf,
-  isAuthError,
-  isForbiddenError,
-  shouldRetryQuery,
-} from '@/lib/query-error';
+import { classifyProjectWriteError, type ProjectWriteOperation } from '@/lib/project-write-error';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
-const shouldRetryProjectQuery = (
-  failureCount: number,
-  error: unknown,
-) => httpStatusOf(error) !== 404
-  && shouldRetryQuery(failureCount, error);
-```
+const shouldRetryProjectQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
-Step 2 で足したロール関連の5つがこの画面の権限判定の材料です。`@/lib/constant/roles` から取り込むのはサーバー側の `project.ts` が使っている定義と同じものを見るためです。`@prisma/client` から型を直接引くと判定の基準がデータベースの都合に引きずられます。
-
-**state の定義**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: state の定義
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+```
+
+これは完成版の 25〜48 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const [memberDialogProjectId, setMemberDialogProjectId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(PROJECT_MEMBER_ROLE.MEMBER);
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
-  const [removeMemberTargetId, setRemoveMemberTargetId] = useState<string | null>(null);
-```
+  const [removeMemberDialogProjectId, setRemoveMemberDialogProjectId] = useState<string | null>(
+    null,
+  );
 
-Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberRole` を足しました。Step 6 の `removeMemberDialogOpen` と `removeMemberTargetId` は削除の確認ダイアログを開くかどうかと、どのメンバーを消そうとしているかを覚える組です。2つに分けているのは閉じる動きの途中で対象を消すと表示が一瞬空になるからです。
-
-**URLパラメータの読み取り**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: URLパラメータの読み取り
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
+  const selectedProject = projectIdParam;
   const router = useRouter();
 
-  const selectedProject = projectIdParam;
+  const previousProject = useRef(selectedProject);
+  const viewRef = useRef(selectedProject);
+  useEffect(() => {
+    viewRef.current = selectedProject;
+  }, [selectedProject]);
+  const authExpiredRef = useRef(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const formSession = useRef({ generation: 0, target: null as string | null });
+  const memberSession = useRef({ generation: 0, target: null as string | null });
 ```
 
-プロジェクト詳細はダイアログではなく、`?projectId=xxx` の付いた同じページとして表示します。`selectedProject` は URL の値そのものなので、ブラウザの戻るボタンでも表示が追従します。開いている画面の状態を URL に載せておくとそのアドレスをそのまま人へ送れます。
+これは完成版の 49〜72 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-**データ取得と権限判定**
-
-一覧と詳細で必要な問い合わせが異なるため、取得状態も別々に受け取ります。
-
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
+  const deleteSession = useRef({ generation: 0, target: null as string | null });
+  const removeSession = useRef({
+    generation: 0,
+    projectId: null as string | null,
+    userId: null as string | null,
+  });
+  const notifiedWriteErrors = useRef(new Set<unknown>());
+  const formSubmitting = useRef(false);
+  const memberSubmitting = useRef(false);
+  const deleteSubmitting = useRef(false);
+  const removeSubmitting = useRef(false);
+  const memberDialogOpen =
+    memberDialogProjectId !== null && memberDialogProjectId === selectedProject;
+  const removeMemberDialogOpen =
+    removeMemberDialogProjectId !== null && removeMemberDialogProjectId === selectedProject;
+
+  const closeProjectDialog = () => {
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    setDialogOpen(false);
+  };
+  const closeMemberDialog = () => {
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    setMemberDialogProjectId(null);
+  };
+```
+
+これは完成版の 73〜96 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const closeDeleteDialog = () => {
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    setDeleteDialogOpen(false);
+  };
+  const closeRemoveDialog = () => {
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+    };
+    setRemoveMemberDialogProjectId(null);
+  };
+
+  useEffect(() => {
+    if (previousProject.current === selectedProject) return;
+    previousProject.current = selectedProject;
+    // 別のプロジェクトへ移ったとき、前の選択を送信しないためです。
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+```
+
+これは完成版の 97〜120 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    };
+    setDialogOpen(false);
+    setMemberDialogProjectId(null);
+    setDeleteDialogOpen(false);
+    setRemoveMemberDialogProjectId(null);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  }, [selectedProject]);
+
   const utils = api.useUtils();
+  const refreshProject = async (projectId?: string, membershipChanged = false) => {
+    // 認証切れの後に届いた成功はキャッシュだけを無効にし、再通信しません。
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [utils.project.getAll.invalidate(undefined, filters)];
+      if (projectId) {
+        updates.push(utils.project.getById.invalidate({ id: projectId }, filters));
+        if (membershipChanged)
+          updates.push(utils.project.getAvailableUsers.invalidate({ projectId }, filters));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+```
+
+これは完成版の 121〜144 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      // 表示更新の失敗を、書き込みの失敗として通知しないためです。
+      console.error('プロジェクトの表示更新に失敗しました。', error);
+      if (!authExpiredRef.current)
+        toast.error(('最新の表示を取得できませんでした。' +
+          '再表示して' +
+          '操作結果を確認してください。'));
+    }
+  };
+```
+
+ここまででメンバー変更後の一覧と詳細を更新し、再取得だけが失敗した場合の案内も終えます。次は書き込みエラーを分類し、権限変更後の表示を安全に回復する処理です。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const reportWriteError = (
+    error: unknown,
+    operation: ProjectWriteOperation,
+    projectId?: string,
+    membershipChanged = false,
+  ) => {
+    if (['create', 'update', 'delete', 'addMember', 'removeMember'].includes(operation)) {
+      notifiedWriteErrors.current.add(error);
+    }
+    const result = classifyProjectWriteError(error, operation);
+    if (result.kind === 'auth') {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    toast.error(result.message);
+    refreshProject(projectId, membershipChanged);
+  };
+```
+
+これは完成版の 145〜168 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const leaveSubmittedDetail = (projectId: string) => {
+    if (authExpiredRef.current || viewRef.current !== projectId) return;
+    try {
+      router.push('/project');
+    } catch (error) {
+      console.error('プロジェクト一覧への移動に失敗しました。', error);
+      toast.error('一覧へ移動できませんでした。再表示して操作結果を確認してください。');
+    }
+  };
+
   const {
     data: currentUser,
     isLoading: currentUserLoading,
@@ -2313,38 +2511,27 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     isFetching: currentUserFetching,
     error: currentUserQueryError,
     refetch: refetchCurrentUser,
-  } = api.auth.getCurrentUser.useQuery(
-    undefined,
-    { retry: shouldRetryProjectQuery },
-  );
-```
-
-ログイン情報の取得状態も表示判定に含めます。本人の確認が終わる前に詳細や操作ボタンを描かず、認証失敗時のデータ露出を防ぐためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    retry: shouldRetryProjectQuery,
+    enabled: !authExpired,
+  });
   const {
     data: projects,
     isLoading: projectsLoading,
+```
+
+これは完成版の 169〜192 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
     isError: projectsError,
     isFetching: projectsFetching,
     error: projectsQueryError,
     refetch: refetchProjects,
   } = api.project.getAll.useQuery(
-    {
-      isArchived: showArchived,
-    },
-    {
-      enabled: !selectedProject,
-      retry: shouldRetryProjectQuery,
-    },
+    { isArchived: showArchived },
+    { enabled: !authExpired && !selectedProject, retry: shouldRetryProjectQuery },
   );
-```
-
-一覧の取得状態をデータと分けて受け取ります。0件と通信待ちを区別し、失敗時には空の一覧ではなく再読み込みの入口を示すためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
   const {
     data: projectDetail,
     isLoading: projectDetailLoading,
@@ -2354,179 +2541,138 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     refetch: refetchProjectDetail,
   } = api.project.getById.useQuery(
     { id: selectedProject ?? '' },
-    {
-      enabled: !!selectedProject,
-      retry: shouldRetryProjectQuery,
-    },
+    { enabled: !authExpired && !!selectedProject, retry: shouldRetryProjectQuery },
   );
+
+  // 詳細画面で操作ボタンの表示可否を決めるため、
+  // ログインユーザー自身のプロジェクト内ロールから権限を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
 ```
 
-詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
+これは完成版の 193〜216 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-詳細を開いている間は一覧の取得を止めます。401・403・404は同じ問い合わせを繰り返しても解決しないため再試行しません。
-
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-  const currentMember = projectDetail?.members
-    ?.find((m) => m.userId === currentUser?.id);
-  const currentMemberRole = currentMember
-    && isProjectMemberRole(currentMember.role)
-      ? currentMember.role
-      : undefined;
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
   const canManageMembers = currentMemberRole
-    ? hasPermission(
-        currentMemberRole,
-        'canManageMembers',
-      )
+    ? hasPermission(currentMemberRole, 'canManageMembers')
     : false;
   const canArchiveProject = currentMemberRole
     ? hasPermission(currentMemberRole, 'canArchive')
     : false;
-```
 
-権限の計算を `ProjectDetailView` の中ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。`isProjectMemberRole` は `members` に並ぶ値が4種のロールのどれかを確かめる型ガードで、予期しない値が混ざっていても `undefined` へ倒れます。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-  const { data: availableUsers } =
-    api.project.getAvailableUsers.useQuery(
-      { projectId: selectedProject ?? '' },
-      {
-        enabled:
-          !!selectedProject && canManageMembers,
-        retry: shouldRetryProjectQuery,
-      },
-    );
-```
-
-候補一覧はメンバー管理権限がある場合だけ取得します。MEMBERやVIEWERが詳細を開いただけで403を発生させないためです。
-
-**作成と更新の mutation**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 作成と更新の mutation
-  const createMutation = api.project.create.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      setDialogOpen(false);
+  const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
+    { projectId: selectedProject ?? '' },
+    {
+      enabled: !authExpired && !!selectedProject && canManageMembers,
+      retry: shouldRetryProjectQuery,
     },
+  );
+
+  const createMutation = api.project.create.useMutation({
+    retry: false,
+    onSuccess: () => {
+      refreshProject();
+    },
+    onError: (error) => reportWriteError(error, 'create'),
+```
+
+これは完成版の 217〜238 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
   });
 
   const updateMutation = api.project.update.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      setDialogOpen(false);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'update', variables.id),
   });
-```
 
-`updateMutation` は Day 11 Step 3 と同じく `getById.invalidate()` を引数なしで呼びます。編集ダイアログは一覧画面にしか無いので保存した時点では詳細画面を開いていません。引数なしで呼ぶと前に開いたプロジェクトの詳細キャッシュすべてに古いという印が付きます。配布した `src/trpc/react.tsx` の設定では取得から30秒のあいだ印の無いキャッシュをそのまま使います。この1行が無いと詳細を見てから30秒以内に名前を変えて開き直したとき古い名前が出ます。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
-
-**削除の mutation**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 削除の mutation
   const deleteMutation = api.project.delete.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'delete', variables.id),
   });
-```
 
-プロジェクトを消したあとは `/project` へ戻します。詳細画面のままだと消えたプロジェクトを `getById` が探しに行って `NOT_FOUND` を返します。
-
-**メンバー追加の mutation**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加の mutation
   const addMemberMutation = api.project.addMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-        utils.project.getAvailableUsers.invalidate({
-          projectId: selectedProject,
-        });
-      }
-      setMemberDialogOpen(false);
-      setNewMemberUserId('');
-      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
     },
-  });
 ```
 
-Step 5 で書いたものです。`getAll` は一覧カードの人数を更新するために取り直します。メンバー一覧の出どころは `getById` なので追加が成功したらここを取り直します。あわせて `getAvailableUsers` にも印を付けます。候補一覧が古いままだといま追加した人がまた候補に並び、選んで送信するとサーバー側の重複チェックでエラーになります。フォームを初期値へ戻しているのは次に開いたとき前回選んだ人が残っていると押し間違いで同じ人を足そうとするからです。
+これは完成版の 239〜262 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-**メンバー削除の mutation**:
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    onError: (error, variables) => reportWriteError(error, 'addMember', variables.projectId, true),
+  });
 
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー削除の mutation
   const removeMemberMutation = api.project.removeMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-        utils.project.getAvailableUsers.invalidate({
-          projectId: selectedProject,
-        });
-      }
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
     },
+    onError: (error, variables) =>
+      reportWriteError(error, 'removeMember', variables.projectId, true),
   });
-```
 
-Step 6 で書いたものです。取り直す相手は追加のときと同じ3つです。`getAll` は一覧カードの人数を更新します。`getById` はメンバー一覧を減らすため`getAvailableUsers` は外した人を候補一覧へ戻すためです。`getAvailableUsers` を更新しないと、外した人をもう一度追加するときに候補へ出てきません。
-
-**ロール変更とアーカイブの mutation**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: ロール変更とアーカイブの mutation
   const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
-    onSuccess: () => {
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId);
     },
+    onError: (error, variables) => reportWriteError(error, 'updateMemberRole', variables.projectId),
   });
 
   const archiveMutation = api.project.archive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+```
+
+これは完成版の 263〜286 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'archive', variables.id),
   });
 
   const unarchiveMutation = api.project.unarchive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'unarchive', variables.id),
   });
-```
 
-`updateMemberRoleMutation` は Step 2 で足したもので`ProjectDetailView` の中のセレクトボックスから呼ばれます。アーカイブの2つは Day 11 で書いたもので成功したら一覧へ戻します。3つとも成功時の後始末を `onSuccess` に置いているので呼ぶ側は結果を待って書く必要がありません。
-
-**作成と編集のハンドラー**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 作成と編集のハンドラー
   const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
     setEditingProject(undefined);
     setDialogOpen(true);
   };
 
   const handleEdit = (projectId: string) => {
     const project = projects?.find((p) => p.id === projectId);
-    if (project) {
+    if (project && !authExpiredRef.current) {
+```
+
+これは完成版の 287〜310 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      formSession.current = { generation: formSession.current.generation + 1, target: projectId };
       const startDate = project.startDate ? dateOnlyFromValue(project.startDate) : undefined;
       const endDate = project.endDate ? dateOnlyFromValue(project.endDate) : undefined;
 
@@ -2541,60 +2687,72 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
       setDialogOpen(true);
     }
   };
-```
 
-`handleCreate` は編集対象を空にしてからダイアログを開きます。前に編集した内容が残っていると新規作成のつもりで開いた画面に他のプロジェクトの名前が入ります。`handleEdit` は一覧から対象を探し、日付を画面用の形へ直してから渡します。
-
-**削除のハンドラー**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 削除のハンドラー
   const handleDelete = (projectId: string) => {
-    setDeleteTargetId(projectId);
+    if (authExpiredRef.current) return;
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: projectId };
     setDeleteDialogOpen(true);
   };
+
+  const handleSubmit = async (data: ProjectFormData) => {
+    if (authExpiredRef.current || formSubmitting.current) return;
 ```
 
-削除は直接実行せず、対象を覚えてから確認ダイアログを開きます。押し間違いで消える操作を、必ずもう1回の確認の後ろへ置く形です。
+ここまでが完成版の 311〜334 行目です。次の3つのブロックは 335〜382 行目です。どれも同じ `page.tsx` の続きなので、前から順番を変えずに貼ってください。
 
-**フォーム送信のハンドラー**:
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    if (!data.id && !currentUser?.id) return;
+    const session = { ...formSession.current };
+    if (session.target !== (data.id ?? null)) return;
+    const payload = {
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
+      endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
+    };
+    formSubmitting.current = true;
+    try {
+      if (data.id) {
+        await updateMutation.mutateAsync({
+          ...payload,
+          id: data.id,
+```
 
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: フォーム送信のハンドラー
-  const handleSubmit = (data: ProjectFormData) => {
-    if (data.id) {
-      updateMutation.mutate({
-        id: data.id,
-        name: data.name,
-        description: data.description || null,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : null,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : null,
-      });
-    } else {
-      if (!currentUser?.id) {
-        return;
+ここまでが完成版の 335〜350 行目です。オブジェクトはまだ閉じていないため、次のブロックを同じ `page.tsx` へ続けて貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+          description: data.description || null,
+          startDate: payload.startDate ?? null,
+          endDate: payload.endDate ?? null,
+        });
+      } else {
+        await createMutation.mutateAsync(payload);
       }
-      createMutation.mutate({
-        name: data.name,
-        description: data.description,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
-      });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      formSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      formSession.current.generation === session.generation &&
+```
+
+ここまでが完成版の 351〜366 行目です。条件式はまだ閉じていないため、次のブロックを同じ `page.tsx` へ続けて貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      formSession.current.target === session.target
+    ) {
+      closeProjectDialog();
+      setEditingProject(undefined);
     }
   };
-```
 
-`data.id` があれば更新、無ければ作成と分けています。1つのダイアログを両方で使い回しているのでどちらの操作かはフォームの中身から決めます。更新側で `description` へ `null` を渡しているのは空欄にしたとき値を消す指示として届けるためです。
-
-**詳細画面の開閉ハンドラー**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 詳細画面の開閉ハンドラー
   const handleProjectClick = (projectId: string) => {
     router.push(`/project?projectId=${projectId}`);
   };
@@ -2602,40 +2760,136 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
   const handleDetailClose = () => {
     router.push('/project');
   };
+
+  const openMemberDialog = () => {
 ```
 
-Day 11 で書いた2つです。どちらも state を直接書き換えず `router.push` で URL を変えます。表示の切り替えを URL に一本化しておくと戻るボタンと画面の状態がずれません。
+ここまでが完成版の 367〜382 行目です。続きも同じ `page.tsx` へ、前のブロックから順番を変えずに貼ってください。
 
-**メンバー追加と削除のハンドラー**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー追加と削除のハンドラー
-  const handleAddMember = () => {
-    if (selectedProject && newMemberUserId) {
-      addMemberMutation.mutate({
-        projectId: selectedProject,
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    if (!selectedProject || authExpiredRef.current) return;
+    memberSession.current = {
+      generation: memberSession.current.generation + 1,
+      target: selectedProject,
+    };
+    setMemberDialogProjectId(selectedProject);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  };
+  const handleAddMember = async () => {
+    if (authExpiredRef.current || memberSubmitting.current || !selectedProject || !newMemberUserId)
+      return;
+    const session = { ...memberSession.current };
+    if (session.target !== selectedProject || !memberDialogOpen) return;
+    memberSubmitting.current = true;
+    try {
+      await addMemberMutation.mutateAsync({
+        projectId: session.target,
         userId: newMemberUserId,
         role: newMemberRole,
       });
-    }
-  };
-
-  const handleRemoveMember = (userId: string) => {
-    setRemoveMemberTargetId(userId);
-    setRemoveMemberDialogOpen(true);
-  };
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
 ```
 
-`handleAddMember` は `selectedProject` と `newMemberUserId` の両方がそろってから送ります。ボタン側でも空のときは押せないようにしていますが送る直前でもう一度確かめる形です。`handleRemoveMember` は対象を覚えて確認ダイアログを開くだけで、実際の削除は確認の後ろにあります。
+これは完成版の 383〜406 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-**ロール変更とアーカイブのハンドラー**:
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    } finally {
+      memberSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      memberSession.current.generation === session.generation &&
+      memberSession.current.target === session.target
+    ) {
+      closeMemberDialog();
+      setNewMemberUserId('');
+      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+    }
+  };
+  const handleRemoveMember = (userId: string) => {
+    if (!selectedProject || authExpiredRef.current) return;
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: selectedProject,
+      userId,
+    };
+    setRemoveMemberDialogProjectId(selectedProject);
+  };
+  const confirmRemoveMember = async () => {
+    const session = { ...removeSession.current };
+```
 
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: ロール変更とアーカイブのハンドラー
+これは完成版の 407〜430 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    if (
+      authExpiredRef.current ||
+      removeSubmitting.current ||
+      !session.projectId ||
+      !session.userId ||
+      viewRef.current !== session.projectId
+    )
+      return;
+    removeSubmitting.current = true;
+    try {
+      await removeMemberMutation.mutateAsync({
+        projectId: session.projectId,
+        userId: session.userId,
+      });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      removeSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      removeSession.current.generation === session.generation &&
+      removeSession.current.projectId === session.projectId &&
+```
+
+これは完成版の 431〜454 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      removeSession.current.userId === session.userId
+    )
+      closeRemoveDialog();
+  };
+  const confirmDeleteProject = async () => {
+    const session = { ...deleteSession.current };
+    if (authExpiredRef.current || deleteSubmitting.current || !session.target) return;
+    deleteSubmitting.current = true;
+    try {
+      await deleteMutation.mutateAsync({ id: session.target });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      deleteSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      deleteSession.current.generation === session.generation &&
+      deleteSession.current.target === session.target
+    )
+      closeDeleteDialog();
+```
+
+これは完成版の 455〜476 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  };
+
   const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
-    if (selectedProject) {
+    if (selectedProject && !authExpiredRef.current) {
       updateMemberRoleMutation.mutate({
         projectId: selectedProject,
         userId,
@@ -2645,62 +2899,54 @@ Day 11 で書いた2つです。どちらも state を直接書き換えず `rou
   };
 
   const handleArchive = (projectId: string, isArchived: boolean) => {
+    if (authExpiredRef.current) return;
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
   };
-```
 
-`handleUpdateMemberRole` は Step 2 で書いたもので`ProjectDetailView` から `userId` と新しいロールを受け取ります。`handleArchive` は現在の状態を見て呼ぶ手続きを切り替えます。どちらのボタンを押したかではなく今の状態から決めるので表示と実行内容がずれません。
-
-**表示に必要な取得状態**
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
   const viewingDetail = Boolean(selectedProject);
   const queryErrors = viewingDetail
     ? [
         currentUserError ? currentUserQueryError : null,
-        projectDetailError
-          ? projectDetailQueryError
-          : null,
+        projectDetailError ? projectDetailQueryError : null,
       ]
-    : [
-        currentUserError ? currentUserQueryError : null,
-        projectsError ? projectsQueryError : null,
-      ];
-  const authFailed = queryErrors.some(isAuthError);
-  const forbidden = queryErrors.some(isForbiddenError);
-  const notFound = viewingDetail
-    && projectDetailError
-    && httpStatusOf(projectDetailQueryError) === 404;
 ```
 
-URLに詳細IDがあるかで対象の問い合わせを選びます。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
+これは完成版の 477〜500 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
+    : [currentUserError ? currentUserQueryError : null, projectsError ? projectsQueryError : null];
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    // 読み取りで判明した認証切れも、後続の書き込み成功では解除しません。
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound =
+    viewingDetail && projectDetailError && httpStatusOf(projectDetailQueryError) === 404;
   const hasFetchError = viewingDetail
     ? currentUserError || projectDetailError
     : currentUserError || projectsError;
   const hasRequiredData =
-    (!currentUserError || currentUser != null)
-    && (viewingDetail
+    (!currentUserError || currentUser != null) &&
+    (viewingDetail
       ? !projectDetailError || projectDetail != null
       : !projectsError || projects != null);
-  const requiredLoading = currentUserLoading
-    || (viewingDetail
-      ? projectDetailLoading
-      : projectsLoading);
-  const requiredFetching = currentUserFetching
-    || (viewingDetail
-      ? projectDetailFetching
-      : projectsFetching);
+  const requiredLoading =
+    currentUserLoading || (viewingDetail ? projectDetailLoading : projectsLoading);
+  const requiredFetching =
 ```
 
-エラーの有無と利用できるデータの有無を別々に判定します。初回失敗ではエラー画面を出し、再取得失敗では既存データを残すためです。
+これは完成版の 501〜523 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
+    currentUserFetching || (viewingDetail ? projectDetailFetching : projectsFetching);
+
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     if (viewingDetail) {
@@ -2710,29 +2956,25 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     void refetchProjects();
   };
 
-  if (requiredLoading
-    && !authFailed && !forbidden && !notFound) {
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
       </AppLayout>
     );
   }
-```
 
-`viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
-
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
-
-<!-- code-block-length-exception: complete-copy-unit -->
-```tsx
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-  if (authFailed || forbidden || notFound
-    || (hasFetchError && !hasRequiredData)) {
+  if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData)) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="mb-2 text-base font-semibold text-foreground">
+```
+
+これは完成版の 524〜547 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             {authFailed
               ? 'ログインの有効期限が切れました'
               : forbidden
@@ -2743,7 +2985,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
             {authFailed
-              ? 'もう一度ログインしてください。'
+              ? 'もう一度ログインしてください。入力内容はログイン後に入力し直してください。'
               : forbidden
                 ? '権限が必要です。プロジェクトの管理者に確認してください。'
                 : notFound
@@ -2757,13 +2999,19 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                 router.push('/login');
                 return;
               }
+```
+
+これは完成版の 548〜571 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
               if (forbidden || notFound) {
                 router.push('/project');
                 return;
               }
               refetchRequiredData();
             }}
-            disabled={requiredFetching}
+            disabled={!authFailed && requiredFetching}
           >
             {authFailed
               ? 'ログイン画面へ'
@@ -2775,9 +3023,10 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       </AppLayout>
     );
   }
+
 ```
 
-401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
+これは完成版の 572〜590 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2786,9 +3035,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       role="alert"
       className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
     >
-      <span>
-        最新のプロジェクト情報を取得できませんでした。前回取得時の内容です。
-      </span>
+      <span>最新のプロジェクト情報を取得できませんでした。前回取得時の内容です。</span>
       <Button
         type="button"
         variant="outline"
@@ -2800,25 +3047,23 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       </Button>
     </div>
   ) : null;
-```
 
-再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
-
-**詳細画面の分岐**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 詳細画面の分岐
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
   if (viewingDetail) {
     return (
       <AppLayout>
         <div className="space-y-4">
           {staleDataWarning}
+```
+
+これは完成版の 591〜614 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
           <ProjectDetailView
             projectDetail={projectDetail}
             onBack={handleDetailClose}
-            onAddMemberClick={() => setMemberDialogOpen(true)}
+            onAddMemberClick={openMemberDialog}
             onRemoveMember={handleRemoveMember}
             onUpdateMemberRole={handleUpdateMemberRole}
             onArchive={handleArchive}
@@ -2826,16 +3071,214 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
             canArchive={canArchiveProject}
           />
         </div>
+
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>メンバー追加</DialogTitle>
+              <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
 ```
 
-URL に `projectId` があるときは一覧を描かずに詳細だけを返します。ここで `return` すると以降の一覧のコードには進まないので2つの画面を同時に描いてしまう心配はありません。8つの props のうち後半2つが上で求めた権限の値です。
+これは完成版の 615〜638 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-**メンバー追加ダイアログの見出し**:
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+              <div className="grid gap-2">
+                <Label htmlFor="user">ユーザー</Label>
+                <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
+                  <SelectTrigger id="user">
+                    <SelectValue placeholder="ユーザーを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role">ロール</Label>
+                <Select
+                  value={newMemberRole}
+                  onValueChange={(value) => {
+                    if (isProjectMemberRole(value)) setNewMemberRole(value);
+                  }}
+                >
+                  <SelectTrigger id="role">
+```
 
-```typescript
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: メンバー追加ダイアログの見出し */}
-        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+これは完成版の 639〜662 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+                    <SelectValue placeholder="ロールを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PROJECT_MEMBER_ROLE_LABELS)
+                      .filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)
+                      .map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeMemberDialog}>
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
+                メンバー追加
+              </Button>
+```
+
+これは完成版の 663〜686 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <DeleteConfirmDialog
+          open={removeMemberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeRemoveDialog();
+          }}
+          onConfirm={confirmRemoveMember}
+          closeOnConfirm={false}
+          isPending={removeMemberMutation.isPending}
+          title="このメンバーを削除しますか？"
+        />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        {staleDataWarning}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
+```
+
+これは完成版の 687〜710 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+            プロジェクト
+          </h1>
+          <div className="flex shrink-0 items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+              <Label htmlFor="show-archived" className="whitespace-nowrap">
+                アーカイブ表示
+              </Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" /> 新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {projects && projects.length > 0 ? (
+            projects.map((project) => {
+              // キャンセル済みは進捗の母数に含めない
+              // （アクティブな4ステータスのみを総数とする）。
+              // 総数と完了数を1回のループで同時に集計する。
+              let taskCount = 0;
+              let doneCount = 0;
+              for (const t of project.tasks ?? []) {
+```
+
+これは完成版の 711〜734 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+                if (t.status === TASK_STATUS.CANCELLED) continue;
+                taskCount++;
+                if (t.status === TASK_STATUS.DONE) doneCount++;
+              }
+```
+
+これは完成版の一覧集計部分です。続けて、ログインユーザーが各プロジェクトで持つロールを確かめます。カードの操作とサーバーの権限をそろえるためです。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+              const listMemberRole = project.members?.find(
+                (member) => member.userId === currentUser?.id,
+              )?.role;
+              const canUpdateProject =
+                isProjectMemberRole(listMemberRole) &&
+                hasPermission(listMemberRole, 'canManageMembers');
+              const canDeleteProject =
+                listMemberRole === PROJECT_MEMBER_ROLE.OWNER;
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length ?? 0}
+                  taskStats={{ total: taskCount, done: doneCount }}
+                  {...(canUpdateProject ? { onEdit: handleEdit } : {})}
+                  {...(canDeleteProject ? { onDelete: handleDelete } : {})}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />
+              );
+```
+
+更新はメンバー管理と同じ OWNER / ADMIN、削除は OWNER だけです。サーバーと同じ条件で表示を決めると、実行できない人に操作ボタンを見せずに済みます。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+            })
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>{showArchived ? 'アーカイブ済みのプロジェクトはありません。'
+                : '進行中のプロジェクトはありません。'}</p>
+```
+
+前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+            </div>
+          )}
+        </div>
+
+        <ProjectDialog
+          open={dialogOpen}
+          onClose={closeProjectDialog}
+          onSubmit={handleSubmit}
+          isPending={createMutation.isPending || updateMutation.isPending}
+          initialData={editingProject}
+        />
+
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>メンバー追加</DialogTitle>
@@ -2843,13 +3286,10 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
             </DialogHeader>
 ```
 
-`open` に `memberDialogOpen` を渡しているので`setMemberDialogOpen(true)` で開き、閉じる操作は `onOpenChange` が受け取って state を戻します。`DialogTitle` と `DialogDescription` の2つを読めば利用者は開いた瞬間に何をする画面かを判断できます。
+前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
-**メンバー追加ダイアログのユーザー選択**:
-
-```typescript
-            {/* filepath: src/app/project/page.tsx */}
-            {/* 完成版: メンバー追加ダイアログのユーザー選択 */}
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="user">ユーザー</Label>
@@ -2866,15 +3306,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
                   </SelectContent>
                 </Select>
               </div>
-```
-
-`value` と `onValueChange` の2つで state へ直接つないでいるので画面の表示は手元の値からずれません。`user.name || user.email` としているのは名前を登録していない人でも空欄にせず必ず何かを出すためです。候補の中身はサーバー側で未参加の人だけに絞ってあるので画面は返ってきた配列を並べるだけで済みます。
-
-**メンバー追加ダイアログのロール選択**:
-
-```typescript
-              {/* filepath: src/app/project/page.tsx */}
-              {/* 完成版: メンバー追加ダイアログのロール選択 */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -2883,6 +3314,12 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
                     if (isProjectMemberRole(value)) setNewMemberRole(value);
                   }}
                 >
+```
+
+これは完成版の 783〜806 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
                   <SelectTrigger id="role">
                     <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
@@ -2898,181 +3335,58 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
                 </Select>
               </div>
             </div>
-```
-
-`Select` が渡してくる値はただの文字列なので`isProjectMemberRole` を通った値だけを state へ入れます。選択肢から OWNER を外しているのは画面から新しいオーナーを作らせないためです。ただし画面側のこの2つは入力を助ける仕掛けであって防御の本体はサーバー側の zod スキーマと権限確認です。
-
-**メンバー追加ダイアログのフッター**:
-
-```typescript
-            {/* filepath: src/app/project/page.tsx */}
-            {/* 完成版: メンバー追加ダイアログのフッター */}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+              <Button variant="outline" onClick={closeMemberDialog}>
                 キャンセル
               </Button>
-              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
                 メンバー追加
+```
+
+これは完成版の 807〜830 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-```
-
-`disabled={!newMemberUserId}` によりユーザーを選ぶまで追加ボタンを押せません。誰を追加するか決まらないまま送るとサーバー側の検査で弾かれるだけの通信になります。押せる状態をあらかじめ絞っておくと利用者は失敗する操作へ触れずに済みます。
-
-**メンバー削除の確認ダイアログ**:
-
-```typescript
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: メンバー削除の確認ダイアログ */}
-        <DeleteConfirmDialog
-          open={removeMemberDialogOpen}
-          onOpenChange={setRemoveMemberDialogOpen}
-          onConfirm={() => {
-            if (selectedProject && removeMemberTargetId) {
-              removeMemberMutation.mutate({
-                projectId: selectedProject,
-                userId: removeMemberTargetId,
-              });
-            }
-          }}
-          isPending={removeMemberMutation.isPending}
-          title="このメンバーを削除しますか？"
-        />
-      </AppLayout>
-    );
-  }
-```
-
-`handleRemoveMember` が覚えた対象を、ここで初めて `mutate` へ渡します。`isPending` を渡しているのは通信中にボタンを押し続けて同じ削除が二重に飛ぶのを防ぐためです。この分岐の中に置いているのは削除ボタンを持つ `ProjectDetailView` が詳細画面にしか現れないからです。
-
-**一覧画面の見出しと操作**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧画面の見出しと操作
-  return (
-    <AppLayout>
-      <div className="flex flex-col gap-6">
-        {staleDataWarning}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
-            プロジェクト
-          </h1>
-          <div className="flex shrink-0 items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-              <Label htmlFor="show-archived" className="whitespace-nowrap">
-                アーカイブ表示
-              </Label>
-            </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" /> 新規プロジェクト
-            </Button>
-          </div>
-        </div>
-```
-
-ここから先は URL に `projectId` が無いときの表示です。`Switch` は通常の一覧とアーカイブ済みだけの一覧の切り替えです。`whitespace-nowrap` を付けているのは画面幅が狭いときに見出しが途中で折り返さないようにするためです。
-
-**プロジェクトカードの集計**:
-
-```typescript
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: プロジェクトカードの集計 */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {projects && projects.length > 0 ? (
-            projects.map((project) => {
-              // キャンセル済みは進捗の母数に含めない
-              let taskCount = 0;
-              let doneCount = 0;
-              for (const t of project.tasks ?? []) {
-                if (t.status === TASK_STATUS.CANCELLED) continue;
-                taskCount++;
-                if (t.status === TASK_STATUS.DONE) doneCount++;
-              }
-
-```
-
-進捗の割合を出すために、タスクの総数と完了数を数えます。キャンセルしたタスクは `continue` で飛ばして分母に入れません。Day 09 で書いた形のままで今日は数え方に手を入れていません。
-
-**プロジェクトカードの一覧**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクトカードの一覧
-              return (
-                <ProjectCard
-                  key={project.id}
-                  id={project.id}
-                  name={project.name}
-                  description={project.description}
-                  color={project.color}
-                  memberCount={project.members?.length ?? 0}
-                  taskStats={{ total: taskCount, done: doneCount }}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onClick={handleProjectClick}
-                  isArchived={project.isArchived}
-                />
-              );
-            })
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>プロジェクトが見つかりません。</p>
-              <p>最初のプロジェクトを作成しましょう！</p>
-            </div>
-          )}
-        </div>
-```
-
-Day 11 で `onClick` に `handleProjectClick` をつなぎ、カードから詳細画面へ移れるようにしました。`key={project.id}` は React が並びを追跡するための目印です。0件のときにメッセージを出すのは読み込み中なのか本当に0件なのかを利用者が判断できるようにするためです。
-
-**プロジェクト作成・編集ダイアログ**:
-
-```typescript
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: プロジェクト作成・編集ダイアログ */}
-        <ProjectDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleSubmit}
-          initialData={editingProject}
-        />
       </div>
-```
 
-Day 10 と Day 11 で作ったダイアログです。作成と編集で同じ部品を使い、`initialData` の有無で中身を切り替えます。最後の `</div>` が見出しから一覧までを囲んでいた枠を閉じる行です。
-
-**プロジェクト削除の確認ダイアログ**:
-
-```typescript
-      {/* filepath: src/app/project/page.tsx */}
-      {/* 完成版: プロジェクト削除の確認ダイアログ */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={() => {
-          if (deleteTargetId) {
-            deleteMutation.mutate({ id: deleteTargetId });
-          }
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog();
         }}
+        onConfirm={confirmDeleteProject}
+        closeOnConfirm={false}
         isPending={deleteMutation.isPending}
         title="プロジェクトを削除しますか？"
+      />
+
+      <DeleteConfirmDialog
+        open={removeMemberDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeRemoveDialog();
+        }}
+        onConfirm={confirmRemoveMember}
+        closeOnConfirm={false}
+```
+
+これは完成版の 831〜854 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+        isPending={removeMemberMutation.isPending}
+        title="このメンバーを削除しますか？"
       />
     </AppLayout>
   );
 }
-```
 
-こちらは Day 11 で作ったプロジェクト削除用です。メンバー削除とは別の対象・別の文言を使います。同じ部品に `title` と `onConfirm` を差し替えて渡す形なので確認ダイアログの見た目は画面をまたいでそろいます。
-
-**Suspense で包んだページ本体**:
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 完成版: Suspense で包んだページ本体
 export default function ProjectPage() {
   return (
     <Suspense fallback={<PageLoadingSpinner />}>
@@ -3082,14 +3396,12 @@ export default function ProjectPage() {
 }
 ```
 
-`useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が`/project` を開いたときに読まれるページ本体です。
+これは完成版の 855〜868 行目です。前後のフェンスは同じ `page.tsx` の続きです。途中では括弧やJSXが閉じていない場合があるため、最後のフェンスまで順番を変えずに貼ってください。
 
 ### 最終確認: 型エラーがない状態で終わる
 
 今日はサーバー側の手続きと画面側の配線を両方足しました。
-最後にビルドを通して、型の不整合が残っていないことを確かめます。
-
-ビルドは開発サーバーと同じ `.next` フォルダに書き込みます。先に開発サーバーを `Ctrl+C` で止めてから実行してください。
+最後にビルドを通して、型の不整合が残っていないことを確かめます。開発サーバーを動かしているターミナルで Ctrl+C を押して停止し、同じプロジェクトのフォルダで次のコマンドを実行してください。
 
 ```bash
 # filepath: ターミナル
@@ -3099,30 +3411,72 @@ npm run build
 `Compiled successfully` の後にも型チェックが続きます。コマンドが最後まで終了し、エラーが出ていないことを確認してください。途中のコンパイル成功だけではビルド成功とは判断できません。
 まだエラーが残る場合は props の書き換え漏れを疑ってください。`ProjectDetailView` の props の数や名前が合わないとこの段階でまとめて表に出ます。
 
-ビルドが終わったら `npm run dev` で開発サーバーを起動し直します。
-
 **確認ポイント**:
-- `npm run build` が成功する
-- 型エラーが1件も残っていない
+- `npm run build` が成功します。
+- 型エラーが1件も残っていません。
 
 ## 今日のまとめ
 
-- [ ] `npm run build` が通ることを確認した
-- [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できた
-- [ ] `addMember` でメンバーを追加できた
-- [ ] `DeleteConfirmDialog` 経由で `removeMember` を実行できた
-- [ ] `isProjectMemberRole` 型ガードでロール値を安全に検証する方法を理解した
-- [ ] 権限チェックの仕組み（フロントエンド + バックエンド）を理解した
+- [ ] `npm run build` が通ることを確認しました。
+- [ ] `ProjectDetailView` コンポーネントでメンバー一覧を表示できました。
+- [ ] `addMember` でメンバーを追加できました。
+- [ ] `DeleteConfirmDialog` 経由で `removeMember` を実行できました。
+- [ ] `isProjectMemberRole` 型ガードでロール値を安全に検証する方法を理解しました。
+- [ ] 権限チェックの仕組み（フロントエンド + バックエンド）を理解しました。
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| `このユーザーは既にプロジェクトのメンバーです` | 同じユーザーを二度追加 | `getAvailableUsers` で既存メンバーを除外済み。ブラウザ更新して再試行 |
-| 「プロジェクト唯一のオーナーは削除できません」 | オーナーが1人だけのプロジェクトからそのオーナーを外そうとした | 画面ではオーナー行の削除ボタンが常に無効なのでこの操作はできません。API を直接呼ばれたときに備えたサーバー側の防波堤です |
-| キャッシュが更新されない | `invalidate()` の呼び忘れ | `onSuccess` で `getById.invalidate()` を確認する |
-| 「この操作を実行する権限がありません」 | MEMBER/VIEWERで管理操作を試行 | OWNER/ADMINアカウントでログインする |
-| `@prisma/client` からインポートエラー | インポート先の間違い | `@/lib/constant/roles` からインポートする |
+#### 「メンバーの追加を現在の状態では実行できません」と表示される
+
+**原因**
+
+同じユーザーを二度追加すると、サーバーは `CONFLICT` を返します。画面はサーバーの内部メッセージをそのまま出さず、409で共通の固定通知を表示します。
+
+**解決方法**
+
+ダイアログを閉じ、プロジェクト詳細のメンバー一覧で対象のユーザーを確認してください。一覧に表示されていれば追加済みなので、同じユーザーは再追加しません。一覧が古い場合はページを再読み込みします。再読み込み後は `getAvailableUsers` が追加済みのユーザーを候補から外すため、別の未参加ユーザーだけを選べます。
+
+#### 「プロジェクト唯一のオーナーは削除できません」
+
+**原因**
+
+オーナーが1人だけのプロジェクトから、そのオーナーを外そうとしたためです。
+
+**解決方法**
+
+画面ではオーナー行の削除ボタンが常に無効なので、この操作はできません。API を直接呼ばれたときに備えたサーバー側の防波堤です。
+
+#### キャッシュが更新されない
+
+**原因**
+
+`invalidate()` を呼び忘れたためです。
+
+**解決方法**
+
+完成コードの `onSuccess` が送信時のIDを `refreshProject` へ渡しているか確認してください。メンバー追加・削除では第2引数も `true` にし、候補一覧も更新します。
+
+#### 管理操作の権限がないという固定通知が表示される
+
+**原因**
+
+MEMBER/VIEWER で管理操作を試行すると、サーバーは `FORBIDDEN` を返します。画面は操作名を含む固定通知を表示し、サーバーの内部メッセージはそのまま表示しません。
+
+**解決方法**
+
+OWNER/ADMIN アカウントでログインしてください。
+
+#### `PROJECT_MEMBER_ROLE` を `@prisma/client` から読み込むとエラーになる
+
+**原因**
+
+`PROJECT_MEMBER_ROLE` と `USER_ROLE` はこの教材で作った定数です。Prisma が生成する `@prisma/client` には、この名前の定数がありません。
+
+**解決方法**
+
+ロールの定数は `import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';` で読み込みます。
+
+行ロックに使う `Prisma.sql` の `Prisma` は `import { Prisma } from '@prisma/client';` のままにしてください。完成版の先頭で、この2行の読み込み元を確認します。
 
 ## 今日学んだ用語
 
@@ -3145,7 +3499,7 @@ A. そのプロジェクトのメンバー行を1件も持たない利用者を�
 
 **Q2. `addMember` の重複チェック `if (existing)` を消すと何が起きますか。**
 
-A. 同じ人をもう一度追加したときに`userId_projectId` の一意制約に当たります。Prisma が投げた例外はそのまま画面まで届きます。利用者が目にするのは日本語の説明が付かないデータベースのエラーです。自分で先に確かめてエラーを返せば何が起きたかを言葉で伝えられます。
+A. 同じ人をもう一度追加したときに `userId_projectId` の一意制約へ当たり、画面では結果を確認するよう固定の通知が出ます。先に重複を確かめて `CONFLICT` を返すと、画面は「メンバーの追加を現在の状態では実行できません。最新の表示を確認してください。」と案内できます。サーバーは重複を理由として記録しますが、画面は409の原因を重複だけに限定しません。
 
 **Q3. `canManageMembers` を持つ ADMIN でも、OWNER としては追加できないようにしているのはなぜですか。**
 

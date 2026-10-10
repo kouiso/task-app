@@ -32,6 +32,10 @@ required_entries=(
   "task-app/doc/SUPPORTED_ENVIRONMENTS.md"
   "task-app/scripts/scaffold-from-scratch.sh"
   "task-app/scripts/verify-scaffold-database.cjs"
+  "task-app/scripts/day17-test/page-pagination.test.tsx.template"
+  "task-app/scripts/day17-test/page-single-write.test.tsx.template"
+  "task-app/scripts/day17-test/setup.ts"
+  "task-app/scripts/day17-test/vitest.config.ts"
 )
 
 for entry in "${required_entries[@]}"; do
@@ -81,9 +85,11 @@ required_support_files=(
   "_lib-base/date.ts"
   "_lib-base/env.ts"
   "_lib-base/prisma.ts"
+  "_lib-base/query-error.ts"
   "_lib-base/rate-limit.ts"
   "_lib-base/session.ts"
   "_lib-base/task-form.ts"
+  "_lib-base/task-write-error.ts"
   "_lib-utils/utils.ts"
   "_prisma/prisma.config.ts"
   "_prisma/schema.prisma"

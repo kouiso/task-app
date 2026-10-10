@@ -138,6 +138,49 @@ describe('projectRouter', () => {
       const project = await caller.project.create({ name: 'デフォルト色' });
       expect(project.color).toMatch(/^#[0-9A-F]{6}$/i);
     });
+
+    it('開始日が終了日より後なら拒否する', async () => {
+      const user = await createTestUser({ email: 'cr-date-reversed@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(
+        caller.project.create({
+          name: '逆転した期間',
+          startDate: '2026-02-02T00:00:00.000Z',
+          endDate: '2026-02-01T00:00:00.000Z',
+        }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: '終了日は開始日以降の日付にしてください',
+      });
+    });
+
+    it.each([
+      {
+        label: '同じ日',
+        email: 'cr-date-equal@example.com',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-02-01T00:00:00.000Z',
+      },
+      {
+        label: '開始日より後の日',
+        email: 'cr-date-increasing@example.com',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-02-02T00:00:00.000Z',
+      },
+    ])('終了日が$labelなら作成できる', async ({ email, startDate, endDate }) => {
+      const user = await createTestUser({ email });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      const project = await caller.project.create({
+        name: '正しい期間',
+        startDate,
+        endDate,
+      });
+
+      expect(project.startDate).toEqual(new Date(startDate));
+      expect(project.endDate).toEqual(new Date(endDate));
+    });
   });
 
   describe('update（更新）', () => {
@@ -162,6 +205,78 @@ describe('projectRouter', () => {
       const { project, caller } = await setupProjectWithActor('OWNER');
       const result = await caller.project.update({ id: project.id, name: '更新後' });
       expect(result.name).toBe('更新後');
+    });
+
+    it('開始日だけの更新でも保存済み終了日より後なら拒否する', async () => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      await prisma.project.update({
+        where: { id: project.id },
+        data: {
+          startDate: new Date('2026-02-01T00:00:00.000Z'),
+          endDate: new Date('2026-02-10T00:00:00.000Z'),
+        },
+      });
+
+      await expect(
+        caller.project.update({ id: project.id, startDate: '2026-02-11T00:00:00.000Z' }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: '終了日は開始日以降の日付にしてください',
+      });
+    });
+
+    it('終了日だけの更新でも保存済み開始日より前なら拒否する', async () => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      await prisma.project.update({
+        where: { id: project.id },
+        data: {
+          startDate: new Date('2026-02-10T00:00:00.000Z'),
+          endDate: new Date('2026-02-20T00:00:00.000Z'),
+        },
+      });
+
+      await expect(
+        caller.project.update({ id: project.id, endDate: '2026-02-09T00:00:00.000Z' }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: '終了日は開始日以降の日付にしてください',
+      });
+    });
+
+    it.each(['startDate', 'endDate'] as const)('%s は null で消去できる', async (field) => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      await prisma.project.update({
+        where: { id: project.id },
+        data: {
+          startDate: new Date('2026-02-01T00:00:00.000Z'),
+          endDate: new Date('2026-02-10T00:00:00.000Z'),
+        },
+      });
+
+      const result = await caller.project.update(
+        field === 'startDate'
+          ? { id: project.id, startDate: null }
+          : { id: project.id, endDate: null },
+      );
+
+      expect(result[field]).toBeNull();
+    });
+
+    it('日付を変更しない更新は保存済み期間が逆転していても妨げない', async () => {
+      const { project, caller } = await setupProjectWithActor('OWNER');
+      await prisma.project.update({
+        where: { id: project.id },
+        data: {
+          startDate: new Date('2026-02-10T00:00:00.000Z'),
+          endDate: new Date('2026-02-01T00:00:00.000Z'),
+        },
+      });
+
+      const result = await caller.project.update({ id: project.id, name: '名前だけ更新' });
+
+      expect(result.name).toBe('名前だけ更新');
+      expect(result.startDate).toEqual(new Date('2026-02-10T00:00:00.000Z'));
+      expect(result.endDate).toEqual(new Date('2026-02-01T00:00:00.000Z'));
     });
 
     it('ADMINは更新できる', async () => {

@@ -54,6 +54,7 @@ DEV_DEPS=(
   vitest@^3.2.4
   @vitest/coverage-v8@^3.2.4
   @testing-library/react@^16.2.0
+  @testing-library/dom@^10.4.1
   @testing-library/jest-dom@^6.6.3
   jsdom@^26.0.0
   @types/bcryptjs@^2.4.6
@@ -82,8 +83,21 @@ version_major() {
   echo "$1" | sed -E 's/^[^0-9]*([0-9]+).*/\1/'
 }
 
+supported_node_version() {
+  local version="$1"
+  local minor
+  if [[ ! "$version" =~ ^v?22\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    return 1
+  fi
+  minor="${BASH_REMATCH[1]}"
+  # 1〜2桁だけを数値比較し、長い正規形は22.12より新しい値として扱う。
+  if [ "${#minor}" -le 2 ] && [ "$minor" -lt 12 ]; then
+    return 1
+  fi
+}
+
 check_node() {
-  require_command "node" "Node.js が見つかりません。Node.js 22 系を入れてから再実行してください: https://nodejs.org/"
+  require_command "node" "Node.js が見つかりません。Node.js 22.12.0 以上 23 未満を入れてから再実行してください: https://nodejs.org/"
   local node_version
   if ! node_version="$(node -v 2>&1)"; then
     print_error "Node.js の確認に失敗しました: ${node_version}"
@@ -92,16 +106,14 @@ check_node() {
     fi
     exit 1
   fi
-  local major
-  major="$(version_major "$node_version")"
-  if [ "${major:-0}" -ne 22 ]; then
-    print_error "Node.js ${node_version} は非対応です。Node.js 22 系が必要です: https://nodejs.org/"
+  if ! supported_node_version "$node_version"; then
+    print_error "Node.js ${node_version} は非対応です。Node.js 22.12.0 以上 23 未満が必要です。Node.js 22.22.2 を推奨します: https://nodejs.org/"
     exit 1
   fi
 }
 
 check_npm() {
-  require_command "npm" "npm が見つかりません。Node.js 22 系と一緒に npm 10 系を入れてください: https://nodejs.org/"
+  require_command "npm" "npm が見つかりません。Node.js 22.12.0 以上 23 未満と一緒に npm 10 系を入れてください: https://nodejs.org/"
   local major
   major="$(version_major "$(npm -v)")"
   if [ "${major:-0}" -ne 10 ]; then
@@ -218,11 +230,12 @@ ensure_empty_or_existing_next_app() (
 )
 
 configure_security_overrides() {
-  # Next.js が内部で固定している脆弱な推移依存を、互換性を検証した修正版へ揃える。
+  # フレームワークと開発ツールが内部で固定している脆弱な推移依存を、互換性を検証した修正版へ揃える。
   # install より先に設定し、package-lock.json と node_modules の両方へ反映させる。
   npm pkg set \
     overrides.postcss="8.5.23" \
-    overrides.sharp="0.35.5"
+    overrides.sharp="0.35.5" \
+    overrides.@prisma/config.deepmerge-ts="8.0.2"
 }
 
 install_dependencies() {
@@ -348,7 +361,7 @@ EOF
 configure_package_json() {
   npm pkg set \
     name="task-app" \
-    engines.node="22.x" \
+    engines.node=">=22.12.0 <23" \
     scripts.dev="next dev" \
     scripts.build="prisma generate && next build" \
     scripts.vercel-build="prisma generate && next build" \
@@ -364,6 +377,11 @@ configure_package_json() {
     scripts.db:migrate="prisma migrate dev" \
     scripts.db:seed="tsx src/command/seed.ts" \
     scripts.test="vitest run"
+}
+
+sync_package_lock_metadata() {
+  # 初回 install 後に確定した配布用メタデータを lock へ反映し、postinstall は再実行しない。
+  npm install --package-lock-only --ignore-scripts
 }
 
 configure_tsconfig() {
@@ -423,11 +441,11 @@ _DOCKER_COMPOSE_HOST_PORT_TEST_DB=25533
 # Prisma connection string
 # ホストマシンから接続する場合のURL (マイグレーション等で使用)
 # ポート番号は _DOCKER_COMPOSE_HOST_PORT_DB と合わせる必要があります
-DATABASE_URL="postgresql://user:password@localhost:25532/taskapp"
+DATABASE_URL="postgresql://user:password@localhost:25532/taskapp?schema=public"
 
 # Vitest が使うテスト用DB接続URL
 # ポート番号は _DOCKER_COMPOSE_HOST_PORT_TEST_DB と合わせる必要があります
-TEST_DATABASE_URL="postgresql://user:password@localhost:25533/taskapp_test"
+TEST_DATABASE_URL="postgresql://user:password@localhost:25533/taskapp_test?schema=public"
 
 # JWT Authentication (32文字以上必須。本番では必ず変更してください)
 JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
@@ -646,7 +664,6 @@ setup_database() {
   app_db_port="$(node "$database_guard" port db)"
   if ! compose up -d db; then
     print_error "アプリ用 DB の起動に失敗しました。Docker の状態と ${app_db_port} 番ポートの競合を確認してください。"
-    print_error "ポートが競合している場合は、付録「トラブルシューティング」の「別フォルダの DB と衝突した場合」の手順で使う番号を変えてください。"
     exit 1
   fi
 
@@ -696,6 +713,7 @@ main() {
   configure_security_overrides
   install_dependencies
   configure_package_json
+  sync_package_lock_metadata
   configure_tsconfig
   remove_eslint_config
   init_biome
@@ -715,4 +733,6 @@ main() {
   echo "カリキュラムの Day 01 の続きを進めてください。"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

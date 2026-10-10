@@ -13,15 +13,18 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
+import json
 import sys
 import tempfile
+from collections.abc import Callable
+from copy import deepcopy
 from pathlib import Path
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
+import check_pdf_book as target  # noqa: E402
 from check_pdf_book import ToolFailure  # noqa: E402
-from check_pdf_book import main as check_pdf_book_main  # noqa: E402
 from check_pdf_book import (  # noqa: E402
     find_blank_pages,
     find_font_problems,
@@ -139,6 +142,44 @@ FURNITURE_CASES: list[tuple[str, list[str], int]] = [
 ]
 
 
+def receipt_rect(left: float, top: float, width: float, height: float) -> dict[str, float]:
+    return {
+        "x": left,
+        "y": top,
+        "left": left,
+        "top": top,
+        "right": left + width,
+        "bottom": top + height,
+        "width": width,
+        "height": height,
+    }
+
+
+def outline_item(page_index: int, role: str, text: str) -> dict[str, object]:
+    side = "right" if page_index % 2 == 0 else "left"
+    local_top = 0.0 if role == "title" else 1000.0
+    page_top = page_index * 1200.0
+    characters = [
+        {
+            "character": character,
+            "global_rect": receipt_rect(10.0 + index, page_top + local_top + 10.0, 1.0, 10.0),
+            "page_local_rect": receipt_rect(10.0 + index, local_top + 10.0, 1.0, 10.0),
+        }
+        for index, character in enumerate(text)
+    ]
+    return {
+        "page_index": page_index,
+        "role": role,
+        "box": f"{'top' if role == 'title' else 'bottom'}-{side}",
+        "text": text,
+        "coordinate_space": "physical_page_css_px_v1",
+        "outline_path_count": sum(character != " " for character in text),
+        "bounds": receipt_rect(0.0, page_top + local_top, 500.0, 100.0),
+        "page_local_bounds": receipt_rect(0.0, local_top, 500.0, 100.0),
+        "character_rects": characters,
+    }
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -226,41 +267,349 @@ def main() -> int:
     if page_residue(f"{spaced}\n\n5\n", exact, 5) != "":
         failures.append("空白入りの柱を引き切れていない")
 
-    # pdf-book-gate の subset 経路は check_pdf_book.py --allow-gaps をディレクトリ
-    # 指定なしで呼ぶ。フラグだけを取り除くと引数が空になるので、空のときは
-    # 既定の dist/pdf へ落ちることを固定する。落ちないと「ディレクトリを1つ
-    # 指定してください」で検査ごと止まる。
-    # 既定と明示を別ディレクトリに分けるのは、明示した引数を無視して既定へ
-    # 落ちる退行も見分けるため。同じ場所だとどちらを見ても通ってしまう。
-    with tempfile.TemporaryDirectory() as tmp:
-        default_dir = Path(tmp) / "default"
-        explicit_dir = Path(tmp) / "explicit"
-        default_dir.mkdir()
-        explicit_dir.mkdir()
-        default_pdf = default_dir / "day01_default.pdf"
-        explicit_pdf = explicit_dir / "day01_explicit.pdf"
-        default_pdf.write_bytes(b"%PDF-1.4\n")
-        explicit_pdf.write_bytes(b"%PDF-1.4\n")
-        for label, argv, expected in (
-            ("--allow-gaps 単体", ["check_pdf_book.py", "--allow-gaps"], default_pdf),
-            ("--allow-gaps + ディレクトリ",
-             ["check_pdf_book.py", "--allow-gaps", str(explicit_dir)], explicit_pdf),
-        ):
-            err = io.StringIO()
-            with (patch("shutil.which", return_value="/usr/bin/x"),
-                    patch("check_pdf_book.DEFAULT_PDF_DIR", default_dir),
-                    patch("check_pdf_book.check_one", return_value=[]) as check_one,
-                    contextlib.redirect_stderr(err)):
-                code = check_pdf_book_main(argv)
-            checked = [c.args[0] for c in check_one.call_args_list]
-            if "ディレクトリを1つ指定" in err.getvalue():
-                failures.append(
-                    f"引数の解釈({label}): 既定ディレクトリへ落ちていない")
-            elif code != 0:
-                failures.append(f"引数の解釈({label}): 戻り値が {code}")
-            elif checked != [expected]:
-                failures.append(
-                    f"引数の解釈({label}): 検査した PDF が {checked}（期待は {expected}）")
+    valid_item = outline_item(0, "title", "AB")
+    if target.validate_outline_receipt(valid_item, 0, "title", "AB", "top-right"):
+        failures.append("outline schema: 正しいglobal/page-local receiptを拒否した")
+    strict_receipt_cases: list[tuple[str, dict[str, object]]] = []
+
+    def invalid_item(label: str, mutate: Callable[[dict[str, object]], None]) -> None:
+        item = deepcopy(valid_item)
+        mutate(item)
+        strict_receipt_cases.append((label, item))
+
+    invalid_item("coordinate_space", lambda item: item.update(coordinate_space="legacy"))
+    invalid_item("文字数", lambda item: item["character_rects"].pop())
+    invalid_item("文字順", lambda item: item["character_rects"][0].update(character="B"))
+    invalid_item(
+        "legacy rect",
+        lambda item: item["character_rects"][0].update(
+            rect=item["character_rects"][0].pop("page_local_rect")
+        ),
+    )
+    invalid_item(
+        "local bounds外",
+        lambda item: item["character_rects"][0].update(
+            page_local_rect=receipt_rect(10.0, 95.0, 1.0, 10.0)
+        ),
+    )
+    invalid_item(
+        "global/local不一致",
+        lambda item: item["character_rects"][0].update(
+            global_rect=receipt_rect(11.0, 10.0, 1.0, 10.0)
+        ),
+    )
+    large_coordinate = deepcopy(valid_item)
+    page_origin = 1051200.125
+    large_coordinate["bounds"] = receipt_rect(0.0, page_origin, 500.0, 100.0)
+    for character_rect in large_coordinate["character_rects"]:
+        local_rect = character_rect["page_local_rect"]
+        character_rect["global_rect"] = receipt_rect(
+            local_rect["left"], local_rect["top"] + page_origin, local_rect["width"], local_rect["height"]
+        )
+    large_coordinate["character_rects"][0]["global_rect"]["y"] += 0.001
+    strict_receipt_cases.append(("巨大座標rel_tol", large_coordinate))
+    for rect_name, rect_getter in (
+        ("bounds", lambda item: item["bounds"]),
+        ("page_local_bounds", lambda item: item["page_local_bounds"]),
+        ("global_rect", lambda item: item["character_rects"][0]["global_rect"]),
+        ("page_local_rect", lambda item: item["character_rects"][0]["page_local_rect"]),
+    ):
+        for field in ("x", "y", "left", "top", "right", "bottom", "width", "height"):
+            invalid_item(
+                f"{rect_name}.{field}=bool",
+                lambda item, getter=rect_getter, key=field: getter(item).__setitem__(key, True),
+            )
+            invalid_item(
+                f"{rect_name}.{field}=nonfinite",
+                lambda item, getter=rect_getter, key=field: getter(item).__setitem__(
+                    key, float("inf")
+                ),
+            )
+        invalid_item(
+            f"{rect_name} order",
+            lambda item, getter=rect_getter: getter(item).__setitem__(
+                "right", getter(item)["left"]
+            ),
+        )
+        invalid_item(
+            f"{rect_name} positive width",
+            lambda item, getter=rect_getter: getter(item).__setitem__("width", 0.0),
+        )
+        invalid_item(
+            f"{rect_name} vertical order",
+            lambda item, getter=rect_getter: getter(item).__setitem__(
+                "bottom", getter(item)["top"]
+            ),
+        )
+        invalid_item(
+            f"{rect_name} positive height",
+            lambda item, getter=rect_getter: getter(item).__setitem__("height", 0.0),
+        )
+
+    for label, item in strict_receipt_cases:
+        got = target.validate_outline_receipt(item, 0, "title", "AB", "top-right")
+        if not got:
+            failures.append(f"outline schema: {label}を拒否しなかった")
+        elif any("pathが無い" in problem for problem in got):
+            failures.append(f"outline schema: {label}を物理path欠落と誤分類した: {got}")
+
+    for label, mutate in (
+        (
+            "空白文字bool",
+            lambda rect: rect["page_local_rect"].__setitem__("top", True),
+        ),
+        (
+            "空白文字nonfinite",
+            lambda rect: rect["global_rect"].__setitem__("bottom", float("inf")),
+        ),
+        (
+            "空白文字order",
+            lambda rect: rect["page_local_rect"].__setitem__(
+                "right", rect["page_local_rect"]["left"]
+            ),
+        ),
+    ):
+        item = outline_item(0, "title", "A B")
+        mutate(item["character_rects"][1])
+        got = target.validate_outline_receipt(item, 0, "title", "A B", "top-right")
+        if not got:
+            failures.append(f"outline schema: {label}を拒否しなかった")
+
+    # 柱とノンブルを SVG path に変えた生成物は pdftotext では読めない。現在の PDF、
+    # DOM 証跡、原稿、font、glyph map を SHA で結んだ場合だけ代替証跡として認める。
+    original_build_dir = target.BUILD_DIR
+    original_src_dir = target.SRC_DIR
+    original_glyph_map = target.GLYPH_MAP
+    original_direct_check = target.find_margin_outline_pdf_problems
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        target.BUILD_DIR = root / "build"
+        target.SRC_DIR = root / "source"
+        target.BUILD_DIR.mkdir()
+        target.SRC_DIR.mkdir()
+        pdf = root / "day01_receipt.pdf"
+        pdf.write_bytes(b"exact pdf bytes")
+        source = target.SRC_DIR / "day01_receipt.md"
+        source.write_text(f"# {HEADER}\n", encoding="utf-8")
+        glyph = root / "glyph.json"
+        target.GLYPH_MAP = glyph
+        font = root / "font.ttf"
+        font.write_bytes(b"font bytes")
+        glyph.write_text(
+            json.dumps(
+                {
+                    "font": {"sha256": hashlib.sha256(font.read_bytes()).hexdigest()},
+                    "supported_titles": [
+                        {
+                            "path": f"material/30days-curriculum/{source.name}",
+                            "title": HEADER,
+                            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        slug = target.work_slug(pdf.stem)
+        dom_path = target.BUILD_DIR / f"{slug}.inline-layout.json"
+        pdf_report_path = target.BUILD_DIR / f"{slug}.inline-pdf.json"
+
+        def write_receipts(*, folio_two: str = "2", pdf_sha: str | None = None) -> None:
+            inventory = []
+            for page_index in range(2):
+                folio = folio_two if page_index == 1 else "1"
+                inventory += [
+                    outline_item(page_index, "title", HEADER),
+                    outline_item(page_index, "folio", folio),
+                ]
+            dom = {
+                "schema_version": 1,
+                "result": "dom_pass_post_pdf_pending",
+                "document_id": slug,
+                "margin_outline": {
+                    "status": "pass",
+                    "provenance": {
+                        "source_title": HEADER,
+                        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        "glyph_map_path": str(glyph),
+                        "glyph_map_sha256": hashlib.sha256(glyph.read_bytes()).hexdigest(),
+                        "font_path": str(font),
+                        "font_sha256": hashlib.sha256(font.read_bytes()).hexdigest(),
+                    },
+                    "conversion": {
+                        "status": "pass",
+                        "expected_title": HEADER,
+                        "page_count": 2,
+                        "converted_box_count": 4,
+                        "page_body_geometry_equal": True,
+                        "inventory": inventory,
+                    },
+                },
+            }
+            dom_path.write_text(json.dumps(dom), encoding="utf-8")
+            report = {
+                "schema_version": 1,
+                "result": "pass",
+                "document_id": slug,
+                "issues": [],
+                "page_count": {"dom": 2, "pdf": 2},
+                "inputs": {
+                    "final_pdf": {"sha256": pdf_sha or hashlib.sha256(pdf.read_bytes()).hexdigest()},
+                    "dom_report": {"sha256": hashlib.sha256(dom_path.read_bytes()).hexdigest()},
+                },
+            }
+            pdf_report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        try:
+            target.find_margin_outline_pdf_problems = lambda _pdf, _total, _header: []
+            missing = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("証跡を読めない" in problem for problem in missing):
+                failures.append("outline証跡: 欠落した証跡を通した")
+
+            write_receipts()
+            if target.find_outline_receipt_problems(pdf, 2, HEADER):
+                failures.append("outline証跡: 完全なSHA結合証跡を拒否した")
+            pages_without_text_furniture = ["表紙", "本文"]
+            if target.find_output_furniture_problems(
+                pdf, pages_without_text_furniture, HEADER, 2
+            ):
+                failures.append("outline証跡: 正しいpath柱・ノンブルを欠落扱いした")
+
+            malformed_dom = json.loads(dom_path.read_text(encoding="utf-8"))
+            malformed_character = malformed_dom["margin_outline"]["conversion"]["inventory"][0][
+                "character_rects"
+            ][0]
+            malformed_character["rect"] = malformed_character.pop("page_local_rect")
+            dom_path.write_text(json.dumps(malformed_dom), encoding="utf-8")
+            malformed_pdf_report = json.loads(pdf_report_path.read_text(encoding="utf-8"))
+            malformed_pdf_report["inputs"]["dom_report"]["sha256"] = hashlib.sha256(
+                dom_path.read_bytes()
+            ).hexdigest()
+            pdf_report_path.write_text(json.dumps(malformed_pdf_report), encoding="utf-8")
+            direct_calls = 0
+
+            def unexpected_direct_call(_pdf: Path, _total: int, _header: str) -> list[str]:
+                nonlocal direct_calls
+                direct_calls += 1
+                return ["p2: 最終PDFに柱が無い"]
+
+            target.find_margin_outline_pdf_problems = unexpected_direct_call
+            malformed_output = target.find_output_furniture_problems(
+                pdf, pages_without_text_furniture, HEADER, 2
+            )
+            if direct_calls != 0:
+                failures.append("outline証跡: invalid receiptでも直接物理検査を呼んだ")
+            if len(malformed_output) != 1 or not malformed_output[0].startswith(
+                "outline DOM証跡が不正:"
+            ):
+                failures.append(f"outline証跡: invalid receipt原因をboundedに返さない {malformed_output}")
+            if any("柱が無い" in problem for problem in malformed_output):
+                failures.append(f"outline証跡: invalid receiptを物理欠落と誤分類した {malformed_output}")
+
+            write_receipts()
+
+            target.find_margin_outline_pdf_problems = (
+                lambda _pdf, _total, _header: ["p2: 最終PDFに柱が無い"]
+            )
+            direct_failure = target.find_output_furniture_problems(
+                pdf, pages_without_text_furniture, HEADER, 2
+            )
+            if not any("最終PDFに柱が無い" in problem for problem in direct_failure):
+                failures.append("outline直接検査: valid receiptで最終PDF欠落を隠した")
+            if not any("p2: 柱が無い" in problem for problem in direct_failure):
+                failures.append("outline直接検査: 元のpdftotext findingを消した")
+            target.find_margin_outline_pdf_problems = lambda _pdf, _total, _header: []
+
+            # 子検査が fail を返したのに詳細が空でも、ラッパーは成功扱いしてはいけない。
+            # この組は V3 の実装で pdftotext 欠落を消す fail-open を再現した。
+            if not target.find_direct_result_problems(1, "fail", []):
+                failures.append("outline直接検査: rc1/fail/空problemsを成功扱いした")
+            if target.find_direct_result_problems(0, "pass", []):
+                failures.append("outline直接検査: rc0/pass/空problemsを拒否した")
+            if not target.find_direct_result_problems(0, "pass", ["p2: 欠落"]):
+                failures.append("outline直接検査: rc0/pass/非空problemsを成功扱いした")
+
+            write_receipts()
+            bool_dom = json.loads(dom_path.read_text(encoding="utf-8"))
+            bool_dom["margin_outline"]["conversion"]["inventory"][0]["page_index"] = True
+            dom_path.write_text(json.dumps(bool_dom), encoding="utf-8")
+            bool_pdf_report = json.loads(pdf_report_path.read_text(encoding="utf-8"))
+            bool_pdf_report["inputs"]["dom_report"]["sha256"] = hashlib.sha256(
+                dom_path.read_bytes()
+            ).hexdigest()
+            pdf_report_path.write_text(json.dumps(bool_pdf_report), encoding="utf-8")
+            got = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("page_indexが整数ではない" in problem for problem in got):
+                failures.append("outline証跡: boolean page_indexを整数として通した")
+
+            write_receipts(pdf_sha="0" * 64)
+            got = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("PDF SHA256" in problem for problem in got):
+                failures.append("outline証跡: 別PDFの証跡を通した")
+
+            write_receipts(folio_two="99")
+            got = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("p2: folio DOM証跡の内容" in problem for problem in got):
+                failures.append("outline証跡: staleなノンブルを通した")
+
+            write_receipts()
+            stale_dom = json.loads(dom_path.read_text(encoding="utf-8"))
+            stale_dom["margin_outline"]["conversion"]["expected_title"] = "stale title"
+            dom_path.write_text(json.dumps(stale_dom), encoding="utf-8")
+            stale_pdf_report = json.loads(pdf_report_path.read_text(encoding="utf-8"))
+            stale_pdf_report["inputs"]["dom_report"]["sha256"] = hashlib.sha256(
+                dom_path.read_bytes()
+            ).hexdigest()
+            pdf_report_path.write_text(json.dumps(stale_pdf_report), encoding="utf-8")
+            got = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("タイトルがPDF Title" in problem for problem in got):
+                failures.append("outline証跡: staleなタイトルを通した")
+
+            write_receipts()
+            source.write_text(f"# {HEADER}\n変更\n", encoding="utf-8")
+            got = target.find_outline_receipt_problems(pdf, 2, HEADER)
+            if not any("原稿SHA256" in problem for problem in got):
+                failures.append("outline証跡: staleな原稿を通した")
+
+            write_receipts()
+            cover_problem = target.find_output_furniture_problems(
+                pdf, [f"{HEADER}\n1\n", "本文"], HEADER, 2
+            )
+            if "表紙にノンブルが出ている" not in cover_problem:
+                failures.append("outline証跡: 表紙の実テキストノンブルを隠した")
+        finally:
+            target.BUILD_DIR = original_build_dir
+            target.SRC_DIR = original_src_dir
+            target.GLYPH_MAP = original_glyph_map
+            target.find_margin_outline_pdf_problems = original_direct_check
+
+    # 全冊検査は day の内側の欠番を落とす一方、変更冊だけを組む subset では
+    # 欠番が仕様なので --allow-gaps のときだけ許可する。両経路を同じfixtureで固定する。
+    with tempfile.TemporaryDirectory() as directory:
+        pdf_dir = Path(directory)
+        (pdf_dir / "day01_first.pdf").touch()
+        (pdf_dir / "day03_third.pdf").touch()
+        original_tools = target.REQUIRED_TOOLS
+        original_check_one = target.check_one
+        target.REQUIRED_TOOLS = ()
+        target.check_one = lambda _pdf: []
+        try:
+            full_output = io.StringIO()
+            with contextlib.redirect_stdout(full_output):
+                full_result = target.main(["check_pdf_book.py", str(pdf_dir)])
+            if full_result != 1 or "day02 の PDF がありません" not in full_output.getvalue():
+                failures.append("全冊検査が day の内側の欠番を見逃している")
+
+            subset_output = io.StringIO()
+            with contextlib.redirect_stdout(subset_output):
+                subset_result = target.main(
+                    ["check_pdf_book.py", "--allow-gaps", str(pdf_dir)]
+                )
+            if subset_result != 0:
+                failures.append("subset 検査が仕様上の day 欠番を拒否している")
+        finally:
+            target.REQUIRED_TOOLS = original_tools
+            target.check_one = original_check_one
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")
@@ -269,7 +618,8 @@ def main() -> int:
         return 1
 
     total = (len(BLANK_CASES) + len(MERMAID_CASES) + len(FONT_CASES)
-             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES) + 13)
+             + len(TOC_CASES) + len(CODE_CASES) + len(FURNITURE_CASES)
+             + len(strict_receipt_cases) + 25)
     print(f"✅ {total} ケースすべて通過")
     return 0
 

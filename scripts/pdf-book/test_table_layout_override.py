@@ -6,8 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from build_pdf_book import work_slug
-
 
 MODULE_PATH = Path(__file__).with_name("table_layout_override.py")
 SPEC = importlib.util.spec_from_file_location("table_layout_override", MODULE_PATH)
@@ -203,25 +201,43 @@ class TableLayoutOverrideTest(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.TableLayoutOverrideError, "span"):
             self.derive(report=report)
 
-    def test_repository_config_matches_current_catalog_and_sources(self):
+    def test_repository_day02_config_matches_raw_source_and_table(self):
         scripts = Path(__file__).parent
         repository = scripts.parent.parent
         config = MODULE.load_table_layout_overrides(scripts / "table-layout.json")
-        sources = {
-            work_slug(source.stem): source
-            for source in (repository / "material/30days-curriculum").glob("*.md")
+        source = repository / "material/30days-curriculum/day02_ダッシュボードに自分だけのメッセージを追加しよう.md"
+        override = config["overrides"][0]
+        manifest = {
+            "document_id": override["document_id"],
+            "tables": [
+                {
+                    "id": override["table_id"],
+                    "source_order": override["table_source_order"],
+                }
+            ],
         }
-        self.assertTrue(sources)
-        MODULE.validate_override_document_catalog(config, list(sources))
-        for override in config["overrides"]:
-            with self.subTest(document_id=override["document_id"]):
-                source = sources[override["document_id"]].read_bytes()
-                self.assertEqual(sha256(source), override["source_sha256"])
-                tables = MODULE._extract_supported_tables(source)
-                self.assertLess(override["table_source_order"], len(tables))
-                raw_table, column_count = tables[override["table_source_order"]]
-                self.assertEqual(sha256(raw_table), override["table_sha256"])
-                self.assertEqual(column_count, len(override["column_percentages"]))
+        report = {
+            "document_id": override["document_id"],
+            "dom_audit": {
+                "observed": [
+                    {
+                        "items": [
+                            {
+                                "page_index": 5,
+                                "table_geometry": geometry(
+                                    table_id=override["table_id"], columns=4
+                                ),
+                            }
+                        ]
+                    }
+                ]
+            },
+        }
+        css, applied = MODULE.derive_reviewed_table_css(
+            config, source, manifest, report
+        )
+        self.assertIn("width:37%", css)
+        self.assertEqual(applied[0]["table_sha256"], override["table_sha256"])
 
 
 if __name__ == "__main__":

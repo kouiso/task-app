@@ -25,7 +25,7 @@
 | ツール | バージョン | 確認コマンド |
 |--------|-----------|------------|
 | OS | macOS 13+ / Ubuntu 22.04 / Windows 11 (WSL2) | `sw_vers` / `lsb_release -a` |
-| Node.js | 22.x | `node -v` |
+| Node.js | 22.12.0 以上 23 未満（22.22.2 推奨） | `node -v` |
 | npm | 10.x | `npm -v` |
 | Docker runtime | Docker Desktop / OrbStack / Docker Engine | `docker -v` |
 | Docker Compose | v2 系（`docker compose` が使えること） | `docker compose version` |
@@ -47,6 +47,7 @@ PostgreSQL は Docker Compose 経由で起動するため、ローカルへの�
 task-app/
   .env.example      <- 環境変数の見本
   .mise.toml        <- mise を使う場合の Node.js バージョン設定
+  .node-version     <- CI などが使う検証済み Node.js バージョン
   README.md         <- セットアップ案内
   doc/               <- 動作環境の詳細
   scripts/           <- セットアップスクリプトとスターター素材
@@ -141,7 +142,7 @@ API の一部は、後の日の画面を先に動かせるスターターです�
 
 ## テストについて
 
-本編の Day 26 で `vitest.config.ts` とテストファイルを作成します。そこで作ったテストや自分で書き足したテストは `npm test` で実行できます。
+本編ではテストの作成を扱いません。Vitest は土台だけ入っているので、自分でテストを書いたときに `npm test` で実行できます。
 
 テストを追加する場合、テスト用データベースは `TEST_DATABASE_URL` のポート（初期値は 25533）を使います。`docker compose up -d` で test-db を起動してから実行してください。
 

@@ -1,8 +1,8 @@
 # Day 08: サイドバー付きのアプリレイアウトを作ろう
 
-![Day 08 のサイドバー。上にロゴ、メニューが「ダッシュボード」「プロジェクト」「マイタスク」の3つ、下にログイン中のユーザー名とログアウトボタンが並んでいる](./screenshots/day08/sidebar.png)
+![Day 08 のサイドバー。上にロゴと「ダッシュボード」のメニュー、下にログイン中の管理者名とログアウトボタンが並んでいる](./screenshots/day08/sidebar.png)
 
-赤い枠が今日作るサイドバーです。メニューは「ダッシュボード」「プロジェクト」「マイタスク」の3つになります。
+画像は今日のサイドバーです。すでにページがある「ダッシュボード」だけを表示します。「プロジェクト」は Day 09、「マイタスク」は Day 17 でページを作った直後に追加します。まだ無いページへのリンクを先に置くと、押した人が 404 ページへ進んでしまうためです。
 残りのメニューは Day 13 以降で画面を作るたびに1つずつ足していきます。
 
 ## 前回の振り返り
@@ -21,16 +21,16 @@ Day 07 で認証バックエンドを作りました。
 サイドバー付きのレイアウトを自分で作って
 まずダッシュボードにこのレイアウトを適用します。Day 09 以降のページには作るたびに同じレイアウトを適用していきます。
 
-- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider を読んで、どこまで届くか確認する
+- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider を読んで、どこまで届くか確認します。
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
 - [ ] `src/app/dashboard/page.tsx` — AppLayout の中で動くダッシュボード
-- [ ] ログアウトが動作することを確認する
+- [ ] ログアウトが動作することを確認します。
 
 ## なぜこれを作るのか
 
-Day 07 のログイン API は動くけどフロント側がまだ繋がっていません。
-ブラウザから tRPC を呼ぶには「tRPC クライアント」をアプリ全体に設定します。
-そしてログイン後のページには共通のサイドバーが必要です。
+Day 05〜07 のログイン・登録画面は、配布済みの tRPC クライアントを通してすでに API を呼んでいます。
+今日はその設定がアプリのどこまで届くのかを確認します。
+そのうえで、ログイン後の各ページで使う共通のサイドバーレイアウトを作ります。
 
 > **例え話**: Day 07 で厨房（サーバー）を作りました。今日は客席のレイアウト（テーブル配置・通路・メニュー看板）を作ります。客が座ったときに「ちゃんとしたお店だな」と感じる骨格の部分です。
 
@@ -61,7 +61,7 @@ flowchart TD
 | やること | やらないこと |
 |---------|-------------|
 | 配布済みの tRPC クライアント設定を読んで、フロントから API を呼べる理由を掴む | tRPC クライアント設定の自作（scaffold で配布済み） |
-| サイドバー + レイアウトを自分の手で書く | モバイル対応のナビゲーション（Day 25 で追加します） |
+| サイドバー + レイアウトを自分の手で書く | 完成版の Sheet（画面端から開くパネル）式モバイルサイドバー（教材では作りません。Day 25 では別方式の横並びトップナビゲーションを作ります） |
 | ログアウトを AlertDialog 付きで実装する | ユーザー編集機能 |
 
 ### 新しく学ぶ概念
@@ -75,7 +75,7 @@ flowchart TD
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 作成ファイル |
+| ステップ | 作業内容 | 読む時間の目安 | 作成ファイル |
 |---------|---------|---------|-------------|
 | Step 1 | providers.tsx の中身を読む（tRPC + React Query） | 8分 | `src/app/providers.tsx` |
 | Step 2 | ルートレイアウトのどこで Provider が囲んでいるか読む | 5分 | `src/app/layout.tsx` 確認 |
@@ -83,13 +83,13 @@ flowchart TD
 | Step 4 | ダッシュボードに AppLayout を適用する | 5分 | `src/app/dashboard/page.tsx` |
 | Step 5 | ログインして全体の動作を確認する | 5分 | なし |
 
-**合計時間**: 約 38 分です。
+**読む時間の合計（仮）**: 約38分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 1: providers.tsx を読む（tRPC クライアント設定・8分）
+### Step 1: providers.tsx を読む（tRPC クライアント設定・読む目安: 8分）
 
 **ゴール**: 配布済みの設定を読んで、フロントエンドから tRPC API を呼べる仕組みを掴みます。
 
@@ -139,13 +139,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 > scaffold の `src/trpc/react.tsx` の中身が気になったら開いてみてもいいです。QueryClient と httpBatchLink の設定が入っています。
 
 **確認ポイント**:
-- [ ] `src/app/providers.tsx` の中身を確認した
-- [ ] `'use client'` が先頭にある
-- [ ] `<Toaster />` が入っている
+- [ ] `src/app/providers.tsx` の中身を確認しました。
+- [ ] `'use client'` が先頭にあります。
+- [ ] `<Toaster />` が入っています。
 
 ---
 
-### Step 2: ルートレイアウトのどこで Provider が囲んでいるか読む（5分）
+### Step 2: ルートレイアウトのどこで Provider が囲んでいるか読む（読む目安: 5分）
 
 **ゴール**: アプリ全体で tRPC が使える理由を、ルートレイアウトを読んで掴みます。
 
@@ -195,12 +195,12 @@ export default function RootLayout({
 > `<Providers>` で全体を囲んだのでアプリのどこからでも `api.auth.login.useMutation()` のように tRPC を呼べます。
 
 **確認ポイント**:
-- [ ] `src/app/layout.tsx` に `<Providers>` が入っていることを確認した
+- [ ] `src/app/layout.tsx` に `<Providers>` が入っていることを確認しました。
 - [ ] この時点で `npm run dev` してエラーが出ないことを確認
 
 ---
 
-### Step 3: AppLayout を作る（サイドバーの骨格・15分）
+### Step 3: AppLayout を作る（サイドバーの骨格・読む目安: 15分）
 
 **ゴール**: サイドバー + メインコンテンツのレイアウトコンポーネントを作ります。
 
@@ -234,18 +234,12 @@ flowchart TD
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-} from 'lucide-react';
+import { LayoutDashboard, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -258,10 +252,10 @@ import {
 
 import はこのファイルで使う道具を先に並べる宣言です。`useQueryClient` は画面をまたいで保存された問い合わせ結果を操作します。`lucide-react` はサイドバーのアイコン、`Link` はページ移動、`usePathname` は今いるページの URL を取る道具で、現在のメニューを目立たせるときに使います。`useState` は画面の状態を覚えておく仕組みです。`useEffect`（画面が表示された後など、決まったタイミングで処理を走らせる React の仕組み）はあとで「ブラウザ側の準備が終わったか」を記録するときに使います。
 
-`AlertDialog` で始まる 9 個はログアウト前の確認ダイアログを組み立てる部品一式です。shadcn/ui のダイアログは 1 つの部品ではなく、枠・見出し・本文・ボタンに分かれています。だから使う分だけ名前を並べて取り込みます。1 つでも取り込み漏れがあるとその名前を書いた行で「定義されていない」というエラーが出ます。
+`AlertDialog` で始まる 8 個はログアウト前の確認ダイアログを組み立てる部品一式です。shadcn/ui のダイアログは 1 つの部品ではなく、枠・見出し・本文・ボタンに分かれています。だから使う分だけ名前を並べて取り込みます。1 つでも取り込み漏れがあるとその名前を書いた行で「定義されていない」というエラーが出ます。
 
 **確認ポイント**:
-- [ ] ログアウト確認に使う `AlertDialog` 一式を import している
+- [ ] ログアウト確認に使う `AlertDialog` 一式を import しています。
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
@@ -272,13 +266,13 @@ import { api } from '@/trpc/react';
 
 `cn` は条件によって変わるクラス名を1つの文字列にまとめる関数です。あとでメニューの現在地を色分けするとき選択中と未選択のクラスを混ぜて渡します。
 
-`+` でつないでも動きます。ただ、空白を1つ入れ忘れると `text-smfont-bold` のようにくっついてそのクラスだけ効かなくなります。画面は崩れず、ただ色が付かないだけです。だから原因を探すのに時間がかかります。
+`+` でつないでも動きます。ただ、空白を1つ入れ忘れると `bg-gray-100text-blue-600` のようにくっついてそのクラスだけ効かなくなります。画面は崩れず、ただ色が付かないだけです。だから原因を探すのに時間がかかります。
 
 `api` は tRPC のクライアントです。これを取り込まないとあとで書く `api.auth.getSession` の行で「名前が見つからない」というエラー画面が出て、ページを表示できなくなります。
 
 **確認ポイント**:
-- [ ] ログアウト用の `AlertDialog` を import している
-- [ ] tRPC 用の `api` を import している
+- [ ] ログアウト用の `AlertDialog` を import しています。
+- [ ] tRPC 用の `api` を import しています。
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
@@ -293,16 +287,6 @@ const menuItems: MenuItem[] = [
     text: 'ダッシュボード',
     icon: <LayoutDashboard className="h-5 w-5" />,
     path: '/dashboard',
-  },
-  {
-    text: 'プロジェクト',
-    icon: <FolderOpen className="h-5 w-5" />,
-    path: '/project',
-  },
-  {
-    text: 'マイタスク',
-    icon: <ListTodo className="h-5 w-5" />,
-    path: '/my-task',
   },
 ];
 ```
@@ -324,28 +308,69 @@ export function AppLayout({
   children: React.ReactNode;
 }) {
   const [hasMounted, setHasMounted] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const logoutLockedRef = useRef(false);
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
 
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+```
 
+ログアウトの失敗を画面に残すため、ダイアログの開閉とエラー文を `useState` で覚えます。
+`useRef`（再描画を待たずに値を保持する React の仕組み）は、連続クリックをその場で止めるために使います。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
       queryClient.clear();
       router.push('/login');
       router.refresh();
+      setLogoutDialogOpen(false);
+    },
+    onError: () => {
+      setLogoutError(
+        'ログアウトの完了を確認できませんでした。' +
+        '通信状況を確認して、もう一度お試しください。');
+    },
+    onSettled: () => {
+      logoutLockedRef.current = false;
     },
   });
+
+  const handleLogout = () => {
+    if (logoutLockedRef.current || logoutMutation.isPending) return;
+    logoutLockedRef.current = true;
+    setLogoutError(null);
+    logoutMutation.mutate();
+  };
+```
+
+`onSettled`（成功・失敗のどちらでも通信の最後に動く処理）で `logoutLockedRef` のロックを解除します。失敗した後も解除されるため、案内を読んでから再試行できます。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
+  const openLogoutDialog = () => {
+    setLogoutError(null);
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutDialogOpenChange = (open: boolean) => {
+    if (!open && (logoutLockedRef.current || logoutMutation.isPending)) return;
+    if (open) setLogoutError(null);
+    setLogoutDialogOpen(open);
+  };
 ```
 
 状態と問い合わせを、関数の先頭でまとめて宣言しています。`useState` や `useQuery` のようなフックは毎回同じ順番で呼ばれることを前提に作られています。`if` の中や `return` より後ろに置くと順番が変わり、React が値を取り違えてエラーになります。並べる場所には理由があります。
 
 `logoutMutation` を関数の先頭で用意しておくのは`useMutation` もフックだからです。フックは毎回同じ順番で呼ばれる前提なので`onClick` の中には書けません。実際に通信が始まるのはボタンが押されて `mutate` が呼ばれたときです。
 
-ログアウト API が成功した後の処理は、次の順番です。
+ログアウト API が成功した後の処理は、次の順番です。失敗した場合はキャッシュと画面を残し、ダイアログ内に再試行の案内を出します。
 
 | 順番 | 処理 |
 |---|---|
@@ -356,9 +381,9 @@ export function AppLayout({
 問い合わせの停止を待つため、`onSuccess` に `async` を付けて `await` を使います。停止と削除の順番が逆だと、消した直後に遅れて終わった問い合わせが前の利用者のデータを入れ直す可能性があります。
 
 **確認ポイント**:
-- [ ] `getSession` でログイン状態を取得している
-- [ ] 実行中の問い合わせを止めてからキャッシュを消している
-- [ ] ログアウト成功後に `/login` へ戻している
+- [ ] `getSession` でログイン状態を取得しています。
+- [ ] 実行中の問い合わせを止めてからキャッシュを消しています。
+- [ ] ログアウト成功後に `/login` へ戻しています。
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（続き）
@@ -375,7 +400,9 @@ export function AppLayout({
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
+        <p className="text-muted-foreground">
+          読み込み中...
+        </p>
       </div>
     );
   }
@@ -440,9 +467,9 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
 パソコンのブラウザでウィンドウ幅を 768px 以上に広げると帯が戻ります。自分の書き間違いではありません。
 
 **確認ポイント**:
-- [ ] 左側にサイドバーを作っている
-- [ ] サイドバー上部のロゴとして `タスク管理` を表示している
-- [ ] 画面幅を 768px より狭くするとサイドバーごと消えることを確認した（仕様どおりの動き）
+- [ ] 左側にサイドバーを作っています。
+- [ ] サイドバー上部のロゴとして `タスク管理` を表示しています。
+- [ ] 画面幅を 768px より狭くするとサイドバーごと消えることを確認しました（仕様どおりの動き）。
 
 ```tsx
         {/* filepath: src/component/layout/app-layout.tsx（続き） */}
@@ -467,8 +494,8 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
 この前半でリンク先と、現在地に応じた色を決めています。続きでアイコンと文字を描き、一覧のタグを閉じます。2つのブロックは同じ `Link` の続きなので、間に別のコードは入れません。
 
 ```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（続き） */}
                 >
+                  {/* filepath: src/component/layout/app-layout.tsx（続き） */}
                   {item.icon}
                   {item.text}
                 </Link>
@@ -478,13 +505,13 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
         </nav>
 ```
 
-メニューを `map` で組み立てるのは項目を増やすときに `menuItems` へ1行足すだけで済むようにするためです。`<li>` を3つ手で書き並べても今は動きます。ただし項目が増えるたびに同じクラス名を書き写すことになり、1つだけ直し忘れた項目がいずれ出ます。`key` に `item.path` を渡すのはReact が並び替えのときにどの項目が動いたかを見分けるためです。
+メニューを `map` で組み立てるのは項目を増やすときに `menuItems` へ1行足すだけで済むようにするためです。今は1項目だけなので `<li>` を手で書いても動きます。ただし項目が増えるたびに同じクラス名を書き写すことになり、1つだけ直し忘れた項目がいずれ出ます。`key` に `item.path` を渡すのはReact が並び替えのときにどの項目が動いたかを見分けるためです。
 
 `pathname === item.path` の比較で、今開いているページのリンクだけ背景色を変えています。この目印が無いとユーザーは自分がどこにいるかを画面から判断できません。移動したかどうかも分からなくなります。
 
 **確認ポイント**:
-- [ ] `menuItems.map` でメニューを表示している
-- [ ] 現在ページは背景色で強調している
+- [ ] `menuItems.map` でメニューを表示しています。
+- [ ] 現在ページは背景色で強調しています。
 
 ```tsx
         {/* filepath: src/component/layout/app-layout.tsx（続き） */}
@@ -512,17 +539,21 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
 この `session` は 3-2 で書いた `getSession` の結果なのでログインした本人の名前と権限がそのまま出ます。別のユーザーでログインし直せばここの表示も入れ替わります。
 
 **確認ポイント**:
-- [ ] サイドバー下部にユーザー名と権限を表示している
+- [ ] サイドバー下部にユーザー名と権限を表示しています。
 
 ```tsx
           {/* filepath: src/component/layout/app-layout.tsx（続き） */}
           {/* ログアウトボタン（確認ダイアログ付き） */}
-          <AlertDialog>
+          <AlertDialog
+            open={logoutDialogOpen}
+            onOpenChange={handleLogoutDialogOpenChange}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                onClick={openLogoutDialog}
               >
                 <LogOut className="h-4 w-4" />
                 ログアウト
@@ -530,31 +561,34 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
             </AlertDialogTrigger>
 ```
 
-`AlertDialogTrigger` はダイアログを開くきっかけになる部品です。`asChild` を付けるとこの部品は自分でボタンを描かず、中に置いた `<Button>` へきっかけ役だけを渡します。付け忘れるとボタンが二重に描かれ、サイドバーの見た目が崩れます。
+ダイアログを自分で開閉するため、`open` に状態を渡します。`AlertDialogTrigger` は開いたボタンを覚え、閉じたときにキーボードのフォーカスを戻します。`openLogoutDialog` は前回のエラー文を消してから開きます。
 
 ログアウトをすぐ実行せずダイアログを挟むのは押し間違いで作業中の画面から追い出されるのを防ぐためです。Day 07 で作ったログアウトは呼べばその場でセッションが消えます。取り消せない操作の手前に一段置く、という考え方はこの先の削除機能でも同じです。
 
 **確認ポイント**:
-- [ ] ボタンを押すと確認ダイアログが開く
+- [ ] ボタンを押すと確認ダイアログが開きます。
 
 ```tsx
             {/* filepath: src/component/layout/app-layout.tsx（続き） */}
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  ログアウトしますか？
-                </AlertDialogTitle>
+                <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
                 <AlertDialogDescription>
                   ログアウトすると、再度ログインが必要になります。
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              {logoutError ? <p role="alert">{logoutError}</p> : null}
               <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  ログアウト
-                </AlertDialogAction>
+                <AlertDialogCancel disabled={logoutMutation.isPending}>
+                  キャンセル
+                </AlertDialogCancel>
+                <Button onClick={handleLogout} disabled={logoutMutation.isPending}>
+                  {logoutMutation.isPending
+                    ? 'ログアウト中...'
+                    : logoutError
+                      ? 'もう一度試す'
+                      : 'ログアウト'}
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -562,12 +596,12 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
       </aside>
 ```
 
-ダイアログの中身は見出し・説明・下部のボタンという 3 つの区画に分かれています。`AlertDialogCancel` は何もせずに閉じるだけの出口です。`AlertDialogAction` を押したときだけ `logoutMutation.mutate()` が走ります。
+ダイアログの下部にはキャンセルと実行のボタンがあります。実行には普通の `Button` を使うため、通信に失敗してもダイアログは勝手に閉じません。送信中は両方を無効にし、失敗後は実行ボタンを「もう一度試す」に変えます。
 
-`mutate()` を呼ぶとサーバーのログアウト手続きが動き、成功したら 3-2 で書いた `onSuccess` が `/login` へ戻します。`onClick` を `AlertDialogCancel` の側に書いてしまうとキャンセルのつもりでログアウトする画面になります。押した先で何が起きるかはこの 2 行のどちらに `onClick` を置くかで決まります。
+ログアウトは Day 07 で `publicProcedure` として作り、Cookie の削除を繰り返しても同じ結果になる形です。先の応答だけ失われた場合も同じ削除を再試行でき、成功が返ったときだけキャッシュを消して `/login` へ移ります。
 
 **確認ポイント**:
-- [ ] ログアウト前に確認ダイアログを表示している
+- [ ] ログアウト前に確認ダイアログを表示しています。
 
 ```tsx
 {/* filepath: src/component/layout/app-layout.tsx（続き） */}
@@ -585,24 +619,25 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
 
 | パーツ | 役割 |
 |--------|------|
-| `AlertDialogTrigger` | ダイアログを開くボタン |
+| `open` / `onOpenChange` | ダイアログの開閉を状態で管理 |
+| `AlertDialogTrigger` | 開くボタンを記録し、閉じた後にフォーカスを戻す |
 | `AlertDialogContent` | ダイアログの中身 |
-| `AlertDialogAction` | 確定（ログアウト実行） |
+| `Button` | ログアウトの実行と再試行 |
 | `AlertDialogCancel` | キャンセル（閉じるだけ） |
 
-> `asChild` を付けると中の `<Button>` がそのままトリガーになります。見た目を自由にカスタマイズできます。
+> 実行ボタンを普通の `Button` にすると、失敗時にダイアログを開いたまま案内できます。
 
 **確認ポイント**:
-- [ ] `src/component/layout/app-layout.tsx` が作成できた
-- [ ] `'use client'` が先頭にある
-- [ ] `menuItems` に 3 つのメニュー項目がある
-- [ ] ログアウトボタンに `AlertDialog` が付いている
+- [ ] `src/component/layout/app-layout.tsx` が作成できました。
+- [ ] `'use client'` が先頭にあります。
+- [ ] `menuItems` に「ダッシュボード」が1つだけあります。
+- [ ] ログアウトボタンに `AlertDialog` が付いています。
 
 **学んだこと**: `useQuery` でサーバーのセッション情報を取得し、無ければログイン画面へ送ります。レイアウト全体が認証ゲートの役割を持ちます。
 
 ---
 
-### Step 4: ダッシュボードに AppLayout を適用する（5分）
+### Step 4: ダッシュボードに AppLayout を適用する（読む目安: 5分）
 
 **ゴール**: Day 02 で作ったダッシュボードを、サイドバー付きの AppLayout で囲みます。
 
@@ -656,13 +691,13 @@ AppLayout がサイドバーと認証チェックを担当し、
 認証前でもサイドバーなしで表示されます。
 
 **確認ポイント**:
-- [ ] `src/app/dashboard/page.tsx` に AppLayout の import がある
-- [ ] `return` の外側が `<AppLayout>...</AppLayout>` で囲まれている
-- [ ] Day 02 の外側の `<main>` を `<div>` に変え、中身が残っている
+- [ ] `src/app/dashboard/page.tsx` に AppLayout の import があります。
+- [ ] `return` の外側が `<AppLayout>...</AppLayout>` で囲まれています。
+- [ ] Day 02 の外側の `<main>` を `<div>` に変え、中身が残っています。
 
 ---
 
-### Step 5: ログインして全体の動作を確認する（5分）
+### Step 5: ログインして全体の動作を確認する（読む目安: 5分）
 
 **ゴール**: ここまでの全 Step が正しく連携して動くことを確認します。
 
@@ -682,25 +717,27 @@ npm run dev
 
 1. `/dashboard` へアクセス → middleware が `/login` にリダイレクト。
 2. `admin@example.com` / `password123` でログイン。
-3. ダッシュボードが表示される（サイドバー付き）。
+3. ダッシュボードが表示されます（サイドバー付き）。
 
-![左に3項目のサイドバー、右に Day 02 で作ったダッシュボードのカードが並んでいる画面](./screenshots/day08/dashboard.png)
+![左に「ダッシュボード」だけのサイドバー、右に Day 02 で作ったダッシュボードのカードが並んでいる画面](./screenshots/day08/dashboard.png)
 
-4. サイドバーに「ダッシュボード」「プロジェクト」「マイタスク」の3つのメニューが見える。
-   （「プロジェクト」と「マイタスク」を押すと 404 になるがこれは正常。ページは Day 09 と Day 17 で作る）
-5. サイドバー下部に「管理者」の名前とロールが表示される。
-6. 「ログアウト」ボタンを押す → 確認ダイアログが出る。
+画像と手元の画面で、サイドバーが「ダッシュボード」の1項目になっていることを確認します。まだ作っていないページへのメニューは表示されません。
+
+4. サイドバーに「ダッシュボード」のメニューが見えます。
+5. 「ダッシュボード」を押すと `/dashboard` が開き、404 になりません。
+6. サイドバー下部に「管理者」の名前とロールが表示されます。
+7. 「ログアウト」ボタンを押す → 確認ダイアログが出ます。
 
 ![「ログアウトしますか？」の見出しと「ログアウトすると再度ログインが必要になります。」の説明、キャンセルとログアウトの2つのボタンが並んだ確認ダイアログ](./screenshots/day08/logout-confirm.png)
 
-7. 「ログアウト」を押す → `/login` に戻る。
+8. 「ログアウト」を押す → `/login` に戻ります。
 
 **確認ポイント**:
-- [ ] `npm run dev` でエラーが出ない
-- [ ] サイドバーが左側に表示される
-- [ ] ユーザー名「管理者」とロール「管理者」が見える
-- [ ] ナビゲーションのアクティブ状態が正しい（現在のページがハイライト）
-- [ ] ログアウト → 確認ダイアログ → ログイン画面に戻る
+- [ ] `npm run dev` でエラーが出ません。
+- [ ] サイドバーが左側に表示されます。
+- [ ] ユーザー名「管理者」とロール「管理者」が見えます。
+- [ ] ナビゲーションのアクティブ状態が正しいです（現在のページがハイライト）。
+- [ ] ログアウト → 確認ダイアログ → ログイン画面に戻ります。
 
 > **うまくいかないとき**: 「つまずきポイント」セクションを確認してください。
 
@@ -718,21 +755,25 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 // → ナビゲーションリンク（静的）まで Client Component になる
 ```
 
-今日書いた `app-layout.tsx` は先頭に `'use client'` を置いたのでこのファイルの中身はまとめてブラウザへ送られます。ロゴやリンク一覧のように押しても何も起きない部分まで一緒に送られるためその分だけ読み込むファイルが増えます。動きは正しく、最初に書く形としてはこれで問題ありません。
+今日書いた `app-layout.tsx` は先頭に `'use client'` を置いたため、ナビゲーションの構成やロゴの描画もブラウザ側で扱います。動きは正しく、最初に書く形としてはこれで問題ありません。
 
-### After（プロが書くコード）
+### 分け方の例（今日は実装しません）
+
+次は構成を考えるための例です。今日書いたコードは置き換えません。
 
 ```tsx
-// app-layout.tsx から 'use client' を外す
-// （Server Component に）
-// ログアウトボタンだけ別ファイルに分離して 'use client'
+// Server Component から静的な外枠と Client の部品を組み立てる
+// 認証判定・現在地の表示・ログアウトなどを Client Component に置く
+// Client のページから外枠を import したままでは Server へ変わらない
 ```
 
-**強み**: 静的な枠（ロゴ、リンク一覧）は Server Component のまま残せます。
-対話が必要な部品（ログアウト、認証チェック）だけを Client Component にします。
-→ ブラウザへ送るコードが減り、初期表示が速くなります。
+現在の `AppLayout` は、認証判定や画面状態の管理に `useQuery`、`useState`、`useEffect` などを使います。ログアウトボタンだけを移しても、これらの処理が残るため `'use client'` を外せません。
 
-> **覚えておきたいエッセンス**: `use client` はファイル全体に効くスイッチです。サイドバーでは「静的な枠は Server、押せる部品は Client」に分けるのがプロの基本です。今日の段階では全体を Client のままにしておいて問題ありません。この最適化は Day 09 以降で必要になったタイミングで取り組みます。
+静的な外枠を Server Component にするなら、Hooks（状態の管理などに使う React の関数）を使う部分を Client Component へ分け、Server 側から組み立てます。外枠を Client のページから直接 `import` すると、その外枠も Client 側として扱われます。呼び出す側も含めて分ける必要があります。
+
+ロゴなどの静的な部分をサーバー側に残せると、ブラウザへ送るコードを減らせます。ただし、初期表示が速くなるかは変更後の測定で確かめます。
+
+> **覚えておきたいエッセンス**: `'use client'` はブラウザで動かす処理の入口を示す宣言です。そのファイルだけでなく、そこから読み込む処理も Client 側へ含まれます。今日は `AppLayout` 全体を Client のまま使います。この節では、分割の実装は行いません。
 
 ---
 
@@ -843,15 +884,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-} from 'lucide-react';
+import { LayoutDashboard, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 ```
 
 1枚目は外部ライブラリの取り込みです。並びがアルファベット順になっているのは`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても手で直す必要はありません。`'use client'` はファイルの1行目に置きます。取り込みの後ろへ動かすとブラウザ側で動かす宣言として読まれず、`useState` の行でエラーになります。
@@ -863,7 +899,6 @@ import { useEffect, useState } from 'react';
 // 完成版: 画面部品と tRPC の取り込み
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -877,7 +912,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
-2枚目は自分のプロジェクトの中にある部品です。`@/` で始まる書き方は `src/` を指す近道で、ファイルの置き場所が深くなっても `../../` を数えずに済みます。`AlertDialog` で始まる名前が9個並ぶのはshadcn/ui のダイアログが枠・見出し・本文・ボタンに分かれているからです。手元で数えて9個に足りない場合はその足りない名前を書いた行が「定義されていません」というエラーになります。
+2枚目は自分のプロジェクトの中にある部品です。`@/` で始まる書き方は `src/` を指す近道で、ファイルの置き場所が深くなっても `../../` を数えずに済みます。`AlertDialog` で始まる名前が8個並ぶのはshadcn/ui のダイアログが枠・見出し・本文・ボタンに分かれているからです。手元で数えて8個に足りない場合はその足りない名前を書いた行が「定義されていません」というエラーになります。
 
 **メニュー項目の型**:
 
@@ -904,20 +939,10 @@ const menuItems: MenuItem[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
     path: '/dashboard',
   },
-  {
-    text: 'プロジェクト',
-    icon: <FolderOpen className="h-5 w-5" />,
-    path: '/project',
-  },
-  {
-    text: 'マイタスク',
-    icon: <ListTodo className="h-5 w-5" />,
-    path: '/my-task',
-  },
 ];
 ```
 
-この配列を関数の外に置いてあるのは中身が画面の状態で変わらないからです。関数の中へ入れると画面を描き直すたびに同じ3件を作り直します。並びはそのまま画面の上から下の順になります。項目を増やすときに書き足すのはこの配列だけで、後ろに出てくる表示側は書き換えません。
+この配列を関数の外に置いてあるのは中身が画面の状態で変わらないからです。関数の中へ入れると画面を描き直すたびに同じ1件を作り直します。並びはそのまま画面の上から下の順になります。項目を増やすときに書き足すのはこの配列だけで、後ろに出てくる表示側は書き換えません。
 
 **状態とサーバーへの問い合わせ**:
 
@@ -930,26 +955,68 @@ export function AppLayout({
   children: React.ReactNode;
 }) {
   const [hasMounted, setHasMounted] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const logoutLockedRef = useRef(false);
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
 
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+```
 
+ログアウトの失敗を画面に残すため、ダイアログの開閉とエラー文を `useState` で覚えます。
+`useRef`（再描画を待たずに値を保持する React の仕組み）は、連続クリックをその場で止めるために使います。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（続き）
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
       queryClient.clear();
       router.push('/login');
       router.refresh();
+      setLogoutDialogOpen(false);
+    },
+    onError: () => {
+      setLogoutError(
+        'ログアウトの完了を確認できませんでした。' +
+        '通信状況を確認して、もう一度お試しください。');
+    },
+    onSettled: () => {
+      logoutLockedRef.current = false;
     },
   });
+
+  const handleLogout = () => {
+    if (logoutLockedRef.current || logoutMutation.isPending) return;
+    logoutLockedRef.current = true;
+    setLogoutError(null);
+    logoutMutation.mutate();
+  };
+```
+
+`onSettled`（成功・失敗のどちらでも通信の最後に動く処理）で `logoutLockedRef` のロックを解除します。失敗した後も解除されるため、案内を読んでから再試行できます。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
+// 完成版: ログアウトの操作
+  const openLogoutDialog = () => {
+    setLogoutError(null);
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutDialogOpenChange = (open: boolean) => {
+    if (!open && (logoutLockedRef.current || logoutMutation.isPending)) return;
+    if (open) setLogoutError(null);
+    setLogoutDialogOpen(open);
+  };
 ```
 
 関数の先頭が道具をそろえる場所です。`useState` や `useQueryClient`、`useQuery` は毎回同じ順番で呼ばれることを前提に作られているので`if` の中や `return` の後ろへ動かすと React が値を取り違えます。`logoutMutation` をここで用意しておくのも同じ理由です。実際に通信が始まるのは後ろのボタンから `mutate()` が呼ばれたときで、この行では準備だけをしています。
 
-成功時は `cancelQueries()`、`clear()`、画面移動の順です。先に問い合わせを止めるため、ログアウト直前に始まった取得処理が古いデータをキャッシュへ戻すことも防げます。
+成功時は `cancelQueries()`、`clear()`、画面移動の順です。先に問い合わせを止めるため、ログアウト直前に始まった取得処理が古いデータをキャッシュへ戻すことも防げます。失敗時はキャッシュを消さず、同じダイアログから再試行できます。
 
 **未ログインの人を送り出す判定**:
 
@@ -969,7 +1036,9 @@ export function AppLayout({
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
+        <p className="text-muted-foreground">
+          読み込み中...
+        </p>
       </div>
     );
   }
@@ -1026,9 +1095,9 @@ export function AppLayout({
 この前半でリンク先と、現在地に応じた色を決めています。続きでアイコンと文字を描き、一覧のタグを閉じます。2つのブロックは同じ `Link` の続きなので、間に別のコードは入れません。
 
 ```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-                {/* 完成版: ナビゲーションの続き */}
                 >
+                  {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+                  {/* 完成版: ナビゲーションの続き */}
                   {item.icon}
                   {item.text}
                 </Link>
@@ -1072,12 +1141,16 @@ export function AppLayout({
           {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
           {/* 完成版: ログアウトボタン */}
           {/* ログアウトボタン（確認ダイアログ付き） */}
-          <AlertDialog>
+          <AlertDialog
+            open={logoutDialogOpen}
+            onOpenChange={handleLogoutDialogOpenChange}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                onClick={openLogoutDialog}
               >
                 <LogOut className="h-4 w-4" />
                 ログアウト
@@ -1085,29 +1158,31 @@ export function AppLayout({
             </AlertDialogTrigger>
 ```
 
-`asChild` が付いていると`AlertDialogTrigger` は自分でボタンを描かず、中に置いた `<Button>` へきっかけ役だけを渡します。付け忘れるとボタンが2つ重なって描かれ、サイドバーの見た目が崩れます。手元でボタンが二重に見えるならまずこの1語を確かめてください。
+`open` と `onOpenChange` を渡すと、ダイアログの開閉を `logoutDialogOpen` で管理できます。`AlertDialogTrigger` は閉じた後のフォーカスをログアウトボタンへ戻します。送信中は閉じる操作を受け付けず、失敗したときは案内をそのまま読めます。
 
 **ログアウトの確認ダイアログ**:
 
 ```tsx
             {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-            {/* 完成版: ログアウトの確認ダイアログ */}
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>
-                  ログアウトしますか？
-                </AlertDialogTitle>
+                <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
                 <AlertDialogDescription>
                   ログアウトすると、再度ログインが必要になります。
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              {logoutError ? <p role="alert">{logoutError}</p> : null}
               <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  ログアウト
-                </AlertDialogAction>
+                <AlertDialogCancel disabled={logoutMutation.isPending}>
+                  キャンセル
+                </AlertDialogCancel>
+                <Button onClick={handleLogout} disabled={logoutMutation.isPending}>
+                  {logoutMutation.isPending
+                    ? 'ログアウト中...'
+                    : logoutError
+                      ? 'もう一度試す'
+                      : 'ログアウト'}
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -1115,7 +1190,7 @@ export function AppLayout({
       </aside>
 ```
 
-`onClick` が付いているのは `AlertDialogAction` の側だけです。ここを `AlertDialogCancel` に付け替えるとキャンセルを押した人がログアウトする画面になります。取り消せない操作の手前に一段置くという考え方はこの先の削除機能でも使います。最後の `</aside>` でサイドバー全体を閉じています。
+実行には普通の `Button` を使います。`AlertDialogAction` は押すと閉じるため、通信失敗を表示したい場面には向きません。`useRef` のロックは React の再描画より先に更新され、素早い連続クリックでも要求を1回に抑えます。最後の `</aside>` でサイドバー全体を閉じています。
 
 **本文の置き場所**:
 
@@ -1380,22 +1455,73 @@ export default function DashboardPage() {
 
 ## 今日のまとめ
 
-- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider の中身を確認した
-- [ ] `src/app/layout.tsx` — `<Providers>` が組み込まれていることを確認した
-- [ ] `src/component/layout/app-layout.tsx` — サイドバー付きレイアウトを作った
-- [ ] `src/app/dashboard/page.tsx` — AppLayout で囲んだ
-- [ ] ログイン → サイドバー表示 → ログアウトの一連の流れを確認した
+- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider の中身を確認しました。
+- [ ] `src/app/layout.tsx` — `<Providers>` が組み込まれていることを確認しました。
+- [ ] `src/component/layout/app-layout.tsx` — サイドバー付きレイアウトを作りました。
+- [ ] `src/app/dashboard/page.tsx` — AppLayout で囲みました。
+- [ ] ログイン → サイドバー表示 → ログアウトの一連の流れを確認しました。
 
 ## つまずきポイント
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| `api is not defined` | `@/trpc/react` からの import 漏れ | `import { api } from '@/trpc/react'` を確認 |
-| `Cannot find module '@/component/ui/alert-dialog'` | UI コンポーネント未配置 | `src/component/ui/alert-dialog.tsx` が存在するか確認 |
-| サイドバーが表示されない | `dashboard/page.tsx` を `AppLayout` で囲んでいない | Step 4 の import と return を確認 |
-| ログイン後に白い画面 | `AppLayout` の `if (!session?.user) { return null; }` に入ったまま。セッションが取れていない | Step 3 の `getSession` の呼び出しと、ログインが済んでいるかを確認する |
-| `useQuery` でエラー | `auth` ルーターの登録、tRPC の Route Handler、または開発サーバーでエラーが発生している | Day 07 の Step 4 で `root.ts` の `auth: authRouter` と `src/app/api/trpc/[trpc]/route.ts` を確認する。両方が合っていれば、`npm run dev` のターミナルで最初のエラーを確認する |
-| ログアウトしてもリダイレクトされない | `onSuccess` 内の `router.push('/login')` の書き漏れ | `onSuccess` 内に `router.push('/login'); router.refresh();` の2行があるか確認する。`refresh()` だけを忘れた場合は移動はするのに古いユーザー名が残る |
+#### `api is not defined`
+
+**原因**
+
+`@/trpc/react` からの import が漏れています。
+
+**解決方法**
+
+`import { api } from '@/trpc/react'` を確認します。
+
+#### `Cannot find module '@/component/ui/alert-dialog'`
+
+**原因**
+
+UI コンポーネントが配置されていません。
+
+**解決方法**
+
+`src/component/ui/alert-dialog.tsx` が存在するか確認します。
+
+#### サイドバーが表示されない
+
+**原因**
+
+`dashboard/page.tsx` を `AppLayout` で囲んでいません。
+
+**解決方法**
+
+Step 4 の import と return を確認します。
+
+#### ログイン後に白い画面
+
+**原因**
+
+`AppLayout` の `if (!session?.user) { return null; }` に入ったままです。セッションを取得できていません。
+
+**解決方法**
+
+Step 3 の `getSession` の呼び出しと、ログインが済んでいるかを確認します。
+
+#### `useQuery` でエラー
+
+**原因**
+
+`auth` ルーターの登録、tRPC の Route Handler、または開発サーバーのどこかでエラーが発生しています。
+
+**解決方法**
+
+Day 07 の Step 4 に戻り、`src/server/api/root.ts` に `auth: authRouter` があることと、`src/app/api/trpc/[trpc]/route.ts` があることを確認してください。両方が合っている場合は、`npm run dev` を実行しているターミナルのいちばん上のエラーから確認してください。
+
+#### ログアウトしてもリダイレクトされない
+
+**原因**
+
+`onSuccess` 内に `router.push('/login')` を書き忘れています。
+
+**解決方法**
+
+`onSuccess` 内に `router.push('/login'); router.refresh();` の2行があるか確認します。`refresh()` だけを忘れた場合は、移動しても古いユーザー名が残ります。
 
 ## 今日学んだ用語
 
@@ -1410,18 +1536,18 @@ export default function DashboardPage() {
 | asChild | ダイアログの引き金を、内側に書いた自分のボタンにそのまま任せる指定 |
 | md: | Tailwind CSS で「画面幅 768px 以上のときだけ効かせる」という接頭辞 |
 
-## 追加課題：メニューの順番を入れ替える
+## 応用課題: メニューの表示名とリンク先を見分ける
 
-配列の順番だけで表示順を変えましょう。リンク先と表示を結び付けたまま移動できるか確かめます。
+メニューの表示名だけを一時的に変え、リンク先が別の値として保たれていることを確かめます。
 
 
-（1）`src/component/layout/app-layout.tsx` の `menuItems` を探し、現在の3項目の順番をメモします。
+（1）`src/component/layout/app-layout.tsx` の `menuItems` を探し、ダッシュボードの要素を確認します。
 
-（2）プロジェクトの要素を、項目の中身を変えずに配列の先頭へ移して保存します。要素の間にカンマがあるか確認します。
+（2）その要素の `text` だけを一時的に `ホーム` へ変えて保存します。`path: '/dashboard'` は変えません。
 
-（3）サイドバーが表示される広い画面で `/dashboard` を開きます。プロジェクトが先頭になり、残りの2項目も表示されれば成功です。リンク先の `path` を変えていないことも確認します。
+（3）サイドバーが表示される広い画面で `/dashboard` を開き、表示だけが「ホーム」に変わることを確認します。確認後は `text` を `ダッシュボード` へ戻します。配列のデータとリンクの表示が対応していることを確かめる練習です。
 
-（4）配列をメモした順番へ戻して保存し、サイドバーの順番が元に戻ることを確認します。
+（4）表示名を戻したあと、「ダッシュボード」と表示されることを確認します。
 
 ## 理解チェック
 
@@ -1450,7 +1576,7 @@ tRPC の `useQuery` でサーバーからプロジェクト一覧を取得して
 
 ## 次に読むもの
 
-- 前の日: [Day 07](./day07_認証バックエンドを作ろう.md)
+- 前の日: [Day 07](./day07_ログイン体験を改善しよう.md)
 - 次の日: [Day 09](./day09_プロジェクト一覧画面.md)
 - 全体の地図: [学びのロードマップ](./00-1_学びのロードマップ.md)
 - 目次: [カリキュラム目次](./00_カリキュラム目次.md)

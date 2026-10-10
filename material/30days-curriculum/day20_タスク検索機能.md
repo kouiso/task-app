@@ -30,7 +30,7 @@ Day 19 ではコメントの編集・削除機能を実装し、自分が書い�
 ### 検索機能の構成
 
 ```mermaid
-flowchart TD
+flowchart LR
     A[検索ページ] --> B[フィルターフォーム]
     B --> C[キーワード]
     B --> D[プロジェクト]
@@ -39,9 +39,16 @@ flowchart TD
     B --> G[担当者]
     B --> H[期限日範囲]
 
-    A --> I[検索ボタン]
+    style A fill:#e3f2fd
+```
+
+入力欄の値は検索に使い、検索ボタンを押すと URL に保存します。次の図は検索と URL からの復元を表しています。
+
+```mermaid
+flowchart TD
+    A[検索ページ] --> I[検索ボタン]
     I --> J[URLパラメータ更新]
-    B -->|入力値の変更| K[api.search.search]
+    B[フィルターフォーム] -->|入力値の変更| K[api.search.search]
     J -->|戻る・共有URLから復元| B
     K --> L[検索結果]
     L --> M[TaskCardで表示]
@@ -60,7 +67,7 @@ flowchart TD
 |---------|-------------|
 | 入力変更に応じた複数条件の検索 | 入力待ち時間による通信の間引き |
 | URLパラメータ保存 | 検索結果の並び替え |
-| TaskCard で結果表示 | ページネーション |
+| TaskCard で結果表示 | 検索結果のページネーション |
 | プロジェクト結果表示 | 検索履歴 |
 
 ### 今日作成・編集するファイル
@@ -71,7 +78,8 @@ flowchart TD
 | `src/app/search/page.tsx` | 検索ページ本体（新規作成） |
 | `src/app/search/loading.tsx` | ローディング画面（新規作成） |
 | `src/component/layout/app-layout.tsx` | サイドバーへ検索の導線を足す |
-| `src/app/task/page.tsx` | 検索からの編集リンクを受け取る |
+| `src/app/task/page.tsx` | 検索からの編集リンクを受け取り、一覧の絞り込みをURLへ保存する |
+| `src/lib/task-filter-query.ts` | タスク一覧のURL条件を読み書きするhelper（新規作成） |
 
 ### 新しく学ぶ概念
 
@@ -83,9 +91,11 @@ flowchart TD
 | useForm（復習） | ユーズフォーム | フォーム状態管理（Day 14 参照） | 検索条件の管理係 |
 | watch | ウォッチ | フォームの値をリアクティブに監視 | 入力が変わるたびに条件を更新 |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | search の残り3手続きと読み込み画面を作る | 22分 |
 | Step 1 | 検索画面から使うAPIを確認する | 3分 |
@@ -96,18 +106,17 @@ flowchart TD
 | Step 6 | handleSearchとhandleClearを定義する | 5分 |
 | Step 7 | URL同期と検索API呼び出し | 5分 |
 | Step 8 | タスク検索結果を表示する | 10分 |
+| Step 8.5 | タスク一覧の絞り込みをURLへ残す | 18分（仮） |
 | Step 9 | プロジェクト結果と削除機能を追加する | 7分 |
 | Step 10 | 動作確認 | 3分 |
 
-**合計時間**: 約77分です。
+**読む時間の合計（仮）**: 約95分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: search の残り3手続きと読み込み画面を作る（22分）
+### Step 0: search の残り3手続きと読み込み画面を作る（読む目安: 22分）
 
 **ゴール**: Day 14 で作った `src/server/api/routers/search.ts` に、
 残っている `search`・`quickSearch`・`getUserProjects` を追記します。
@@ -123,16 +132,15 @@ Day 14 では担当者候補を取る 2 手続きだけを先に作りました�
 Day 14 で書いた import に、今日初めて必要になるものだけを足します。
 `Prisma` は検索条件の型に使います。
 `taskStatusSchema` と `taskPrioritySchema` は検索フォーム入力の検証に使います。
-`getUserProjectIds` は「自分が参加しているプロジェクトだけを検索対象にする」ために使います。
+タスクを読むクエリには、現在のプロジェクトメンバーだけを対象にする条件を直接入れます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（既存 import に追記）
 import type { Prisma } from '@prisma/client';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
-import { getUserProjectIds } from './_helpers/permission';
 ```
 
-3つとも、今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて`Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値をそのまま持っているので画面から届いた文字列が正しい値かどうかを入口で確かめられます。`getUserProjectIds` はそのユーザーが参加しているプロジェクトの id だけを返す関数です。これを取り込んでおかないとあとで検索範囲を自分のプロジェクトへ絞れません。
+3つとも、今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて`Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値をそのまま持っているので、画面から届いた文字列が正しい値かどうかを入口で確かめられます。検索範囲は、タスクを読む `where` へ現在のプロジェクト所属を直接書いて絞ります。
 
 続けてDay 14 の `import` 群の下に検索件数の上限を置きます。
 
@@ -253,7 +261,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 #### 0-4. 既存の 2 手続きを下へ移し、search を先頭に入れる
 
 ここからが本体です。Day 14 で書いた `getProjectMembers` と
-`getMembersByProject` はいったんそのまま残してよいです。
+`getMembersByProject` はそのまま残します。Day 14で、所属条件をメンバー取得と同じ `findMany` に含めました。所属確認だけを先に別の問い合わせへ分けないでください。
 ただし最終的にはその前に `search`・`quickSearch`・`getUserProjects`
 が並ぶ形にしてください。
 完成形の `export const searchRouter = createTRPCRouter({ ... })` の先頭は
@@ -285,10 +293,8 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 // filepath: src/server/api/routers/search.ts（続き）
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
-    const projectIds = await getUserProjectIds(userId);
-
     const andConditions: Prisma.TaskWhereInput[] = [
-      { projectId: { in: projectIds } },
+      { project: { members: { some: { userId } } } },
       buildDynamicWhere(baseFilters),
     ];
     if (dueDateFilter) {
@@ -296,7 +302,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
     }
 ```
 
-`getUserProjectIds(userId)` が重要です。これで「自分が所属しているプロジェクト id の一覧」を先に取り、`projectId: { in: projectIds }` で検索対象を絞ります。これを入れないとキーワードさえ合えば他人のプロジェクトのタスクまで検索できてしまいます。
+`project: { members: { some: { userId } } }` が重要です。タスクを取得する時点のプロジェクト所属で検索対象を絞ります。この条件がないと、キーワードさえ合えば他人のプロジェクトのタスクまで検索できてしまいます。
 
 この1行は検索機能でいちばん壊してはいけない場所です。試すなら自分が参加していないプロジェクトのタスク名で検索してみてください。この条件があるうちは0件になり、外すと他人のタスクが並びます。しかも画面側で隠しても手遅れです。サーバーが返した時点で、通信の中身には残っています。だから絞り込みは必ずここで済ませます。`andConditions` の配列の先頭へ置いてあるのも、あとから条件を足す人がいちばん先に目を通す場所だからです。
 
@@ -342,7 +348,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 
 プロジェクト検索は `!keyword ? []` で分岐しています。プロジェクト名検索はキーワードがあって初めて意味があるので空検索のときは無理に DB を読まず空配列を返します。
 
-プロジェクト側の見える範囲は `members: { some: { userId } }` で守ります。タスク側の `projectId: { in: projectIds }` と役割は同じで、「自分がメンバーのものだけ」という条件です。名前が一致しても参加していないプロジェクトはここで落ちます。手続きの中に検索が2本ある以上、絞り込みも2本とも書きます。
+プロジェクト側とタスク側の両方で、`members: { some: { userId } }` により見える範囲を守ります。名前が一致しても参加していないプロジェクトのデータはここで落ちます。手続きの中に検索が2本ある以上、絞り込みも2本とも書きます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -392,12 +398,10 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    const projectIds = await getUserProjectIds(userId);
-
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
-          projectId: { in: projectIds },
+          project: { members: { some: { userId } } },
           OR: buildKeywordFilter(keyword, ['title', 'description']),
         },
 ```
@@ -406,7 +410,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 互いを待つ必要がないからです。
 順番に 2 回待つより同時実行のほうが検索体験は軽くなります。
 
-`Promise.all` は渡した処理を同時に始めて全部が終わったところで結果を配列で返します。`[tasks, projects]` と書いて受け取ると渡した順番のまま値が入ります。片方が失敗したときは全体が失敗になるのでタスクだけ届いた中途半端な結果が画面に出る心配もありません。ここでも `projectIds` を先に取り、`search` と同じ絞り込みを掛けています。
+`Promise.all` は渡した処理を同時に始めて全部が終わったところで結果を配列で返します。`[tasks, projects]` と書いて受け取ると渡した順番のまま値が入ります。片方が失敗したときは全体が失敗になるので、タスクだけ届いた中途半端な結果が画面に出る心配もありません。ここでも各クエリへ `search` と同じ現在の所属条件を掛けています。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -425,7 +429,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
         },
 ```
 
-ここでも `projectId: { in: projectIds }` と `members: { some: { userId } }` が並んでいます。`quickSearch` は入力がキーワード1つだけで条件は薄いのですが見える範囲の制限だけは `search` と同じに保ちます。手続きごとに書く決まりなので忘れやすく、1か所抜けるとそこだけが抜け道になります。新しい検索の手続きを足すときはまずこの2つを書いてから中身を考えると安全です。
+ここでもタスク側とプロジェクト側の両方に `members: { some: { userId } }` が並んでいます。`quickSearch` は入力がキーワード1つだけで条件は薄いのですが見える範囲の制限だけは `search` と同じに保ちます。手続きごとに書く決まりなので忘れやすく、1か所抜けるとそこだけが抜け道になります。新しい検索の手続きを足すときはまずこの2つを書いてから中身を考えると安全です。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -509,10 +513,10 @@ Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード�
 `src/server/api/routers/search.ts` を先頭から読み直し、次の確認ポイントと照らし合わせてください。販売用 ZIP には完成済み router を入れていないためこの教材内のコードと順序が正本です。
 
 **確認ポイント**:
-- `search.ts` の手続き順が `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になっている
-- `searchInputSchema` / `quickSearchInputSchema` / `FilterConfig` / 3つの helper が `searchRouter` の前にある
-- `root.ts` は Day 18 のまま、`search: searchRouter` が `task` と `comment` の間にある
-- `npx tsc --noEmit` を実行し、型エラーが出ていない
+- `search.ts` の手続き順が `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になっています
+- `searchInputSchema` / `quickSearchInputSchema` / `FilterConfig` / 3つの helper が `searchRouter` の前にあります
+- `root.ts` は Day 18 のまま、`search: searchRouter` が `task` と `comment` の間にあります
+- `npx tsc --noEmit` を実行し、型エラーが出ていません
 
 ---
 
@@ -532,7 +536,7 @@ export default function Loading() {
 
 これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示はStep 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら同じ内容のファイルをそのフォルダへ置いてください。
 
-### Step 1: 検索画面から使うAPIを確認する（3分）
+### Step 1: 検索画面から使うAPIを確認する（読む目安: 3分）
 
 **ゴール**: 今書いた `search` ルーターのうち、検索画面がどの手続きを呼ぶのかを整理します。
 
@@ -564,8 +568,8 @@ const searchInputSchema = z.object({
 同じ定義をもう一度載せたのはこれから作る画面のフォームがこの7項目とそのまま1対1で対応するからです。キーワード欄が `keyword`、プロジェクトの選択が `projectId`、というように入力欄を1つ足すたびにこのスキーマへ戻ってくることになります。逆に言うとここに無い項目は画面から送っても届きません。zod は定義に無いキーを黙って捨てます。絞り込みが効かないときはまずこのスキーマを疑ってください。
 
 **確認ポイント**:
-- 7つのフィルターパラメータを把握した
-- `status` と `priority` が union 型である
+- 7つのフィルターパラメータを把握しました
+- `status` と `priority` が union 型です
 
 #### search ルーターの全メソッド
 
@@ -600,45 +604,10 @@ const searchInputSchema = z.object({
 
 ---
 
-### Step 2: ページの土台を作る（5分）
+### Step 2: ページの土台を作る（読む目安: 5分）
 
 **ゴール**: 検索ページの基本構造と export default を完成させます。
 
-Day 13 までのサイドバーへ検索導線を追加します。
-`lucide-react` の既存 import に `Search` を
-加えてください。
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-import {
-  ClipboardList,
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-  Search,
-} from 'lucide-react';
-```
-
-足すのは `Search` の1行だけです。`lucide-react` からアイコンをまとめて取り込んでいるので既存のアイコンを消さずに並びへ追加します。アルファベット順に入れてあるのはimport の並べ替えを Biome に任せているからで、順番を崩すと保存のたびに差分が出ます。
-
-`menuItems` の閉じかっこ直前へ
-検索項目を追加します。
-
-```typescript
-// filepath: src/component/layout/app-layout.tsx
-{
-  text: '検索',
-  icon: <Search className="h-5 w-5" />,
-  path: '/search',
-},
-```
-
-`path: '/search'` がこのあと作る `src/app/search/page.tsx` と対応します。Next.js はフォルダの位置がそのままURLになるのでリンク先を別に登録する作業は要りません。ページを作る前でも項目は追加できますがその状態で押すと404の画面になります。順番としては先にサイドバーへ入口を作り、次にページ本体を作ります。
-
-**確認ポイント**:
-- 既存の4項目を残した
-- サイドバーの「検索」から `/search` を開ける
 
 `src/app/search/page.tsx` を新規作成します。まずインポートを記述します。
 
@@ -649,22 +618,23 @@ import {
 import { zodResolver }
   from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
+import Link from 'next/link';
 import {
   useRouter, useSearchParams,
 } from 'next/navigation';
 import {
   Suspense, useCallback, useEffect,
-  useMemo, useState,
+  useMemo, useRef, useState,
 } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
 
-今日の主役は `useSearchParams` と `useRouter` です。前者はURLに付いた検索条件を読み、後者は条件をURLへ書き戻します。`useForm` と `zodResolver` は Day 14 のタスクフォームと同じ組み合わせで、`Suspense` は Day 09 のプロジェクト一覧で使ったものと同じ役割です。新しく覚えるのは実質2つだけで、残りは今まで書いてきた道具の組み替えになります。
+今日の主役は `useSearchParams` と `useRouter` です。前者はURLに付いた検索条件を読み、後者は条件をURLへ書き戻します。`useForm` と `zodResolver` は Day 14 のタスクフォームと同じ組み合わせで、`Suspense` は Day 09 のプロジェクト一覧で使ったものと同じ役割です。`useRef` は Day 15 の送信記録と同じ使い方で、Step 9で削除の連続送信を防ぎます。
 
 **確認ポイント**:
-- `useForm`, `zodResolver`, `z` がインポートされている
+- `useForm`, `zodResolver`, `z` がインポートされています
 
 続いてローカルモジュールのインポートです。
 
@@ -687,10 +657,10 @@ import { Label }
   from '@/component/ui/label';
 ```
 
-ここで取り込む部品はすべて Day 09 から Day 19 までに使ってきたものです。`TaskCard` は Day 13 のタスク一覧で、`DeleteConfirmDialog` は Day 11 の削除確認で初めて呼び出した、用意済みの共通部品です。`TaskCard` は Day 16 で時間記録のボタンを足しただけです。どちらも一から書いたものではありません。検索画面でも表示用の部品を新しく作らず、すでにあるカードとダイアログを並べ替えて使います。見た目がタスク一覧とそろうので読者にとっても「検索したあとの操作は今まで通り」になります。
+ここで取り込む部品はすべて Day 09 から Day 19 までに使ってきたものです。`TaskCard` は Day 13 のタスク一覧で、`DeleteConfirmDialog` は Day 11 の削除確認で初めて呼び出した、用意済みの共通部品です。どちらも中身を自分で書いたことはありません。検索画面でも表示用の部品を新しく作らず、すでにあるカードとダイアログを並べ替えて使います。見た目がタスク一覧とそろうので読者にとっても「検索したあとの操作は今まで通り」になります。
 
 **確認ポイント**:
-- レイアウト・UIコンポーネントが揃っている
+- レイアウト・UIコンポーネントが揃っています
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -708,7 +678,7 @@ import {
 } from '@/lib/constant/priority';
 ```
 
-`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 14 のタスク作成ダイアログで読み込んだ scaffold 配布の定数を使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
+`Select` は shadcn/ui の部品で、4つがそろって1つのプルダウンになります。`SelectTrigger` が閉じているときのボタン、`SelectContent` が開いたときの一覧、`SelectItem` が選択肢1つ分、`SelectValue` が今選ばれている値の表示です。`TASK_PRIORITY_LABELS` は `HIGH` のような内部の値を「高」という日本語へ変える対応表で、Day 13 で作ったものを使い回します。`isTaskPriority` は受け取った文字列がその4つのどれかに当たるかを確かめる関数です。
 
 続けてロール判定用と検索条件用のインポートを追加します。
 
@@ -730,14 +700,15 @@ import {
   isAuthError, isForbiddenError,
   shouldRetryQuery,
 } from '@/lib/query-error';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 ```
 
-`dateOnlyToUtcStartIso` と `dateOnlyToUtcEndIso` は日付だけの文字列を時刻付きに直す関数です。`type="date"` の入力欄からは `2026-04-17` のような値が届くので、その日の始まりと終わりへ直してからサーバーへ渡します。`hasPermission` と `isProjectMemberRole` は Day 13 で使ったロール判定の道具で、検索結果のカードに編集ボタンを出してよいかを決めます。`query-error` の3つは、通信失敗と認証・認可の拒否を分けるために使います。
+`dateOnlyToUtcStartIso` と `dateOnlyToUtcEndIso` は日付だけの文字列を時刻付きに直す関数です。`type="date"` の入力欄からは `2026-04-17` のような値が届くので、その日の始まりと終わりへ直してからサーバーへ渡します。`hasPermission` と `isProjectMemberRole` は Day 13 で使ったロール判定の道具で、検索結果のカードに編集ボタンを出してよいかを決めます。`query-error` の3つは、通信失敗と認証・認可の拒否を分けるために使います。`classifyTaskWriteError` は、Day 14で導入し、Day 15の削除でも使った書き込みエラーの分類関数です。削除時の401をログイン切れとして扱い、権限不足や結果不明の場合には次の操作を伝える文を返します。
 
 **確認ポイント**:
 - `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner`
-- 型ガード `isTaskStatus` / `isTaskPriority` がインポートされている
+- 型ガード `isTaskStatus` / `isTaskPriority` がインポートされています
 
 `SearchPageContent` の外枠と `export default` を書きます。`useSearchParams` は Suspense 境界が必要です。
 
@@ -769,9 +740,24 @@ function SearchPageContent() {
 
 中身はまだ見出しと説明文だけで、フォームと結果はコメントの位置へ順に足していきます。先に外枠を置いておくと次のステップから貼り付ける場所に迷いません。`utils` は `api.useUtils()` で取り出す道具で、タスクを削除したあとに検索結果を取り直させるために使います。今の時点では使い道が見えませんがStep 9 の削除処理でここへ戻ってきます。
 
+削除の応答が401でも、検索結果の読み取りはまだ成功時の値を持っている場合があります。書き込みで分かったログイン切れを保存するため、`SearchPageContent` 内の `const utils = api.useUtils();` の直後へ次を追加します。
+
+```typescript
+// filepath: src/app/search/page.tsx（utils の直後に追加）
+const [authExpired, setAuthExpired] = useState(false);
+const authExpiredRef = useRef(false);
+const markAuthExpired = () => {
+  authExpiredRef.current = true;
+  setAuthExpired(true);
+};
+```
+
+stateはログイン切れの案内を表示するために使います。refは代入した直後から読めるため、Reactの再描画より先に次の編集・削除を止めます。`markAuthExpired` は両方を更新する関数です。この画面では期限切れを解除せず、ログイン画面へ進んで認証し直します。
+
 **確認ポイント**:
-- `utils` は検索結果の再取得（削除後）に使う
-- コメントでフォームと結果の挿入位置を示している
+- `utils` は検索結果の再取得（削除後）に使います
+- コメントでフォームと結果の挿入位置を示しています
+- `markAuthExpired` がstateとrefの両方を更新し、表示を切り替え、再描画前の編集・削除を止めます
 
 > `useSearchParams` はURL のクエリ文字列を読み取る Next.js のフックです。`useRouter` はプログラムからURL遷移するために使います。
 
@@ -791,14 +777,50 @@ export default function SearchPage() {
 ページを `SearchPageContent` と `SearchPage` の2つに分けたのは`Suspense` の外側に本体を置けないからです。外側の `SearchPage` が待ち受け役、内側が本体という分担で、Day 09 のプロジェクト一覧ページと同じ形になっています。`fallback` に渡した `PageLoadingSpinner` はURLが決まるまでの間だけ表示されます。
 
 **確認ポイント**:
-- `/search` にアクセスして画面が表示される
-- `PageLoadingSpinner` で読み込み中が表示される
+- `/search` にアクセスして画面が表示されます
+- `PageLoadingSpinner` で読み込み中が表示されます
+
+検索ページが表示できたので、Day 17 までのサイドバーへ検索導線を追加します。
+`lucide-react` の既存 import に `Search` を
+加えてください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+```
+
+足すのは `Search` の1行だけです。`lucide-react` からアイコンをまとめて取り込んでいるので既存のアイコンを消さずに並びへ追加します。アルファベット順に入れてあるのはimport の並べ替えを Biome に任せているからで、順番を崩すと保存のたびに差分が出ます。
+
+`menuItems` の閉じかっこ直前へ
+検索項目を追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+{
+  text: '検索',
+  icon: <Search className="h-5 w-5" />,
+  path: '/search',
+},
+```
+
+`path: '/search'` は、先ほど作った `src/app/search/page.tsx` と対応します。Next.js はフォルダの位置がそのままURLになるのでリンク先を別に登録する作業は要りません。ページが表示できることを確かめてから入口を足したので、この時点で検索項目を押しても404にはなりません。
+
+**確認ポイント**:
+- 既存の4項目を残しました
+- サイドバーの「検索」から `/search` を開けます
 
 > Next.js App Router では `useSearchParams` を使うコンポーネントを `Suspense` で囲む必要があります。囲まないとビルド時にエラーになります。
 
 ---
 
-### Step 3: zodスキーマとuseFormを設定する（5分）
+### Step 3: zodスキーマとuseFormを設定する（読む目安: 5分）
 
 **ゴール**: 7つのフィルター条件を zod スキーマと useForm で一括管理します。
 
@@ -819,7 +841,7 @@ const TASK_PRIORITY_VALUES = [
 `as const` を付けると配列を要素数と順番が決まった読み取り専用の型として扱えます。次の `z.enum([...])` はこの値の一覧から選択肢を作ります。サーバー側の `taskStatusSchema` と値をそろえておきましょう。片方だけ増やすと画面では選べるのにサーバーで弾かれる項目ができます。
 
 **確認ポイント**:
-- サーバー側の `taskStatusSchema` / `taskPrioritySchema` と値が一致している
+- サーバー側の `taskStatusSchema` / `taskPrioritySchema` と値が一致しています
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -844,8 +866,46 @@ type SearchFormValues =
 `'all'` を配列の先頭へ置いたのは絞り込みなしもフォームの正式な値として扱うためです。サーバー側の `searchInputSchema` が `z.union([z.literal('all'), taskStatusSchema])` だったのと同じ考え方で、画面とサーバーで受け取れる値をそろえています。最後の `z.infer` は書いたスキーマから型を組み立てる書き方です。型を別に手で書かないのでスキーマを直せば型も一緒に変わります。この `SearchFormValues` が次に `useForm` へ渡す型になります。
 
 **確認ポイント**:
-- `status` / `priority` が `'all'` + 実際の値の union になっている
+- `status` / `priority` が `'all'` + 実際の値の union になっています
 - サーバー側と型が合っている（`z.string()` ではなく `z.enum`）
+
+支援クエリ（検索条件や操作権限を支える問い合わせ）が失敗した場合は、空の選択肢に見せず警告を表示します。4つの問い合わせで同じ見た目と再試行条件を使うため、警告用の props と部品を定義します。次の2ブロックを順番につなげて、`type SearchFormValues = z.infer<typeof searchFormSchema>;` の直後へ追加します。`SearchPageContent` 関数の外へ両方のブロックを書いてから保存してください。
+
+```typescript
+// filepath: src/app/search/page.tsx
+type SupportQueryWarningProps = {
+  ariaLabel: string;
+  message: string;
+  retryLabel: string;
+  hasCachedData: boolean;
+  isFetching: boolean;
+  onRetry: () => void;
+};
+
+function SupportQueryWarning({
+  ariaLabel, message, retryLabel,
+  hasCachedData, isFetching, onRetry,
+}: SupportQueryWarningProps) {
+  return (
+    <div role="alert" aria-label={ariaLabel}>
+      <span>{message}{hasCachedData
+        ? '前回取得時の内容を表示しています。'
+        : '選択肢や操作権限は利用できません。'}</span>
+```
+
+初回失敗と再取得失敗で文を分けるのは、手元に表示できるキャッシュがあるかを読者へ伝えるためです。取得中は同じ問い合わせを重ねないよう、ボタンを無効にします。
+
+```typescript
+{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+      <Button type="button" variant="outline"
+        size="sm" onClick={onRetry}
+        disabled={isFetching}>
+        {retryLabel}
+      </Button>
+    </div>
+  );
+}
+```
 
 URLのプロジェクトID・担当者ID・日付はフォームへ入れる前に確かめます。`SearchPageContent` の外に次の関数を追加してください。
 
@@ -891,7 +951,7 @@ const form = useForm<SearchFormValues>({
 `status` だけ `isTaskStatus` を通してから入れているのはURLが誰でも手で書き換えられるからです。`?status=ABC` のような値をそのままフォームへ入れるとSelect に無い値が選ばれた状態になり、表示が空欄のまま固まります。
 
 **確認ポイント**:
-- `??` を使って初期値を設定している（`||` ではない）
+- `??` を使って初期値を設定しています（`||` ではありません）
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -912,8 +972,8 @@ const form = useForm<SearchFormValues>({
 未指定のときの値が項目ごとに違う点を見てください。`assignedTo` は `'all'`、日付は空文字です。Select は必ず何かが選ばれている状態なので「すべて」を表す `'all'` が必要で、日付欄は空欄のままを許すので空文字になります。ここで型がそろっていないと`useForm` に渡した時点で型エラーになります。7つの条件を1つの `useForm` にまとめているのであとで値をまとめて読むのもまとめて消すのも1行で済みます。
 
 **確認ポイント**:
-- `isTaskStatus` / `isTaskPriority` で型安全にバリデーションしている
-- 7つのフィールドが1つの `useForm` で管理されている
+- `isTaskStatus` / `isTaskPriority` で型安全にバリデーションしています
+- 7つのフィールドが1つの `useForm` で管理されています
 
 `watch` でフォームの現在値を取得し、プルダウン用データを取得します。
 
@@ -922,14 +982,29 @@ const form = useForm<SearchFormValues>({
 // フォームの現在値を監視
 const formValues = form.watch();
 
-const { data: projects } =
-  api.search.getUserProjects.useQuery();
-const { data: users } =
-  api.search.getProjectMembers.useQuery();
+const {
+  data: projects,
+  isError: projectOptionsErrorPresent,
+  isFetching: projectOptionsFetching,
+  error: projectOptionsError,
+  failureReason: projectOptionsFailure,
+  refetch: refetchProjectOptions,
+} = api.search.getUserProjects.useQuery(
+  undefined, { retry: shouldRetryQuery });
+const {
+  data: users,
+  isError: assigneeOptionsErrorPresent,
+  isFetching: assigneeOptionsFetching,
+  error: assigneeOptionsError,
+  failureReason: assigneeOptionsFailure,
+  refetch: refetchAssigneeOptions,
+} = api.search.getProjectMembers.useQuery(
+  undefined, { retry: shouldRetryQuery });
 ```
 
 **確認ポイント**:
-- `watch()` でフォームの値をリアクティブに取得している
+- `watch()` でフォームの値をリアクティブに取得しています
+- 選択肢の取得結果と一緒に、失敗・再取得中・再試行の状態も受け取っています
 
 > Day 14 では `register` と `Controller` で各入力を管理しました。検索フォームでは `setValue` と `watch` の組み合わせで Select コンポーネントの値も管理できます。
 
@@ -938,16 +1013,64 @@ const { data: users } =
 ```typescript
 // filepath: src/app/search/page.tsx
 // ログインユーザーの情報とロール判定用のプロジェクト一覧
-const { data: session } =
-  api.auth.getSession.useQuery();
-const { data: memberProjects } =
-  api.project.getAll.useQuery();
+const {
+  data: session,
+  isError: sessionErrorPresent,
+  error: sessionError,
+  failureReason: sessionFailure,
+  isFetching: sessionFetching,
+  refetch: refetchSession,
+} = api.auth.getSession.useQuery(
+  undefined, { retry: shouldRetryQuery });
+const {
+  data: memberProjects,
+  isError: memberProjectsErrorPresent,
+  error: memberProjectsError,
+  failureReason: memberProjectsFailure,
+  isFetching: memberProjectsFetching,
+  refetch: refetchMemberProjects,
+} = api.project.getAll.useQuery(
+  undefined, { retry: shouldRetryQuery });
+```
 
+401と403は再試行しても同じ要求のままでは解決しないため、`shouldRetryQuery` が自動再試行を止めます。ただし再試行中に401へ変わった場合も保護情報を隠せるよう、次の判定では `failureReason`（再試行中に起きたエラー）も確認します。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+const supportAuthFailed = authExpired || session === null || [
+  sessionError, sessionFailure,
+  projectOptionsError, projectOptionsFailure,
+  memberProjectsError, memberProjectsFailure,
+  assigneeOptionsError, assigneeOptionsFailure,
+].some(isAuthError);
+const supportForbidden = [
+  sessionError, sessionFailure,
+  projectOptionsError, projectOptionsFailure,
+  memberProjectsError, memberProjectsFailure,
+  assigneeOptionsError, assigneeOptionsFailure,
+].some(isForbiddenError);
+const projectOptionsProtected =
+  [projectOptionsError, projectOptionsFailure]
+    .some((e) => isAuthError(e) || isForbiddenError(e));
+const assigneeOptionsProtected =
+  [assigneeOptionsError, assigneeOptionsFailure]
+    .some((e) => isAuthError(e) || isForbiddenError(e));
+const permissionDataUnavailable = sessionErrorPresent
+  || memberProjectsErrorPresent || supportForbidden;
+const supportWriteBlocked =
+  supportAuthFailed || permissionDataUnavailable;
+```
+
+一時的な500は `isError` が真になった時点で警告を出します。再試行中の500を最終失敗と決めつけず、401と403だけは `failureReason` の段階でも表示と操作を保護します。`supportWriteBlocked` はログイン状態か操作権限を確認できない間の書き込みを止めます。`supportAuthFailed` に書き込みで判明した `authExpired` も含めるので、削除の401でも以前の検索結果を隠してログインを案内します。選択肢だけの500は権限を失った意味ではないため、この値には含めません。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
 // プロジェクトごとのログインユーザー自身のロールを引けるようにする
 const myRoleByProject = useMemo(() => {
   const map = new Map<string, ProjectMemberRole>();
   const userId = session?.user?.id;
-  if (!userId || !memberProjects) {
+  if (!userId || !memberProjects
+    || permissionDataUnavailable) {
     return map;
   }
   for (const project of memberProjects) {
@@ -959,12 +1082,15 @@ const myRoleByProject = useMemo(() => {
     }
   }
   return map;
-}, [memberProjects, session?.user?.id]);
+}, [memberProjects, permissionDataUnavailable,
+  session?.user?.id]);
 ```
 
-`useMemo`（計算した結果を覚えておいてもとにした値が変わるまで作り直さないReactの機能）で包んでいます。この対応表を作り直したいのは`memberProjects` かログインユーザーが変わったときだけだからです。検索結果には複数のプロジェクトのタスクが混ざるのでカードを1枚描くたびに配列を端から探し直すと件数の分だけ同じ処理が走ります。`Map` に一度まとめておけばあとは id で1回引くだけで済みます。
+`useMemo`（計算した結果を覚えておいてもとにした値が変わるまで作り直さないReactの機能）で包んでいます。プロジェクト一覧、ログインユーザー、権限情報の取得状態が変わったら、対応表を作り直します。検索結果には複数のプロジェクトのタスクが混ざるのでカードを1枚描くたびに配列を端から探し直すと件数の分だけ同じ処理が走ります。`Map` に一度まとめておけばあとは id で1回引くだけで済みます。
 
 > `projects`（`getUserProjects`）はSelectの選択肢専用で、メンバーのロール情報を含みません。ロール判定には `api.project.getAll` が返す `memberProjects`（`members` 配列つき）を使います。
+
+`permissionDataUnavailable` が真の間は、前回取得したデータが残っていても対応表を空にします。権限情報が更新できなかった時点で、古いロールを使って編集・削除ボタンを出す根拠がなくなるためです。画面は操作を閉じたうえで、あとで追加する警告から失敗した問い合わせだけを再試行できます。
 
 続けてそのロールから編集・削除の権限を判定する関数を追加します。
 
@@ -993,12 +1119,12 @@ const canDeleteProject = useCallback(
 > `canEditProject` / `canDeleteProject` の考え方はDay 13のタスク一覧ページと同じです。
 
 **確認ポイント**:
-- `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
-- `npm run dev` でエラーが出ていない
+- `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できました
+- `npm run dev` でエラーが出ていません
 
 ---
 
-### Step 4: キーワード入力とプロジェクトフィルター（5分）
+### Step 4: キーワード入力とプロジェクトフィルター（読む目安: 5分）
 
 **ゴール**: Card 内にキーワード入力とプロジェクトSelectを配置します。
 
@@ -1037,8 +1163,8 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 定義するまでこの画面は表示できないのでEnter キーの動きを確かめるのは Step 6 のあとです。
 
 **確認ポイント**:
-- `register('keyword')` でフォームに登録している
-- `onKeyDown` の中で `handleSearch()` を呼ぶ行を書けた
+- `register('keyword')` でフォームに登録しています
+- `onKeyDown` の中で `handleSearch()` を呼ぶ行を書けました
 
 > `Search` アイコンを `absolute` で左に配置し、Input の `pl-8` で左パディングを確保します。これでアイコン付き入力欄になります。
 
@@ -1054,7 +1180,9 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
     <Select
       value={formValues.projectId}
       onValueChange={(v) =>
-        form.setValue('projectId', v)}>
+        form.setValue('projectId', v)}
+      disabled={supportAuthFailed || supportForbidden
+        || (projectOptionsErrorPresent && !projects)}>
       <SelectTrigger id="project">
         <SelectValue
           placeholder="すべて" />
@@ -1066,7 +1194,7 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 Select は `<input>` と違って `register` では結び付けられません。値の表示は `value={formValues.projectId}`、変更の受け取りは `onValueChange` から `form.setValue` を呼ぶ、という2本立てにして自分の手でつなぎます。`formValues` は `form.watch()` の結果なので`setValue` で書き込むと表示側もすぐ追いつきます。この2つのどちらかを書き忘れると選んだ項目が画面に反映されない、あるいは選んでも検索条件に入らない、という食い違いが起きます。
 
 **確認ポイント**:
-- `form.setValue` で Select の値をフォームに反映している
+- `form.setValue` で Select の値をフォームに反映しています
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1075,7 +1203,8 @@ Select は `<input>` と違って `register` では結び付けられません�
         <SelectItem value="all">
           すべてのプロジェクト
         </SelectItem>
-        {projects?.map((p) => (
+        {!supportAuthFailed && !supportForbidden
+          && !projectOptionsProtected && projects?.map((p) => (
           <SelectItem key={p.id}
             value={p.id}>
             {p.name}
@@ -1088,11 +1217,11 @@ Select は `<input>` と違って `register` では結び付けられません�
 この `projects` は Step 0 で書いた `getUserProjects` の結果なのでここに他人のプロジェクトは現れません。選択肢の時点で範囲が閉じているからフォーム側で改めて確かめる必要もありません。
 
 **確認ポイント**:
-- `value="all"` が初期選択肢になっている
+- `value="all"` が初期選択肢になっています
 
 ---
 
-### Step 5: ステータス・優先度・担当者・期限フィルター（7分）
+### Step 5: ステータス・優先度・担当者・期限フィルター（読む目安: 7分）
 
 **ゴール**: 残り5つのフィルターを Grid 内に追加します。
 
@@ -1128,8 +1257,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 `onValueChange` の中で `isTaskStatus(v) || v === 'all'` を確かめてから `setValue` しているのはフォームが受け取れる値だけを通すためです。選択肢を自分で並べているので普段なら外れた値は来ません。ただし `v` の型が `string` である以上、型の上では何でも渡せてしまいます。ここで一段はさむと`SearchFormValues` の型と実際に入る値がずれません。`Object.entries(TASK_STATUS_LABELS)` は`['TODO', '未対応']` のような値とラベルの組を一度に取り出す書き方です。選択肢を手で5行書かずに済むうえ、ステータスが増えたときも定数を直すだけで画面に出ます。
 
 **確認ポイント**:
-- `isTaskStatus(v)` で値をバリデーションしている
-- `TASK_STATUS_LABELS` から日本語ラベルを取得している
+- `isTaskStatus(v)` で値をバリデーションしています
+- `TASK_STATUS_LABELS` から日本語ラベルを取得しています
 
 優先度もステータスと同じパターンです。
 
@@ -1163,7 +1292,7 @@ Select は `<input>` と違って `register` では結び付けられません�
 似た形の絞り込みを1つの部品にまとめる手もありますがここでは並べたままにしています。選択肢の作り方が項目ごとに変わりやすく、まとめると分岐だらけの部品になるからです。書き写す量は増えますがあとで1項目だけ直したいときに他の項目を壊さずに済みます。
 
 **確認ポイント**:
-- 優先度もステータスと同じパターンで動作する
+- 優先度もステータスと同じパターンで動作します
 
 担当者フィルターを追加します。
 
@@ -1177,7 +1306,9 @@ Select は `<input>` と違って `register` では結び付けられません�
     <Select
       value={formValues.assignedTo}
       onValueChange={(v) =>
-        form.setValue('assignedTo', v)}>
+        form.setValue('assignedTo', v)}
+      disabled={supportAuthFailed || supportForbidden
+        || (assigneeOptionsErrorPresent && !users)}>
       <SelectTrigger id="assignedTo">
         <SelectValue
           placeholder="すべての担当者" />
@@ -1187,7 +1318,7 @@ Select は `<input>` と違って `register` では結び付けられません�
 担当者は値が id なのでステータスのような型ガードは使いません。選択肢が `getProjectMembers` の返す一覧から作られていてそこに無い id はそもそも選べないからです。サーバー側でも `assignedTo` に `.cuid()` が付いているので形の違う値は入口で落ちます。`SelectTrigger` に `id="assignedTo"` を付けたのは上の `<Label htmlFor="assignedTo">` と結び付けるためです。ラベルの文字を押してもプルダウンが開くようになり、押せる範囲が広がります。
 
 **確認ポイント**:
-- 担当者も `form.setValue` で管理している
+- 担当者も `form.setValue` で管理しています
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1196,7 +1327,8 @@ Select は `<input>` と違って `register` では結び付けられません�
         <SelectItem value="all">
           すべての担当者
         </SelectItem>
-        {users?.map((user) => (
+        {!supportAuthFailed && !supportForbidden
+          && !assigneeOptionsProtected && users?.map((user) => (
           <SelectItem key={user.id}
             value={user.id}>
             {user.name ?? user.email}
@@ -1234,7 +1366,7 @@ Select は `<input>` と違って `register` では結び付けられません�
 日付の2つは Select と違うので `register` で結び付けられます。`type="date"` にするとブラウザが用意しているカレンダーの入力欄になり、値は `2026-04-17` のような文字列で届きます。この形のまま送ると時刻が付いていないのでStep 7 で `dateOnlyToUtcStartIso` を通してから API へ渡します。開始日と終了日を分けているのはサーバー側の `buildDateRangeFilter` が `gte` と `lte` を別々に受け取る作りだからです。片方だけ入れた検索も成り立ちます。
 
 **確認ポイント**:
-- 日付入力欄が `type="date"` で表示される
+- 日付入力欄が `type="date"` で表示されます
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1262,8 +1394,8 @@ Select は `<input>` と違って `register` では結び付けられません�
 定義するまでこの画面は表示できないので見た目の確認は Step 6 のあとに行います。
 
 **確認ポイント**:
-- ボタンを2つ書けた
-- フォーム全体が Card 内にまとまっている
+- ボタンを2つ書けました
+- フォーム全体が Card 内にまとまっています
 
 スクリーンショット: 下の画像は Step 6 まで書き終えた完成後の画面です。入力欄が7つそろい、右下に「クリア」と「検索」の2つのボタンが並びます。押したときの処理は Step 6 で書きます。まだ関数が未定義なので画面の確認も Step 6 の後に行います。
 
@@ -1271,7 +1403,7 @@ Select は `<input>` と違って `register` では結び付けられません�
 
 ---
 
-### Step 6: handleSearch と handleClear を定義する（5分）
+### Step 6: handleSearch と handleClear を定義する（読む目安: 5分）
 
 **ゴール**: 検索実行とクリアのハンドラーを定義します。フォームの値をURLパラメータに変換します。
 
@@ -1307,8 +1439,8 @@ const handleSearch = () => {
 `paramList` を配列にしたのは7つの項目を同じ手順で処理したいからです。項目ごとに `if` を7個並べる書き方もできますが条件を1つ足すたびに書き足す場所が増えて漏れやすくなります。`exclude: 'all'` が付いている4つは「すべて」を選んだときにURLへ書かないという指定です。キーワードと日付に付いていないのはこの2つの未入力が空文字で、次のブロックの `p.value` の判定だけで落ちるからです。
 
 **確認ポイント**:
-- `form.getValues()` で全フィールドの値を一括取得している
-- `exclude: 'all'` で「すべて」選択時はURLに含めない
+- `form.getValues()` で全フィールドの値を一括取得しています
+- `exclude: 'all'` で「すべて」選択時はURLに含めません
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1327,8 +1459,8 @@ const handleSearch = () => {
 ```
 
 **確認ポイント**:
-- `URLSearchParams` で条件をURL文字列に変換している
-- `router.push` でURLを更新している
+- `URLSearchParams` で条件をURL文字列に変換しています
+- `router.push` でURLを更新しています
 
 未入力の条件をURLから外しているのは共有したときのURLを読める長さに保つためです。7項目を全部書くと `?keyword=&projectId=all&status=all...` という並びになり、何で絞り込んだのかが見て分かりません。`router.push` を使うとブラウザの履歴に1件積まれるので条件を変えて検索したあとに「戻る」を押すと前の条件へ戻ります。
 
@@ -1354,14 +1486,14 @@ const handleClear = () => {
 `form.reset` でフォームを空にするだけでは足りません。URLには前の条件が残ったままだからです。残っているとこのあと Step 7 で書くURL同期がすぐに値を書き戻し、クリアしたはずの条件が復活します。だから `router.push('/search')` でURLも同時に空へ戻します。フォームとURLのどちらか片方だけを直すと必ず食い違うのでこの2行は必ずセットで書きます。
 
 **確認ポイント**:
-- `form.reset()` で7つのフィールドを一括クリアしている
-- `router.push('/search')` でURLもリセットしている
+- `form.reset()` で7つのフィールドを一括クリアしています
+- `router.push('/search')` でURLもリセットしています
 
 > `form.getValues()` で全フィールドの値を一括取得し、`form.reset()` で一括クリアできます。`useState` を7個並べるより管理しやすくなります。
 
 ---
 
-### Step 7: URL同期と検索API呼び出し（5分）
+### Step 7: URL同期と検索API呼び出し（読む目安: 5分）
 
 **ゴール**: URLパラメータの変更をフォームに同期し、条件付きで検索APIを呼びます。
 
@@ -1397,7 +1529,7 @@ useEffect(() => {
 `transform` は URL の値を検査してからフォームへ入れるための関数です。不正なID・ステータス・優先度は `'all'` に、不正な日付は空文字に戻します。
 
 **確認ポイント**:
-- `status` / `priority` は型ガードで不正な値を防いでいる
+- `status` / `priority` は型ガードで不正な値を防いでいます
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1429,8 +1561,8 @@ flowchart LR
 書き出しと読み戻しは同じ輪の上にあり、`exclude` と `empty` が対になっています。`status` を「すべて」にすると `exclude` でURLから消え、次に読み戻すときは載っていないので `empty` の `'all'` が入ります。片方だけ直すと消したはずの条件が画面に残ります。
 
 **確認ポイント**:
-- 依存配列に `searchParams` と `form` を指定している
-- 7つの項目すべてに `form.setValue` を呼んでいる
+- 依存配列に `searchParams` と `form` を指定しています
+- 7つの項目すべてに `form.setValue` を呼んでいます
 
 検索条件が1つでもあるか判定するフラグを定義します。
 
@@ -1450,8 +1582,8 @@ const shouldSearch =
 `!!` は値が入っているかどうかを true と false に変える書き方です。キーワードは空文字なら false、4つの Select は `'all'` なら false になり、7つ全部が false のときだけ `shouldSearch` が false になります。この判定が無いと`/search` を開いた瞬間に条件なしの検索が走ります。参加しているプロジェクトのタスクを上限の100件まで読み込むのでまだ何も入力していない読者に大量の結果が並びます。条件がそろうまで待たせるための、たった1つの変数です。
 
 **確認ポイント**:
-- すべてのフィルター条件を OR で評価している
-- 条件が1つもなければ API を呼ばない
+- すべてのフィルター条件を OR で評価しています
+- 条件が1つもなければ API を呼びません
 
 検索APIを呼び出します。`enabled: shouldSearch` で条件が空のときはリクエストを送りません。
 
@@ -1484,7 +1616,7 @@ const {
 `projectId` と `assignedTo` で `'all'` を `undefined` に置き換えているのはサーバーへ渡す前に条件を落としておくためです。`status` と `priority` は `'all'` のまま送っています。サーバー側の `buildDynamicWhere` が `'all'` を捨てる作りだったのでどちらの形でも同じ結果になります。渡す値が `formValues` から作られているところにも注目してください。`form.watch()` の結果なので入力が変わるたびに新しい条件で `useQuery` が走ります。
 
 **確認ポイント**:
-- `formValues.keyword || undefined` で空文字を undefined に変換している
+- `formValues.keyword || undefined` で空文字を undefined に変換しています
 
 > ここで `|| undefined` を使うのは「空文字なら検索条件なしとして扱いたい」からです。今回は **空文字も未入力扱いにしたい** ので `??` ではなく `||` を使っています。
 
@@ -1520,6 +1652,42 @@ const authFailed = isAuthError(searchError);
 const forbidden = isForbiddenError(searchError);
 const protectedSearchError =
   searchErrorPresent && (authFailed || forbidden);
+const queryWriteBlocked =
+  supportWriteBlocked || protectedSearchError;
+```
+
+検索API自身が401または403を返した場合も、画面の外に残っている確認操作から書き込ませません。次に、現在の検索結果とロールを使って対象タスクの権限を調べます。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+const canDeleteTask = useCallback(
+  (taskId: string) => {
+    const task = searchResults?.tasks.find(
+      (item) => item.id === taskId);
+    return task ? canDeleteProject(task.projectId) : false;
+  },
+  [canDeleteProject, searchResults?.tasks],
+);
+const canEditTask = useCallback(
+  (taskId: string) => {
+    const task = searchResults?.tasks.find(
+      (item) => item.id === taskId);
+    return task ? canEditProject(task.projectId) : false;
+  },
+  [canEditProject, searchResults?.tasks],
+);
+```
+
+タスクIDからプロジェクトIDを引き、更新後のロールで編集・削除を判定します。確認画面を開いたあとにOWNERからVIEWERへ変わった場合も、古いロールを使いません。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+const queryWriteBlockedRef = useRef(queryWriteBlocked);
+const canDeleteTaskRef = useRef(canDeleteTask);
+const canEditTaskRef = useRef(canEditTask);
+queryWriteBlockedRef.current = queryWriteBlocked;
+canDeleteTaskRef.current = canDeleteTask;
+canEditTaskRef.current = canEditTask;
 
 const handleSearchErrorAction = () => {
   if (authFailed) {
@@ -1534,17 +1702,17 @@ const handleSearchErrorAction = () => {
 };
 ```
 
-401はログインし直す必要があり、403はその検索結果を見る権限がありません。どちらも以前取得したデータを残すと、現在は見てはいけない情報が画面へ出続けます。一時的な通信失敗では以前の結果を残し、警告と再試行ボタンを添えます。
+参照へ毎回最新の判定を入れるのは、確認画面が保持していた古いコールバックから呼ばれた場合にも現在の権限を読むためです。401はログインし直す必要があり、403はその検索結果を見る権限がありません。どちらも以前取得したデータを残すと、現在は見てはいけない情報が画面へ出続けます。一時的な通信失敗では以前の結果を残し、警告と再試行ボタンを添えます。
 
 **確認ポイント**:
-- `enabled: shouldSearch` で条件なしのときはAPIを呼ばない
-- 日付を ISO 文字列に変換している
+- `enabled: shouldSearch` で条件なしのときはAPIを呼びません
+- 日付を ISO 文字列に変換しています
 
 > `enabled: shouldSearch` は Day 12 で学んだ `enabled` 制御と同じパターンです。条件が揃うまで API リクエストを送りません。
 
 ---
 
-### Step 8: タスク検索結果を表示する（10分）
+### Step 8: タスク検索結果を表示する（読む目安: 10分）
 
 この Step で書くコードは `handleTaskDelete` を参照しますがその中身を書くのは Step 9 です。
 それまでは「`handleTaskDelete` が見つからない」という型エラーが出たままになります。
@@ -1563,137 +1731,108 @@ const handleTaskClick =
   };
 const handleTaskEdit =
   (taskId: string) => {
+    if (authExpiredRef.current
+      || queryWriteBlockedRef.current
+      || !canEditTaskRef.current(taskId)) return;
     router.push(
       `/task?taskId=${taskId}&edit=true`);
   };
-const handleProjectClick =
-  (projectId: string) => {
-    router.push(
-      `/project?projectId=${projectId}`);
-  };
 ```
 
-3つとも `router.push` でURLを組み立てるだけで、遷移先の画面が何を表示するかまでは決めていません。タスク一覧のページが `taskId` を読んで詳細を開き、`edit=true` が付いていれば編集ダイアログを開きます。検索画面から渡すのはURLだけ、という分担にしておくと遷移先の作りが変わってもこちらは触らずに済みます。ここでもURLが画面どうしの受け渡し役になっています。
+詳細表示は `router.push` でURLを組み立てます。編集は移動前にログイン切れのref、最新の問い合わせ状態、ロールを確かめます。削除が401を返した直後に編集ボタンを押しても、再描画を待たずに移動を止めます。タスク一覧のページが `taskId` を読んで詳細を開き、`edit=true` が付いていれば編集ダイアログを開きます。検索画面から渡すのはURLだけ、という分担にしておくと遷移先の作りが変わってもこちらは触らずに済みます。ここでもURLが画面どうしの受け渡し役になっています。プロジェクトの結果は、このあと `Link`（ページを移動するための部品）で詳細ページへのリンクを作ります。
 
 **確認ポイント**:
-- 3つのハンドラーを `search/page.tsx` へ書いた
-- どれも `router.push` を呼ぶだけの中身になっている
+- 2つのハンドラーを `search/page.tsx` へ書きました
+- どれも `router.push` を呼ぶだけの中身になっています
 
 実際の動きを確かめるのはこのあとです。検索結果が画面に出てStep 9 で `handleTaskDelete` を書き終えてから押します。
 
-検索画面の編集ボタンは `edit=true` を付けるため
-タスク一覧ページ側でもこの値を受け取ります。
-`src/app/task/page.tsx` にある既存の
-`taskIdParam` と詳細ダイアログ用 `useEffect` を、
-次の形へ置き換えてください。
-
-```typescript
-// filepath: src/app/task/page.tsx
-const taskIdParam = searchParams.get('taskId');
-const isEditLink =
-  searchParams.get('edit') === 'true';
-const { data: linkedTask } =
-  api.task.getById.useQuery(
-    { id: taskIdParam ?? '' },
-    { enabled: !!taskIdParam && isEditLink },
-  );
-
-useEffect(() => {
-  if (taskIdParam && !isEditLink) {
-    setSelectedTask(taskIdParam);
-    setDetailOpen(true);
-  }
-}, [isEditLink, taskIdParam]);
-```
-
-置き換えるのは Day 13 で書いた `taskIdParam` のまわりです。`edit=true` が付いているときだけ詳細を取りたいので`enabled` に `!!taskIdParam && isEditLink` を渡します。下の `useEffect` へ `!isEditLink` を足したのは編集リンクで来たときに詳細ダイアログまで開くとダイアログが2枚重なってしまうからです。編集で来たときは詳細を飛ばして編集画面へ、という振り分けをこの1行で決めています。
-
-検索から編集用データを取得できたら
-Day 15 の `TaskDialog` を編集モードで開きます。
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-useEffect(() => {
-  if (!isEditLink || !linkedTask) return;
-  setEditingTask(
-    taskToFormData(linkedTask),
-  );
-  setDetailOpen(false);
-  setDialogOpen(true);
-}, [isEditLink, linkedTask]);
-```
-
-`linkedTask` が届くまでこの処理は何もしません。先頭の `if` で `linkedTask` が無いときに戻しているからです。取得が終わってから `taskToFormData` で入力用の形へ変え、詳細ダイアログを閉じてから編集ダイアログを開きます。`setDetailOpen` と `setDialogOpen` は別々の値なのでこの2行は順番を入れ替えても結果は変わりません。
-
-まず `task/page.tsx` の import を書き換えます。Day 13 で
-`useSearchParams` だけを読み込んだ行を、次の形にします。
-
-```typescript
-// filepath: src/app/task/page.tsx
-import { useRouter, useSearchParams }
-  from 'next/navigation';
-```
-
-`useRouter` はプログラムから URL を書き換えるための
-フックです。Day 13 では URL を読むだけだったので
-`useSearchParams` しか要りませんでしたが今日は閉じるときに
-URL から編集指定を消すので書き込む側も必要になります。
-
-そのうえで、`const searchParams = useSearchParams();` の
-下に1行足します。
-
-```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-const router = useRouter();
-```
-
-この2つが無いと次の `router.replace` で
-`router is not defined` というエラーで止まります。
-
-ダイアログを閉じたあとに再び開かないよう、
-URL の編集指定も取り除きます。次の関数を
-`createMutation` / `updateMutation` より前へ追加します。
-
-```typescript
-// filepath: src/app/task/page.tsx（続き）
-const closeTaskDialog = () => {
-  setDialogOpen(false);
-  setEditingTask(undefined);
-  if (!isEditLink) return;
-
-  const params = new URLSearchParams(
-    searchParams.toString(),
-  );
-  params.delete('taskId');
-  params.delete('edit');
-  const query = params.toString();
-  router.replace(
-    query ? `/task?${query}` : '/task',
-  );
-};
-```
-
-`createMutation` と `updateMutation` の成功時にある
-`setDialogOpen(false)` は`closeTaskDialog()` へ
-置き換えます。`TaskDialog` の
-`onClose={() => setDialogOpen(false)}` も、
-`onClose={closeTaskDialog}` へ置き換えてください。
-
-**確認ポイント**:
-- `/task?taskId=...&edit=true` で編集ダイアログが開く
-- ダイアログを閉じると URL から `taskId` と `edit` が消える
+検索画面の編集ボタンは `edit=true` を付けて `/task` へ移動します。この Step ではリンクを作るところまで進め、`src/app/task/page.tsx` はまだ変更しません。Day 15 の `useRouter`、`searchParams`、`closeTaskDialog`、フォームgenerationをそのまま残してください。リンクを受け取る側は、検索結果の表示を完成させた後の Step 8.5 でまとめて接続します。
 
 Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ローディング表示と結果件数です。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
 {/* ローディング・結果件数・タスク見出し */}
-{isLoading ? (
+{!supportAuthFailed && !supportForbidden
+  && projectOptionsErrorPresent ? (
+  <SupportQueryWarning ariaLabel="プロジェクトの選択肢を取得できませんでした"
+    message="プロジェクトの選択肢を取得できませんでした。"
+    retryLabel="プロジェクト選択肢を再試行"
+    hasCachedData={projects !== undefined}
+    isFetching={projectOptionsFetching}
+    onRetry={() => void refetchProjectOptions()} />
+) : null}
+{!supportAuthFailed && !supportForbidden
+  && assigneeOptionsErrorPresent ? (
+  <SupportQueryWarning ariaLabel="担当者の選択肢を取得できませんでした"
+    message="担当者の選択肢を取得できませんでした。"
+    retryLabel="担当者選択肢を再試行"
+    hasCachedData={users !== undefined}
+    isFetching={assigneeOptionsFetching}
+    onRetry={() => void refetchAssigneeOptions()} />
+) : null}
+```
+
+選択肢の警告は失敗した問い合わせごとに再試行します。プロジェクトだけ失敗したときに担当者まで取り直すと、成功済みの通信を増やし、どの復旧を待っているのか分かりにくくなるためです。
+
+```typescript
+{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+{!supportAuthFailed && !supportForbidden
+  && sessionErrorPresent ? (
+  <SupportQueryWarning ariaLabel="操作権限を確認できませんでした"
+    message="ログインユーザーの操作権限を確認できませんでした。"
+    retryLabel="ログインユーザーを再試行"
+    hasCachedData={session !== undefined}
+    isFetching={sessionFetching}
+    onRetry={() => void refetchSession()} />
+) : null}
+{!supportAuthFailed && !supportForbidden
+  && memberProjectsErrorPresent ? (
+  <SupportQueryWarning ariaLabel="操作権限を確認できませんでした"
+    message="プロジェクトの操作権限を確認できませんでした。"
+    retryLabel="プロジェクト権限を再試行"
+    hasCachedData={memberProjects !== undefined}
+    isFetching={memberProjectsFetching}
+    onRetry={() => void refetchMemberProjects()} />
+) : null}
+```
+
+セッションまたはロール一覧の取得失敗では、検索結果を残して編集・削除だけを止めます。401はキャッシュ済み結果を隠してログインへ進み、403は検索結果を残しながら選択肢と操作権限を利用不可として示します。
+
+```typescript
+{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+{!supportAuthFailed && supportForbidden ? (
+  <div role="alert">
+    <p>検索条件に必要な情報を見る権限がありません</p>
+    <p>選択肢やタスクの操作権限は利用できません。</p>
+  </div>
+) : null}
+```
+
+支援クエリの401では、成功時に取得済みだった検索結果も表示しません。ログイン状態を確認できないまま保護情報を残さず、ログイン画面への導線だけを表示するためです。
+
+```typescript
+{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+{supportAuthFailed ? (
+  <div className="space-y-4 text-center">
+    <p>ログインの有効期限が切れました</p>
+    <Button onClick={() => router.push('/login')}>
+      ログイン画面へ
+    </Button>
+  </div>
+) : isLoading ? (
   <PageLoadingSpinner />
 ) : shouldSearch && searchErrorPresent
   && (!searchResults || protectedSearchError) ? (
   <div className="space-y-4 rounded-lg border
     border-destructive/40 p-6 text-center">
+```
+
+支援クエリが正常なら、ここから既存の検索APIの失敗表示へ戻ります。検索APIの401と403は従来どおり結果を隠し、500だけが再試行できる分岐を使います。
+
+```typescript
+{/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
     <p className="font-medium">
       {authFailed
         ? 'ログインの有効期限が切れました'
@@ -1713,14 +1852,14 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 401と403は以前の結果も隠し、押すべきボタンを1つだけ表示します。続けて、一時的な失敗で以前の結果が残っている場合の警告を書きます。
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
 ) : shouldSearch && searchResults ? (
   <div className="space-y-6">
+    {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
     {searchErrorPresent ? (
       <div role="alert" className="flex items-center
         justify-between gap-4 rounded-lg border
         border-amber-300/60 bg-amber-50 px-4 py-3">
-        <span>最新の検索結果を取得できませんでした。前回取得時の内容です。</span>
+        <span>取得できませんでした。前回の検索結果です。</span>
         <Button type="button" variant="outline" size="sm"
           onClick={() => void refetchSearch()}
           disabled={searchFetching}>再試行</Button>
@@ -1755,7 +1894,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 表示は読み込み、取得エラー、取得済み、未入力に分かれます。初回取得に失敗したときは未入力の案内へ戻さず、失敗したことと次の操作を示します。401ならログイン画面へ進み、403なら条件を消します。一時的な失敗で以前の結果が残っている場合は、結果と警告を一緒に表示します。件数はサーバーが返した `totalCount` をそのまま出し、タスクとプロジェクトの内訳だけを画面側で組み立てています。
 
 **確認ポイント**:
-- 件数がタスクとプロジェクト別に表示される
+- 件数がタスクとプロジェクト別に表示されます
 
 タスク結果をカード形式で表示します。
 
@@ -1780,7 +1919,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 `searchResults.tasks.length > 0 &&` で囲っているのでタスクが0件のときはこのかたまりごと消えます。見出しだけが残って中身が空、という見え方を避けられます。`Separator` に `flex-1` を付けたのは見出しの右側の余白いっぱいまで線を伸ばすためです。タスクとプロジェクトが両方並ぶときも、どこまでが同じ種類の結果かが線で分かれます。
 
 **確認ポイント**:
-- セクション見出しに件数が表示される
+- セクション見出しに件数が表示されます
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1811,51 +1950,575 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 
 検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCardに権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
+TaskCardに権限フラグと作業時間を渡します。上の `<TaskCard key={task.id} ... />` を以下に**置き換えて**ください。
 
 ```typescript
-{/* filepath: src/app/search/page.tsx */}
-          {searchResults.tasks
-            .map((task) => (
-            <TaskCard key={task.id}
-              id={task.id}
-              title={task.title}
-              description={
-                task.description}
-              status={task.status}
-              priority={task.priority}
-              dueDate={task.dueDate}
-              assignee={task.assignee}
-              timeSpentMinutes={
-                task.timeSpentMinutes}
-              onEdit={handleTaskEdit}
-              onDelete={handleTaskDelete}
-              onClick={handleTaskClick}
-              onTimeLogSuccess={() =>
-                utils.search.search
-                  .invalidate()}
-              canEdit={canEditProject(
-                task.projectId)}
-              canDelete={canDeleteProject(
-                task.projectId)} />
-          ))}
+<TaskCard key={task.id}
+  // filepath: src/app/search/page.tsx
+  // TaskCardに権限フラグと作業時間を追加
+  id={task.id}
+  title={task.title}
+  description={
+    task.description}
+  status={task.status}
+  priority={task.priority}
+  dueDate={task.dueDate}
+  assignee={task.assignee}
+  timeSpentMinutes={
+    task.timeSpentMinutes}
+  onEdit={handleTaskEdit}
+  onDelete={handleTaskDelete}
+  onClick={
+    handleTaskClick}
+  onTimeLogSuccess={() =>
+    utils.search.search
+      .invalidate()}
+  canEdit={canEditProject(
+    task.projectId)}
+  canDelete={canDeleteProject(
+    task.projectId)} />
 ```
 
-> `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
+> `canEdit` / `canDelete` を省くと既定値の `false` が使われ、編集・削除ボタンは表示されません。編集できる利用者にはボタンを表示するため、判定した値を毎回渡します。検索結果は複数プロジェクトのタスクが混ざるため `task.projectId` ごとに個別に権限を判定します。
 
 `timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないとこの画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
 
 **確認ポイント**:
-- Day 13 から使っている `TaskCard` をそのまま再利用している
+- Day 13 で作った `TaskCard` をそのまま再利用しています
 - `handleTaskDelete` が未定義という型エラーが出る（Step 9 で書くのでこの時点では正常）
-- 3つの操作が動くかどうかは Step 9 を終えてから確かめる
+- 3つの操作が動くかどうかは Step 9 を終えてから確かめます
 
 キーワードを打つとその下に一致したタスクとプロジェクトがカードで並びます。
 一致するものが無いときは「該当する結果が見つかりませんでした」に変わります。
 
+### Step 8.5: タスク一覧の絞り込みをURLへ残す（読む目安: 18分・仮）
+
+**ゴール**: `/task` のプロジェクトとステータスをURLへ保存し、共有URLの初回表示とブラウザの「戻る」「進む」で同じ条件を復元します。
+
+Step 7 の `/search` は7つの検索条件を扱います。ここから変更するのは `/task` です。Day 15 のプロジェクトとステータスだけをURLへ接続し、優先度・担当者と一括操作は Day 28 まで追加しません。
+
+#### 8.5-1. URLと一覧の値を変換するhelperを作る
+
+`src/lib/task-filter-query.ts` を新しく作り、次の全文を貼り付けます。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/lib/task-filter-query.ts
+import { z } from 'zod';
+import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
+
+export type TaskFilters = {
+  project: string;
+  status: TaskStatus | 'all';
+};
+
+export const DEFAULT_TASK_FILTERS: TaskFilters = {
+  project: 'all',
+  status: 'all',
+};
+
+const cuidSchema = z.string().cuid();
+
+const normalizeProjectFilter = (value: string): string =>
+  value === DEFAULT_TASK_FILTERS.project || cuidSchema.safeParse(value).success
+    ? value
+    : DEFAULT_TASK_FILTERS.project;
+
+export const parseTaskFiltersFromSearchParams = (searchParams: URLSearchParams): TaskFilters => {
+  const project = normalizeProjectFilter(
+    searchParams.get('project') ?? DEFAULT_TASK_FILTERS.project,
+  );
+  const rawStatus = searchParams.get('status') ?? DEFAULT_TASK_FILTERS.status;
+
+  return {
+    project,
+    status:
+      rawStatus === 'all' || isTaskStatus(rawStatus) ? rawStatus : DEFAULT_TASK_FILTERS.status,
+  };
+};
+
+export const buildTaskFiltersQueryString = (filters: TaskFilters): string => {
+  const params = new URLSearchParams();
+  const project = normalizeProjectFilter(filters.project);
+
+  if (project !== DEFAULT_TASK_FILTERS.project) {
+    params.set('project', project);
+  }
+
+  if (filters.status !== DEFAULT_TASK_FILTERS.status) {
+    params.set('status', filters.status);
+  }
+
+  return params.toString();
+};
+```
+
+URLに無い条件は `'all'` として読みます。不正なステータスも `'all'` へ戻します。プロジェクトはサーバー入力と同じZodのCUID形式で検査し、空文字や壊れた値を `'all'` へ戻します。書き出すときも同じ検査を通すので、不正な値をAPIへ送り直しません。
+
+この検査が保証するのはIDの形だけです。有効な形でも、ログイン中の利用者が所属していないプロジェクトかもしれません。所属と権限はサーバーが現在のDBを見て判定し、クライアントの形式検査で代用しません。絞り込みなしのURLは `/task?project=all&status=all` ではなく `/task` になります。
+
+#### 8.5-2. Day 15 の宣言を重ねずに置き換える
+
+`src/app/task/page.tsx` のnavigation importを**置き換えます**。Day 15 の `useRouter` と `useSearchParams` は残し、同じ行へ `usePathname` を加えます。importをもう1行追加しません。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存importを置き換える）
+import {
+  usePathname, useRouter, useSearchParams,
+} from 'next/navigation';
+```
+
+`isAuthError` を読むimportの直後へhelperのimportを追加します。URLの読み取りと書き出しを同じ変換規則へそろえ、片方だけ直して条件がずれるのを防ぐためです。
+
+```typescript
+// filepath: src/app/task/page.tsx
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
+```
+
+`TaskPageContent` の先頭にある2つのフィルターstateを、次の5行へ**置き換えます**。古い `useState('all')` の2行は残しません。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存の2つのstateを置き換える）
+const searchParams = useSearchParams();
+const urlFilters =
+  parseTaskFiltersFromSearchParams(searchParams);
+const [filterProject, setFilterProject] =
+  useState<string>(urlFilters.project);
+const [filterStatus, setFilterStatus] =
+  useState<TaskStatus | 'all'>(urlFilters.status);
+```
+
+初期値をURLから作るため、最初だけ `'all'` で問い合わせてから取り直す二重取得を防げます。
+
+`authExpiredRef` の直後へ3つのrefを追加します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const linkedFormTarget = useRef<string | null>(null);
+const dismissedDetailTaskId = useRef<string | null>(null);
+const desiredUrlFilterContext = useRef(
+  `${urlFilters.project}\u0000${urlFilters.status}`,
+);
+```
+
+`\u0000` はヌル文字（Unicode U+0000）です。Day 13 の `pageContext` で使ったものと同じ区切り文字で、通常のIDやステータスには含まれません。2条件を1本の比較用キーへ安全につなぐために使います。`dismissedDetailTaskId` は、詳細を閉じた直後に古いURLが一度描画されても同じ詳細を開き直さないための記録です。
+
+次に、Day 15 の後半にある古い `const leavePageContext = () => {` から対応する `};` までを削除します。あとで `useCallback` 版を前方へ置くため、2つを残しません。
+
+Day 15 の次の範囲もまとめて**置き換えます**。ここで探すのは、いま先頭へ追加したものではありません。`authExpiredRef` と、直前に追加した2つのrefより後ろに残っている古い `searchParams` です。
+
+- 開始: 後ろに残っている2つ目の `const searchParams = useSearchParams();`
+- 終了: 古い詳細表示effectの `}, [taskIdParam]);`
+- 範囲内の `router`、`taskIdParam`、`utils` も一度消します
+
+この範囲へ、次のブロックを上から順に貼ります。最初はnavigation値とページ境界です。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const router = useRouter();
+const pathname = usePathname();
+const taskIdParam = searchParams.get('taskId');
+const isEditLink = searchParams.get('edit') === 'true';
+
+const leavePageContext = useCallback(() => {
+  formGeneration.current += 1;
+  setDeleteDialogOpen(false);
+  setDeleteTargetId(null);
+  setDialogOpen(false);
+  setEditingTask(undefined);
+  setSelectedTask(null);
+  setDetailOpen(false);
+}, []);
+```
+
+Day 15 のダイアログ初期化とgenerationを削らず、URLやページが変わったときにも同じ関数を呼べる位置へ移し、古い保存結果が現在の画面を閉じない判定を保ちます。
+
+編集リンクの対象が変わったら、前のリンク用データを使わないようにします。上のブロックへ続けて貼ります。前の取得結果が遅れて届いても、新しい編集フォームへ混ざらないようにするためです。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じ置換範囲の続き）
+useEffect(() => {
+  formGeneration.current += 1;
+  linkedFormTarget.current = null;
+}, [taskIdParam, isEditLink]);
+
+const {
+  data: linkedTask, error: linkedTaskError,
+  isFetching: linkedTaskFetching,
+  refetch: refetchLinkedTask,
+} = api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    {
+      enabled: !authExpired && !!taskIdParam && isEditLink,
+      retry: shouldRetryQuery,
+    },
+  );
+```
+
+詳細リンクと編集リンクを分けます。編集用データを同じリンクへ一度反映したら、再取得でフォームを開き直しません。取得中に別のタスクへ移った場合も、前のタスクの内容を新しいフォームへ入れないためです。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じ置換範囲の続き）
+useEffect(() => {
+  if (!taskIdParam || isEditLink ||
+    dismissedDetailTaskId.current !== taskIdParam) {
+    dismissedDetailTaskId.current = null;
+  }
+  if (taskIdParam && !isEditLink &&
+    dismissedDetailTaskId.current !== taskIdParam) {
+    setSelectedTask(taskIdParam);
+    setDetailOpen(true);
+  }
+}, [isEditLink, taskIdParam]);
+```
+
+閉じた詳細と同じIDだけを一時的に止めます。別のIDへ移動した場合や編集リンクへ切り替えた場合は記録を解除するので、新しい遷移まで止めません。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じ置換範囲の続き）
+useEffect(() => {
+  if (!isEditLink) {
+    linkedFormTarget.current = null;
+    return;
+  }
+  if (!linkedTask ||
+    linkedFormTarget.current === linkedTask.id) return;
+  linkedFormTarget.current = linkedTask.id;
+  formGeneration.current += 1;
+  setEditingTask(taskToFormData(linkedTask));
+  setDetailOpen(false);
+  setDialogOpen(true);
+}, [isEditLink, linkedTask]);
+```
+
+Day 15 の `if (taskIdParam)` だけのeffectは置換範囲ごと消えています。残すと編集リンクで詳細と編集の2画面を開こうとします。
+
+#### 8.5-3. URLを読むeffectを先に置く
+
+編集リンクの2つのeffectの**直後**へ、URLから画面へ読むeffectを貼ります。
+
+```typescript
+// filepath: src/app/task/page.tsx（編集リンクeffectの直後）
+useEffect(() => {
+  const nextUrlFilterContext =
+    `${urlFilters.project}\u0000${urlFilters.status}`;
+  if (desiredUrlFilterContext.current
+    !== nextUrlFilterContext) {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
+  }
+  desiredUrlFilterContext.current = nextUrlFilterContext;
+  setFilterProject(urlFilters.project);
+  setFilterStatus(urlFilters.status);
+}, [leavePageContext,
+  urlFilters.project, urlFilters.status]);
+```
+
+ブラウザ操作でURLの条件が変わった場合だけ、前のページのフォームや詳細を閉じて1ページ目へ戻します。画面自身が書いた同じ条件では閉じません。
+
+#### 8.5-4. 読むeffectの直後にURLを書くeffectを置く
+
+次のeffectは、必ず8.5-3の読むeffectの**直後**へ置きます。Reactはeffectを宣言順に実行します。読む側が先なら、戻る操作で変わったURLをrefへ記録し、書く側は古いstateとの不一致を見て止まります。逆順にすると、書く側が古い条件でURLを上書きし、「戻る」を打ち消します。
+
+前半を貼ります。
+
+```typescript
+// filepath: src/app/task/page.tsx（読むeffectの直後）
+useEffect(() => {
+  const renderedUrlFilterContext =
+    `${filterProject}\u0000${filterStatus}`;
+  if (renderedUrlFilterContext
+    !== desiredUrlFilterContext.current) return;
+  const params =
+    new URLSearchParams(searchParams.toString());
+  params.delete('project');
+  params.delete('status');
+  if (dismissedDetailTaskId.current === taskIdParam &&
+    !isEditLink) {
+    params.delete('taskId');
+  }
+
+  const filterQuery = buildTaskFiltersQueryString({
+    project: filterProject,
+    status: filterStatus,
+  });
+```
+
+最初にフィルター2項目だけを消すので、`taskId` と `edit` は残ります。続きは同じeffectの閉じ括弧までです。
+
+```typescript
+// filepath: src/app/task/page.tsx（同じeffectの続き）
+  if (filterQuery) {
+    const filterParams = new URLSearchParams(filterQuery);
+    for (const [key, value] of filterParams.entries()) {
+      params.set(key, value);
+    }
+  }
+  const nextQuery = params.toString();
+  const currentQuery = searchParams.toString();
+  if (nextQuery !== currentQuery) {
+    router.replace(
+      nextQuery ? `${pathname}?${nextQuery}` : pathname,
+      { scroll: false },
+    );
+  }
+}, [filterProject, filterStatus, isEditLink,
+  pathname, router, searchParams, taskIdParam]);
+
+const utils = api.useUtils();
+```
+
+`router.replace` はフィルターを変えるたびに履歴を増やしません。だから、画面のSelectを変えただけでは前の条件へ「戻る」ことはできません。別のURLから `/task` へ移動した履歴を使って確認します。
+
+JSXのタスク一覧上部にあるフィルター行から、プロジェクト用とステータス用の2つのSelectを探します。開始タグから `>` までをそれぞれ置き換えます。既存の同値判定と型guardを残したまま、stateを変える前に次の条件をrefへ記録します。
+
+```tsx
+{/* filepath: src/app/task/page.tsx（プロジェクトSelect開始タグを置換） */}
+<Select
+  value={filterProject}
+  onValueChange={(value) => {
+    if (value === filterProject) return;
+    desiredUrlFilterContext.current =
+      `${value}\u0000${filterStatus}`;
+    resetPageForFilter();
+    setFilterProject(value);
+  }}
+>
+```
+
+プロジェクト値が同じなら何もしません。値が変わる場合だけページと開いている画面を初期化し、次に書くURLの条件をrefへ先に記録します。
+
+```tsx
+{/* filepath: src/app/task/page.tsx（ステータスSelect開始タグを置換） */}
+<Select
+  value={filterStatus}
+  onValueChange={(value) => {
+    if ((value === 'all' || isTaskStatus(value)) &&
+      value !== filterStatus) {
+      desiredUrlFilterContext.current =
+        `${filterProject}\u0000${value}`;
+      resetPageForFilter();
+      setFilterStatus(value);
+    }
+  }}
+>
+```
+
+この順序ならフィルター変更で古いフォームを閉じたあと、URL反映の通知を外部操作と取り違えません。不正なステータスをstateへ入れないguardも残ります。
+
+詳細ダイアログを閉じる関数も置き換えます。`taskId` だけを消し、プロジェクトとステータスは残します。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存関数全体を置き換える）
+const handleDetailClose = () => {
+  setDetailOpen(false);
+  setSelectedTask(null);
+  if (taskIdParam && !isEditLink) {
+    dismissedDetailTaskId.current = taskIdParam;
+    const params =
+      new URLSearchParams(searchParams.toString());
+    params.delete('taskId');
+    const nextQuery = params.toString();
+    router.replace(nextQuery
+      ? `${pathname}?${nextQuery}` : pathname,
+      { scroll: false });
+  }
+};
+```
+
+`router.replace` の反映を待つ間は、古い `taskId` のまま描画される場合もあります。先にdismissed IDを記録します。URLを書くeffectでも同じ `taskId` を落とすため、閉じた詳細を一瞬だけ開き直す競合を防げます。別IDへの移動、編集リンクへの移動、URLから `taskId` が消えた通知では記録を解除します。
+
+#### 8.5-5. 1件操作の寿命をページとURLで照合する
+
+`TaskSubmission` を次の全文へ置き換えます。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存型を置き換える）
+type TaskSubmission = {
+  generation: number;
+  pageIndex: number;
+  routeTaskId: string | null;
+  editLink: boolean;
+  isCurrent: () => boolean;
+};
+```
+
+`handleSubmit` と1件削除確認で `singleSubmission.current` を作る既存オブジェクトを探します。既存の `pageIndex,` 行のすぐ後ろへ、次の2行**だけ**を追加します。続く `isCurrent` は削らず、同じ位置に残してください。
+
+```typescript
+// filepath: src/app/task/page.tsx（pageIndex の直後へ2行だけ追加）
+routeTaskId: taskIdParam,
+editLink: isEditLink,
+```
+
+1件削除側では後ろにある `isCurrent: () => false,` をそのまま残します。作成・更新側では `isCurrent,` を残します。どちらも新しく書き足しません。
+
+`finishSubmittedForm` の中にある `canClose` の代入式全体を、次の7行へ**置き換えます**。既存の式へ条件だけを継ぎ足しません。世代とページ番号に加え、送信開始時のURLも照合するためです。
+
+```typescript
+// filepath: src/app/task/page.tsx（canClose の代入式を置き換える）
+const canClose =
+  !authExpiredRef.current &&
+  submitted?.generation === formGeneration.current &&
+  submitted.pageIndex === pageIndex &&
+  submitted.routeTaskId === taskIdParam &&
+  submitted.editLink === isEditLink &&
+  submitted.isCurrent();
+```
+
+Day 15 の `closeTaskDialog` 全体を次へ**置き換えます**。古い関数を残したまま追加しません。先頭のgeneration更新も残します。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存関数全体を置き換える）
+const closeTaskDialog = useCallback(() => {
+  formGeneration.current += 1;
+  setDialogOpen(false);
+  setEditingTask(undefined);
+
+  if (isEditLink) {
+    const params =
+      new URLSearchParams(searchParams.toString());
+    params.delete('taskId');
+    params.delete('edit');
+    const nextQuery = params.toString();
+    router.replace(
+      nextQuery ? `${pathname}?${nextQuery}` : pathname,
+      { scroll: false },
+    );
+  }
+}, [isEditLink, pathname, router, searchParams]);
+```
+
+`queryAuthFailed` の配列へ `linkedTaskError` を加えます。編集リンクの取得が401でも、一覧と同じログイン切れ表示へ進めるためです。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const queryAuthFailed =
+  (sessionLoaded && session === null) ||
+  [sessionError, tasksError, projectsError,
+    linkedTaskError].some(isAuthError);
+const queryForbidden =
+  [sessionError, tasksError, projectsError,
+    linkedTaskError].some(isForbiddenError);
+```
+
+編集リンクの取得が403になった場合も、以前表示した保護データを残しません。401ではログイン案内、403では権限不足の案内へ進み、どちらも自動再試行しない契約を保ちます。500などの一時的な失敗は編集画面が黙って閉じたように見せず、取得失敗と再試行を表示します。
+
+編集対象の取得失敗を一覧の警告へつなぎます。`const myRoleByProject = useMemo(` の直前へ次の3つの変数を追加してください。401と403は上の分岐が処理するため、この判定は一時的な取得失敗だけを扱います。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const linkedTaskReadFailed = !!linkedTaskError
+  && !isAuthError(linkedTaskError)
+  && !isForbiddenError(linkedTaskError);
+const linkedTaskReadFailedInitially =
+  linkedTaskReadFailed && linkedTask === undefined;
+const linkedTaskReadDataIsStale =
+  linkedTaskReadFailed && linkedTask !== undefined;
+```
+
+Day 14 の `{sessionReadDataIsStale && (` から始まる警告を探し、その閉じる `)}` の直後へ次の表示を追加します。編集対象を取得できていない場合と、前回の値が残っている場合を分けて伝えます。再試行は編集対象だけを取得し、一覧や入力中のフォームを初期化しません。
+
+```tsx
+{/* filepath: src/app/task/page.tsx */}
+{(linkedTaskReadFailedInitially || linkedTaskReadDataIsStale) && (
+  <div className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4"
+    role="alert">
+    <span>{linkedTaskReadDataIsStale
+      ? '最新の編集対象タスクを取得できませんでした。前回取得時の内容です。'
+      : '編集するタスクを取得できませんでした。'}</span>
+    <Button type="button" variant="outline" size="sm"
+      onClick={() => void refetchLinkedTask()}
+      disabled={linkedTaskFetching}>再試行</Button>
+  </div>
+)}
+```
+
+Day 15 の `singleMutationOptions`、`createMutation`、`updateMutation` は構造を変えません。二重送信防止、古い応答の判定、認証切れ、再取得失敗の案内を残し、上で広げた `TaskSubmission` と `finishSubmittedForm` をそのまま通します。
+
+`handleCreate` と `handleEdit` の先頭には、次の同期guardを残します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const handleCreate = () => {
+  if (authExpiredRef.current) return;
+  formGeneration.current += 1;
+```
+
+作成ボタンは入力対象を持たないため、認証切れrefを確認してから新しいフォーム世代へ進みます。stateの反映を待たず、同じイベント周期のクリックも止めます。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const handleEdit = (taskId: string) => {
+  if (authExpiredRef.current) return;
+  const task = tasks?.find((item) => item.id === taskId);
+```
+
+401を受けた直後は、stateを再描画する前に古いクリック処理が動く場合もあります。refを先頭で読む2行は、その短い間に作成・編集フォームを開かないために必要です。後続のフォーム初期化は既存のまま残します。
+
+Day 16 で `TaskCard` へ追加した合計作業時間も残します。URL同期ではカードの表示値を変更しないため、一覧の `<TaskCard>` 全体は次の形を保ってください。
+
+```tsx
+{/* filepath: src/app/task/page.tsx（既存のTaskCardを保持） */}
+<TaskCard
+  key={task.id}
+  id={task.id}
+  title={task.title}
+  description={task.description}
+  status={task.status}
+  priority={task.priority}
+  dueDate={task.dueDate}
+  assignee={task.assignee}
+  timeSpentMinutes={task.timeSpentMinutes}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  onClick={handleTaskClick}
+  canEdit={canEditProject(task.projectId)}
+  canDelete={canDeleteProject(task.projectId)}
+/>
+```
+
+`timeSpentMinutes` を省くと `TaskCard` の既定値0が使われ、Day 16 で記録した合計が `0m` に戻ります。時間記録後の一覧再取得は `TimeLogDialog` が行うため、親ページへ `onTimeLogSuccess` は追加しません。Day 16 の契約どおり、親から同じ一覧を二重に再取得しないためです。
+
+#### 8.5-6. 貼り付け順と動きを確認する
+
+`src/app/task/page.tsx` を上から見て、次の順番になっていることを確認します。
+
+1. URLから初期値を作るstate
+2. navigation値と `leavePageContext`
+3. 編集リンク用effect
+4. URLを読むeffect
+5. URLを書くeffect
+6. `const utils = api.useUtils();`
+
+同じ名前の `searchParams`、`router`、`taskIdParam`、`closeTaskDialog` が2つずつ残っていないことも確認します。
+
+ブラウザの履歴は次の手順で試します。
+
+1. `/task?status=DONE` を直接開きます
+2. サイドバーの「タスク」を押して、条件なしの `/task` へ移動します
+3. ブラウザの「戻る」で `DONE` と1ページ目が復元されることを確認します
+4. 「進む」で条件なしへ戻ることを確認します
+
+Selectの変更は `replace` なので、それ自体では履歴が増えません。この手順ではページ遷移で作った履歴を使います。
+
+**確認ポイント**:
+- `/task?project=...&status=...` の初回表示で、その条件の1ページ目を取得します
+- 不正な `status` は `'all'` として扱い、URLから取り除きます
+- 「戻る」「進む」でフィルターと1ページ目を復元します
+- 画面でフィルターを変えるとURLも変わります
+- 開いている詳細の `taskId` と編集用の `edit` は、閉じるまでフィルター変更で残します
+- 詳細を閉じると `taskId` だけを消し、編集を閉じると `taskId` と `edit` を消します
+- どちらを閉じても `project` と `status` は残します
+- 古いページや古いURLの保存結果が現在のフォームを閉じません
+- 作成・更新の共通送信処理とページ送りが残っています
+
 ---
 
-### Step 9: プロジェクト結果と削除機能を追加する（7分）
+### Step 9: プロジェクト結果と削除機能を追加する（読む目安: 7分）
 
 **ゴール**: プロジェクト検索結果の表示と、タスク削除機能を完成させます。
 
@@ -1883,7 +2546,7 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
 タスクと同じ形で、プロジェクト結果も0件のときは丸ごと非表示にします。ここが並ぶのはキーワードを入れて検索したときだけです。Step 0 で書いた `search` が `!keyword ? []` で分岐していたのでステータスだけで絞り込んだ検索ではプロジェクトの配列は常に空になります。サーバー側の分岐がそのまま画面の見え方につながっている例です。
 
 **確認ポイント**:
-- プロジェクト件数が見出しに表示される
+- プロジェクト件数が見出しに表示されます
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1893,18 +2556,20 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
           xl:grid-cols-4">
           {searchResults.projects
             .map((project) => (
-            <Card key={project.id}
-              className="cursor-pointer
-                hover:shadow-md"
-              onClick={() =>
-                handleProjectClick(
-                  project.id)}>
+            <Link key={project.id}
+              href={`/project?projectId=${project.id}`}
+              className="block rounded-lg
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-ring
+                focus-visible:ring-offset-2">
+            <Card className="hover:shadow-md">
 ```
 
-プロジェクトの結果には専用のカード部品を作らず、`Card` をそのまま並べています。ここで見せたいのは名前と説明の2つだけで、Day 09 の `ProjectCard` が持つ進捗やメンバー数までは要らないからです。押せる場所だと分かるようにカード全体を `onClick` の対象にしています。
+プロジェクトの結果には専用のカード部品を作らず、`Card` をそのまま並べています。ここで見せたいのは名前と説明の2つだけで、Day 09 の `ProjectCard` が持つ進捗やメンバー数までは要らないからです。カード全体を `Link` で囲むと、マウスで押すほかに Tab キーで移動して Enter キーで開けます。`href` に詳細ページのURLを書きます。
 
 **確認ポイント**:
-- カードクリックで `handleProjectClick` が呼ばれる
+- Tab キーでプロジェクトのカードへ移動すると枠が付き、Enter キーで詳細ページが開きます
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1920,15 +2585,15 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
                   {project.description
                     ?? '説明なし'}</p>
               </CardContent>
-            </Card>))}
+            </Card></Link>))}
         </div></div>)}
 ```
 
 `line-clamp-2` は説明文を2行で切り、はみ出た部分を「…」にするクラスです。説明の長さがプロジェクトごとに違っても並んだカードの高さがそろいます。`?? '説明なし'` は説明が未入力のプロジェクトで下半分が空白のカードになるのを防ぎます。
 
 **確認ポイント**:
-- プロジェクトもカード形式で表示される
-- クリックでプロジェクト詳細に遷移する
+- プロジェクトもカード形式で表示されます
+- クリックでプロジェクト詳細に遷移します
 
 結果0件と条件未入力時の表示を追加します。
 
@@ -1952,44 +2617,105 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
 メッセージを2つに分けたのは読者に伝えたいことが違うからです。「検索結果が見つかりません」は条件に合うものが無かったとき「検索条件を入力してください」はまだ何も入れていないときに出ます。両方を同じ文にすると何も入力していない人が「0件だった」と受け取ります。前者は条件を緩める合図、後者は入力を促す合図なので言葉を分けたほうが次の行動が決まります。
 
 **確認ポイント**:
-- 結果0件時と未入力時で異なるメッセージが表示される
+- 結果0件時と未入力時で異なるメッセージが表示されます
 
-タスク削除機能を追加します。削除確認ダイアログの state と mutation を定義します。
+タスク削除機能を追加します。Step 2で追加した `useRef` を使い、確認画面の状態と送信記録を分けて保存します。以下の5区切りは、`SearchPageContent` 内の `return` より前へ順に追加します。
+
+**削除確認の状態と送信記録**:
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 削除確認state
-const [deleteTaskConfirm,
-  setDeleteTaskConfirm] = useState<{
-    open: boolean;
-    taskId: string | null;
-  }>({ open: false, taskId: null });
-
-const deleteMutation =
-  api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.search.search.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message
-        ?? 'タスクの削除に失敗しました');
-    },
-  });
-
-const handleTaskDelete =
-  (taskId: string) => {
-    setDeleteTaskConfirm(
-      { open: true, taskId });
-  };
+// 削除確認の状態と送信記録
+const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
+  open: boolean;
+  taskId: string | null;
+}>({ open: false, taskId: null });
+const deleteSubmission = useRef<{ taskId: string } | null>(null);
 ```
 
-`utils.search.search.invalidate()` は覚えてある検索結果に古い印を付けて取り直させる呼び出しです。Step 2 で用意した `utils` をここで使います。この行が無いと削除したタスクのカードが画面へ残ったままになり、読者は削除できなかったと思います。`deleteTaskConfirm` を `{ open, taskId }` という1つの状態にまとめたのは開いているかどうかと対象の id が必ず一緒に変わるからです。2つの `useState` に分けると閉じたのに id だけが残る状態を作れてしまいます。
+`deleteTaskConfirm` は確認画面の開閉と対象IDを一緒に保存します。`deleteSubmission` は送信中の対象を保存する参照です。`useRef` の `.current` は代入直後に変わるので、Reactが画面を描き直す前の連続した確認にも使えます。`null` はまだ削除を送っていない状態です。
 
-**確認ポイント**:
-- 削除成功時に検索結果を再取得する（`invalidate`）
-- エラー時に `toast.error` で通知される
+**削除と送信記録の片付け**:
 
-削除確認ダイアログのJSXです。検索結果の下に配置します。
+```typescript
+// filepath: src/app/search/page.tsx
+// 削除と送信記録の片付け
+const deleteMutation = api.task.delete.useMutation({
+  retry: false,
+  onMutate: () => deleteSubmission.current,
+  onSuccess: (_data, variables, submitted) => {
+    if (submitted && submitted.taskId === variables.id) {
+      setDeleteTaskConfirm((current) =>
+        current.taskId === variables.id
+          ? { open: false, taskId: null } : current,
+      );
+    }
+    void utils.search.search.invalidate();
+  },
+```
+
+成功した削除の対象IDと現在の確認対象IDが一致する場合だけ、確認画面を閉じます。送信後にキャンセルして閉じた場合は、確認対象IDが `null` になっているため、遅れた成功応答で確認画面の状態を書き換えません。成功時には一覧も再取得します。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じ削除Mutationの続き）
+  onError: (error) => {
+    const failure = classifyTaskWriteError(error, 'delete');
+    if (failure.kind === 'auth') {
+      markAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    void utils.search.search.invalidate();
+  },
+  onSettled: (_data, _error, _variables, submitted) => {
+    if (deleteSubmission.current === submitted) {
+      deleteSubmission.current = null;
+    }
+  },
+});
+```
+
+`retry: false` は失敗した削除を自動で送り直さない設定です。`onMutate` は通信前に呼ばれる関数で、送信時の参照を返します。その値が `onSettled` の `submitted` に渡ります。`onSettled` は成功・失敗のどちらでも呼ばれますが、参照が一致する送信だけを片付けます。別の送信の終了通知で、今の送信記録を消さないためです。
+
+401は `markAuthExpired` でログイン切れを記録します。それ以外の失敗は分類した通知を出し、確認画面を保持して一覧を再取得します。通信が切れると、削除がサーバーで済んだか分からない場合があります。`invalidate()` はその結果を確認するための再取得を促します。再取得の完了まで待つ呼び出しではありません。検索結果を取り直している間は、削除を押し直さずに待ちます。権限不足の通知が出た場合、検索結果を再取得するだけではロール一覧を更新できません。権限が変更された後は画面を読み込み直し、権限の問い合わせが成功したことを確かめます。
+
+**権限が変わった確認画面を閉じる処理**:
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 権限を確認できない間は送信中の確認画面も表示しないため
+useEffect(() => {
+  if (
+    deleteTaskConfirm.open &&
+    (queryWriteBlocked || !deleteTaskConfirm.taskId || !canDeleteTask(deleteTaskConfirm.taskId))
+  ) {
+    setDeleteTaskConfirm({ open: false, taskId: null });
+  }
+}, [canDeleteTask, deleteTaskConfirm, queryWriteBlocked]);
+```
+
+権限を確認できなくなった確認画面を閉じます。送信済みの削除がある場合も、`deleteSubmission` とMutationのコールバックは消しません。画面を閉じても、すでに送った削除は取り消せないためです。
+
+**削除確認を開く関数**:
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 削除確認を開く関数
+const handleTaskDelete = (taskId: string) => {
+  if (authExpiredRef.current
+    || queryWriteBlockedRef.current
+    || !canDeleteTaskRef.current(taskId)
+    || deleteSubmission.current
+    || deleteMutation.isPending) return;
+  setDeleteTaskConfirm({ open: true, taskId });
+};
+```
+
+現在の問い合わせ状態かロールが削除を許可しない場合は確認画面を開きません。送信記録か通信中の表示状態がある場合も、別のタスクの確認画面を開きません。この関数は画面を開くだけです。削除を送るのは次の `onConfirm` です。
+
+削除確認ダイアログを検索結果の下へ配置します。
+
+**削除確認ダイアログ**:
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1997,30 +2723,40 @@ const handleTaskDelete =
 <DeleteConfirmDialog
   open={deleteTaskConfirm.open}
   onOpenChange={(open) =>
-    !open && setDeleteTaskConfirm(
-      { open: false, taskId: null })}
+    !open && setDeleteTaskConfirm({ open: false, taskId: null })}
   onConfirm={() => {
-    if (deleteTaskConfirm.taskId) {
-      deleteMutation.mutate({
-        id: deleteTaskConfirm.taskId,
-      });
-      setDeleteTaskConfirm(
-        { open: false, taskId: null });
+    if (
+      deleteTaskConfirm.taskId &&
+      !authExpiredRef.current &&
+      !queryWriteBlockedRef.current &&
+      canDeleteTaskRef.current(deleteTaskConfirm.taskId) &&
+      !deleteSubmission.current &&
+      !deleteMutation.isPending
+    ) {
+      deleteSubmission.current = { taskId: deleteTaskConfirm.taskId };
+      deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
     }
   }}
-  isPending={
-    deleteMutation.isPending} />
+  isPending={deleteMutation.isPending}
+  closeOnConfirm={false}
+/>
 ```
 
-削除そのものは `handleTaskDelete` では走りません。あの関数がするのは確認ダイアログを開くところまでで、実際に消すのは `onConfirm` の中の `mutate` です。押し間違いで消える事故を防ぐためDay 11 の削除確認でも使った共通部品 `DeleteConfirmDialog` をここでも挟みます。`isPending` を渡しておくと通信中はボタンが押せない状態になり、二重に削除リクエストが飛びません。これで検索・表示・削除がひととおりつながりました。
+対象ID、ログイン切れのref、現在の問い合わせ状態、削除権限を確認してから削除を送ります。権限を確認できない間は、保持されていた確認操作からも書き込みません。`mutate` より先に `.current` を設定するので、描き直し前に同じ確認処理が続いても2件目を送りません。
+
+`closeOnConfirm={false}` は、共通部品が確認を押した直後に画面を閉じる動作を止める指定です。削除が成功した場合は、上の `onSuccess` が対象を確かめて閉じます。失敗時には確認内容を残し、送信記録だけを `onSettled` で片付けます。`isPending` は通信中の削除ボタンを無効にします。キャンセルで画面を閉じても、送信済みの削除は取り消せません。
 
 **確認ポイント**:
-- 削除ボタンで確認ダイアログが表示される
-- 確認後にAPIで削除が実行される
+- 削除成功後に検索結果が再取得されます
+- 通信中は別のタスクの削除確認を開きません
+- 失敗時は確認画面を保持し、結果不明の通知が出たら再取得後の検索結果で削除対象が残っているか確認します
+- 削除が401を返した場合は、結果を隠してログイン画面へのボタンを表示します
+
+通信が切れた場合は、通知が出ても削除がサーバーで済んでいることがあります。結果不明の通知が出たら、確認画面の「キャンセル」で閉じてから再取得後の検索結果を確認します。キャンセルしても、すでに送った削除は取り消せません。再取得の結果が出るまでは削除を押し直しません。自動の再取得が終わり、対象が見つからなければ、すぐに削除を送り直さずプロジェクトのタスク一覧でも確認します。再取得が失敗した場合は警告の「再試行」を押します。最新の結果を取得できない間は、削除の成否を判断できません。対象が残っていることを確認できたら、必要な場合だけ削除を送り直します。
 
 ---
 
-### Step 10: 動作確認（3分）
+### Step 10: 動作確認（読む目安: 3分）
 
 **ゴール**: 検索機能の全体を確認します。
 
@@ -2033,7 +2769,7 @@ npm run dev
 ```
 
 **確認ポイント**:
-- `http://localhost:3000/search` でアプリが表示される
+- `http://localhost:3000/search` でアプリが表示されます
 
 以下の操作を順に試します。
 
@@ -2048,9 +2784,9 @@ npm run dev
 | URLに検索条件が含まれる | ブラウザの戻るで復元される |
 
 **確認ポイント**:
-- 複数の条件で絞り込める
-- URLをコピーして共有できる
-- カードクリックで詳細に遷移する
+- 複数の条件で絞り込めます
+- URLをコピーして共有できます
+- カードクリックで詳細に遷移します
 
 スクリーンショット: 完成した検索ページです。条件を入れる前の状態が写っています。
 
@@ -2083,9 +2819,9 @@ useEffect(() => {
 
 **このコードの問題点**:
 
-- `keyword` が変わるたびに fetch が発火し、入力中に大量リクエストが飛ぶ
+- `keyword` が変わるたびに fetch が発火し、入力中に大量リクエストが飛びます
 - キャンセル処理がないので古いリクエストの結果が新しい結果を上書きする可能性
-- エラーハンドリングが抜けている
+- エラーハンドリングが抜けています
 
 ### After（プロが書くコード）
 
@@ -2101,7 +2837,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 **このコードの強み**:
 
-- `enabled` で空検索を防止。条件が空のあいだは問い合わせが飛ばない
+- `enabled` で空検索を防止。条件が空のあいだは問い合わせが飛びません
 - TanStack Query が検索条件ごとに結果を管理し、同じ条件の通信をまとめる。通信のキャンセルには別途設定が必要
 - キャッシュが効くので同じ検索語を入れ直しても即表示
 
@@ -2113,7 +2849,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は6つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2121,9 +2857,10 @@ const { data: results, isLoading } = api.search.search.useQuery(
 | `src/app/search/loading.tsx` | 検索ページへ移動している間の仮表示 | Step 0 |
 | `src/app/search/page.tsx` | 検索フォームと検索結果の画面 | Step 2〜Step 9 |
 | `src/component/layout/app-layout.tsx` | サイドバーの検索導線 | Step 2 |
-| `src/app/task/page.tsx` | 検索からの編集リンクの受け取り | Step 8 |
+| `src/app/task/page.tsx` | 編集リンク、一覧のURL絞り込み、ページ送り、単一書き込み | Step 8〜Step 8.5 |
+| `src/lib/task-filter-query.ts` | タスク一覧のURL条件を読み書きするhelper | Step 8.5 |
 
-`app-layout.tsx` と `task/page.tsx` は今日の分だけを載せます。それ以外の部分に今日は触っていないので手元のファイルをそのまま残してください。
+`app-layout.tsx` は今日の変更部分だけを載せます。`task/page.tsx` と `task-filter-query.ts` は、Day 15 までのページ送りと送信境界を落とさないよう全文を載せます。
 
 ### `src/server/api/routers/search.ts`
 
@@ -2138,7 +2875,6 @@ import { z } from 'zod';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 
 const SEARCH_TASK_LIMIT = 100;
@@ -2218,7 +2954,7 @@ const buildKeywordFilter = (keyword: string, fields: string[]) =>
   }));
 ```
 
-`buildDynamicWhere` が `undefined` と `'all'` の2つを飛ばしているのはどちらも「この条件では絞らない」という意味だからです。`'all'` をそのまま条件へ入れると`status` が `'all'` という文字列のタスクを探すことになり、結果は必ず0件になります。
+`buildDynamicWhere` が `undefined` と `'all'` の2つを飛ばしているのはどちらも「この条件では絞らない」という意味だからです。`'all'` は検索 API の入力では許可されていますが、Prisma の `status` 列が受け取れる値ではありません。そのまま条件へ入れると0件になるのではなく、検索がエラーになります。
 
 `buildKeywordFilter` が配列を返すのは呼ぶ側が `OR` へそのまま渡せる形にするためです。探す列だけを引数で変えられるのでタスクなら `title` と `description`、プロジェクトなら `name` と `description` を指定します。
 
@@ -2270,10 +3006,8 @@ export const searchRouter = createTRPCRouter({
 // 完成版: search — 検索条件の組み立て
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
-    const projectIds = await getUserProjectIds(userId);
-
     const andConditions: Prisma.TaskWhereInput[] = [
-      { projectId: { in: projectIds } },
+      { project: { members: { some: { userId } } } },
       buildDynamicWhere(baseFilters),
     ];
     if (dueDateFilter) {
@@ -2292,7 +3026,7 @@ flowchart LR
     M --> R["検索結果"]
 ```
 
-`projectId: { in: projectIds }` を必ず AND 条件へ含めるのは、画面から届く絞り込みにかかわらず自分が参加しているプロジェクトだけを対象にするためです。大事なのは、権限条件を省いたり検索条件と OR で結んだりしないことです。キーワードの OR は所属条件の内側ではなく、別の AND 要素として `{ OR: [...] }` の形で並べます（この次のコードで出てきます）。
+`project: { members: { some: { userId } } }` を必ず AND 条件へ含めるのは、画面から届く絞り込みにかかわらず取得時点で自分が参加しているプロジェクトだけを対象にするためです。大事なのは、権限条件を省いたり検索条件と OR で結んだりしないことです。キーワードの OR は所属条件の内側ではなく、別の AND 要素として `{ OR: [...] }` の形で並べます（この次のコードで出てきます）。
 
 **search — キーワードとタスクの取得**:
 
@@ -2381,12 +3115,10 @@ flowchart LR
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    const projectIds = await getUserProjectIds(userId);
-
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
-          projectId: { in: projectIds },
+          project: { members: { some: { userId } } },
           OR: buildKeywordFilter(keyword, ['title', 'description']),
         },
         include: {
@@ -2508,46 +3240,37 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
 
 `distinct: ['userId']` は1人が複数のプロジェクトに入っている場合に同じ人が何度も返るのを防ぎます。担当者フィルターの選択肢に同じ名前が並ぶと読者はどちらを選べばよいか判断できません。
 
-**getMembersByProject — 所属の確認**:
+**getMembersByProject — 所属を含む取得条件**:
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getMembersByProject — 所属の確認
+// 完成版: getMembersByProject — 所属を含む取得条件
   getMembersByProject: protectedProcedure
     .input(z.object({ projectId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      const callerMembership = await prisma.projectMember.findUnique({
+      const members = await prisma.projectMember.findMany({
         where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
+          projectId: input.projectId,
+          project: {
+            members: {
+              some: { userId: ctx.session.userId },
+            },
           },
         },
-        select: { id: true },
-      });
-
-      if (!callerMembership) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このプロジェクトのメンバーではありません',
-        });
-      }
-```
-
-`projectId` は画面から届く値なので書き換えれば他人のプロジェクトを指せます。取得の前に所属を確かめて `FORBIDDEN` で止めているのはその場合にメンバーの名前とメールアドレスが手に入るのを防ぐためです。
-
-**getMembersByProject — 取得と戻り値**:
-
-```typescript
-// filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getMembersByProject — 取得と戻り値
-      const members = await prisma.projectMember.findMany({
-        where: { projectId: input.projectId },
         select: {
           user: {
             select: USER_SELECT,
           },
         },
+```
+
+`projectId` は画面から届くため、別のプロジェクトの id に書き換えられます。`project.members.some` を取得条件に含め、ログイン中の人が所属しているプロジェクトに限ってメンバーを返します。所属だけを先に別の問い合わせで調べないため、確認と取得の間へ削除が割り込む隙間を作りません。
+
+**getMembersByProject — 並び順と拒否**:
+
+```typescript
+// filepath: src/server/api/routers/search.ts（同じファイルの続き）
+// 完成版: getMembersByProject — 並び順と拒否
         orderBy: {
           user: {
             name: 'asc',
@@ -2555,12 +3278,19 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
         },
       });
 
+      if (members.length === 0) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このプロジェクトのメンバーではありません',
+        });
+      }
+
       return members.map((member) => member.user);
     }),
 });
 ```
 
-最後の `});` で `searchRouter` が閉じます。ここまでで5つの手続きが1つのファイルに入りました。閉じ括弧の数が合わないときは5つそれぞれの末尾が `}),` で終わっているかを上から数えてください。
+取得結果が空なら `FORBIDDEN` にするのは、所属している人自身のメンバー行が必ず1件は含まれるからです。`distinct` が無いのは1つのプロジェクトの中で同じ人が2行に現れないためです。`getProjectMembers` と返す形をそろえてあるので、画面側はどちらも `user.id` と `user.name` で読めます。
 
 ### `src/app/search/loading.tsx`
 
@@ -2591,12 +3321,13 @@ export default function Loading() {
 import { zodResolver }
   from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
+import Link from 'next/link';
 import {
   useRouter, useSearchParams,
 } from 'next/navigation';
 import {
   Suspense, useCallback, useEffect,
-  useMemo, useState,
+  useMemo, useRef, useState,
 } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -2662,6 +3393,7 @@ import {
   isAuthError, isForbiddenError,
   shouldRetryQuery,
 } from '@/lib/query-error';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 ```
 
@@ -2703,6 +3435,48 @@ type SearchFormValues =
 
 このスキーマをコンポーネント関数の外に置いてあるのは画面が描き直されるたびに作り直さないためです。
 
+**支援クエリの警告**:
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: 支援クエリ警告の props
+type SupportQueryWarningProps = {
+  ariaLabel: string;
+  message: string;
+  retryLabel: string;
+  hasCachedData: boolean;
+  isFetching: boolean;
+  onRetry: () => void;
+};
+
+function SupportQueryWarning({
+  ariaLabel, message, retryLabel,
+  hasCachedData, isFetching, onRetry,
+}: SupportQueryWarningProps) {
+  return (
+    <div role="alert" aria-label={ariaLabel}>
+      <span>{message}{hasCachedData
+        ? '前回取得時の内容を表示しています。'
+```
+
+キャッシュがあっても最新とは限らないため、前回取得時の内容だと明示します。初回失敗では選択肢や権限が利用できないことを表示し、空のデータと区別します。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: 支援クエリ警告の再試行
+        : '選択肢や操作権限は利用できません。'}</span>
+      <Button type="button" variant="outline"
+        size="sm" onClick={onRetry}
+        disabled={isFetching}>
+        {retryLabel}
+      </Button>
+    </div>
+  );
+}
+```
+
+再試行ボタンは対象クエリの `refetch` だけを呼びます。取得中はボタンを無効にします。同じ問い合わせの連打によって復旧結果の到着順が入れ替わるのを防ぐためです。
+
 **URL の日付検査**:
 
 ```typescript
@@ -2731,6 +3505,18 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const utils = api.useUtils();
 
+  const [authExpired, setAuthExpired] = useState(false);
+  const authExpiredRef = useRef(false);
+  const markAuthExpired = () => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  };
+```
+
+書き込みが401になった場合はstateとrefへ同時に記録します。stateは表示を切り替え、refは再描画前の編集・削除を止めます。続けて同じ関数内へフォームの初期値を書きます。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
   const initialStatus =
     searchParams.get('status') ?? 'all';
   const initialPriority =
@@ -2769,11 +3555,31 @@ function SearchPageContent() {
   });
 
   const formValues = form.watch();
+```
 
-  const { data: projects } =
-    api.search.getUserProjects.useQuery();
-  const { data: users } =
-    api.search.getProjectMembers.useQuery();
+フォームの初期化が終わった後に、プロジェクトと担当者の選択肢を取得します。取得結果と失敗状態を同じクエリから受け取るため、空配列と通信失敗を区別できます。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: 選択肢を支えるクエリ
+  const {
+    data: projects,
+    isError: projectOptionsErrorPresent,
+    isFetching: projectOptionsFetching,
+    error: projectOptionsError,
+    failureReason: projectOptionsFailure,
+    refetch: refetchProjectOptions,
+  } = api.search.getUserProjects.useQuery(
+    undefined, { retry: shouldRetryQuery });
+  const {
+    data: users,
+    isError: assigneeOptionsErrorPresent,
+    isFetching: assigneeOptionsFetching,
+    error: assigneeOptionsError,
+    failureReason: assigneeOptionsFailure,
+    refetch: refetchAssigneeOptions,
+  } = api.search.getProjectMembers.useQuery(
+    undefined, { retry: shouldRetryQuery });
 ```
 
 `keyword` と日付の初期値が `''` で、`projectId` などが `'all'` になっている違いに注目してください。入力欄は空文字が「未入力」を表し、Select は `'all'` が「すべて」の選択肢を指します。ここを取り違えるとSelect が何も選ばれていない見た目になります。
@@ -2785,15 +3591,57 @@ function SearchPageContent() {
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
 // 完成版: ロールの対応表を作る
-  const { data: session } =
-    api.auth.getSession.useQuery();
-  const { data: memberProjects } =
-    api.project.getAll.useQuery();
+  const {
+    data: session, isError: sessionErrorPresent,
+    isFetching: sessionFetching, error: sessionError,
+    failureReason: sessionFailure, refetch: refetchSession,
+  } = api.auth.getSession.useQuery(
+    undefined, { retry: shouldRetryQuery });
+  const {
+    data: memberProjects, isError: memberProjectsErrorPresent,
+    isFetching: memberProjectsFetching, error: memberProjectsError,
+    failureReason: memberProjectsFailure, refetch: refetchMemberProjects,
+  } = api.project.getAll.useQuery(
+    undefined, { retry: shouldRetryQuery });
+```
 
+完成版でも認証とロールの問い合わせを分け、片方だけ失敗した場合にその問い合わせだけ再試行します。`failureReason` は再試行中に401または403へ変わった場合の保護判定に使います。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: 支援クエリの保護エラー分類
+  const supportAuthFailed = authExpired || session === null || [
+    sessionError, sessionFailure,
+    projectOptionsError, projectOptionsFailure,
+    memberProjectsError, memberProjectsFailure,
+    assigneeOptionsError, assigneeOptionsFailure,
+  ].some(isAuthError);
+  const supportForbidden = [
+    sessionError, sessionFailure, projectOptionsError, projectOptionsFailure,
+    memberProjectsError, memberProjectsFailure,
+    assigneeOptionsError, assigneeOptionsFailure,
+  ].some(isForbiddenError);
+  const projectOptionsProtected =
+    [projectOptionsError, projectOptionsFailure]
+      .some((e) => isAuthError(e) || isForbiddenError(e));
+  const assigneeOptionsProtected =
+    [assigneeOptionsError, assigneeOptionsFailure]
+      .some((e) => isAuthError(e) || isForbiddenError(e));
+  const permissionDataUnavailable = sessionErrorPresent
+    || memberProjectsErrorPresent || supportForbidden;
+  const supportWriteBlocked =
+    supportAuthFailed || permissionDataUnavailable;
+```
+
+権限の500が最終失敗になった場合と403の場合は、キャッシュ済みロールを使いません。`supportWriteBlocked` はログイン状態か操作権限を読めない間の書き込みを止めます。選択肢だけの500では、確認済みのロールまで無効にしません。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: ロールの対応表を作る
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
-    if (!userId || !memberProjects) {
+    if (!userId || !memberProjects || permissionDataUnavailable) {
       return map;
     }
     for (const project of memberProjects) {
@@ -2805,12 +3653,12 @@ function SearchPageContent() {
       }
     }
     return map;
-  }, [memberProjects, session?.user?.id]);
+  }, [memberProjects, permissionDataUnavailable, session?.user?.id]);
 ```
 
 `Map` に組み替えているのはカード1枚ごとに配列を探し直さないためです。検索結果が100件並ぶ場合配列の `find` を100回走らせるとそのたびに全プロジェクトを先頭から見ます。`Map` なら id を渡せば一発で引けます。
 
-`useMemo` で包んでいるのでこの組み替えは `memberProjects` かログインユーザーが変わったときだけ走ります。包まないとキーワードを1文字打つたびに作り直されます。
+`useMemo` の依存配列には、`memberProjects`、`permissionDataUnavailable`、ログインユーザーのIDを入れています。プロジェクト一覧、権限情報の取得状態、ログインユーザーのIDが変わると対応表を作り直します。キーワードだけを変更したときは、前の対応表を使います。
 
 **権限を判定する関数**:
 
@@ -3054,6 +3902,41 @@ const {
   const forbidden = isForbiddenError(searchError);
   const protectedSearchError =
     searchErrorPresent && (authFailed || forbidden);
+  const queryWriteBlocked = supportWriteBlocked || protectedSearchError;
+```
+
+支援クエリに加え、検索API自身の401と403でも書き込みを止めます。続けて現在の検索結果から対象タスクのプロジェクトを引き、最新のロールを確かめます。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: タスクごとの最新権限を判定する
+  const canDeleteTask = useCallback(
+    (taskId: string) => {
+      const task = searchResults?.tasks.find((item) => item.id === taskId);
+      return task ? canDeleteProject(task.projectId) : false;
+    },
+    [canDeleteProject, searchResults?.tasks],
+  );
+  const canEditTask = useCallback(
+    (taskId: string) => {
+      const task = searchResults?.tasks.find((item) => item.id === taskId);
+      return task ? canEditProject(task.projectId) : false;
+    },
+    [canEditProject, searchResults?.tasks],
+  );
+```
+
+タスクIDとプロジェクトIDを取り違えないよう、検索結果から対応するタスクを見つけてからプロジェクト権限を渡します。ロールがOWNERからVIEWERへ変われば、ここで編集と削除が偽になります。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じファイルの続き）
+// 完成版: 保持済みコールバックへ最新判定を渡す
+  const queryWriteBlockedRef = useRef(queryWriteBlocked);
+  const canDeleteTaskRef = useRef(canDeleteTask);
+  const canEditTaskRef = useRef(canEditTask);
+  queryWriteBlockedRef.current = queryWriteBlocked;
+  canDeleteTaskRef.current = canDeleteTask;
+  canEditTaskRef.current = canEditTask;
 
   const handleSearchErrorAction = () => {
     if (authFailed) {
@@ -3068,7 +3951,7 @@ const {
   };
 ```
 
-401と403では、キャッシュに以前の検索結果があっても表示しません。ログイン状態や権限が変わったあとに、保護された情報を画面へ残さないためです。500やネットワーク切断では以前の結果を残し、古い内容だと分かる警告を表示します。
+参照の `.current` は描画のたびに最新値へ替わります。確認画面が前の描画で受け取った関数を保持していても、実行時には現在の問い合わせ状態とロールを読めます。401と403では、キャッシュに以前の検索結果があっても表示しません。500やネットワーク切断では以前の結果を残し、古い内容だと分かる警告を表示します。
 
 **画面の移動を扱う関数**:
 
@@ -3082,52 +3965,109 @@ const {
     };
   const handleTaskEdit =
     (taskId: string) => {
+      if (authExpiredRef.current
+        || queryWriteBlockedRef.current
+        || !canEditTaskRef.current(taskId)) return;
       router.push(
         `/task?taskId=${taskId}&edit=true`);
     };
-  const handleProjectClick =
-    (projectId: string) => {
-      router.push(
-        `/project?projectId=${projectId}`);
-    };
 ```
 
-3つとも URL を組み立てて移動するだけです。検索結果の中に詳細画面を作り込まずすでにあるページへ渡しているのでタスクの見せ方を直したいときに触る場所が1か所で済みます。
+詳細表示はURLを組み立てて移動します。編集はログイン切れのref、最新の問い合わせ状態、ロールを確かめてから移動します。検索結果の中に詳細画面を作り込まずすでにあるページへ渡しているのでタスクの見せ方を直したいときに触る場所が1か所で済みます。
 
 `edit=true` が付いているかどうかで、移動先が詳細を開くか編集を開くかを決めます。この判定は移動先の `src/app/task/page.tsx` 側にあり、Step 8 で足したとおりです。
 
-**削除の状態と処理**:
+**削除確認の状態と送信記録**:
 
 ```typescript
-// filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 削除の状態と処理
-  const [deleteTaskConfirm,
-    setDeleteTaskConfirm] = useState<{
-      open: boolean;
-      taskId: string | null;
-    }>({ open: false, taskId: null });
-
-  const deleteMutation =
-    api.task.delete.useMutation({
-      onSuccess: () => {
-        utils.search.search.invalidate();
-      },
-      onError: (error) => {
-        toast.error(error.message
-          ?? 'タスクの削除に失敗しました');
-      },
-    });
-
-  const handleTaskDelete =
-    (taskId: string) => {
-      setDeleteTaskConfirm(
-        { open: true, taskId });
-    };
+// filepath: src/app/search/page.tsx
+// 完成版: 削除確認の状態と送信記録
+const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
+  open: boolean;
+  taskId: string | null;
+}>({ open: false, taskId: null });
+const deleteSubmission = useRef<{ taskId: string } | null>(null);
 ```
 
-`open` と `taskId` を1つの状態にまとめてあるので「開いているのに対象が空」という組み合わせが起きません。2つの `useState` に分けると片方だけ更新した瞬間にその状態が生まれます。
+`deleteTaskConfirm` は確認画面の開閉と対象IDを一緒に保存します。`deleteSubmission` は送信中の対象を保存する参照です。`useRef` の `.current` は代入直後に変わるので、Reactが画面を描き直す前の連続した確認にも使えます。`null` はまだ削除を送っていない状態です。
 
-`onSuccess` の `invalidate()` が削除したタスクを一覧から消しています。これを書かないと通信は成功しているのに画面には消えたはずのカードが残り、読者は削除が失敗したと受け取ります。
+**削除と送信記録の片付け**:
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 完成版: 削除と送信記録の片付け
+const deleteMutation = api.task.delete.useMutation({
+  retry: false,
+  onMutate: () => deleteSubmission.current,
+  onSuccess: (_data, variables, submitted) => {
+    if (submitted && submitted.taskId === variables.id) {
+      setDeleteTaskConfirm((current) =>
+        current.taskId === variables.id
+          ? { open: false, taskId: null } : current,
+      );
+    }
+    void utils.search.search.invalidate();
+  },
+```
+
+成功した削除の対象IDと現在の確認対象IDが一致する場合だけ、確認画面を閉じます。送信後にキャンセルして閉じた場合は、確認対象IDが `null` になっているため、遅れた成功応答で確認画面の状態を書き換えません。成功時には一覧も再取得します。
+
+```typescript
+// filepath: src/app/search/page.tsx（同じ削除Mutationの続き）
+  onError: (error) => {
+    const failure = classifyTaskWriteError(error, 'delete');
+    if (failure.kind === 'auth') {
+      markAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    void utils.search.search.invalidate();
+  },
+  onSettled: (_data, _error, _variables, submitted) => {
+    if (deleteSubmission.current === submitted) {
+      deleteSubmission.current = null;
+    }
+  },
+});
+```
+
+`retry: false` は失敗した削除を自動で送り直さない設定です。`onMutate` は通信前に呼ばれる関数で、送信時の参照を返します。その値が `onSettled` の `submitted` に渡ります。`onSettled` は成功・失敗のどちらでも呼ばれますが、参照が一致する送信だけを片付けます。別の送信の終了通知で、今の送信記録を消さないためです。
+
+401は `markAuthExpired` でログイン切れを記録します。それ以外の失敗は分類した通知を出し、確認画面を保持して一覧を再取得します。通信が切れると、削除がサーバーで済んだか分からない場合があります。`invalidate()` はその結果を確認するための再取得を促します。再取得の完了まで待つ呼び出しではありません。検索結果を取り直している間は、削除を押し直さずに待ちます。権限不足の通知が出た場合、検索結果を再取得するだけではロール一覧を更新できません。権限が変更された後は画面を読み込み直し、権限の問い合わせが成功したことを確かめます。
+
+**権限が変わった確認画面を閉じる処理**:
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 権限を確認できない間は送信中の確認画面も表示しないため
+useEffect(() => {
+  if (
+    deleteTaskConfirm.open &&
+    (queryWriteBlocked || !deleteTaskConfirm.taskId || !canDeleteTask(deleteTaskConfirm.taskId))
+  ) {
+    setDeleteTaskConfirm({ open: false, taskId: null });
+  }
+}, [canDeleteTask, deleteTaskConfirm, queryWriteBlocked]);
+```
+
+問い合わせかロールが変わり、現在の対象を削除できなくなった場合は確認画面を閉じます。送信済みの処理は `deleteSubmission` とMutationのコールバックへ残すため、画面を閉じても通信結果は処理できます。
+
+**削除確認を開く関数**:
+
+```typescript
+// filepath: src/app/search/page.tsx
+// 完成版: 削除確認を開く関数
+const handleTaskDelete = (taskId: string) => {
+  if (authExpiredRef.current
+    || queryWriteBlockedRef.current
+    || !canDeleteTaskRef.current(taskId)
+    || deleteSubmission.current
+    || deleteMutation.isPending) return;
+  setDeleteTaskConfirm({ open: true, taskId });
+};
+```
+
+現在の問い合わせ状態かロールが削除を許可しない場合は確認画面を開きません。送信記録か通信中の表示状態がある場合も、別のタスクの確認画面を開きません。削除を送るのは次の `onConfirm` です。
 
 **JSX — 画面の外枠と見出し**:
 
@@ -3197,7 +4137,9 @@ const {
                   <Select
                     value={formValues.projectId}
                     onValueChange={(v) =>
-                      form.setValue('projectId', v)}>
+                      form.setValue('projectId', v)}
+                    disabled={supportAuthFailed || supportForbidden
+        || (projectOptionsErrorPresent && !projects)}>
                     <SelectTrigger id="project">
                       <SelectValue
                         placeholder="すべて" />
@@ -3217,7 +4159,8 @@ const {
                       <SelectItem value="all">
                         すべてのプロジェクト
                       </SelectItem>
-                      {projects?.map((p) => (
+                      {!supportAuthFailed && !supportForbidden
+          && !projectOptionsProtected && projects?.map((p) => (
                         <SelectItem key={p.id}
                           value={p.id}>
                           {p.name}
@@ -3309,7 +4252,9 @@ const {
                   <Select
                     value={formValues.assignedTo}
                     onValueChange={(v) =>
-                      form.setValue('assignedTo', v)}>
+                      form.setValue('assignedTo', v)}
+                    disabled={supportAuthFailed || supportForbidden
+        || (assigneeOptionsErrorPresent && !users)}>
                     <SelectTrigger id="assignedTo">
                       <SelectValue
                         placeholder="すべての担当者" />
@@ -3327,7 +4272,8 @@ const {
                       <SelectItem value="all">
                         すべての担当者
                       </SelectItem>
-                      {users?.map((user) => (
+                      {!supportAuthFailed && !supportForbidden
+          && !assigneeOptionsProtected && users?.map((user) => (
                         <SelectItem key={user.id}
                           value={user.id}>
                           {user.name ?? user.email}
@@ -3393,13 +4339,92 @@ const {
 
 ```typescript
         {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — 結果の見出しと件数 */}
-        {isLoading ? (
+        {/* 完成版: JSX — 支援クエリの警告（選択肢） */}
+        {!supportAuthFailed && !supportForbidden
+          && projectOptionsErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="プロジェクトの選択肢を取得できませんでした"
+            message="プロジェクトの選択肢を取得できませんでした。"
+            retryLabel="プロジェクト選択肢を再試行"
+            hasCachedData={projects !== undefined}
+            isFetching={projectOptionsFetching}
+            onRetry={() => void refetchProjectOptions()} />
+        ) : null}
+        {!supportAuthFailed && !supportForbidden
+          && assigneeOptionsErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="担当者の選択肢を取得できませんでした"
+            message="担当者の選択肢を取得できませんでした。"
+            retryLabel="担当者選択肢を再試行"
+            hasCachedData={users !== undefined}
+            isFetching={assigneeOptionsFetching}
+            onRetry={() => void refetchAssigneeOptions()} />
+        ) : null}
+```
+
+選択肢を取得できない場合は、失敗した欄を空の一覧として扱いません。初回失敗では Select を無効にし、キャッシュがある再取得失敗では古い内容だと警告します。
+
+```typescript
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 支援クエリの警告（権限） */}
+        {!supportAuthFailed && !supportForbidden
+          && sessionErrorPresent ? (
+          <SupportQueryWarning ariaLabel="操作権限を確認できませんでした"
+            message="ログインユーザーの操作権限を確認できませんでした。"
+            retryLabel="ログインユーザーを再試行"
+            hasCachedData={session !== undefined}
+            isFetching={sessionFetching}
+            onRetry={() => void refetchSession()} />
+        ) : null}
+        {!supportAuthFailed && !supportForbidden
+          && memberProjectsErrorPresent ? (
+          <SupportQueryWarning ariaLabel="操作権限を確認できませんでした"
+            message="プロジェクトの操作権限を確認できませんでした。"
+            retryLabel="プロジェクト権限を再試行"
+            hasCachedData={memberProjects !== undefined}
+            isFetching={memberProjectsFetching}
+            onRetry={() => void refetchMemberProjects()} />
+        ) : null}
+```
+
+権限情報の一時的な取得失敗では検索結果を残し、編集・削除ボタンを隠します。403も検索結果を残しますが、再試行ボタンは出さず、選択肢と操作権限が利用できないことを明示します。
+
+```typescript
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 支援クエリの保護エラー */}
+        {!supportAuthFailed && supportForbidden ? (
+          <div role="alert">
+            <p>検索条件に必要な情報を見る権限がありません</p>
+            <p>選択肢やタスクの操作権限は利用できません。</p>
+          </div>
+        ) : null}
+```
+
+403では検索結果を残しますが、権限を確認できない操作と選択肢は利用できません。手動の再試行ボタンを出さないため、拒否された同じ問い合わせを利用者が繰り返しません。
+
+```typescript
+        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+        {/* 完成版: JSX — 支援クエリの401 */}
+        {supportAuthFailed ? (
+          <div className="space-y-4 text-center">
+            <p>ログインの有効期限が切れました</p>
+            <Button onClick={() => router.push('/login')}>
+              ログイン画面へ
+            </Button>
+          </div>
+        ) : isLoading ? (
           <PageLoadingSpinner />
         ) : shouldSearch && searchErrorPresent
           && (!searchResults || protectedSearchError) ? (
           <div className="space-y-4 rounded-lg border
             border-destructive/40 p-6 text-center">
+```
+
+401の支援情報では検索結果を隠してログインへ進めます。支援情報が安全に読める場合だけ、次のブロックで検索API自身の失敗と検索結果を表示します。
+
+```typescript
+          {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+          {/* 完成版: JSX — 検索APIの失敗 */}
             <p className="font-medium">
               {authFailed
                 ? 'ログインの有効期限が切れました'
@@ -3419,14 +4444,14 @@ const {
 401と403では以前の結果も隠し、現在の状態に合う操作だけを表示します。次は、一時的な失敗で以前の結果が残っている場合の警告です。
 
 ```typescript
-        // filepath: src/app/search/page.tsx（同じファイルの続き）
         ) : shouldSearch && searchResults ? (
           <div className="space-y-6">
+            {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
             {searchErrorPresent ? (
               <div role="alert" className="flex items-center
                 justify-between gap-4 rounded-lg border
                 border-amber-300/60 bg-amber-50 px-4 py-3">
-                <span>最新の検索結果を取得できませんでした。前回取得時の内容です。</span>
+                <span>取得できませんでした。前回の検索結果です。</span>
                 <Button type="button" variant="outline" size="sm"
                   onClick={() => void refetchSearch()}
                   disabled={searchFetching}>再試行</Button>
@@ -3563,12 +4588,21 @@ const {
                   xl:grid-cols-4">
                   {searchResults.projects
                     .map((project) => (
-                    <Card key={project.id}
-                      className="cursor-pointer
-                        hover:shadow-md"
-                      onClick={() =>
-                        handleProjectClick(
-                          project.id)}>
+                    <Link key={project.id}
+                      href={`/project?projectId=${project.id}`}
+                      className="block rounded-lg
+                        focus-visible:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-ring
+                        focus-visible:ring-offset-2">
+                    <Card className="hover:shadow-md">
+```
+
+`Link` と `Card` の開始タグは、まだ閉じていません。次のブロックを続けて書き、カードの内容と終了タグを追加します。
+
+```typescript
+                      {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
+                      {/* 完成版: JSX — プロジェクトカードの内容と終了タグ */}
                       <CardContent className="pt-6">
                         <h4 className=
                           "font-semibold mb-2">
@@ -3579,13 +4613,13 @@ const {
                           {project.description
                             ?? '説明なし'}</p>
                       </CardContent>
-                    </Card>))}
+                    </Card></Link>))}
                 </div></div>)}
 ```
 
 タスクは `TaskCard` を呼ぶのにプロジェクトはここで `<Card>` を組み立てています。プロジェクト用のカード部品を作っていないからです。同じ見た目を他の画面でも使いたくなった時点で、部品として切り出す判断になります。
 
-`cursor-pointer` を付けているのは押せることをマウスの形で伝えるためです。見た目が変わらないと読者はカードをクリックできると気づきません。`line-clamp-2` は説明文を2行で打ち切り、カードの高さをそろえます。
+`Link` はリンクとしてキーボードから操作できます。`focus-visible:ring-2` は Tab キーでカードへ移動したときに枠を出すクラスです。いまどのカードを開けるかが分かります。`line-clamp-2` は説明文を2行で打ち切り、カードの高さをそろえます。
 
 **JSX — 0件と未入力の案内**:
 
@@ -3608,36 +4642,49 @@ const {
 
 2つの案内文が別の場所にあるのは伝えたい内容が違うからです。上は「探したが無かった」、下は「まだ探していない」です。同じ文言にすると読者は条件を入れたのに無視されたと受け取ります。
 
-**JSX — 削除の確認画面と閉じタグ**:
+**JSX — 削除確認と送信の制限**:
 
 ```typescript
-        {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — 削除の確認画面と閉じタグ */}
-        <DeleteConfirmDialog
-          open={deleteTaskConfirm.open}
-          onOpenChange={(open) =>
-            !open && setDeleteTaskConfirm(
-              { open: false, taskId: null })}
-          onConfirm={() => {
-            if (deleteTaskConfirm.taskId) {
-              deleteMutation.mutate({
-                id: deleteTaskConfirm.taskId,
-              });
-              setDeleteTaskConfirm(
-                { open: false, taskId: null });
-            }
-          }}
-          isPending={
-            deleteMutation.isPending} />
+{/* filepath: src/app/search/page.tsx */}
+{/* 完成版: JSX — 削除確認と送信の制限 */}
+<DeleteConfirmDialog
+  open={deleteTaskConfirm.open}
+  onOpenChange={(open) =>
+    !open && setDeleteTaskConfirm({ open: false, taskId: null })}
+  onConfirm={() => {
+    if (
+      deleteTaskConfirm.taskId &&
+      !authExpiredRef.current &&
+      !queryWriteBlockedRef.current &&
+      canDeleteTaskRef.current(deleteTaskConfirm.taskId) &&
+      !deleteSubmission.current &&
+      !deleteMutation.isPending
+    ) {
+      deleteSubmission.current = { taskId: deleteTaskConfirm.taskId };
+      deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
+    }
+  }}
+  isPending={deleteMutation.isPending}
+  closeOnConfirm={false}
+/>
+```
+
+対象ID、ログイン切れのref、現在の問い合わせ状態、削除権限を確認してから削除を送ります。権限を確認できない間は、保持されていた確認操作からも書き込みません。`mutate` より先に `.current` を設定するので、描き直し前に同じ確認処理が続いても2件目を送りません。
+
+`closeOnConfirm={false}` は、共通部品が確認を押した直後に画面を閉じる動作を止める指定です。削除が成功した場合は、上の `onSuccess` が対象を確かめて閉じます。失敗時には確認内容を残し、送信記録だけを `onSettled` で片付けます。`isPending` は通信中の削除ボタンを無効にします。キャンセルで画面を閉じても、送信済みの削除は取り消せません。
+
+**JSX — 画面の閉じタグ**:
+
+```typescript
+{/* filepath: src/app/search/page.tsx */}
+{/* 完成版: JSX — 画面の閉じタグ */}
       </div>
     </AppLayout>
   );
 }
 ```
 
-`onConfirm` の中で `if (deleteTaskConfirm.taskId)` を確かめているのは対象が決まっていない状態で削除を送らないためです。この判定が無いとid が `null` のまま通信が飛びます。
-
-`isPending` を渡しているので通信中はボタンが押せません。渡さないと反応が無いと感じた読者が何度も押し、同じ削除が複数回送られます。閉じタグは `</div>`、`</AppLayout>`、`);`、`}` の順で、開いた順の逆になっています。
+ここで検索ページの外枠を閉じ、`SearchPageContent` を終えます。次の区切りは、この関数の外に書きます。
 
 **Suspense で包む形**:
 
@@ -3658,7 +4705,7 @@ export default function SearchPage() {
 
 `SearchPageContent` を別の関数へ分けているのはこの決まりを守るためです。1つの関数に全部書くと包む相手がいなくなります。
 
-> **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の違いは4つです。1つ目は完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目はキーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目はURL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。4つ目は `TaskCard` に `timeSpentMinutes` と `onTimeLogSuccess` を渡していない点で、検索画面では時間記録の欄を出さない形になっています。ルーター側は今日のコードと同じ並びで、違いはありません。この4か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
+> **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の主な違いは次の3つです。1つ目は完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目はキーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目はURL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。画面の文言やカードの装飾にも差があります。また、教材では Day 16で追加した `TaskCard` の `timeSpentMinutes` と `onTimeLogSuccess` を残しているため、作業時間の表示と保存後の再取得も確かめられます。ルーター側は手続きの順序と取得条件をそろえています。`getMembersByProject` は Day 14の所属条件を含む1回の取得を保ちます。コメントや改行まで同じという意味ではありません。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/component/layout/app-layout.tsx`
 
@@ -3677,7 +4724,7 @@ import {
 } from 'lucide-react';
 ```
 
-今日足したのは `Search` の1行です。Day 13 までに入れた4つのアイコンはそのまま残します。
+今日足したのは `Search` の1行です。Day 17 までに入れた4つのアイコンはそのまま残します。
 
 **サイドバーのメニュー項目**:
 
@@ -3707,7 +4754,7 @@ const menuItems: MenuItem[] = [
   },
 ```
 
-ここまでの4項目は Day 13 までに書いたものです。今日は1文字も変えないので手元のコードをそのまま残してください。
+ここまでの4項目は Day 17 までに書いたものです。今日は1文字も変えないので手元のコードをそのまま残してください。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
@@ -3722,136 +4769,867 @@ const menuItems: MenuItem[] = [
 
 今日足したのは末尾の「検索」だけです。`path: '/search'` が `src/app/search/page.tsx` の置き場所と対応します。
 
-### `src/app/task/page.tsx`
+### `src/lib/task-filter-query.ts`
 
-**編集リンクの読み取り**:
+URLの読み取りと書き出しを1か所へまとめた完成形です。プロジェクトIDはサーバー入力と同じCUID形式で検査します。タスク一覧だけが使う2条件に限定し、優先度と担当者はまだ追加しません。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 編集リンクの読み取り
-import { useRouter, useSearchParams }
-  from 'next/navigation';
+// filepath: src/lib/task-filter-query.ts
+import { z } from 'zod';
+import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
 
-const searchParams = useSearchParams();
-const router = useRouter();
-const taskIdParam = searchParams.get('taskId');
-const isEditLink =
-  searchParams.get('edit') === 'true';
-const { data: linkedTask } =
-  api.task.getById.useQuery(
-    { id: taskIdParam ?? '' },
-    { enabled: !!taskIdParam && isEditLink },
+export type TaskFilters = {
+  project: string;
+  status: TaskStatus | 'all';
+};
+
+export const DEFAULT_TASK_FILTERS: TaskFilters = {
+  project: 'all',
+  status: 'all',
+};
+
+const cuidSchema = z.string().cuid();
+
+const normalizeProjectFilter = (value: string): string =>
+  value === DEFAULT_TASK_FILTERS.project || cuidSchema.safeParse(value).success
+    ? value
+    : DEFAULT_TASK_FILTERS.project;
+
+export const parseTaskFiltersFromSearchParams = (searchParams: URLSearchParams): TaskFilters => {
+  const project = normalizeProjectFilter(
+    searchParams.get('project') ?? DEFAULT_TASK_FILTERS.project,
   );
+  const rawStatus = searchParams.get('status') ?? DEFAULT_TASK_FILTERS.status;
 
-useEffect(() => {
-  if (taskIdParam && !isEditLink) {
-    setSelectedTask(taskIdParam);
-    setDetailOpen(true);
+  return {
+    project,
+    status:
+      rawStatus === 'all' || isTaskStatus(rawStatus) ? rawStatus : DEFAULT_TASK_FILTERS.status,
+  };
+};
+
+export const buildTaskFiltersQueryString = (filters: TaskFilters): string => {
+  const params = new URLSearchParams();
+  const project = normalizeProjectFilter(filters.project);
+
+  if (project !== DEFAULT_TASK_FILTERS.project) {
+    params.set('project', project);
   }
-}, [isEditLink, taskIdParam]);
-```
 
-Day 13 で書いた `taskIdParam` とその下の `useEffect` を、今日この形へ置き換えました。
+  if (filters.status !== DEFAULT_TASK_FILTERS.status) {
+    params.set('status', filters.status);
+  }
 
-**編集ダイアログを開く処理**:
-
-```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 編集ダイアログを開く処理
-useEffect(() => {
-  if (!isEditLink || !linkedTask) return;
-  setEditingTask(
-    taskToFormData(linkedTask),
-  );
-  setDetailOpen(false);
-  setDialogOpen(true);
-}, [isEditLink, linkedTask]);
-```
-
-上の `useEffect` の下へ今日足したものです。編集リンクで来たときだけ、詳細を閉じて編集を開きます。
-
-**ダイアログを閉じる処理**:
-
-```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ダイアログを閉じる処理
-const closeTaskDialog = () => {
-  setDialogOpen(false);
-  setEditingTask(undefined);
-  if (!isEditLink) return;
-
-  const params = new URLSearchParams(
-    searchParams.toString(),
-  );
-  params.delete('taskId');
-  params.delete('edit');
-  const query = params.toString();
-  router.replace(
-    query ? `/task?${query}` : '/task',
-  );
+  return params.toString();
 };
 ```
 
-`createMutation` / `updateMutation` より前へ今日足した関数です。
+### `src/app/task/page.tsx`
 
-**呼び出し側の差し替え**:
+Day 16 の合計作業時間、Day 15 の作成・更新・削除、100件ずつのページ送り、送信generationを残し、Day 20 の編集リンク、詳細を閉じたURL、2つのURLフィルターを加えた完成形です。Day 28 の優先度・担当者フィルター、選択チェックボックス、一括操作はまだ入りません。
 
-```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 呼び出し側の差し替え
-const createMutation =
-  api.task.create.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      closeTaskDialog();
-    },
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+'use client';
+// filepath: src/app/task/page.tsx
+
+import { Plus } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { Button } from '@/component/ui/button';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
+import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
+import { api } from '@/trpc/react';
+
+const PAGE_SIZE = 100;
+
+type TaskSubmission = {
+  generation: number;
+  pageIndex: number;
+  routeTaskId: string | null;
+  editLink: boolean;
+  isCurrent: () => boolean;
+};
+
+function TaskPageContent() {
+  const searchParams = useSearchParams();
+  const urlFilters = parseTaskFiltersFromSearchParams(searchParams);
+  const [filterProject, setFilterProject] = useState<string>(urlFilters.project);
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>(urlFilters.status);
+  const pageContext = `${filterProject}\u0000${filterStatus}`;
+  const [pagination, setPagination] = useState({ context: pageContext, index: 0 });
+  const pageIndex = pagination.context === pageContext ? pagination.index : 0;
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskFormData | undefined>();
+  const [authExpired, setAuthExpired] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const singleSubmission = useRef<TaskSubmission | null>(null);
+  const formGeneration = useRef(0);
+  const authExpiredRef = useRef(false);
+  const linkedFormTarget = useRef<string | null>(null);
+  const dismissedDetailTaskId = useRef<string | null>(null);
+  const desiredUrlFilterContext = useRef(`${urlFilters.project}\u0000${urlFilters.status}`);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const taskIdParam = searchParams.get('taskId');
+  const isEditLink = searchParams.get('edit') === 'true';
+
+  const leavePageContext = useCallback(() => {
+    formGeneration.current += 1;
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+    setDialogOpen(false);
+    setEditingTask(undefined);
+    setSelectedTask(null);
+    setDetailOpen(false);
+  }, []);
+
+  useEffect(() => {
+    formGeneration.current += 1;
+    linkedFormTarget.current = null;
+  }, [taskIdParam, isEditLink]);
+
+  const {
+    data: linkedTask,
+    error: linkedTaskError,
+    isFetching: linkedTaskFetching,
+    refetch: refetchLinkedTask,
+  } = api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !authExpired && !!taskIdParam && isEditLink, retry: shouldRetryQuery },
+  );
+
+  useEffect(() => {
+    if (!taskIdParam || isEditLink || dismissedDetailTaskId.current !== taskIdParam) {
+      dismissedDetailTaskId.current = null;
+    }
+    if (taskIdParam && !isEditLink && dismissedDetailTaskId.current !== taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [isEditLink, taskIdParam]);
+
+  useEffect(() => {
+    if (!isEditLink) {
+      linkedFormTarget.current = null;
+      return;
+    }
+    if (!linkedTask || linkedFormTarget.current === linkedTask.id) return;
+    linkedFormTarget.current = linkedTask.id;
+    formGeneration.current += 1;
+    setEditingTask(taskToFormData(linkedTask));
+    setDetailOpen(false);
+    setDialogOpen(true);
+  }, [isEditLink, linkedTask]);
+
+  useEffect(() => {
+    const nextUrlFilterContext = `${urlFilters.project}\u0000${urlFilters.status}`;
+    if (desiredUrlFilterContext.current !== nextUrlFilterContext) {
+      leavePageContext();
+      setPagination({ context: '', index: 0 });
+    }
+    desiredUrlFilterContext.current = nextUrlFilterContext;
+    setFilterProject(urlFilters.project);
+    setFilterStatus(urlFilters.status);
+  }, [leavePageContext, urlFilters.project, urlFilters.status]);
+
+  useEffect(() => {
+    const renderedUrlFilterContext = `${filterProject}\u0000${filterStatus}`;
+    if (renderedUrlFilterContext !== desiredUrlFilterContext.current) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('project');
+    params.delete('status');
+    if (dismissedDetailTaskId.current === taskIdParam && !isEditLink) {
+      params.delete('taskId');
+    }
+
+    const filterQuery = buildTaskFiltersQueryString({
+      project: filterProject,
+      status: filterStatus,
+    });
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery);
+      for (const [key, value] of filterParams.entries()) params.set(key, value);
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [filterProject, filterStatus, isEditLink, pathname, router, searchParams, taskIdParam]);
+
+  const utils = api.useUtils();
+
+  const {
+    data: session,
+    error: sessionError,
+    isSuccess: sessionLoaded,
+    isFetching: sessionFetching,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
   });
-```
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isFetching: tasksFetching,
+    error: tasksError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      status: filterStatus === 'all' ? undefined : filterStatus,
+      limit: PAGE_SIZE,
+      offset: pageIndex * PAGE_SIZE,
+    },
+    { enabled: !authExpired, retry: shouldRetryQuery, refetchOnWindowFocus: false },
+  );
+  const {
+    data: projects,
+    error: projectsError,
+    isFetching: projectsFetching,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
 
-保存できたあとの後片付けを `closeTaskDialog` の1か所へ寄せたので閉じ方が増えても直す場所は1つで済みます。
+  const queryAuthFailed =
+    (sessionLoaded && session === null) ||
+    [sessionError, tasksError, projectsError, linkedTaskError].some(isAuthError);
+  const queryForbidden = [sessionError, tasksError, projectsError, linkedTaskError].some(
+    isForbiddenError,
+  );
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
 
-```typescript
-// filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: updateMutation の成功時も同じ関数で閉じる
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      if (selectedTask) {
-        utils.task.getById.invalidate(
-          { id: selectedTask }
+  const taskReadFailed = !!tasksError && !isAuthError(tasksError) && !isForbiddenError(tasksError);
+  const projectReadFailed =
+    !!projectsError && !isAuthError(projectsError) && !isForbiddenError(projectsError);
+  const sessionReadFailed =
+    !!sessionError && !isAuthError(sessionError) && !isForbiddenError(sessionError);
+  const linkedTaskReadFailed =
+    !!linkedTaskError && !isAuthError(linkedTaskError) && !isForbiddenError(linkedTaskError);
+  const taskReadFailedInitially = taskReadFailed && tasks === undefined;
+  const projectReadFailedInitially = projectReadFailed && projects === undefined;
+  const sessionReadFailedInitially = sessionReadFailed && session === undefined;
+  const sessionReadDataIsStale = sessionReadFailed && session !== undefined;
+  const linkedTaskReadFailedInitially = linkedTaskReadFailed && linkedTask === undefined;
+  const linkedTaskReadDataIsStale = linkedTaskReadFailed && linkedTask !== undefined;
+  const requiredReadFailedInitially = taskReadFailedInitially || projectReadFailedInitially;
+  const requiredReadDataIsStale =
+    (taskReadFailed && tasks !== undefined) || (projectReadFailed && projects !== undefined);
+  const requiredReadRetrying =
+    (taskReadFailed && tasksFetching) || (projectReadFailed && projectsFetching);
+  const retryRequiredReads = () => {
+    const retries: Promise<unknown>[] = [];
+    if (taskReadFailed) retries.push(refetchTasks());
+    if (projectReadFailed) retries.push(refetchProjects());
+    void Promise.all(retries);
+  };
+  const initialReadErrorMessage =
+    taskReadFailedInitially && projectReadFailedInitially
+      ? 'タスクとプロジェクトを取得できませんでした。'
+      : taskReadFailedInitially
+        ? 'タスクを取得できませんでした。'
+        : 'プロジェクトを取得できませんでした。';
+  const staleReadErrorMessage =
+    taskReadFailed && projectReadFailed
+      ? '最新のタスクとプロジェクトを取得できませんでした。前回取得時の内容です。'
+      : taskReadFailed
+        ? '最新のタスクを取得できませんでした。前回取得時の内容です。'
+        : '最新のプロジェクトを取得できませんでした。前回取得時の内容です。';
+
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) return map;
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) map.set(project.id, me.role);
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const editableProjects = useMemo(
+    () => projects?.filter((project) => canEditProject(project.id)) ?? [],
+    [projects, canEditProject],
+  );
+
+  const closeTaskDialog = useCallback(() => {
+    formGeneration.current += 1;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+
+    if (isEditLink) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      params.delete('edit');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [isEditLink, pathname, router, searchParams]);
+
+  const refreshTaskTargets = async (
+    ids: string[],
+    refreshPermissions: boolean,
+    reportDetailFailure = false,
+  ) => {
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [
+        utils.task.getAll.invalidate(undefined, filters, { throwOnError: true }),
+        ...ids.map((id) =>
+          utils.task.getById.invalidate({ id }, filters, { throwOnError: reportDetailFailure }),
+        ),
+      ];
+      if (refreshPermissions) {
+        updates.push(utils.project.getAll.invalidate(undefined, filters, { throwOnError: true }));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+      if (isAuthError(error)) {
+        authExpiredRef.current = true;
+        setAuthExpired(true);
+        return;
+      }
+      console.error('操作後の表示更新に失敗しました。', error);
+      if (!authExpiredRef.current) {
+        toast.error(
+          '最新の表示を取得できませんでした。' + '再表示して' + '操作結果を確認してください。',
         );
       }
-      closeTaskDialog();
+    }
+  };
+
+  const finishSubmittedForm = (
+    submitted: TaskSubmission | null,
+    operation: 'create' | 'update',
+    target: { id: string; title: string | undefined },
+  ) => {
+    const canClose =
+      !authExpiredRef.current &&
+      submitted?.generation === formGeneration.current &&
+      submitted.pageIndex === pageIndex &&
+      submitted.routeTaskId === taskIdParam &&
+      submitted.editLink === isEditLink &&
+      submitted.isCurrent();
+    if (canClose) closeTaskDialog();
+    if (authExpiredRef.current) return;
+    const name = target.title ? `「${target.title}」` : '先ほど送信したタスク';
+    toast.success(`${name}を${operation === 'create' ? '作成' : '更新'}しました。`);
+    if (canClose || !dialogOpen) return;
+    if (operation === 'create' && !editingTask?.id) {
+      toast(
+        '送信後に入力した内容は' +
+          'まだ保存されていません。' +
+          'このまま作成すると' +
+          '別のタスクになります。',
+      );
+    } else if (operation === 'update' && editingTask?.id === target.id) {
+      toast(
+        '送信後に入力した内容は' +
+          'まだ保存されていません。' +
+          '続けて更新する前に入力を控え、' +
+          '閉じて開き直してください。',
+      );
+    }
+  };
+
+  const handleSingleError = async (
+    error: unknown,
+    operation: 'create' | 'update' | 'delete',
+    ids: string[],
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    toast.error(failure.message);
+    await refreshTaskTargets(ids, true, true);
+  };
+
+  const singleMutationOptions = {
+    retry: false as const,
+    onMutate: () => singleSubmission.current,
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      _variables: unknown,
+      submitted: TaskSubmission | null | undefined,
+    ) => {
+      if (singleSubmission.current === submitted) singleSubmission.current = null;
     },
-    onError: (error) => {
-      toast.error(error.message);
+  };
+
+  const createMutation = api.task.create.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'create', { id: data.id, title: variables.title });
+      await refreshTaskTargets([data.id], false, true);
     },
+    onError: (error) => handleSingleError(error, 'create', []),
   });
+  const updateMutation = api.task.update.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'update', { id: variables.id, title: variables.title });
+      await refreshTaskTargets([variables.id], false, true);
+    },
+    onError: (error, variables) => handleSingleError(error, 'update', [variables.id]),
+  });
+
+  const deleteMutation = api.task.delete.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables) => {
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+      setSelectedTask((current) => (current === variables.id ? null : current));
+      await refreshTaskTargets([variables.id], false);
+    },
+    onError: (error, variables) => handleSingleError(error, 'delete', [variables.id]),
+  });
+  const singlePending =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+  const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formGeneration.current += 1;
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (taskId: string) => {
+    if (authExpiredRef.current) return;
+    const task = tasks?.find((item) => item.id === taskId);
+    if (!task) return;
+    formGeneration.current += 1;
+    setEditingTask(taskToFormData(task));
+    setDialogOpen(true);
+  };
+  const handleDelete = (taskId: string) => {
+    if (singleSubmission.current || singlePending || authExpiredRef.current) return;
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit = (data: TaskFormData, isCurrent: () => boolean = () => true) => {
+    if (
+      singleSubmission.current ||
+      singlePending ||
+      authExpiredRef.current ||
+      !dialogOpen ||
+      !isCurrent()
+    ) {
+      return;
+    }
+    if (!data.id && !session?.user?.id) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    singleSubmission.current = {
+      generation: formGeneration.current,
+      pageIndex,
+      routeTaskId: taskIdParam,
+      editLink: isEditLink,
+      isCurrent,
+    };
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        title: data.title,
+        description: data.description || null,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
+        estimatedHours: data.estimatedHours ?? null,
+        projectId: data.projectId,
+        assigneeId: data.assigneeId || null,
+        ...(data.expectedUpdatedAt !== undefined && {
+          expectedUpdatedAt: data.expectedUpdatedAt,
+        }),
+      });
+      return;
+    }
+    createMutation.mutate({
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
+      estimatedHours: data.estimatedHours,
+      projectId: data.projectId,
+      assigneeId: data.assigneeId || undefined,
+    });
+  };
+
+  const handleTaskClick = (taskId: string) => {
+    setSelectedTask(taskId);
+    setDetailOpen(true);
+  };
+
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+    if (taskIdParam && !isEditLink) {
+      dismissedDetailTaskId.current = taskIdParam;
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  };
+
+  const moveToPage = (nextPage: number) => {
+    if (tasksFetching || nextPage < 0 || nextPage === pageIndex) return;
+    leavePageContext();
+    setPagination({ context: pageContext, index: nextPage });
+  };
+
+  const resetPageForFilter = () => {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
+  };
+  if (authExpired || queryAuthFailed) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">ログインの有効期限が切れました。もう一度ログインしてください。</p>
+          <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (queryForbidden) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">タスク情報を表示する権限がありません。</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (sessionReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">ログイン情報を取得できませんでした。</p>
+          <Button type="button" onClick={() => void refetchSession()} disabled={sessionFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (requiredReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">{initialReadErrorMessage}</p>
+          <Button type="button" onClick={retryRequiredReads} disabled={requiredReadRetrying}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
+        {requiredReadDataIsStale && (
+          <div
+            className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <span>{staleReadErrorMessage}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={retryRequiredReads}
+              disabled={requiredReadRetrying}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        {sessionReadDataIsStale && (
+          <div
+            className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <span>
+              最新のログイン情報を取得できませんでした。前回取得時の権限で表示しています。
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchSession()}
+              disabled={sessionFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        {(linkedTaskReadFailedInitially || linkedTaskReadDataIsStale) && (
+          <div
+            className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <span>
+              {linkedTaskReadDataIsStale
+                ? '最新の編集対象タスクを取得できませんでした。前回取得時の内容です。'
+                : '編集するタスクを取得できませんでした。'}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchLinkedTask()}
+              disabled={linkedTaskFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+
+        <div className="flex gap-2 w-full sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select
+              value={filterProject}
+              onValueChange={(value) => {
+                if (value === filterProject) return;
+                desiredUrlFilterContext.current = `${value}\u0000${filterStatus}`;
+                resetPageForFilter();
+                setFilterProject(value);
+              }}
+            >
+              <SelectTrigger aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder="すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                {projects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[200px]">
+            <Select
+              value={filterStatus}
+              onValueChange={(value) => {
+                if ((value === 'all' || isTaskStatus(value)) && value !== filterStatus) {
+                  desiredUrlFilterContext.current = `${filterProject}\u0000${value}`;
+                  resetPageForFilter();
+                  setFilterStatus(value);
+                }
+              }}
+            >
+              <SelectTrigger aria-label="ステータスで絞り込み">
+                <SelectValue placeholder="すべてのステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのステータス</SelectItem>
+                {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                timeSpentMinutes={task.timeSpentMinutes}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+          ) : pageIndex > 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>このページにはタスクがありません。</p>
+              <p>前のページへ戻ってください。</p>
+            </div>
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+          <nav
+            className="flex items-center justify-center gap-3"
+            aria-label="タスク一覧のページ移動"
+          >
+            <Button
+              variant="outline"
+              disabled={tasksFetching || pageIndex === 0}
+              onClick={() => moveToPage(pageIndex - 1)}
+            >
+              前へ
+            </Button>
+            <span className="text-sm text-muted-foreground">{pageIndex + 1}ページ目</span>
+            <Button
+              variant="outline"
+              disabled={tasksFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+              onClick={() => moveToPage(pageIndex + 1)}
+            >
+              次へ
+            </Button>
+          </nav>
+        )}
+
+        <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
+
+        <TaskDialog
+          open={dialogOpen}
+          onClose={closeTaskDialog}
+          onSubmit={handleSubmit}
+          isPending={singlePending}
+          initialData={editingTask}
+          projects={editableProjects}
+        />
+
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => {
+            if (
+              deleteTargetId &&
+              !singleSubmission.current &&
+              !singlePending &&
+              !authExpiredRef.current
+            ) {
+              singleSubmission.current = {
+                generation: formGeneration.current,
+                pageIndex,
+                routeTaskId: taskIdParam,
+                editLink: isEditLink,
+                isCurrent: () => false,
+              };
+              deleteMutation.mutate({ id: deleteTargetId });
+            }
+          }}
+          isPending={singlePending}
+          closeOnConfirm={false}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+
+export default function TaskPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
 ```
 
-Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDialog()` へ替えた形です。`getById` の無効化はそのまま残します。
-
-```typescript
-{/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-{/* 完成版: 編集ダイアログの onClose */}
-<TaskDialog
-  open={dialogOpen}
-  onClose={closeTaskDialog}
-  onSubmit={handleSubmit}
-  initialData={editingTask}
-  projects={projects ?? []}
-/>
-```
-
-Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTaskDialog}` へ替えた箇所です。
+URLの外部変更ではページとダイアログを初期化します。画面自身がURLへ書いた同じ条件では初期化しません。作成と更新は共通の送信contextを通るため、Day 15 の競合対策も残ります。
 
 ## 今日のまとめ
 
-- [ ] 検索フォームを作成できた
-- [ ] `api.search.search` で検索できた
-- [ ] URLパラメータと連動させた
-- [ ] 検索結果をTaskCardで表示できた
+- [ ] 検索フォームを作成できました
+- [ ] `api.search.search` で検索できました
+- [ ] URLパラメータと連動させました
+- [ ] 検索結果をTaskCardで表示できました
+- [ ] `/task` のプロジェクトとステータスをURLから復元できました
+- [ ] ブラウザの「戻る」「進む」で一覧条件と1ページ目を復元できました
 
 ## つまずきポイント
 
@@ -3862,6 +5640,8 @@ Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTa
 | 結果が0件表示 | projectId初期値が間違い | `'all'`で初期化する |
 | Enter検索が効かない | onKeyDown未設定 | EnterでhandleSearch |
 | フィルターがリセットされない | handleClearに項目漏れ | 全stateを'all'/''に |
+| 「戻る」で一覧条件が復元されない | URLを書くeffectが読むeffectより前 | 読むeffect、書くeffectの順に置く |
+| `/task` で重複宣言の型エラー | Day 15 の宣言へ追加している | 指定範囲を置き換え、古い宣言を残さない |
 
 ## 今日学んだ用語
 
@@ -3893,7 +5673,7 @@ A. 未入力を表す値が違うためです。Select は「すべて」を選�
 
 ## 追加課題：検索条件を別のタブで再現する
 
-理解チェック Q2 の URL 同期を応用します。検索したタブを閉じてもURL から同じ条件を再現できることを確かめましょう。
+理解チェック Q2 の URL 同期を応用します。検索したタブを閉じても URL から同じ条件を再現できることを確かめましょう。
 
 前提は今日の検索画面が使えることです。自分が見られるタスクを1件選び、タイトルの一部とステータスを控えてください。
 
@@ -3903,7 +5683,7 @@ A. 未入力を表す値が違うためです。Select は「すべて」を選�
 
 新しいタブで「クリア」を押し、URL が `/search` に戻ったことを確認します。ブラウザの戻るボタンで、先ほどの2条件が再び表示されるか確かめてください。
 
-条件が残る場合は`src/app/search/page.tsx` の URL 同期処理が未指定の項目も初期値へ戻しているか確認します。確認後は両方のタブで「クリア」を押してください。DB とコードは変更しません。
+条件が残る場合は `src/app/search/page.tsx` の URL 同期処理が未指定の項目も初期値へ戻しているか確認します。確認後は両方のタブで「クリア」を押してください。DB とコードは変更しません。
 
 ## 次回予告
 

@@ -135,18 +135,94 @@ def with_stems(paths: set[str]) -> set[str]:
     return paths | {Path(p).with_suffix("").as_posix() for p in paths}
 
 
-def scaffold_pins_node(scaffold_script: str) -> bool:
-    """scaffold が作る package.json に engines.node="22.x" が入るか。
+def source_security_contract(package_json: dict[str, object]) -> bool:
+    """本体の依存固定が、Prisma 配下だけに限定されていることを検査する。"""
+    dependencies = package_json.get("dependencies", {})
+    dev_dependencies = package_json.get("devDependencies", {})
+    overrides = package_json.get("overrides", {})
+    if not all(isinstance(value, dict) for value in (dependencies, dev_dependencies, overrides)):
+        return False
+    prisma_override = overrides.get("@prisma/config")
+    return (
+        dependencies.get("next") == "^15.5.24"
+        and dev_dependencies.get("postcss") == "8.5.23"
+        and overrides.get("postcss") == "8.5.23"
+        and overrides.get("sharp") == "0.35.5"
+        and "deepmerge-ts" not in overrides
+        and isinstance(prisma_override, dict)
+        and prisma_override.get("deepmerge-ts") == "8.0.2"
+    )
 
-    Day 03 は「公開先の Vercel が使う Node の版は package.json の engines.node
-    （このプロジェクトでは "22.x"）で決まる」と教える。scaffold が engines を
-    書かないと Vercel 既定の版が選ばれ、手元（22系）と公開先が食い違う。
 
-    文字列が含まれるかだけで判定すると、コメントアウトした行や説明文の中の
-    同じ文字列でも True になる。`npm pkg set` へ渡す継続行の形で書かれた
-    行だけを数える。
-    """
-    return re.search(r'^[ \t]+engines\.node="22\.x" \\$', scaffold_script, re.M) is not None
+def scaffold_security_contract(scaffold_script: str) -> bool:
+    """固定した依存と、override を install 前に設定する順序を検査する。"""
+    required = (
+        "next@15.5.24",
+        "create-next-app@15.5.24",
+        'overrides.postcss="8.5.23"',
+        'overrides.sharp="0.35.5"',
+        'overrides.@prisma/config.deepmerge-ts="8.0.2"',
+    )
+    main_match = re.search(
+        r"(?:^|\n)main\(\) \{\n(?P<body>.*?)\n\}",
+        scaffold_script,
+        re.DOTALL,
+    )
+    if (
+        not all(token in scaffold_script for token in required)
+        or "overrides.deepmerge-ts=" in scaffold_script
+        or main_match is None
+    ):
+        return False
+    body = main_match.group("body")
+    override_position = body.find("configure_security_overrides")
+    install_position = body.find("install_dependencies")
+    return 0 <= override_position < install_position
+
+
+def day30_production_schema_contract(day30_text: str) -> bool:
+    """本番 DB の接続先確認と明示同意を経る schema 手順を検査する。"""
+    candidates: list[str] = []
+    for _lang, body in code_blocks(day30_text):
+        text = "\n".join(line for _lineno, line in body)
+        if "// filepath: scripts/apply-production-schema.mjs" in text:
+            candidates.append(text)
+    if len(candidates) != 1:
+        return False
+    script = candidates[0]
+    required = (
+        "spawnSync('npx', args, { stdio, env, shell: false })",
+        "if (result.error || result.status !== 0)",
+        "run(['vercel', 'env', 'pull', file, '--environment=production']);",
+        "const values = parse(readFileSync(file));",
+        "rmSync(directory, { recursive: true, force: true });",
+        "new URL(values.DATABASE_URL)",
+        "!['postgres:', 'postgresql:'].includes(target.protocol)",
+        "!target.hostname",
+        "target.pathname.length < 2",
+        "const confirmation = `apply ${randomBytes(4).toString('hex')}`;",
+        "教材用の新規・空の DB と確認できたら ${confirmation}",
+        "if (answer !== confirmation) throw new Error",
+        "const env = { ...process.env, DATABASE_URL: values.DATABASE_URL };",
+        "delete env.DOTENV_CONFIG_OVERRIDE;",
+        "run(['--yes=false', 'prisma', 'db', 'push', '--skip-generate'], env, [",
+        "env, [\n    'ignore',\n    'inherit',\n    'inherit',\n  ]);",
+    )
+    if not all(token in script for token in required):
+        return False
+    ordered = (
+        "run(['vercel', 'env', 'pull'",
+        "const values = parse(readFileSync(file));",
+        "new URL(values.DATABASE_URL)",
+        "const confirmation = `apply ${randomBytes(4).toString('hex')}`;",
+        "const answer = await readSecret(",
+        "if (answer !== confirmation)",
+        "const env = { ...process.env, DATABASE_URL: values.DATABASE_URL };",
+        "delete env.DOTENV_CONFIG_OVERRIDE;",
+        "run(['--yes=false', 'prisma', 'db', 'push', '--skip-generate']",
+    )
+    positions = [script.find(token) for token in ordered]
+    return positions == sorted(positions) and all(position >= 0 for position in positions)
 
 
 def main() -> int:
@@ -196,17 +272,6 @@ def main() -> int:
 
     scaffold_script = (SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(encoding="utf-8")
     package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
-    dependencies = package_json.get("dependencies", {})
-    dev_dependencies = package_json.get("devDependencies", {})
-    overrides = package_json.get("overrides", {})
-    scaffold_main_match = re.search(
-        r"\nmain\(\) \{\n(?P<body>.*?)\n\}\n\nmain \"\$@\"",
-        scaffold_script,
-        re.DOTALL,
-    )
-    scaffold_main_body = (
-        scaffold_main_match.group("body") if scaffold_main_match is not None else ""
-    )
     day07_candidates = sorted(MATERIAL_DIR.glob("day07_*.md"))
     day07_text = (
         day07_candidates[0].read_text(encoding="utf-8") if len(day07_candidates) == 1 else ""
@@ -219,9 +284,6 @@ def main() -> int:
     day30_text = (
         day30_candidates[0].read_text(encoding="utf-8") if len(day30_candidates) == 1 else ""
     )
-    # Day 30 のコマンドは行末 `\` で続き行へ割る書き方を使う。契約はコマンドが
-    # 1行で書かれていることを見ているので、照合前に継続行をつなぎ直す
-    day30_text = re.sub(r"[ \t]*\\\n[ \t]*", " ", day30_text)
     deployment_contract = {
         "source/scaffold seed byte parity": (
             REPO_ROOT / "src" / "command" / "seed.ts"
@@ -253,41 +315,19 @@ def main() -> int:
         "Day 08 route continuity": (
             "src/app/dashboard/page.tsx" in day08_text and "src/app/(app)" not in day08_text
         ),
-        'scaffold engines.node="22.x"': scaffold_pins_node(scaffold_script),
         'scaffold scripts.vercel-build="prisma generate && next build"': (
             'scripts.vercel-build="prisma generate && next build"' in scaffold_script
         ),
         'scaffold scripts.postinstall="prisma generate"': (
             'scripts.postinstall="prisma generate"' in scaffold_script
         ),
-        "source production dependency audit overrides": (
-            dependencies.get("next") == "^15.5.24"
-            and dev_dependencies.get("postcss") == "8.5.23"
-            and overrides.get("postcss") == "8.5.23"
-            and overrides.get("sharp") == "0.35.5"
+        "source production dependency audit overrides": source_security_contract(
+            package_json
         ),
-        "scaffold production dependency audit overrides": (
-            all(
-                token in scaffold_script
-                for token in (
-                    "next@15.5.24",
-                    "create-next-app@15.5.24",
-                    'overrides.postcss="8.5.23"',
-                    'overrides.sharp="0.35.5"',
-                )
-            )
-            and 0
-            <= scaffold_main_body.find("configure_security_overrides")
-            < scaffold_main_body.find("install_dependencies")
+        "scaffold production dependency audit overrides": scaffold_security_contract(
+            scaffold_script
         ),
-        # `vercel env run` は実在しないサブコマンド（あるのは ls / add / rm / pull）。
-        # 以前はその文字列を契約として固定していたため、動かない手順が守られていた。
-        # 取り出してから読み込む形に変え、追加の道具を要らない書き方を契約にする。
-        "Day 30 production schema command": (
-            "npx vercel env pull .env.production.local --environment=production" in day30_text
-            and "npx prisma db push" in day30_text
-            and "rm .env.production.local" in day30_text
-        ),
+        "Day 30 production schema command": day30_production_schema_contract(day30_text),
     }
     for contract, satisfied in deployment_contract.items():
         if not satisfied:

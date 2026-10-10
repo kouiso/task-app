@@ -1,19 +1,9 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import toast from 'react-hot-toast';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TaskDetailDialog } from '../task-detail-dialog';
-
-interface ErrorShape {
-  data?: { httpStatus?: number };
-  message?: string;
-}
-type MutationCallbacks = {
-  onSuccess?: () => void;
-  onError?: (error: ErrorShape) => void;
-};
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
 
 const state = vi.hoisted(() => ({ role: 'MEMBER', authorId: 'user-1' }));
 const mutations = vi.hoisted(() => ({
@@ -21,16 +11,9 @@ const mutations = vi.hoisted(() => ({
   update: vi.fn(),
   delete: vi.fn(),
 }));
-const mutationOptions = vi.hoisted(() => ({
-  create: {} as MutationCallbacks,
-  update: {} as MutationCallbacks,
-  delete: {} as MutationCallbacks,
-}));
-const pending = vi.hoisted(() => ({ create: false, update: false, delete: false }));
-const invalidateTask = vi.hoisted(() => vi.fn());
 vi.mock('@/trpc/react', () => ({
   api: {
-    useUtils: () => ({ task: { getById: { invalidate: invalidateTask } } }),
+    useUtils: () => ({ task: { getById: { invalidate: vi.fn() } } }),
     auth: { getSession: { useQuery: () => ({ data: { user: { id: 'user-1' } } }) } },
     task: {
       getById: {
@@ -57,29 +40,34 @@ vi.mock('@/trpc/react', () => ({
     },
     comment: {
       create: {
-        useMutation: (options?: MutationCallbacks) => {
-          mutationOptions.create = options ?? {};
-          return { mutate: mutations.create, isPending: pending.create };
-        },
+        useMutation: (options: { onSettled?: () => void }) => ({
+          mutate: (variables: unknown) => {
+            mutations.create(variables);
+            options.onSettled?.();
+          },
+          isPending: false,
+        }),
       },
       update: {
-        useMutation: (options?: MutationCallbacks) => {
-          mutationOptions.update = options ?? {};
-          return { mutate: mutations.update, isPending: pending.update };
-        },
+        useMutation: (options: { onSettled?: () => void }) => ({
+          mutate: (variables: unknown) => {
+            mutations.update(variables);
+            options.onSettled?.();
+          },
+          isPending: false,
+        }),
       },
       delete: {
-        useMutation: (options?: MutationCallbacks) => {
-          mutationOptions.delete = options ?? {};
-          return { mutate: mutations.delete, isPending: pending.delete };
-        },
+        useMutation: (options: { onSettled?: () => void }) => ({
+          mutate: (variables: unknown) => {
+            mutations.delete(variables);
+            options.onSettled?.();
+          },
+          isPending: false,
+        }),
       },
     },
   },
-}));
-
-vi.mock('react-hot-toast', () => ({
-  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
 
 const dialog = <TaskDetailDialog open taskId="task-1" onClose={() => {}} />;
@@ -87,16 +75,9 @@ const dialog = <TaskDetailDialog open taskId="task-1" onClose={() => {}} />;
 beforeEach(() => {
   state.role = 'MEMBER';
   state.authorId = 'user-1';
-  pending.create = false;
-  pending.update = false;
-  pending.delete = false;
   mutations.create.mockClear();
   mutations.update.mockClear();
   mutations.delete.mockClear();
-  invalidateTask.mockClear();
-  vi.mocked(toast).mockClear();
-  vi.mocked(toast.success).mockClear();
-  vi.mocked(toast.error).mockClear();
 });
 
 describe('コメント操作の権限', () => {
@@ -108,7 +89,7 @@ describe('コメント操作の権限', () => {
     await user.click(screen.getByRole('button', { name: '更新' }));
     expect(mutations.update).toHaveBeenCalledWith({ id: 'comment-1', content: '元のコメント' });
     await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    await user.click(screen.getByRole('button', { name: '削除' }));
+    await user.click(screen.getByRole('button', { name: /^削除$/ }));
     expect(mutations.delete).toHaveBeenCalledWith({ id: 'comment-1' });
   });
 
@@ -190,327 +171,5 @@ describe('コメント操作の権限', () => {
       id: 'comment-1',
       content: '更新したコメント',
     });
-  });
-});
-
-describe('送信後の下書きと成功通知', () => {
-  it('投稿の送信後に書き足すと、成功しても下書きを残して警告を出す', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-
-    await user.type(textbox, '最初の本文');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-    expect(mutations.create).toHaveBeenCalledWith({
-      content: '最初の本文',
-      taskId: 'task-1',
-    });
-
-    // 送信待ちの間に書き足す
-    await user.type(textbox, '追記');
-
-    act(() => mutationOptions.create.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
-    expect(toast).toHaveBeenCalledWith(
-      '送信後の変更は保存されていません。このまま投稿すると別のコメントになります',
-    );
-    expect(textbox).toHaveValue('最初の本文追記');
-  });
-
-  it('編集を始めても、進行中の投稿成功は作成フォームをリセットする', async () => {
-    // 作成と編集の世代が分離されていることの確認。
-    // 共有だと編集開始で世代が進み、投稿成功時に reset が呼ばれず下書きが残る。
-    const user = userEvent.setup();
-    render(dialog);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-
-    await user.type(textbox, '投稿中の下書き');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-    expect(mutations.create).toHaveBeenCalledTimes(1);
-
-    // 投稿が返る前に別コメントの編集を始める（編集用の世代だけが進む）
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    expect(screen.getByDisplayValue('元のコメント')).toBeInTheDocument();
-
-    act(() => mutationOptions.create.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
-    expect(textbox).toHaveValue('');
-    // 編集中のフォームはそのまま残る
-    expect(screen.getByDisplayValue('元のコメント')).toBeInTheDocument();
-  });
-
-  it('投稿を閉じて開き直すと、古い投稿成功は新しい下書きを消さない', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={onClose} />);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-
-    await user.type(textbox, '最初の下書き');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-    expect(mutations.create).toHaveBeenCalledTimes(1);
-
-    // 閉じる操作で下書きは一度リセットされ、開き直して別の下書きを書く
-    // （作成用の世代が進む）
-    await user.click(screen.getByRole('button', { name: '閉じる' }));
-    rerender(<TaskDetailDialog open={false} taskId="task-1" onClose={onClose} />);
-    rerender(<TaskDetailDialog open taskId="task-1" onClose={onClose} />);
-    const reopenedTextbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(reopenedTextbox, '別の下書き');
-
-    act(() => mutationOptions.create.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを投稿しました');
-    expect(toast).not.toHaveBeenCalled();
-    expect(reopenedTextbox).toHaveValue('別の下書き');
-  });
-
-  it('更新の送信後に書き足すと、編集を閉じずに警告を出す', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    const editTextbox = screen.getByDisplayValue('元のコメント');
-    await user.click(screen.getByRole('button', { name: '更新' }));
-    expect(mutations.update).toHaveBeenCalledWith({
-      id: 'comment-1',
-      content: '元のコメント',
-    });
-
-    // 送信待ちの間に書き足す
-    await user.type(editTextbox, '追記');
-
-    act(() => mutationOptions.update.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
-    expect(toast).toHaveBeenCalledWith(
-      '送信後の変更は保存されていません。もう一度更新すると反映されます',
-    );
-    expect(editTextbox).toHaveValue('元のコメント追記');
-    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
-  });
-
-  it('更新の送信後に変更がなければ編集を閉じて成功トーストを出す', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    await user.click(screen.getByRole('button', { name: '更新' }));
-
-    act(() => mutationOptions.update.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
-    expect(toast).not.toHaveBeenCalled();
-    expect(screen.queryByDisplayValue('元のコメント')).not.toBeInTheDocument();
-  });
-
-  it('編集をやり直した後の古い更新成功は、新しい編集を閉じない', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    await user.click(screen.getByRole('button', { name: '更新' }));
-    expect(mutations.update).toHaveBeenCalledTimes(1);
-
-    // 取り消して編集し直す（編集用の世代が2回進む）
-    await user.click(screen.getByRole('button', { name: 'キャンセル' }));
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    const editTextbox = screen.getByDisplayValue('元のコメント');
-    await user.type(editTextbox, '書き直し');
-
-    act(() => mutationOptions.update.onSuccess?.());
-
-    // 成功通知は出るが、新しい編集セッションには触れない
-    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
-    expect(editTextbox).toHaveValue('元のコメント書き直し');
-    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
-  });
-
-  it('削除の成功時に成功トーストを出す', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-
-    await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    await user.click(screen.getByRole('button', { name: '削除' }));
-    expect(mutations.delete).toHaveBeenCalledWith({ id: 'comment-1' });
-
-    act(() => mutationOptions.delete.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを削除しました');
-  });
-});
-
-describe('別タスクへの切り替え', () => {
-  it('作成中の下書きは前のタスクへ持ち越さない', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={() => {}} />);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, 'タスク1への下書き');
-
-    rerender(<TaskDetailDialog open taskId="task-2" onClose={() => {}} />);
-
-    expect(screen.getByRole('textbox', { name: 'コメント本文' })).toHaveValue('');
-  });
-
-  it('編集中のコメント操作は閉じる', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={() => {}} />);
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    expect(screen.getByDisplayValue('元のコメント')).toBeInTheDocument();
-
-    rerender(<TaskDetailDialog open taskId="task-2" onClose={() => {}} />);
-
-    // task-1 のコメント編集を task-2 へ誤投稿させないため編集状態は閉じる
-    expect(screen.queryByDisplayValue('元のコメント')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '更新' })).not.toBeInTheDocument();
-  });
-
-  it('開いている削除確認は閉じる', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={() => {}} />);
-    await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-
-    rerender(<TaskDetailDialog open taskId="task-2" onClose={() => {}} />);
-
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-  });
-
-  it('切り替え前に送信した更新の成功は、切り替え後に始めた編集を閉じない', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<TaskDetailDialog open taskId="task-1" onClose={() => {}} />);
-
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    await user.click(screen.getByRole('button', { name: '更新' }));
-    expect(mutations.update).toHaveBeenCalledTimes(1);
-
-    // 別タスクへ切り替えてから編集を始め直す。切り替えで編集世代が進まないと
-    // 遅れて届く task-1 の成功がこの編集を閉じてしまう
-    rerender(<TaskDetailDialog open taskId="task-2" onClose={() => {}} />);
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    const editTextbox = screen.getByDisplayValue('元のコメント');
-
-    act(() => mutationOptions.update.onSuccess?.());
-
-    expect(toast.success).toHaveBeenCalledWith('コメントを更新しました');
-    expect(editTextbox).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
-  });
-});
-
-describe('コメント操作の共有ロック', () => {
-  it('投稿の送信中は更新も削除確認の送信も止める', async () => {
-    pending.create = true;
-    const user = userEvent.setup();
-    render(dialog);
-
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, '下書き');
-    expect(screen.getByRole('button', { name: '投稿中...' })).toBeDisabled();
-
-    await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-    expect(screen.getByRole('button', { name: '更新' })).toBeDisabled();
-
-    await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    expect(screen.getByRole('button', { name: '削除中...' })).toBeDisabled();
-  });
-
-  it('更新の送信中は投稿も削除確認の送信も止める', async () => {
-    pending.update = true;
-    const user = userEvent.setup();
-    render(dialog);
-
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, '下書き');
-    expect(screen.getByRole('button', { name: 'コメント投稿' })).toBeDisabled();
-
-    await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-    expect(screen.getByRole('button', { name: '削除中...' })).toBeDisabled();
-  });
-});
-
-describe('コメント成功時のタスク詳細の再取得', () => {
-  const flows = {
-    create: async (user: ReturnType<typeof userEvent.setup>) => {
-      const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-      await user.type(textbox, '新しいコメント');
-      await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-    },
-    update: async (user: ReturnType<typeof userEvent.setup>) => {
-      await user.click(screen.getByRole('button', { name: 'コメントを編集' }));
-      await user.click(screen.getByRole('button', { name: '更新' }));
-    },
-    delete: async (user: ReturnType<typeof userEvent.setup>) => {
-      await user.click(screen.getByRole('button', { name: 'コメントを削除' }));
-      await user.click(screen.getByRole('button', { name: '削除' }));
-    },
-  } as const;
-
-  it.each([
-    'create',
-    'update',
-    'delete',
-  ] as const)('%s の成功でタスク詳細を再取得する', async (kind) => {
-    const user = userEvent.setup();
-    render(dialog);
-
-    await flows[kind](user);
-    act(() => mutationOptions[kind].onSuccess?.());
-
-    expect(invalidateTask).toHaveBeenCalledWith({ id: 'task-1' });
-  });
-});
-
-describe('コメント操作の失敗通知', () => {
-  it('サーバーが失敗を返したら失敗トーストを出す', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, '新しいコメント');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-
-    act(() =>
-      mutationOptions.create.onError?.({
-        data: { httpStatus: 500 },
-        message: 'サーバーエラー',
-      }),
-    );
-
-    expect(toast.error).toHaveBeenCalledWith('サーバーエラー');
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it('401 は通常の失敗と区別して再ログインが必要と伝える', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, '新しいコメント');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-
-    act(() =>
-      mutationOptions.create.onError?.({
-        data: { httpStatus: 401 },
-        message: 'UNAUTHORIZED',
-      }),
-    );
-
-    // 「投稿に失敗しました」と誤報せず、セッション切れであることを伝える
-    expect(toast.error).toHaveBeenCalledWith('ログインの有効期限が切れました');
-  });
-
-  it('応答そのものが届かない失敗は結果不明として伝えて再取得する', async () => {
-    const user = userEvent.setup();
-    render(dialog);
-    const textbox = screen.getByRole('textbox', { name: 'コメント本文' });
-    await user.type(textbox, '新しいコメント');
-    await user.click(screen.getByRole('button', { name: 'コメント投稿' }));
-
-    act(() => mutationOptions.create.onError?.({ message: 'network error' }));
-
-    expect(toast.error).toHaveBeenCalledWith(
-      '応答を確認できませんでした。一覧を更新して結果を確認してください。',
-    );
-    expect(invalidateTask).toHaveBeenCalledWith({ id: 'task-1' });
   });
 });

@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
@@ -48,8 +49,10 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     where: { id: ctx.session.userId },
     select: {
       id: true,
+      email: true,
       role: true,
       isActive: true,
+      sessionVersion: true,
     },
   });
 
@@ -67,10 +70,18 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     });
   }
 
+  if (currentUser.sessionVersion !== ctx.session.version) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'セッションが無効になりました。再度ログインしてください',
+    });
+  }
+
   return next({
     ctx: {
       session: {
         ...ctx.session,
+        email: currentUser.email,
         role: currentUser.role,
       },
     },
@@ -87,7 +98,7 @@ const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
     requestId: ctx.requestId,
     path,
     method: type,
-    status: result.ok ? 200 : 500,
+    status: result.ok ? 200 : getHTTPStatusCodeFromError(result.error),
     durationMs: Date.now() - startedAt,
     ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
   });

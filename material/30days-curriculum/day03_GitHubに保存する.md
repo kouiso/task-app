@@ -16,14 +16,14 @@ Day 02 までで作った `task-app` を、自分の GitHub リポジトリへ�
 
 ここまで終わると`task-app` は教材を読んで動かしただけのコードではなく、自分で変更を積み重ねていく開発物として GitHub に残ります。
 
-- [ ] Day 02 の完成状態から作業を再開する
-- [ ] いまの Git 状態とブランチ名、未保存の変更を確認する
-- [ ] `README.md` を、自分のアプリに合う内容へ整える
-- [ ] `.gitignore` と `.env.example` の役割を確認する
-- [ ] GitHub に空のリポジトリを作成する
-- [ ] `gh auth login` で安全に GitHub 認証を済ませる
-- [ ] `origin` を登録してローカルの履歴を GitHub に送る
-- [ ] ブラウザで GitHub のリポジトリページを開き、自分のコードが見えることを確認する
+- [ ] Day 02 の完成状態から作業を再開します。
+- [ ] いまの Git 状態とブランチ名、未保存の変更を確認します。
+- [ ] `README.md` を、自分のアプリに合う内容へ整えます。
+- [ ] `.gitignore` と `.env.example` の役割を確認します。
+- [ ] GitHub に空のリポジトリを作成します。
+- [ ] `gh auth login` で安全に GitHub 認証を済ませます。
+- [ ] `origin` を登録してローカルの履歴を GitHub に送ります。
+- [ ] ブラウザで GitHub のリポジトリページを開き、自分のコードが見えることを確認します。
 
 ## なぜこれを作るのか
 
@@ -53,11 +53,11 @@ Day 02 までで作った `task-app` を、自分の GitHub リポジトリへ�
 
 今日は Day 02 の続きから進めます。新しいプロジェクトを作り直すわけではありません。次の状態になっている前提で進めます。
 
-- `task-app` ディレクトリが手元にある
-- `npm install` 済みで `npm run dev` が動く
-- `src/app/dashboard/page.tsx` に Day 02 の自分用ダッシュボードがある
-- `.env.example` が置かれている
-- `.gitignore` が置かれている
+- `task-app` ディレクトリが手元にあります。
+- `npm install` 済みで `npm run dev` が動きます。
+- `src/app/dashboard/page.tsx` に Day 02 の自分用ダッシュボードがあります。
+- `.env.example` が置かれています。
+- `.gitignore` が置かれています。
 
 今日の流れは昨日までの自分の作業をそのまま GitHub に持っていくことです。別の完成品を用意するのではなく、Day 02 の続きの `task-app` をそのまま GitHub へ送ります。
 
@@ -71,7 +71,14 @@ GitHub へ保存できるようになると自分のコードにインターネ�
 
 まずは Day 02 の終わりからいまの状態を揃えます。Day 02 の最後では次のように予告していました。
 
-> Day 03 は今日編集したファイルを変更履歴として記録します。手元のファイルを GitHub にも保存します。編集内容と保存した内容を照合しながら進めましょう。
+> Day 03 は
+> 今日編集したファイルを変更履歴として記録します。
+>
+> 手元のファイルを
+> GitHub にも保存します。
+>
+> 編集内容と保存した内容を
+> 照合しながら進めましょう。
 
 今日はここに取り組みます。
 
@@ -85,9 +92,9 @@ npm run dev
 
 ブラウザでは次の状態が見えていたら OK です。
 
-- Day 02 で作った自分用ダッシュボードが表示される
-- 見出しだけではなく、自分の名前やメッセージが主役として見える
-- 画面が崩れていない
+- Day 02 で作った自分用ダッシュボードが表示されます。
+- 見出しだけではなく、自分の名前やメッセージが主役として見えます。
+- 画面が崩れていません。
 
 ここで表示が崩れていたらGitHub へ送る前に直しておきます。GitHub は壊れた状態でも保存できますが今日の目的はいまの正常な状態を記録することだからです。
 
@@ -95,15 +102,15 @@ npm run dev
 
 ### ローカルの Git はもう始まっている
 
-今日の教材はローカルの Git 管理がすでに始まっている前提で進めます。これは Day 01 の土台づくりに理由があります。
+Day 01 の時点で Git が使えた場合、ローカルの Git 管理はすでに始まっています。Git をまだ入れていなかった場合は、Step 0 で導入して初期化します。
 
 `scripts/scaffold-from-scratch.sh` は空ディレクトリに公式の `create-next-app` を実行します。Day 01 の実行ログにも `Initialized a git repository.` と出ていました。
 
-つまり今日はローカルの履歴づくりをゼロから始めるのではなく、その履歴を GitHub に接続する日です。この2つを分けて理解しておくとGit の役割を整理しやすくなります。
+Git 管理が始まっている場合は、その履歴を GitHub に接続する日です。今日初期化する場合も、いまある Day 01・02のファイルを作り直す必要はありません。履歴を記録する場所を用意してから、同じ保存手順へ進みます。
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | Git の準備を確認する | 3分 |
 | Step 1 | いまの Git 状態を読む | 3分 |
@@ -117,13 +124,15 @@ npm run dev
 | Step 9 | ブラウザで GitHub のページを確認する | 3分 |
 | Step 10 | よくあるつまずきを、送る前後で切り分ける | 5分 |
 
-**合計時間**: 約54分です。
+**読む時間の合計（仮）**: 約54分です。
 
-Step 4 の10分と Step 5 の7分にはGitHub のアカウント登録と確認メールの待ち時間が入っています。すでにアカウントを持っている場合は、この2つはもっと短く終わります。この時間は手順を読んで進める目安なので詰まって調べる時間は別に見てください。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
+
+GitHub のアカウント登録や確認メールの到着にかかる時間は、人によって変わります。すでにアカウントを持っている場合は、本文の案内に沿って登録を飛ばしてください。
 
 ---
 
-### Step 0: Git の準備を確認する（3分）
+### Step 0: Git の準備を確認する（読む目安: 3分）
 
 Git が使える環境では、`create-next-app` がプロジェクトの Git 初期化も行います。Git をあとから導入した場合は、この Step で初期化します。
 
@@ -144,18 +153,16 @@ git init
 このコマンドはそのフォルダに履歴を記録するための `.git` という隠しフォルダを作ります。すでにある場合は作り直さないので間違えて実行しても履歴は消えません。
 
 **確認ポイント**:
-- `git --version` でバージョンが表示された
-- `git init` が必要な場合だけ実行した
-- すでに Git 管理されている場合はこのまま次へ進めると分かった
+- `git --version` でバージョンが表示されました。
+- `git init` が必要な場合だけ実行しました。
+- すでに Git 管理されている場合はこのまま次へ進めると分かりました。
 
 ---
 
 
-### Step 1: いまの Git 状態を読む（3分）
+### Step 1: いまの Git 状態を読む（読む目安: 3分）
 
 GitHub 側を触る前に、まずローカルの状態を確認します。
-
-![git status の実行結果](./screenshots/day03-git-status.png)
 
 ここを確認しておかないといま何が未保存なのか、どのブランチにいるのか、すでに接続先があるのかが分からないまま進めることになります。送る前に現在地を読むのが確実な進め方です。
 
@@ -168,6 +175,40 @@ git branch --show-current
 git log --oneline --decorate -3
 git remote -v
 ```
+
+次は、配布 ZIP から作った Day 02 完了状態で `git status -sb` を実行した出力です。手元の状態を照合できるように、図と同じ内容をテキストでも載せています。
+
+```text
+## main
+ M README.md
+ M next.config.ts
+ M package-lock.json
+ M package.json
+ M src/app/globals.css
+ M src/app/layout.tsx
+ M src/app/page.tsx
+ M tsconfig.json
+?? .mise.toml
+?? .node-version
+?? biome.json
+?? doc/
+?? docker-compose.yml
+?? prisma.config.ts
+?? prisma/
+?? scripts/
+?? src/app/api/
+?? src/app/dashboard/
+?? src/app/providers.tsx
+?? src/command/
+?? src/component/
+?? src/lib/
+?? src/server/
+?? src/trpc/
+```
+
+次の画像は実行結果を整理した図です。端末画面の写真ではありません。`## main`、`M`、`??` の読み方を出力の横に示しています。
+
+![実行結果を整理した図です。端末画面の写真ではありません。git statusの出力をブランチ、変更済み、未追跡に分けている](./screenshots/day03-git-status.png)
 
 この5つはどれも読み取るだけのコマンドです。ファイルやコミットを書き換えないので何度実行しても手元の状態は変わりません。もし `fatal: not a git repository (or any of the parent directories): .git` と出たらGit 管理の外でコマンドを打っています。1行目の `pwd` の表示を見て`task-app` のルートにいるか確かめてください。
 
@@ -184,30 +225,29 @@ git remote -v
 - `git remote -v`
   すでに GitHub などの保存先がつながっていないか確認する
 
-#### 期待するイメージ
+#### 残りの出力例
 
-環境によって多少違いますが次のような表示になっていれば進めやすい状態です。
+同じ環境では、ブランチ名と直近の履歴が次のように表示されました。
 
 ```text
-/Users/your-name/workspace/task-app
-## main
 main
-ea211a9 (HEAD -> main) Initial commit from Create Next App
+1ad3274 (HEAD -> main) Initial commit from Create Next App
 ```
 
-`git remote -v` はまだ何も表示されないかもしれません。この時点ではそれで問題ありません。GitHub 側の保存先をまだ作っていないのでつなぎ先は空のままで正しい状態です。1行目のパスの末尾が `task-app` になっているか確かめてください。
+`pwd` のパスとコミットの短いハッシュは環境によって変わります。`git remote -v` はまだ何も表示されません。この時点ではそれで問題ありません。GitHub 側の保存先をまだ作っていないのでつなぎ先は空のままで正しい状態です。`pwd` の表示ではパスの末尾が `task-app` になっているか確かめてください。
 
-コミットが1本しか無いことにも注目してください。これは土台を作った時点のものでDay 01 のセットアップで置いたファイルも、Day 02 で書いたダッシュボードも、まだ保存されていません。だから `git status -sb` には未保存の行が10行以上並びます。今日はそれを GitHub へ送るところまでを行います。
+Day 01 の時点で Git が使えた場合、土台を作ったコミットが1本あります。Day 01 のセットアップで置いたファイルも、Day 02 で書いたダッシュボードも、その後の変更として残っています。Step 0 で初めて `git init` した場合は、コミットがまだ無いため `git log` に `does not have any commits yet` と表示されます。これは初回保存の前なので正常です。どちらの場合も Step 7 で必要なファイルを選び、最初の GitHub 保存用のコミットを作ります。
 
 #### ここで見ておきたい判断ポイント
 
-- `git status -sb` に `??` や `M` が10行以上並ぶのがこの時点では正しい状態
-- `git remote -v` が空ならまだ GitHub 側の保存先は未接続
-- ブランチ名が `main` 以外でも慌てなくていい
+- `git status -sb` に Day 01・02で置いたファイルの `??` や `M` が並ぶ
+- Step 0 で初期化した場合、`git log` のコミットが無いという表示は正常です。
+- `git remote -v` が空ならまだ GitHub 側の保存先は未接続です。
+- ブランチ名が `main` 以外でも慌てなくてよいです。
 
 今日はブランチ名を固定で決め打ちせず、いま実際にいるブランチをそのまま GitHub に送る流れで進めます。このやり方なら環境差でつまずきにくくなります。
 
-### Step 2: GitHub に置く前に、README を自分の顔に整える（7分）
+### Step 2: GitHub に置く前に、README を自分の顔に整える（読む目安: 7分）
 
 GitHub に保存すると最初に見られるのはコードだけではありません。リポジトリのトップに表示される `README.md` も、そのアプリの入り口になります。
 
@@ -225,16 +265,16 @@ sed -n '1,200p' README.md
 
 #### 編集アンカー
 
-`~/workspace/task-app/README.md` を開いてファイル全体を次の内容に置き換えます。
+`~/workspace/task-app/README.md` を開き、まずファイル全体を前半の内容に置き換えます。その後、前半の最終行の下に空行を1行入れ、後半を続けて貼り付けます。紙面をまたいで行を見失わないように、1つの README を2つのブロックに分けています。
 
-~~~md title="README.md"
+~~~md title="README.md（前半）"
 # task-app
 30日カリキュラムで育てる、自分専用のタスク管理アプリです。
 Day 03 時点では、自分用のダッシュボード画面まで進んでいます。
 
 ## 現在できること
-- ダッシュボードに自分の名前や集中テーマを表示できる
-- Git で履歴を持ち、GitHub に保存できる
+- ダッシュボードに自分の名前や集中テーマを表示できます。
+- Git で履歴を持ち、GitHub に保存できます。
 
 ## 使用技術
 - Next.js 15 / TypeScript / Tailwind CSS
@@ -248,10 +288,9 @@ cp .env.example .env
 npm run dev
 ```
 ブラウザで `http://localhost:3000` を開きます。データベースを使う前に `.env` を自分の環境に合わせて書き換えます。
-
 ~~~
 
-~~~md title="README.md（続き）"
+~~~md title="README.md（後半）"
 ## 今日の進捗
 - Day 01: 土台を立ち上げて最初の画面を表示しました。
 - Day 02: ダッシュボードに自分だけのメッセージを追加しました。
@@ -260,10 +299,10 @@ npm run dev
 
 #### この README で押さえていること
 
-- リポジトリ名と内容が最初の数行で分かる
-- Day 03 時点の現在地だけを正直に書いている
-- 起動手順が短くまとまっている
-- まだできていない機能を盛っていない
+- リポジトリ名と内容が最初の数行で分かります。
+- Day 03 時点の現在地だけを正直に書いています。
+- 起動手順が短くまとまっています。
+- まだできていない機能を盛っていません。
 
 README は機能を多く見せることよりも、いまの状態を正確に伝えることが大切です。Day 30 まで進んだら、内容を書き足していけば十分です。
 
@@ -271,13 +310,13 @@ README は機能を多く見せることよりも、いまの状態を正確に�
 
 `sed -n '1,200p' README.md` をもう一度実行して次の3つになっていれば置き換えは成功です。
 
-- 先頭の行が `# task-app` になっている
-- `## ローカル起動` の下に `npm install` と `npm run dev` の2行が入っている
-- Day 03 時点でできることだけが書かれていてまだ作っていない機能が並んでいない
+- 先頭の行が `# task-app` になっています。
+- `## ローカル起動` の下に `npm install` と `npm run dev` の2行が入っています。
+- Day 03 時点でできることだけが書かれていてまだ作っていない機能が並んでいません。
 
 3つ目は見落としやすいところです。README に書いた機能は「もうある」と読まれます。この先の Day で作るものを先に書くとリポジトリを開いた人に嘘をつくことになります。
 
-### Step 3: `.gitignore` と `.env.example` の役割を確認する（3分）
+### Step 3: `.gitignore` と `.env.example` の役割を確認する（読む目安: 3分）
 
 GitHub へ保存するときいちばん気をつけたいのは送っていいものと送ってはいけないものの線引きです。今日の `task-app` ではこの線引きを主に `.gitignore` と `.env.example` の2つが担っています。
 
@@ -287,7 +326,7 @@ GitHub へ保存するときいちばん気をつけたいのは送っていい�
 sed -n '1,220p' .gitignore
 ```
 
-`sed` は中身を表示するだけで、`.gitignore` を書き換えません。`No such file or directory` と出たら`.gitignore` の無い場所でコマンドを打っています。`pwd` で `task-app` のルートに戻ってからもう一度実行してください。このプロジェクトにはローカル環境変数を無視する設定がすでに入っています。特に見てほしいのは次の部分です。
+`sed` は中身を表示するだけで、`.gitignore` を書き換えません。`No such file or directory` と出たら `.gitignore` の無い場所でコマンドを打っています。`pwd` で今いる場所を確認し、`cd ~/workspace/task-app` で作業場所へ戻ってからもう一度実行してください。このプロジェクトにはローカル環境変数を無視する設定がすでに入っています。特に見てほしいのは次の部分です。
 
 ```text
 # env files (can opt-in for committing if needed)
@@ -299,11 +338,11 @@ sed -n '1,220p' .gitignore
 #### この1行の意味
 
 - `.env*`
-  `.env` や `.env.local` や `.env.example` のように`.env` で始まるファイルをまとめて Git 管理から外す
+  `.env` や `.env.local` や `.env.example` のように `.env` で始まるファイルを、Git に新たに追加する対象から除外します。
 
 打ち消しの行が無いので見本用の `.env.example` もこの1行に含まれます。GitHub へ載せたいときはあとの手順で `git add -f` を使って明示的に加えます。
 
-この設定があることで、チーム開発と個人開発のどちらでも、起動に必要な項目は共有しつつ、本物の値は共有しない運用がやりやすくなります。
+`.env.example` で起動に必要な項目の名前を共有し、本物の値が入る `.env` は送信対象から外します。すでに Git に記録した値は `.gitignore` だけでは除外できないため、Step 10 で追跡と過去のコミットも確認します。
 
 #### `.env.example` も確認する
 
@@ -315,9 +354,9 @@ Day 01 の scaffold で、すでに見本ファイルが作られています。
 
 #### ここでの判断
 
-- `.env` や `.env.local` は GitHub に送らない
-- `.env.example` も既定では除外されるのでGitHub に載せたいときは `git add -f` で明示的に加える
-- `.gitignore` があるから安心ではなく、送る前に `git status` でも確認する
+- `.env` や `.env.local` は GitHub に送りません。
+- `.env.example` も既定では除外されるので GitHub に載せたいときは `git add -f` で明示的に加えます。
+- `.gitignore` があるから安心ではなく、送る前に `git status` でも確認します。
 
 ignore 設定があることと、送信前に自分でも `git status` で確認することの両方が大切です。
 
@@ -325,30 +364,28 @@ ignore 設定があることと、送信前に自分でも `git status` で確�
 
 このステップで打った2つの `sed` がどちらも次の状態になっていれば大丈夫です。
 
-- `.gitignore` の表示の中に `.env*` の行が見えている
-- `.env.example` の中身が表示され、環境変数の名前が並んでいる
-- どちらのコマンドでも `No such file or directory` が出ていない
+- `.gitignore` の表示の中に `.env*` の行が見えています。
+- `.env.example` の中身が表示され、環境変数の名前が並んでいます。
+- どちらのコマンドでも `No such file or directory` が出ていません。
 
-3つ目が出た場合は`task-app` のルート以外の場所でコマンドを打っています。`pwd` で今いる場所を確かめてから打ち直してください。
+3つ目が出た場合は `task-app` のルート以外の場所でコマンドを打っています。`pwd` で今いる場所を確かめてから打ち直してください。
 
-### Step 4: GitHub アカウントと空のリポジトリを用意する（10分）
+### Step 4: GitHub アカウントと空のリポジトリを用意する（読む目安: 10分）
 
 次は GitHub 側に、このプロジェクトの保存先を用意します。ここでのポイントは空のリポジトリを作ることです。ローカルにはすでに履歴があるのでGitHub 側で別の初期ファイルを作る必要はありません。
 
 #### ブラウザでやること
 
-GitHub のアカウントをまだ持っていない場合は先に `https://github.com/signup` を開いて
-メールアドレス・パスワード・ユーザー名を登録します。確認メールに届いたコードを入力すると
-アカウントができます。
+GitHub のアカウントをまだ持っていない場合は先に `https://github.com/signup` を開いて、メールアドレス・パスワード・ユーザー名を登録します。確認メールに届いたコードを入力するとアカウントができます。
 
-1. `https://github.com/new` を開く
-2. Owner を自分のアカウントにする
-3. Repository name に `task-app` と入れる
-4. Public / Private は好きなほうで選ぶ
-5. `Add a README file` のチェックボックスはオフのままにする
-6. `Add .gitignore` のドロップダウンは `None` のままにする
-7. `Choose a license` のドロップダウンも `None` のままにする
-8. `Create repository` を押す
+1. `https://github.com/new` を開きます。
+2. Owner を自分のアカウントにします。
+3. Repository name に `task-app` と入れます。
+4. Public / Private は好きなほうを選びます。
+5. `Add a README file` のチェックボックスはオフのままにします。
+6. `Add .gitignore` のドロップダウンは `None` のままにします。
+7. `Choose a license` のドロップダウンも `None` のままにします。
+8. `Create repository` を押します。
 
 #### ここで README を足さない理由
 
@@ -356,17 +393,17 @@ GitHub 側で先に README を作るとGitHub 側だけが持つ最初の履歴�
 
 #### 作成後に確認すること
 
-- URL が `https://github.com/<自分のユーザー名>/task-app` になっている
-- まだファイル一覧はほとんど空の表示になっている
-- “push an existing repository” に近い案内が出ている
+- URL が `https://github.com/<自分のユーザー名>/task-app` になっています。
+- まだファイル一覧はほとんど空の表示になっています。
+- “push an existing repository” に近い案内が出ています。
 
 この画面は、このあと `origin` を登録するときに使う URL を確認する場所でもあります。ブラウザは開いたままにしておきます。
 
-### Step 5: GitHub CLI（ターミナルから GitHub を操作する道具）で認証する（7分）
+### Step 5: GitHub CLI（ターミナルから GitHub を操作する道具）で認証する（読む目安: 7分）
 
 リポジトリの箱を作っただけではまだローカルから送れません。次に必要なのはこのターミナルが自分の GitHub アカウントとして送信してよい、と認証してもらうことです。
 
-今日は `gh auth login` を使います。初回セットアップとして分かりやすく、秘密の値を手で URL に埋め込む運用を避けられるためです。
+今日は `gh auth login` を使います。初回セットアップとして分かりやすく、秘密の値を URL へ直接書かずに済むためです。
 
 #### まずは `gh` コマンドがあるか確認する
 
@@ -374,7 +411,7 @@ GitHub 側で先に README を作るとGitHub 側だけが持つ最初の履歴�
 gh --version
 ```
 
-うまく入っていれば`gh version 2.89.0 (2026-03-26)` のような形式でバージョンが表示されます。数字は手元のバージョンによって変わります。
+うまく入っていれば `gh version 2.89.0 (2026-03-26)` のような形式でバージョンが表示されます。数字は手元のバージョンによって変わります。
 
 #### もし `gh` が見つからないとき
 
@@ -384,9 +421,26 @@ macOS なら次のコマンドで入れられます。
 brew install gh
 ```
 
-`zsh: command not found: brew` と出た場合はHomebrew がまだ入っていません。
-Homebrew は macOS へソフトを入れるための道具です。`https://brew.sh` の先頭にある
-インストール用のコマンドをコピーして実行し、終わってから `brew install gh` をもう一度実行します。Homebrew を初めて入れるときは開発者向けの部品もまとめて取り寄せるためこの Step だけで30分を超えることがあります。止まっているわけではないのでそのまま待ってください。
+`zsh: command not found: brew` と出た場合は Homebrew がまだ入っていません。
+Homebrew は macOS へソフトを入れるための道具です。[Homebrew の公式サイト](https://brew.sh) の先頭にあるインストール用のコマンドをコピーして実行します。初めて入れるときは開発者向けの部品もまとめて取り寄せるため、この Step だけで30分を超えることがあります。止まっているわけではないのでそのまま待ってください。
+
+インストール後は、ターミナルの末尾に表示される `Next steps:`（次の手順）を実行します。「Run these commands in your terminal to add Homebrew to your PATH」という案内の直下に並ぶコマンドを、1行ずつコピーして実行してください。PATH（コマンドを探すフォルダの一覧）に Homebrew を追加する設定です。[公式のインストール後の設定](https://docs.brew.sh/Installation#post-installation-steps) でも、この設定が必要と案内されています。
+
+設定後にターミナルを開き直し、次のコマンドを実行します。
+
+```bash
+brew --version
+```
+
+`Homebrew` とバージョン番号が表示されれば、このターミナルから `brew` を使える状態です。まだ `command not found: brew` が出る場合は、インストール完了時の `Next steps:` に表示されたコマンドを実行したか確認してください。
+
+バージョンを確認できたら、GitHub CLI を入れます。
+
+```bash
+brew install gh
+```
+
+このコマンドで `gh` を入れてから、次の認証へ進みます。
 
 Windows の WSL2（Ubuntu）または Ubuntu 22.04 を使っている場合は[GitHub CLI 公式の Linux インストール手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) に沿って Ubuntu のターミナルで入れます。
 
@@ -419,13 +473,13 @@ gh auth status
 
 #### 期待する状態
 
-- 自分の GitHub ユーザー名が表示される
-- 認証先が `github.com` になっている
-- エラーが出ていない
+- 自分の GitHub ユーザー名が表示されます。
+- 認証先が `github.com` になっています。
+- エラーが出ていません。
 
 ここが通れば今日進めるうえでは十分です。
 
-### Step 6: `origin` を登録してローカルと GitHub をつなぐ（3分）
+### Step 6: `origin` を登録してローカルと GitHub をつなぐ（読む目安: 3分）
 
 次はローカルの `task-app` に、GitHub の保存先 URL を教えます。
 
@@ -467,7 +521,7 @@ origin  https://github.com/<your-user-name>/task-app.git (push)
 
 自分のものと違うならいったん立ち止まります。どこにつながっているかを整理してから進めるほうが安全です。焦って送るのがいちばん危ないです。
 
-### Step 7: 送る前に、どのファイルを履歴に残すか決める（7分）
+### Step 7: 送る前に、どのファイルを履歴に残すか決める（読む目安: 7分）
 
 ここが今日の本質です。GitHub に保存する日はとりあえず全部送る日ではありません。**今日の状態として残したいものだけを、自分で選ぶ**日です。
 
@@ -522,31 +576,40 @@ git status --short
 
 もし `.env` や `.env.local` がここに出ていたらそのまま進めずに、`.gitignore` の設定かファイル名の置き方を先に見直します。今日の目的は動くものを保存するだけでなく、送っていいものだけを送る習慣を作ることだからです。
 
+#### 名前やメッセージを履歴に残す前に確認する
+
+VS Code で `src/app/dashboard/page.tsx` を開き、Day 02 で入力した名前・肩書き・集中テーマ・今日の目標など、画面へ表示する文字列をすべて読みます。本名・住所・電話番号や、勤務先の未公開情報が入っていれば、ニックネームや架空の内容へ直して保存します。`README.md` に自分で書き足した内容も確認してください。
+
+Public を選んだリポジトリでは、コードと過去のコミットを誰でも読めます。あとから表示を直しても、以前のコミットに入った値は履歴に残ります。そのため、最初のコミットを作る前に確認します。Private を選んだ場合も、明日はアプリを公開するので、いま公開できる内容へ直しておきましょう。
+
+開発サーバーを止めていた場合は、別のターミナルを開き、プロジェクトのフォルダで `npm run dev` を実行します。起動中なら再実行しません。以降の Git コマンドは、いま使っている元のターミナルで実行します。`http://localhost:3000/dashboard` を開き、表示が保存した内容に変わったことを確かめます。公開できる名前とメッセージになってから、次の `git add` へ進みます。
+
 #### アプリ実行に必要なファイルを add する
 
 この Day ではVercel が GitHub からコードを取り寄せて build できるようにアプリ実行に必要なファイルを名前で指定して add します。
 
-`scripts/` は初期セットアップ用なのでGitHub に上げなくてもアプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には要りません。一方で `package.json` や `src/` や `prisma/` はDay 04 の Vercel build に欠かせないファイルです。すでに履歴に入っていて変更のないファイルはadd しても何も起きないだけで害はありません。それでも名前を挙げておくとデプロイに必要なものがそろっていることを自分の目で確認できます。
+`scripts/` は、アプリのデプロイ（作ったアプリをサーバーに置いて公開する作業）には要りません。ただし Day 17 などで配布済みのファイルをコピーするためにも使います。配布 ZIP は保管しておきましょう。GitHub から別のパソコンへコードを取り出した場合も、不足した配布ファイルは元の ZIP から戻します。一方で `package.json` や `src/` や `prisma/` はDay 04 の Vercel build に欠かせないファイルです。すでに履歴に入っていて変更のないファイルはadd しても何も起きないだけで害はありません。それでも名前を挙げておくとデプロイに必要なものがそろっていることを自分の目で確認できます。
 
 ```bash
-git add README.md
+git add README.md .gitignore
 git add package.json package-lock.json
-git add tsconfig.json next.config.ts
-git add postcss.config.mjs biome.json
+git add tsconfig.json next.config.ts postcss.config.mjs biome.json
 git add prisma prisma.config.ts
 git add public src
 git add docker-compose.yml
 git add .node-version
 git add -f .env.example
 git status --short
+git ls-files README.md .gitignore
 git ls-files package.json package-lock.json
-git ls-files tsconfig.json next.config.ts
-git ls-files postcss.config.mjs biome.json
+git ls-files tsconfig.json next.config.ts postcss.config.mjs biome.json
 git ls-files prisma prisma.config.ts public src
 git ls-files docker-compose.yml .node-version .env.example
 ```
 
-`.node-version` は中身が `22` の1行だけのファイルで、手元の Node をこのバージョンにそろえる目的で置いてあります。`mise` のようなバージョン管理ツールがこのファイルを読みます。公開先の Vercel が使う Node のバージョンはこのファイルではなく `package.json` の `engines.node`（このプロジェクトでは `"22.x"`）で決まります。`package.json` はこの Step で add するので手元と公開先のバージョンはそろいます。
+`.gitignore` も明示して加えます。Day 01 で Git が無かった場合、このファイルもまだ履歴に入っていないためです。GitHub から取り寄せた環境でも `.env*` の除外が働くように、コードと一緒に保存します。`next-env.d.ts` は型定義（TypeScriptがNext.jsの機能を読み取るための情報）を置くファイルで、Next.jsが自動で作り直します。`.gitignore` の設定どおり保存しません。
+
+配布 ZIP の `.node-version` は `22.22.2` の1行です。`mise` などのバージョン管理ツールがこのファイルを読み、手元の Node をその版にそろえます。公開先の Vercel は `package.json` の `engines.node` を読みます。このプロジェクトの指定は `">=22.12.0 <23"` で、22.12.0 以上の Node 22 を使う条件です。手元と公開先が同じ細かい版になるとは限りません。両方のファイルを保存して、それぞれの条件を伝えます。
 
 `.env.example` にだけ `-f` を付けているのは`.gitignore` の `.env*` がこのファイルも除外しているためです。見本ファイルだけは意図的に例外として加えます。`-f` を付けずに実行すると `The following paths are ignored by one of your .gitignore files` と表示され、追加されません。
 
@@ -570,9 +633,9 @@ A  src/app/dashboard/page.tsx
 行が多くてもやりすぎではありません。数える必要もありません。
 ここで確認したいのは次の3点だけです。
 
-- `README.md` の `M` が左側（1文字目）に付いている
-- 直前の `git ls-files` で指定したファイルやディレクトリの中身が表示される
-- 秘密の値を入れる `.env` そのものが出ていない（見本の `.env.example` は表示されてよい）
+- `README.md` の `M` または `A` が左側（1文字目）に付いています。
+- 直前の `git ls-files` で指定したファイルやディレクトリの中身が表示されます。
+- 秘密の値を入れる `.env` そのものが出ていません（見本の `.env.example` は表示されて構いません）。
 
 いちばん下にはadd しなかったものが `??` の行として残ります。配布 ZIP をそのまま使っていれば `?? .mise.toml` `?? doc/` `?? scripts/` の3行が並びます。
 どれも add していないので正しい状態です。`.node-version` はさきほど add したのでここには出てきません。
@@ -617,11 +680,28 @@ git log --oneline --decorate -3
 これらは GitHub へ送らないので残っていて正常です。上に挙げた3つ以外の行が残っていたらその行が何のファイルかで対応が分かれます。`src/` や `prisma/` のようにこのカリキュラムで作ってきたファイルなら送るはずのものが送られていません。`git add` してからもう一度コミットしてください。`.vscode/` や `.DS_Store` のように自分のエディタやパソコンが勝手に作ったファイル、あるいは自分用のメモならGitHub へ送る必要はありません。`git add` せずにそのまま置いておいてください。判断が付かないときは送らないほうが安全です。いったんインターネットに出したファイルはあとから消しても記録に残ります。
 `git log` の1行目に、いま付けたメッセージが出ていれば成功です。
 
-![コミット成功後の状態](./screenshots/day03-commit-success.png)
+次は、上の3つのコマンドで確認した実行結果です。図と同じ内容をコピーできるテキストでも載せています。
+
+```text
+[main 85d31f7] feat: save initial dashboard project to GitHub
+ 83 files changed, 13229 insertions(+), 1249 deletions(-)
+## main
+?? .mise.toml
+?? doc/
+?? scripts/
+85d31f7 (HEAD -> main) feat: save initial dashboard project to GitHub
+1ad3274 Initial commit from Create Next App
+```
+
+次の画像は実行結果を整理した図です。端末画面の写真ではありません。コミットの結果、残った未追跡ファイル、履歴の順番を分けて示しています。
+
+![実行結果を整理した図です。端末画面の写真ではありません。コミット結果、未追跡ファイル、Git履歴を3つに分けている](./screenshots/day03-commit-success.png)
+
+短いコミットハッシュ、変更したファイル数、追加・削除した行数は手元の変更によって変わります。コミットメッセージが表示され、`.env` が未追跡ファイルにも含まれていなければ確認できています。
 
 ### Pro パターンで書こう（GitHub に送る日は `git add .` ではなく、残したいファイルを選ぶ）
 
-ここまでで GitHub に送る流れは作れました。ただし現場ではもう一段ていねいなやり方をします。
+ここまでで、GitHub へ送る前のコミットを作りました。次の Before/After は読み比べ用の例です。この2つのコードは実行せずに読み、読み終えたら Step 8 のコマンドで GitHub へ送ります。
 
 GitHub に保存するときは全部まとめて送るよりも、今日の変更として残したいファイルを自分で選ぶほうが確実です。理由を Before/After で見比べてみます。
 
@@ -636,9 +716,9 @@ git push -u origin "$(git branch --show-current)"
 
 **この流れの問題点**:
 
-- 何を GitHub に送ったのかが自分でも曖昧になりやすい
-- `.gitignore` の設定漏れや想定外ファイル混入に気づきにくい
-- `update` みたいなメッセージではあとから履歴を読んだときに意味が薄い
+- 何を GitHub に送ったのかが自分でも曖昧になりやすいです。
+- `.gitignore` の設定漏れや想定外ファイル混入に気づきにくいです。
+- `update` みたいなメッセージではあとから履歴を読んだときに意味が薄いです。
 
 #### After（プロがやる流れ）
 
@@ -653,19 +733,19 @@ git push -u origin "$(git branch --show-current)"
 
 **この流れの強み**:
 
-- どのファイルを今日の進化として残したいかが明確になる
-- 送信前に差分をもう一度目で確認できる
-- コミット履歴を読んだ未来の自分が何をやった日かすぐ分かる
+- どのファイルを今日の進化として残したいかが明確になります。
+- 送信前に差分をもう一度目で確認できます。
+- コミット履歴を読んだ未来の自分が何をやった日かすぐ分かります。
 
 #### 覚えておきたいエッセンス
 
 GitHub に保存するときは手早く済ませることよりも、何を残すかを自分で選ぶことが大切です。履歴は量よりも、意味の分かりやすさが効いてきます。
 
-### Step 8: いまいるブランチを GitHub に送る（3分）
+### Step 8: いまいるブランチを GitHub に送る（読む目安: 3分）
 
 ここまでで、ローカルの履歴は整いました。次はそれを GitHub に送ります。
 
-今日はブランチ名を固定で決め打ちせず、いま実際にいるブランチをそのまま push する形で進めます。これなら`main` でも別名でも動かせます。
+今日はブランチ名を固定で決め打ちせず、いま実際にいるブランチをそのまま push する形で進めます。これなら `main` でも別名でも動かせます。
 
 #### 実行コマンド
 
@@ -673,7 +753,7 @@ GitHub に保存するときは手早く済ませることよりも、何を残�
 git push -u origin "$(git branch --show-current)"
 ```
 
-ここで初めて手元のコミットが GitHub 側にコピーされます。ここまでの `commit` はすべて自分のパソコンの中だけの操作だったので外へ出るのは今回が最初です。`Authentication failed` や `could not read Username` と出たらStep 5 の認証が効いていません。`gh auth status` で状態を見てから`gh auth login` をやり直します。
+ここで初めて手元のコミットが GitHub 側にコピーされます。ここまでの `commit` はすべて自分のパソコンの中だけの操作だったので外へ出るのは今回が最初です。`Authentication failed` や `could not read Username` と出たら Step 5 の認証が効いていません。`gh auth status` で状態を見てから `gh auth login` をやり直します。
 
 #### `-u` の意味
 
@@ -697,34 +777,36 @@ branch 'main' set up to track 'origin/main'.
 100件を超えて数百 KB になることもあり、上の数字と違っても問題ありません。
 次の3点が見えたら大丈夫です。
 
-- `To https://github.com/...` が出ている
-- 新しいブランチが GitHub 側に作られている
-- tracking が設定されたと分かる文言が出ている
+- `To https://github.com/...` が出ています。
+- 新しいブランチが GitHub 側に作られています。
+- tracking が設定されたと分かる文言が出ています。
 
-### Step 9: ブラウザで GitHub のページを確認する（3分）
+### Step 9: ブラウザで GitHub のページを確認する（読む目安: 3分）
 
 ターミナルで push が通っても最後はブラウザで確認します。送れたつもりで終わらせず、GitHub 上で実際に見えている状態を確かめておきます。
 
 #### 確認手順
 
-1. さっき作った GitHub リポジトリページを開く
-2. ブラウザを再読み込みする
-3. ファイル一覧が表示されるか確認する
-4. `README.md` の内容がページ下部に表示されるか確認する
-5. `src/app/dashboard/page.tsx` がリポジトリ内に存在するか確認する
+1. さっき作った GitHub リポジトリページを開きます。
+2. ブラウザを再読み込みします。
+3. ファイル一覧が表示されるか確認します。
+4. `README.md` の内容がページ下部に表示されるか確認します。
+5. `src/app/dashboard/page.tsx` がリポジトリ内に存在するか確認します。
 
 #### ここで見えていたら成功
 
-- リポジトリ URL が自分のアカウント配下になっている
-- `README.md` がトップページに表示される
-- `src` ディレクトリがある
-- Day 02 までのコードが GitHub 上で見える
+- リポジトリ URL が自分のアカウント配下になっています。
+- `README.md` がトップページに表示されます。
+- `src` ディレクトリがあります。
+- Day 02 までのコードが GitHub 上で見えます。
 
-![GitHub リポジトリページでコードが見えている状態](./screenshots/day03-github-history.png)
+次の画像は GitHub の Code タブにあるファイル一覧と、README 領域の上端を拡大したものです。公開リポジトリ `kouiso/rhf-zod-imageup-sample` を使っているため、リポジトリ名とファイル内容は手元の `task-app` と異なります。自分の画面では、上の4項目を確認してください。画像では `src` と `README.md` がファイル一覧に並んでいます。その下に README のタブと見出しの始まる位置を確認できます。
 
-ここまで見えていれば自分のコードに GitHub 上の置き場所ができた状態です。
+![GitHubのファイル一覧とREADME領域の上端を拡大し、srcとREADME.mdが見える状態](./screenshots/day03-github-history.png)
 
-### Step 10: よくあるつまずきを、送る前後で切り分ける（5分）
+自分のリポジトリでここまで見えていれば、自分のコードに GitHub 上の置き場所ができた状態です。
+
+### Step 10: よくあるつまずきを、送る前後で切り分ける（読む目安: 5分）
 
 GitHub まわりは1か所詰まると全部止まったように見えがちです。ただ実際には原因はだいたい次のどれかに分かれます。
 
@@ -770,7 +852,7 @@ git remote -v
 git status --short
 ```
 
-ここで何が出ているかを見てからadd するか、今日は送らないかを決めます。見えていない差分はそのまま送りません。これを覚えておくと安全です。
+ここで何が出ているかを見てから add するか、今日は送らないかを決めます。見えていない差分はそのまま送りません。これを覚えておくと安全です。
 
 #### `.env` が出てきてしまった
 
@@ -783,13 +865,13 @@ git ls-files .env
 git log --all -- .env
 ```
 
-4つとも読み取るだけのコマンドなので`.env` を消したり書き換えたりはしません。
+4つとも読み取るだけのコマンドなので `.env` を消したり書き換えたりはしません。
 
 ここから先は状況によってやることが変わります。上から順に自分の位置を確かめてください。
 
-**1. 現在の追跡と過去の記録を分けて調べる。** `git status --short` の一覧から `.env` の行が消えてもそれだけでは安心できません。`.gitignore` はGit がすでに記録している（追跡している）ファイルには効かないからです。現在の追跡は `git ls-files .env`、過去のコミットは `git log --all -- .env` の結果で判断します。両方とも何も表示されなければGit に記録されていません。`.env` が `git status` に出た場合は`.gitignore` に `.env*` を追加し、表示が消えたことを確認して終わります。
+**1. 現在の追跡と過去の記録を分けて調べる。** `git status --short` の一覧から `.env` の行が消えてもそれだけでは安心できません。`.gitignore` は Git がすでに記録している（追跡している）ファイルには効かないからです。現在の追跡は `git ls-files .env`、過去のコミットは `git log --all -- .env` の結果で判断します。両方とも何も表示されなければ、Git に記録されていません。この場合だけ、`git status --short` に出ている `.env` を `.gitignore` の `.env*` で除外し、表示が消えたことを確認して終わります。追跡や過去の記録がある場合は、次の手順へ進みます。
 
-**2. 現在追跡されていたら追跡だけを外す。** `git ls-files .env` にファイル名が表示されたら `git rm --cached .env` を実行します。このコマンドは手元の `.env` を消さず、Git の管理から外すだけです。そのあと `git ls-files .env` で何も表示されないことを確認します。
+**2. 現在追跡されていたら追跡だけを外す。** `.gitignore` に `.env*` が無ければ追加して保存します。追跡を外した後に、もう一度 `.env` を追加してしまわないためです。`git ls-files .env` にファイル名が表示されたら `git rm --cached .env` を実行します。このコマンドは手元の `.env` を消さず、Git の管理から外すだけです。そのあと `git ls-files .env` で何も表示されないことを確認します。
 
 **3. コミット前ならここで終える。** `git log --all -- .env` に何も表示されないなら、`.env` はステージングされただけで過去のコミットには入っていません。`git ls-files .env` にも何も表示されないことを確認できたら追加対応は不要です。
 
@@ -805,7 +887,7 @@ git log --all --oneline -- .env
 
 **5. すでに push していたらまず鍵を作り直す。** 一度 push した値は過去のコミットに残り、GitHub からも読めます。パスワードやアクセストークンを新しい値に作り直すのが最優先です。履歴の掃除より先にこちらを行います。
 
-**6. 複数のコミットに入っていたら過去の記録からも消す。** `git rm --cached .env` や手順4の `git commit --amend` だけでは、それより古いコミットから値を消せません。履歴全体の書き換えは影響範囲が大きいため、[GitHub 公式の機密情報削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) で副作用を確認したうえで `git filter-repo` を使います。`git filter-repo` は Git に最初から入っている道具ではありません。macOS なら `brew install git-filter-repo` で入れてから使います。書き換えた結果をすでにあるリモートへ送るときは `git push --force-with-lease` を使います。リモートの最新を確かめてから上書きするコマンドです。条件なしの `git push --force` はその間に他の人が入れた変更ごと消してしまいます。共同で作業している相手がいれば取り直してもらう連絡も要ります。すでに push した秘密値は、履歴を書き換える前に失効または作り直します。GitHub のキャッシュや他の人の複製に残る可能性があるため、履歴を書き換えただけで鍵を作り直さなくてよい、とは判断しません。
+**6. 複数のコミットに入っていたら過去の記録からも消す。** `git rm --cached .env` や手順4の `git commit --amend` だけでは、それより古いコミットから値を消せません。履歴を書き換えるとコミットの識別番号が変わります。他の人が複製した履歴と合わなくなるため、[GitHub 公式の機密情報削除手順](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) で副作用と `git-filter-repo` の手順を確認してください。すでに push した秘密値は、履歴を書き換える前に失効または作り直します。GitHub のキャッシュや他の人の複製に残る可能性があるため、履歴を書き換えただけで鍵を作り直さなくてよい、とは判断しません。
 
 `.env.example` は値の入っていない見本なので追跡したままで問題ありません。
 
@@ -847,43 +929,112 @@ git branch --show-current
 
 ## 覚えておきたいエッセンス
 
-- Day 03 は新しい完成品を作る日ではなく、Day 02 までの自分の作業を GitHub に乗せる日
-- この教材の流れではローカルの Git 管理はすでに始まっている。今日は GitHub と接続して外へ出す
-- GitHub へ送る前に、`git status` で現在地を読むクセをつける
-- `README.md` はリポジトリの顔になる。Day 03 では正直で短い説明で十分
-- `.env` は送らず、`.env.example` は送る。この線引きを `.gitignore` と目視確認で守る
-- `git add .` で雑にまとめるより今日残したいファイルを自分で選ぶほうが履歴の質が上がる
-- `commit` はローカル保存、`push` は GitHub への送信。この役割分担を分けて理解する
-- 最後はブラウザで GitHub ページを開いて本当に見えているところまで確認する
+- Day 03 は新しい完成品を作る日ではなく、Day 02 までの自分の作業を GitHub に保存する日です。
+- Day 01 で Git が使えた場合、ローカルの Git 管理はすでに始まっています。未導入だった場合は Step 0 で準備してから GitHub へ送ります。
+- GitHub へ送る前に、`git status` で現在地を読むクセをつけます。
+- `README.md` はリポジトリを開いた人にアプリの内容を伝えます。Day 03 では正直で短い説明で十分です。
+- `.env` は送らず、`.env.example` は送ります。この線引きを `.gitignore` と目視確認で守ります。
+- `git add .` で雑にまとめるより今日残したいファイルを自分で選ぶほうが履歴の質が上がります。
+- `commit` はローカル保存、`push` は GitHub への送信。この役割分担を分けて理解します。
+- 最後はブラウザで GitHub ページを開いて本当に見えているところまで確認します。
 
 ## 今日のチェックリスト
 
 最後にこの Day の完了条件を自分で確認しておきます。
 
-- [ ] `git status -sb` で現在地を読めた
-- [ ] `README.md` を自分の `task-app` に合う内容へ整えた
-- [ ] `.gitignore` と `.env.example` の役割を確認した
-- [ ] GitHub に空のリポジトリを作れた
-- [ ] `gh auth login` が通った
-- [ ] `git remote add origin ...` で保存先を登録できた
-- [ ] 変更したファイルだけを add してコミットできた
-- [ ] `git push -u origin "$(git branch --show-current)"` が通った
-- [ ] GitHub のブラウザ画面でコードが見えた
+- [ ] `git status -sb` で現在地を読めました。
+- [ ] `README.md` を自分の `task-app` に合う内容へ整えました。
+- [ ] `.gitignore` と `.env.example` の役割を確認しました。
+- [ ] GitHub に空のリポジトリを作れました。
+- [ ] `gh auth login` が通りました。
+- [ ] `git remote add origin ...` で保存先を登録できました。
+- [ ] 変更したファイルだけを add してコミットできました。
+- [ ] `git push -u origin "$(git branch --show-current)"` が通りました。
+- [ ] GitHub のブラウザ画面でコードが見えました。
 
-全部埋まったらDay 03 は完了です。
+全部埋まったら Day 03 は完了です。
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る | 実際に出る未追跡ファイルは環境で前後する。配布 ZIP をそのまま使った場合は `.mise.toml` `doc/` `scripts/` の3件が残っている | 行数は数えなくてよい。`README.md` の `M` が付いていることと、秘密の値を入れた `.env` そのものが出ていないことを確認する。見本の `.env.example` は表示されてよい |
-| `git add` が `fatal: pathspec '...' did not match any files` で止まる | 指定したファイルが手元に無い | その行から無いファイル名だけを外して同じコマンドをもう一度実行する。同じ行に書いた実在するファイルも一緒に失敗しているので実行し直しが要る |
-| `git add .env.example` が `The following paths are ignored by one of your .gitignore files` で止まる | `.gitignore` の `.env*` がこのファイルも除外している | `git add -f .env.example` と `-f` を付けて除外をこのファイルだけ上書きする |
-| `git commit` が `*** Please tell me who you are.` で止まる | `user.name` と `user.email` を登録していない | `git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに接続済みのメールアドレス"` を1回だけ実行する。名前とメールアドレスは自分のものに置き換える |
-| `git commit` が `nothing added to commit but untracked files present` と言う | ステージングが空。`git add` が終わっていないか、そもそも変更が無い | `git add` からやり直す。`git status --short` で行頭に `M` や `A` が付いているかを見る |
-| `git push` が認証で止まる | `gh auth login` が終わっていない、または別アカウントで認証している | `gh auth status` で誰として認証しているかを確認し、必要なら `gh auth login` をやり直す |
-| GitHub のページに反映されていない | `commit` までで止まっていて `push` していない | `git log --oneline -3` でコミットがあることを確かめてから `git push` する。ブラウザ側は再読み込みする |
-| `.env` が `git status` に出てきた | `.gitignore` の設定漏れ、またはすでに追跡されている | Step 10 の「`.env` が出てきてしまった」を上から順に読む。外部へ push 済みなら鍵の作り直しを最優先にする |
+#### Step 7 の `git status --short` に、教材の例より多い（または少ない）行が出る
+
+**原因**
+
+実際に出る未追跡ファイルは環境によって変わります。配布 ZIP をそのまま使った場合は、`.mise.toml`、`doc/`、`scripts/` の3件が残っています。
+
+**解決方法**
+
+行数を数える必要はありません。`README.md` に `M` または `A` が付いていることと、秘密の値を入れた `.env` そのものが出ていないことを確認します。見本の `.env.example` は表示されて構いません。
+
+#### `git add` が `fatal: pathspec '...' did not match any files` で止まる
+
+**原因**
+
+指定したファイルが手元にありません。
+
+**解決方法**
+
+その行から、手元にないファイル名だけを外して同じコマンドをもう一度実行します。同じ行に書いた実在するファイルも一緒に失敗しているため、実行し直す必要があります。
+
+#### `git add .env.example` が `The following paths are ignored by one of your .gitignore files` で止まる
+
+**原因**
+
+`.gitignore` の `.env*` がこのファイルも除外しています。
+
+**解決方法**
+
+`git add -f .env.example` のように `-f` を付けて、このファイルだけ除外を上書きします。
+
+#### `git commit` が `*** Please tell me who you are.` で止まる
+
+**原因**
+
+`user.name` と `user.email` を登録していません。
+
+**解決方法**
+
+`git config --global user.name "あなたの名前"` と `git config --global user.email "GitHubに登録したメールアドレス"` を1回だけ実行します。名前とメールアドレスは自分のものに置き換えてください。
+
+#### `git commit` が `nothing added to commit but untracked files present` と言う
+
+**原因**
+
+ステージングが空です。`git add` が終わっていないか、変更がありません。
+
+**解決方法**
+
+`git add` からやり直します。`git status --short` で行頭に `M` や `A` が付いているかを確認してください。
+
+#### `git push` が認証で止まる
+
+**原因**
+
+`gh auth login` が終わっていないか、別のアカウントで認証しています。
+
+**解決方法**
+
+`gh auth status` で誰として認証しているかを確認します。必要なら `gh auth login` をやり直してください。
+
+#### GitHub のページに反映されていない
+
+**原因**
+
+`commit` までで止まっていて、`push` していません。
+
+**解決方法**
+
+`git log --oneline -3` でコミットがあることを確かめてから `git push` します。ブラウザ側も再読み込みしてください。
+
+#### `.env` が `git status` に出てきた
+
+**原因**
+
+`.gitignore` の設定が漏れているか、すでに追跡されています。
+
+**解決方法**
+
+Step 10 の「`.env` が出てきてしまった」を上から順に読みます。外部へ push 済みなら、鍵の作り直しを最優先にしてください。
 
 ## 今日学んだ用語
 
@@ -898,7 +1049,7 @@ git branch --show-current
 | `gh` | ターミナルから GitHub を操作するための公式コマンド |
 | ブランチ | 履歴の枝。今日は現在いるブランチ（多くは `main`）をそのまま GitHub へ送る |
 
-## 追加課題：READMEの変更を1件の履歴にする
+## 追加課題: READMEの変更を1件の履歴にする
 
 変更したファイルを選んで履歴へ残しましょう。保存とコミットが別の操作であることを確かめます。
 

@@ -6,15 +6,15 @@
 
 | # | 中身 | 置き場所 |
 |---|---|---|
-| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に届けます（同名上書き＝同一IDを維持。`scripts/pdf-book/pdf-link-map.json` が現行の配布IDを指します。認証経路は下の「Drive 配布の認証方式」を参照） |
-| 2 | **写経用の土台コード（この ZIP）** | `task-app-curriculum-v1.1.zip`。同じ Drive フォルダへ `task-app-curriculum-v1.1.zip` としてアップロード済み（ファイル ID: `1JGcp9mhde-MOD97CcIjKacHgcD38OLkr`） |
+| 1 | **教材PDF 36冊** | `make book-pdf` で `dist/pdf/` に出力。**ZIP には入れません**。Drive フォルダ `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU` に届けます（既存ファイルの内容を更新して同一IDを維持。`scripts/pdf-book/pdf-link-map.json` が現行の配布IDを指します。認証経路は下の「Drive 配布の認証方式」を参照） |
+| 2 | **写経用の土台コード（この ZIP）** | `task-app-curriculum-v1.1.zip`。同じ Drive フォルダへ `task-app-curriculum-v1.1.zip` として配布しています（ファイル ID: `1JGcp9mhde-MOD97CcIjKacHgcD38OLkr`） |
 
 読者は PDF を見ながら、この ZIP を展開して写経します。
-ZIP の共有権限は PDF と同じフォルダ内で継承されるため、購入者への届け方も PDF と同じ導線で扱えます。
+更新前後にファイルID・名前・親フォルダ・共有権限を照合します。更新後は同じIDから内容を読戻し、ローカル成果物のSHA256と一致することを確認します。
 
 ## Drive 配布の認証方式
 
-配布フォルダへの操作は **OAuth 経路のみ**で行います。サービスアカウントは使いません。サービスアカウントの新規発行・GCP プロジェクトでの API 有効化・外部プログラム（Developer Preview 等）への申請も禁止です。Drive を操作する自作コード（rclone スクリプト等）はリポジトリに置きません。操作経路は **ブラウザでの手作業** か **Devin 登録の Remote MCP** のどちらかです。
+配布フォルダへの操作は **OAuth 経路のみ**で行います。サービスアカウントは使いません。サービスアカウントの新規発行・GCP プロジェクトでの API 有効化・外部プログラム（Developer Preview 等）への申請も禁止です。Drive を操作する自作コード（rclone スクリプト等）はリポジトリに置きません。操作経路は **ブラウザ** または **接続済みのOAuthコネクタ・Remote MCP** です。
 
 ### Devin からの操作: Google Drive Remote MCP のみ
 
@@ -23,11 +23,17 @@ Devin の org に登録済みの **Google Drive Remote MCP**（`google-drive` �
 - 参照・検証: `search_files`（`parentId = '1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU'` で一覧）、`get_file_metadata`、`get_file_permissions`、`download_file_content`
 - 新規ファイルの作成: `create_file` に `title`・`parentId`・`contentMimeType` を指定し、バイナリは `base64Content` で渡します
 
-Remote MCP には既存ファイルの内容を更新する手段がありません。`create_file` で同名ファイルを作ると別 ID になり、配布済み PDF 内の章間リンクと `pdf-link-map.json` が古い ID を指して壊れます。同一 ID 維持が必要な上書きには使わないでください。
+このDevin Remote MCPには既存ファイルの内容を更新する手段がありません。`create_file` で同名ファイルを作ると別 ID になり、配布済み PDF 内の章間リンクと `pdf-link-map.json` が古い ID を指して壊れます。同一 ID 維持が必要な上書きには使わないでください。
+
+### Codexからの上書き: Google Driveコネクタ
+
+接続済みGoogle Driveコネクタの `update_file` は、既存の `fileId` とPDF・ZIPのファイル参照を指定して内容を更新できます。ID・名前・親フォルダ・共有権限を保つ更新には、この経路を使えます。`upload_file` による新規作成や、同名ファイルの作成で置き換えないでください。
+
+更新機能の有無は接続先ごとに確認します。Devin Remote MCPの制限を、別のコネクタにも当てはめないでください。接続済みコネクタで更新できない場合は、下のブラウザ経路を使います。
 
 ### 作業者による上書き: ブラウザの「バージョンを管理」
 
-同名上書き（＝同一ファイルIDの維持）が必要な再配布は、作業者がブラウザの Drive 画面で行います。対象ファイルを右クリック →「バージョンを管理」→「新しいバージョンをアップロード」で、ファイル ID と共有設定を維持したまま内容だけを差し替えられます（教材PDF・写経用 ZIP 共通）。新規ファイルの追加はフォルダへのドラッグ＆ドロップで構いません。
+既存ファイルの同一IDを維持する再配布では、作業者がブラウザの Drive 画面で行います。対象ファイルを右クリック →「バージョンを管理」→「新しいバージョンをアップロード」で、ファイル ID と共有設定を維持したまま内容だけを差し替えられます（教材PDF・写経用 ZIP 共通）。新規ファイルの追加はフォルダへのドラッグ＆ドロップで構いません。
 
 ## PDFの章間リンクを設定する
 

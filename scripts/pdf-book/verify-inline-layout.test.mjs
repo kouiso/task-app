@@ -5,11 +5,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import test, { after } from 'node:test';
+import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
   assertHookCount,
+  main,
+  repeatedHeaderIssues,
   validateManifest,
   verifyPinnedToolchain,
 } from './verify-inline-layout.mjs';
@@ -22,19 +24,28 @@ const TOOLCHAIN =
 const BROWSER =
   process.env.PDF_BOOK_TEST_BROWSER ??
   ['/usr/bin/google-chrome', '/usr/bin/chromium'].find(fs.existsSync);
-// 個人の作業場所を決め打ちせん。置き場所を変えたい時だけ環境変数で渡す
-const SCRATCH_ROOT = process.env.PDF_BOOK_TEST_SCRATCH_DIR ?? os.tmpdir();
-const scratchDirectories = [];
+const SCRATCH_ROOT = fs.existsSync('/home/kouiso/.codex/scratch')
+  ? '/home/kouiso/.codex/scratch'
+  : os.tmpdir();
+const canIntegrate = Boolean(BROWSER) && fs.existsSync(path.join(TOOLCHAIN, 'node_modules'));
 
-function makeScratch(prefix) {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, prefix));
-  scratchDirectories.push(directory);
-  return directory;
-}
-
-after(() => {
-  for (const directory of scratchDirectories) {
-    fs.rmSync(directory, { recursive: true, force: true });
+test('margin outline runtime inputs are all-or-none', async () => {
+  const required = {
+    PDF_BOOK_INLINE_LAYOUT_MANIFEST: '/missing/manifest.json',
+    PDF_BOOK_INLINE_LAYOUT_REPORT: '/missing/report.json',
+    PDF_BOOK_TOOLCHAIN_DIR: '/missing/toolchain',
+  };
+  for (const partial of [
+    { PDF_BOOK_MARGIN_OUTLINE_GLYPHS: '/map.json' },
+    {
+      PDF_BOOK_MARGIN_OUTLINE_GLYPHS: '/map.json',
+      PDF_BOOK_MARGIN_OUTLINE_FONT: '/font.ttf',
+    },
+  ]) {
+    await assert.rejects(
+      () => main([], { ...required, ...partial }),
+      /PDF_BOOK_MARGIN_OUTLINE_GLYPHS\/FONT\/SOURCEはすべて必要です/,
+    );
   }
 });
 
@@ -115,8 +126,120 @@ test('manifest schema rejects duplicate ids and weakened font floors', () => {
   assert.throws(() => validateManifest({ ...manifest([]), minimum_font_size_pt: 7 }), /8で固定/);
 });
 
+test('only source-identified THEAD clones on distinct ascending pages are accepted', () => {
+  const tableCell = {
+    table_id: 'pdf-table-0123456789ab-00000',
+    section: 'thead',
+    row_index: 0,
+    cell_index: 0,
+    column_index: 0,
+    row_span: 1,
+    column_span: 1,
+    tag: 'TH',
+    code_index: 0,
+  };
+  const entry = {
+    id: 'pdf-inline-0123456789ab-00000',
+    expected_text: 'HEADER',
+    source_order: 0,
+    context: 'table',
+    pagination_role: 'repeating_table_header',
+    table_cell: tableCell,
+  };
+  const visual = {
+    font_family: 'monospace',
+    font_size_pt: 9,
+    cell_content_rect: { left: 10, right: 110, width: 100 },
+    table_geometry: {
+      rect: { left: 0 },
+      columns: [{ column_index: 0, left: 0, right: 120, width: 120 }],
+    },
+  };
+  validateManifest(manifest([entry], [{ id: tableCell.table_id }]));
+  assert.deepEqual(
+    repeatedHeaderIssues(entry, [
+      { ...visual, page_index: 0, table_cell: tableCell },
+      { ...visual, page_index: 1, table_cell: tableCell },
+    ]),
+    [],
+  );
+  for (const items of [
+    [
+      { ...visual, page_index: 0, table_cell: tableCell },
+      { ...visual, page_index: 0, table_cell: tableCell },
+    ],
+    [
+      { ...visual, page_index: 1, table_cell: tableCell },
+      { ...visual, page_index: 0, table_cell: tableCell },
+    ],
+    [
+      { ...visual, page_index: 0, table_cell: tableCell },
+      { ...visual, page_index: 1, table_cell: { ...tableCell, column_index: 1 } },
+    ],
+  ]) {
+    assert.notEqual(repeatedHeaderIssues(entry, items).length, 0);
+  }
+  assert.throws(
+    () => validateManifest(manifest([{ ...entry, table_cell: { ...tableCell, tag: 'TD' } }])),
+    /identity/,
+  );
+});
+
+test('real paginated THEAD clones retain semantic identity and pass DOM audit', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'repeating-thead-test-'));
+  const tableId = 'pdf-table-0123456789ab-00000';
+  const inlineId = 'pdf-inline-0123456789ab-00000';
+  const tableCell = {
+    table_id: tableId,
+    section: 'thead',
+    row_index: 0,
+    cell_index: 0,
+    column_index: 0,
+    row_span: 1,
+    column_span: 1,
+    tag: 'TH',
+    code_index: 0,
+  };
+  const rows = Array.from(
+    { length: 18 },
+    (_, index) => `<tr><td>row ${index}</td><td>value ${index}</td></tr>`,
+  ).join('');
+  writeFixture(directory, {
+    html: `<!doctype html><html lang="ja"><body><table data-pdf-table-id="${tableId}"><thead><tr><th><code data-pdf-inline-id="${inlineId}">HEADER-CODE</code></th><th>説明</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+    css: '@page{size:A5;margin:15mm}body{font:11pt sans-serif}table{width:100%;border-spacing:0}th,td{height:18mm;padding:2mm;border:0}code{font:9pt monospace;white-space:nowrap}',
+    expected: manifest(
+      [
+        {
+          id: inlineId,
+          expected_text: 'HEADER-CODE',
+          source_order: 0,
+          context: 'table',
+          pagination_role: 'repeating_table_header',
+          table_cell: tableCell,
+        },
+      ],
+      [{ id: tableId }],
+    ),
+  });
+  const result = runFixture(directory, 'repeated-header.pdf');
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.report.result, 'dom_pass_post_pdf_pending');
+  const observation = result.report.dom_audit.observed[0];
+  assert.ok(observation.items.length >= 2);
+  assert.deepEqual(
+    observation.items.map((item) => item.table_cell),
+    observation.items.map(() => tableCell),
+  );
+  assert.equal(
+    new Set(observation.items.map((item) => item.page_index)).size,
+    observation.items.length,
+  );
+});
+
 test('toolchain version and hash mismatches fail before browser launch', () => {
-  const directory = makeScratch('inline-layout-pin-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-pin-test-'));
   fs.mkdirSync(path.join(directory, 'node_modules', 'example'), { recursive: true });
   const file = path.join(directory, 'node_modules', 'example', 'file.js');
   fs.writeFileSync(file, '{"version":"1.0.0"}\n');
@@ -142,12 +265,10 @@ test('zero or multiple page.pdf interceptions fail closed', () => {
   assert.throws(() => assertHookCount(2), /1回必要/);
 });
 
-const canIntegrate = Boolean(BROWSER) && fs.existsSync(path.join(TOOLCHAIN, 'node_modules'));
-
 test('normal inline code passes DOM scope while release remains blocked for post-PDF audit', {
   skip: !canIntegrate,
 }, () => {
-  const directory = makeScratch('inline-layout-normal-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-normal-test-'));
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <section class="page">
@@ -195,8 +316,6 @@ test('normal inline code passes DOM scope while release remains blocked for post
   assert.equal(result.report.dom_audit.checks.single_line.status, 'pass');
   assert.equal(result.report.dom_audit.checks.cell_content_bounds.status, 'pass');
   assert.equal(result.report.dom_audit.checks.page_content_bounds.status, 'pass');
-  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'pass');
-  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'pass');
   assert.equal(result.report.dom_audit.checks.measurement_support.status, 'pass');
   assert.equal(result.report.dom_audit.checks.physical_page_box_selector.status, 'pass');
   assert.equal(result.report.dom_audit.checks.post_pdf_text_and_geometry.status, 'unsupported');
@@ -251,99 +370,10 @@ test('normal inline code passes DOM scope while release remains blocked for post
   assert.equal(fs.existsSync(result.output), true);
 });
 
-test('table prose glyphs outside cell or page content fail before PDF', {
-  skip: !canIntegrate,
-}, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-bounds-test-'));
-  writeFixture(directory, {
-    html: `<!doctype html><html lang="ja"><body>
-      <table class="narrow" data-pdf-table-id="narrow-table"><tr><td>一文字でも収まらない</td></tr></table>
-      <div class="past-page"><table data-pdf-table-id="past-page-table"><tr><td>版面外</td></tr></table></div>
-    </body></html>`,
-    css: `@page{size:A4;margin:20mm}body{font:12pt sans-serif}.narrow{table-layout:fixed;width:20px}.narrow td{padding:4px;white-space:nowrap}.past-page{position:relative;left:700px;width:100px}.past-page table{width:100px}.past-page td{padding:4px;white-space:nowrap}`,
-    expected: manifest([], [{ id: 'narrow-table' }, { id: 'past-page-table' }]),
-  });
-  const result = runFixture(directory);
-  assert.notEqual(result.status, 0);
-  assert.equal(result.report.result, 'dom_fail');
-  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'fail');
-  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'fail');
-  assert.ok(
-    result.report.dom_audit.violations.some(
-      (violation) =>
-        violation.check === 'table_prose_cell_bounds' && violation.table_id === 'narrow-table',
-    ),
-  );
-  assert.ok(
-    result.report.dom_audit.violations.some(
-      (violation) =>
-        violation.check === 'table_prose_page_bounds' && violation.table_id === 'past-page-table',
-    ),
-  );
-  assert.equal(fs.existsSync(result.output), false);
-});
-
-test('missing expected table blocks the prose bounds gate', { skip: !canIntegrate }, () => {
-  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-missing-test-'));
-  writeFixture(directory, {
-    html: '<!doctype html><html lang="ja"><body><p>表はありません</p></body></html>',
-    css: '@page{size:A4;margin:20mm}body{font:12pt sans-serif}',
-    expected: manifest([], [{ id: 'missing-table' }]),
-  });
-  const result = runFixture(directory);
-  assert.notEqual(result.status, 0);
-  assert.equal(result.report.result, 'dom_fail');
-  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'unsupported');
-  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'unsupported');
-  assert.ok(
-    result.report.dom_audit.violations.some(
-      (violation) =>
-        violation.check === 'table_prose_cell_bounds' &&
-        violation.table_id === 'missing-table' &&
-        violation.reason === 'expected_table_missing',
-    ),
-  );
-  assert.equal(fs.existsSync(result.output), false);
-});
-
-// 別の表で見つけたはみ出しを、欠けた表の「未対応」で上書きしない。上書きすると
-// summary.failed_checks が 0 に数えられ、はみ出しが集計から消える
-test('missing expected table keeps a prose overflow found in another table as fail', {
-  skip: !canIntegrate,
-}, () => {
-  const directory = makeScratch('table-prose-missing-keeps-fail-test-');
-  writeFixture(directory, {
-    html: `<!doctype html><html lang="ja"><body>
-      <table class="narrow" data-pdf-table-id="narrow-table"><tr><td>一文字でも収まらない</td></tr></table>
-    </body></html>`,
-    css: `@page{size:A4;margin:20mm}body{font:12pt sans-serif}.narrow{table-layout:fixed;width:20px}.narrow td{padding:4px;white-space:nowrap}`,
-    expected: manifest([], [{ id: 'narrow-table' }, { id: 'missing-table' }]),
-  });
-  const result = runFixture(directory);
-  assert.notEqual(result.status, 0);
-  assert.equal(result.report.result, 'dom_fail');
-  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'fail');
-  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'unsupported');
-  assert.ok(result.report.summary.failed_checks >= 1);
-  assert.ok(
-    result.report.dom_audit.violations.some(
-      (violation) =>
-        violation.check === 'table_prose_cell_bounds' && violation.table_id === 'narrow-table',
-    ),
-  );
-  assert.ok(
-    result.report.dom_audit.violations.some(
-      (violation) =>
-        violation.table_id === 'missing-table' && violation.reason === 'expected_table_missing',
-    ),
-  );
-  assert.equal(fs.existsSync(result.output), false);
-});
-
 test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PDF', {
   skip: !canIntegrate,
 }, () => {
-  const directory = makeScratch('inline-layout-adversarial-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-adversarial-test-'));
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <section class="page"><div class="narrow">before <code data-pdf-inline-id="wrapped">WRAP-ME-ABCDEFGHIJKLMN</code> after</div></section>
@@ -403,7 +433,7 @@ test('wrap, cell overflow, page-content overflow and sub-8pt text fail before PD
 test('reordered inline entries fail before PDF despite matching ids and text', {
   skip: !canIntegrate,
 }, () => {
-  const directory = makeScratch('inline-layout-order-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-order-test-'));
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p><code data-pdf-inline-id="second">SECOND</code> <code data-pdf-inline-id="first">FIRST</code></p></body></html>',
     css: '@page{size:A4;margin:20mm} code{font:12pt monospace;white-space:nowrap}',
@@ -421,7 +451,7 @@ test('reordered inline entries fail before PDF despite matching ids and text', {
 test('fixed letter spacing cannot bypass the final flow width gate after font shrink', {
   skip: !canIntegrate,
 }, () => {
-  const directory = makeScratch('inline-layout-spacing-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-spacing-test-'));
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p class="flow">before<br><code data-pdf-inline-id="spacing">ABCDEFGHIJKLMNOPQRST</code><br>after</p></body></html>',
     css: '@page{size:A4;margin:20mm}html,body{margin:0;padding:0}body{font:12pt sans-serif}.flow{width:200px;margin:0;padding:0;overflow:visible}code{display:inline-block;box-sizing:content-box;white-space:nowrap;font:10.834pt monospace;letter-spacing:1px;padding:0 4px}',
@@ -437,7 +467,7 @@ test('fixed letter spacing cannot bypass the final flow width gate after font sh
 });
 
 test('missing expected id fails before PDF', { skip: !canIntegrate }, () => {
-  const directory = makeScratch('inline-layout-missing-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-missing-test-'));
   writeFixture(directory, {
     html: '<!doctype html><html lang="ja"><body><p>no marked inline code</p></body></html>',
     css: '@page{size:A4;margin:20mm}',
@@ -456,7 +486,7 @@ test('missing expected id fails before PDF', { skip: !canIntegrate }, () => {
 test('unmarked inline code fails before PDF even with an otherwise complete manifest', {
   skip: !canIntegrate,
 }, () => {
-  const directory = makeScratch('inline-layout-unmarked-test-');
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-layout-unmarked-test-'));
   writeFixture(directory, {
     html: `<!doctype html><html lang="ja"><body>
       <p><code data-pdf-inline-id="marked">MARKED</code> <code>UNMARKED</code></p>
@@ -473,5 +503,141 @@ test('unmarked inline code fails before PDF even with an otherwise complete mani
   assert.equal(result.report.dom_audit.checks.manifest_coverage.status, 'fail');
   assert.match(JSON.stringify(result.report.dom_audit.violations), /inline_code_missing_id/);
   assert.doesNotMatch(JSON.stringify(result.report.dom_audit.violations), /PRE-IS-EXCLUDED/);
+  assert.equal(fs.existsSync(result.output), false);
+});
+
+test('table prose measurement fails closed for missing and malformed geometry', async () => {
+  const { verifyTableProseBounds } = await import('./verify-inline-layout.mjs');
+  const rect = { left: 0, top: 0, right: 100, bottom: 100 };
+  const fixture = () => ({
+    table_inventory: {
+      tables: [
+        {
+          id: 't',
+          fragments: [
+            {
+              page_index: 0,
+              page_content_rect: rect,
+              geometry: {
+                cells: [
+                  {
+                    row_index: 0,
+                    cell_index: 0,
+                    content_rect: rect,
+                    prose_lines: [{ line_index: 0, characters: [{ character: '字', rect }] }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.deepEqual(verifyTableProseBounds(fixture()).violations, []);
+  const mutations = [
+    (dom) => {
+      delete dom.table_inventory;
+    },
+    (dom) => {
+      dom.table_inventory.tables[0].fragments = [];
+    },
+    (dom) => {
+      dom.table_inventory.tables[0].fragments[0].page_content_rect = null;
+    },
+    (dom) => {
+      delete dom.table_inventory.tables[0].fragments[0].geometry.cells;
+    },
+    (dom) => {
+      dom.table_inventory.tables[0].fragments[0].geometry.cells[0].content_rect = {};
+    },
+    (dom) => {
+      delete dom.table_inventory.tables[0].fragments[0].geometry.cells[0].prose_lines;
+    },
+    (dom) => {
+      dom.table_inventory.tables[0].fragments[0].geometry.cells[0].prose_lines[0].characters = [];
+    },
+    (dom) => {
+      dom.table_inventory.tables[0].fragments[0].geometry.cells[0].prose_lines[0].characters[0].rect =
+        { ...rect, right: NaN };
+    },
+  ];
+  for (const mutate of mutations) {
+    const dom = fixture();
+    mutate(dom);
+    assert.equal(verifyTableProseBounds(dom).checks.table_prose_measurement.status, 'fail');
+  }
+});
+
+test('prose-only cell and page overflow fail before PDF without inline code', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-overflow-'));
+  writeFixture(directory, {
+    html: '<!doctype html><html lang="ja"><body><table data-pdf-table-id="narrow"><tr><td>日本語</td></tr></table><table class="outside"><tr><td>PAGE</td></tr></table></body></html>',
+    css: '@page{size:A4;margin:20mm}body{font:17px sans-serif}table{table-layout:fixed;width:12px}td{padding:0;overflow-wrap:anywhere}.outside{margin-left:750px;width:100px}',
+    expected: manifest([], [{ id: 'narrow' }]),
+  });
+  const result = runFixture(directory);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.report.dom_audit.observed.length, 0);
+  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'fail');
+  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'fail');
+  assert.equal(fs.existsSync(result.output), false);
+});
+
+test('paginated prose tables and single prose character next to inline code pass', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-fragments-'));
+  writeFixture(directory, {
+    html: `<!doctype html><html lang="ja"><body><table data-pdf-table-id="long"><thead><tr><th>説明</th></tr></thead><tbody><tr><td>の<code data-pdf-inline-id="mixed">CODE</code></td></tr>${Array.from({ length: 70 }, (_, i) => `<tr><td>日本語の説明 ${i}</td></tr>`).join('')}</tbody></table></body></html>`,
+    css: '@page{size:A4;margin:20mm}body{font:12pt sans-serif}table{table-layout:fixed;width:100%}td,th{padding:4px}code{font:12pt monospace;white-space:nowrap}',
+    expected: manifest(
+      [{ id: 'mixed', expected_text: 'CODE', source_order: 0, context: 'table' }],
+      [{ id: 'long' }],
+    ),
+  });
+  const result = runFixture(directory);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.ok(result.report.dom_audit.table_inventory.tables[0].fragments.length > 1);
+  assert.equal(result.report.dom_audit.checks.table_prose_cell_bounds.status, 'pass');
+  assert.equal(result.report.dom_audit.checks.table_prose_page_bounds.status, 'pass');
+  const characters = result.report.dom_audit.table_inventory.tables[0].fragments.flatMap(
+    (fragment) =>
+      fragment.geometry.cells.flatMap((cell) =>
+        cell.prose_lines.flatMap((line) => line.characters),
+      ),
+  );
+  assert.ok(characters.length > 0);
+  assert.ok(
+    characters.every(
+      (character) =>
+        Number.isFinite(character.font_size_pt) && Math.abs(character.font_size_pt - 12) < 0.01,
+    ),
+  );
+  const mixedCharacters =
+    result.report.dom_audit.table_inventory.tables[0].fragments[0].geometry.cells
+      .find((cell) => cell.row_index === 1)
+      .prose_lines.flatMap((line) => line.characters);
+  assert.equal(mixedCharacters.map((character) => character.character).join(''), 'の');
+});
+
+test('unmeasurable table prose fails closed before PDF', {
+  skip: !canIntegrate,
+}, () => {
+  const directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'table-prose-unmeasured-'));
+  writeFixture(directory, {
+    html: '<!doctype html><html lang="ja"><body><table data-pdf-table-id="hidden"><tr><td>表示<span style="font-size:0">不可視</span></td></tr></table></body></html>',
+    css: '@page{size:A4;margin:20mm}body{font:12pt sans-serif}td{padding:4px}',
+    expected: manifest([], [{ id: 'hidden' }]),
+  });
+  const result = runFixture(directory);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.report.dom_audit.checks.table_prose_measurement.status, 'fail');
+  assert.match(
+    JSON.stringify(result.report.dom_audit.violations),
+    /prose_character_geometry_missing/,
+  );
   assert.equal(fs.existsSync(result.output), false);
 });

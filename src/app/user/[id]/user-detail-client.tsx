@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
 import { StatusBadge } from '@/component/task/status-badge';
@@ -174,10 +175,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/profile')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'プロフィールに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -257,14 +258,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                 {user.projects && user.projects.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {user.projects.map((member) => (
-                      <Badge
+                      <Link
                         key={member.id}
-                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
-                        style={{ backgroundColor: member.project.color }}
-                        onClick={() => router.push(`/project?projectId=${member.project.id}`)}
+                        href={`/project?projectId=${member.project.id}`}
+                        className={
+                          'inline-flex items-center gap-2 rounded-md border px-3 py-1 ' +
+                          'text-sm text-foreground hover:bg-muted'
+                        }
                       >
+                        <span
+                          aria-hidden="true"
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: member.project.color }}
+                        />
                         {member.project.name}
-                      </Badge>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -292,12 +300,15 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     </TableHeader>
                     <TableBody>
                       {user.assignedTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => router.push(`/task?taskId=${task.id}`)}
-                        >
-                          <TableCell className="font-medium">{task.title}</TableCell>
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/task?taskId=${task.id}`}
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              {task.title}
+                            </Link>
+                          </TableCell>
                           <TableCell>
                             <StatusBadge status={task.status} />
                           </TableCell>

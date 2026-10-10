@@ -29,6 +29,7 @@ function LoginForm() {
   // callbackUrl の検証：相対パスのみを許可
   const rawCallbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
   const callbackUrl = isValidRedirectUrl(rawCallbackUrl) ? rawCallbackUrl : '/dashboard';
+  const registrationCompleted = searchParams?.get('registered') === '1';
 
   const [error, setError] = useState<string | null>(null);
 
@@ -43,11 +44,8 @@ function LoginForm() {
   const loginMutation = api.auth.login.useMutation({
     onSuccess: (data) => {
       toast.success(`おかえりなさい、${data.user.name}さん`);
-      // tRPC レスポンスで Set-Cookie された session を確実にブラウザへ反映してから
-      // middleware 配下のページへ遷移する。router.push/refresh だと
-      // cookie 反映と RSC 再フェッチのタイミング次第で middleware が未認証と判断し
-      // /login に戻されるレースが起きる (Issue #98、2 回目以降は cookie が乗って正常遷移)
-      // replace を使うことで /login を履歴から除去し、戻るボタンでログイン画面に戻らないようにする
+      // 原因未特定のIssue #98に対し、既存の画面切り替えの状態に依存せず全体を読み直すため。
+      // 現在の履歴項目も置き換え、ログイン画面を戻る先に残さないため。
       window.location.replace(callbackUrl);
     },
     onError: (error) => {
@@ -76,6 +74,12 @@ function LoginForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {registrationCompleted && (
+              <Alert role="status">
+                <AlertTitle>登録が完了しました</AlertTitle>
+                <AlertDescription>ログインしてください。</AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -132,7 +136,7 @@ function LoginForm() {
                 href="/register"
                 className="text-primary underline underline-offset-4 hover:text-primary/80"
               >
-                こちら
+                新規登録
               </Link>
             </div>
           </form>

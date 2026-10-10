@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import re
+from copy import deepcopy
 from html.parser import HTMLParser
 
 
@@ -16,6 +17,7 @@ TABLE_ID_ATTRIBUTE = "data-pdf-table-id"
 RESERVED_ATTRIBUTES = {INLINE_ID_ATTRIBUTE, TABLE_ID_ATTRIBUTE}
 INLINE_ID_RE = re.compile(r"pdf-inline-[0-9a-f]{12}-[0-9]{5}")
 TABLE_ID_RE = re.compile(r"pdf-table-[0-9a-f]{12}-[0-9]{5}")
+BREAKABLE_TABLE_PATH_COLUMNS = {("day07-ec8746", 13, 0)}
 
 HTML_VOID_ELEMENTS = {
     "area",
@@ -48,6 +50,7 @@ class InlineCodeAnnotator(HTMLParser):
     def __init__(self, markup: str, document_id: str):
         super().__init__(convert_charrefs=False)
         self.markup = markup
+        self.document_id = document_id
         self.document_key = hashlib.sha256(document_id.encode("utf-8")).hexdigest()[:12]
         self.line_starts = [0]
         for index, character in enumerate(markup):
@@ -57,6 +60,8 @@ class InlineCodeAnnotator(HTMLParser):
         self.pre_depth = 0
         self.cell_depth = 0
         self.active_code: dict | None = None
+        self.table_stack: list[dict] = []
+        self.active_cell: dict | None = None
         self.entries: list[dict] = []
         self.tables: list[dict] = []
         self.edits: list[tuple[int, str]] = []
@@ -83,26 +88,36 @@ class InlineCodeAnnotator(HTMLParser):
         if self.active_code is not None:
             raise InlineLayoutMarkupError("code要素を入れ子にできません")
         match = TAG_NAME_RE.match(raw_tag)
-        if not match or match.group(1).lower() not in {"code", "span"}:
+        if not match or match.group(1).lower() != "code":
             raise InlineLayoutMarkupError("code開始タグの位置を特定できません")
         source_order = len(self.entries)
         stable_id = f"pdf-inline-{self.document_key}-{source_order:05d}"
         insertion = self._absolute_position() + match.end()
         self.edits.append((insertion, f' {INLINE_ID_ATTRIBUTE}="{stable_id}"'))
+        table_cell = deepcopy(self.active_cell)
+        if table_cell is not None:
+            table_cell["code_index"] = table_cell.pop("_next_code_index")
+            self.active_cell["_next_code_index"] += 1
         self.active_code = {
             "id": stable_id,
             "expected_text_parts": [],
-            "tag": match.group(1).lower(),
-            "depth": len(self.stack),
-            "table_header": "thead" in self.stack and "th" in self.stack,
-            "table_id": self.tables[-1]["id"] if self.cell_depth and self.tables else None,
             "source_order": source_order,
             "context": "table" if self.cell_depth else "flow",
+            "table_cell": table_cell,
+            "break_path": bool(
+                table_cell
+                and (
+                    self.document_id,
+                    self.table_stack[-1]["source_order"],
+                    table_cell["column_index"],
+                )
+                in BREAKABLE_TABLE_PATH_COLUMNS
+            ),
         }
 
     def _annotate_table(
         self, raw_tag: str, attributes: dict[str, str | None]
-    ) -> None:
+    ) -> dict:
         match = TAG_NAME_RE.match(raw_tag)
         if not match or match.group(1).lower() != "table":
             raise InlineLayoutMarkupError("table開始タグの位置を特定できません")
@@ -110,13 +125,90 @@ class InlineCodeAnnotator(HTMLParser):
         stable_id = f"pdf-table-{self.document_key}-{source_order:05d}"
         insertion = self._absolute_position() + match.end()
         self.edits.append((insertion, f' {TABLE_ID_ATTRIBUTE}="{stable_id}"'))
-        self.tables.append(
-            {
-                "id": stable_id,
-                "source_order": source_order,
-                "source_id": attributes.get("id"),
-            }
-        )
+        table = {
+            "id": stable_id,
+            "source_order": source_order,
+            "source_id": attributes.get("id"),
+        }
+        self.tables.append(table)
+        return {
+            "id": stable_id,
+            "source_order": source_order,
+            "section": None,
+            "section_rows": {"thead": 0, "tbody": 0, "tfoot": 0, "table": 0},
+            "row": None,
+            "carry": {},
+        }
+
+    @staticmethod
+    def _span(attributes: dict[str, str | None], name: str) -> int:
+        value = attributes.get(name)
+        if value is None:
+            return 1
+        if not value.isascii() or not value.isdigit() or int(value) <= 0:
+            raise InlineLayoutMarkupError(f"{name}は正の整数が必要です")
+        return int(value)
+
+    def _start_row(self) -> None:
+        if not self.table_stack:
+            return
+        table = self.table_stack[-1]
+        if table["row"] is not None:
+            raise InlineLayoutMarkupError("tr要素を入れ子にできません")
+        section = table["section"] or "table"
+        row_index = table["section_rows"][section]
+        table["section_rows"][section] += 1
+        table["row"] = {
+            "section": section,
+            "row_index": row_index,
+            "cell_index": 0,
+            "occupied": set(table["carry"]),
+            "new_spans": {},
+        }
+
+    def _start_cell(self, tag: str, attributes: dict[str, str | None]) -> None:
+        if not self.table_stack or self.table_stack[-1]["row"] is None:
+            raise InlineLayoutMarkupError(f"{tag}要素は表のtr内に置く必要があります")
+        row = self.table_stack[-1]["row"]
+        column_span = self._span(attributes, "colspan")
+        row_span = self._span(attributes, "rowspan")
+        column_index = 0
+        while any(
+            candidate in row["occupied"]
+            for candidate in range(column_index, column_index + column_span)
+        ):
+            column_index += 1
+        covered = range(column_index, column_index + column_span)
+        row["occupied"].update(covered)
+        if row_span > 1:
+            for candidate in covered:
+                row["new_spans"][candidate] = row_span - 1
+        self.active_cell = {
+            "table_id": self.table_stack[-1]["id"],
+            "section": row["section"],
+            "row_index": row["row_index"],
+            "cell_index": row["cell_index"],
+            "column_index": column_index,
+            "row_span": row_span,
+            "column_span": column_span,
+            "tag": tag.upper(),
+            "_next_code_index": 0,
+        }
+        row["cell_index"] += 1
+
+    def _finish_row(self) -> None:
+        if not self.table_stack or self.table_stack[-1]["row"] is None:
+            return
+        table = self.table_stack[-1]
+        row = table["row"]
+        carried = {
+            column: remaining - 1
+            for column, remaining in table["carry"].items()
+            if remaining > 1
+        }
+        carried.update(row["new_spans"])
+        table["carry"] = carried
+        table["row"] = None
 
     def _finish_code(self) -> None:
         if self.active_code is None:
@@ -129,7 +221,17 @@ class InlineCodeAnnotator(HTMLParser):
                 "expected_text": "".join(entry["expected_text_parts"]),
                 "source_order": entry["source_order"],
                 "context": entry["context"],
-                **({"plain_latin": True, "table_header": entry["table_header"], "table_id": entry["table_id"]} if entry["tag"] == "span" else {}),
+                **({"allow_line_wrap": True} if entry["break_path"] else {}),
+                **(
+                    {
+                        "pagination_role": "repeating_table_header",
+                        "table_cell": entry["table_cell"],
+                    }
+                    if entry["table_cell"]
+                    and entry["table_cell"]["section"] == "thead"
+                    and entry["table_cell"]["tag"] == "TH"
+                    else {}
+                ),
             }
         )
 
@@ -139,10 +241,21 @@ class InlineCodeAnnotator(HTMLParser):
         raw_tag = self.get_starttag_text()
         if raw_tag is None:
             raise InlineLayoutMarkupError(f"開始タグを取得できません: {tag}")
-        if (tag == "code" or (tag == "span" and "pdf-table-latin" in (attributes.get("class") or "").split())) and self.pre_depth == 0:
-            self._start_code(raw_tag)
         if tag == "table":
-            self._annotate_table(raw_tag, attributes)
+            if self.table_stack:
+                raise InlineLayoutMarkupError("table要素を入れ子にできません")
+            self.table_stack.append(self._annotate_table(raw_tag, attributes))
+        elif tag in {"thead", "tbody", "tfoot"} and self.table_stack:
+            if self.table_stack[-1]["section"] is not None:
+                raise InlineLayoutMarkupError("表sectionを入れ子にできません")
+            self.table_stack[-1]["section"] = tag
+            self.table_stack[-1]["carry"] = {}
+        elif tag == "tr":
+            self._start_row()
+        elif tag in {"td", "th"}:
+            self._start_cell(tag, attributes)
+        if tag == "code" and self.pre_depth == 0:
+            self._start_code(raw_tag)
         if tag not in HTML_VOID_ELEMENTS:
             self.stack.append(tag)
             if tag == "pre":
@@ -171,8 +284,17 @@ class InlineCodeAnnotator(HTMLParser):
             raise InlineLayoutMarkupError(
                 f"終了タグの対応が崩れています: </{tag}>（期待: </{expected}>）"
             )
-        if self.active_code is not None and tag == self.active_code["tag"] and len(self.stack) == self.active_code["depth"] + 1:
+        if tag == "code" and self.pre_depth == 0:
             self._finish_code()
+        if tag in {"td", "th"}:
+            self.active_cell = None
+        elif tag == "tr":
+            self._finish_row()
+        elif tag in {"thead", "tbody", "tfoot"} and self.table_stack:
+            self.table_stack[-1]["section"] = None
+            self.table_stack[-1]["carry"] = {}
+        elif tag == "table" and self.table_stack:
+            self.table_stack.pop()
         self.stack.pop()
         if tag == "pre":
             self.pre_depth -= 1
@@ -184,6 +306,12 @@ class InlineCodeAnnotator(HTMLParser):
             raise InlineLayoutMarkupError("閉じていない開始タグがあります")
         if self.active_code is not None:
             self.active_code["expected_text_parts"].append(data)
+            if self.active_code["break_path"]:
+                start = self._absolute_position()
+                for index, character in enumerate(data):
+                    insertion = start + index + 1
+                    if character == "/" and not self.markup.startswith("<wbr>", insertion):
+                        self.edits.append((insertion, "<wbr>"))
 
     def handle_entityref(self, name):
         if self.active_code is not None:
@@ -202,6 +330,8 @@ class InlineCodeAnnotator(HTMLParser):
             raise InlineLayoutMarkupError(f"要素が閉じていません: <{self.stack[-1]}>")
         if self.pre_depth or self.cell_depth:
             raise InlineLayoutMarkupError("HTML要素の深さが不整合です")
+        if self.table_stack or self.active_cell is not None:
+            raise InlineLayoutMarkupError("表要素の深さが不整合です")
 
 
 class AnnotatedAttributeStripper(HTMLParser):
@@ -242,7 +372,7 @@ class AnnotatedAttributeStripper(HTMLParser):
         name, value = reserved[0]
         expected_name = None
         expected_pattern = None
-        if (tag == "code" or (tag == "span" and "pdf-table-latin" in (dict(attrs).get("class") or "").split())) and self.pre_depth == 0:
+        if tag == "code" and self.pre_depth == 0:
             expected_name = INLINE_ID_ATTRIBUTE
             expected_pattern = INLINE_ID_RE
         elif tag == "table":

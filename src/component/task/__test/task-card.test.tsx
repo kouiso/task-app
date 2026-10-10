@@ -70,6 +70,8 @@ describe('TaskCard', () => {
     onEdit: mockOnEdit,
     onDelete: mockOnDelete,
     onClick: mockOnClick,
+    canEdit: true,
+    canDelete: true,
   };
 
   beforeEach(() => {
@@ -228,8 +230,18 @@ describe('TaskCard', () => {
     render(<TaskCard {...defaultProps} canEdit={false} />, { wrapper: Wrapper });
 
     expect(screen.queryByLabelText('タスクを編集')).not.toBeInTheDocument();
-    // 削除はデフォルトtrueなので残る
+    expect(screen.queryByLabelText('Test Taskの時間を記録')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('time-log-dialog')).not.toBeInTheDocument();
+    // 削除権限は明示しているので残る
     expect(screen.getByLabelText('タスクを削除')).toBeInTheDocument();
+  });
+
+  it('canEditがtrueのとき時間記録の操作UIとダイアログを用意する', () => {
+    const Wrapper = createWrapper();
+    render(<TaskCard {...defaultProps} canEdit />, { wrapper: Wrapper });
+
+    expect(screen.getByLabelText('Test Taskの時間を記録')).toBeInTheDocument();
+    expect(screen.getByTestId('time-log-dialog')).toBeInTheDocument();
   });
 
   it('canDeleteがfalseのとき削除ボタンを表示しない', () => {
@@ -246,5 +258,15 @@ describe('TaskCard', () => {
 
     expect(screen.queryByLabelText('タスクを編集')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('タスクを削除')).not.toBeInTheDocument();
+  });
+
+  it('権限propsを省略したとき編集・削除ボタンを表示しない', () => {
+    const Wrapper = createWrapper();
+    const { canEdit: _canEdit, canDelete: _canDelete, ...propsWithoutPermissions } = defaultProps;
+    render(<TaskCard {...propsWithoutPermissions} />, { wrapper: Wrapper });
+
+    expect(screen.queryByLabelText('タスクを編集')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('タスクを削除')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Test Task$/ })).toBeInTheDocument();
   });
 });

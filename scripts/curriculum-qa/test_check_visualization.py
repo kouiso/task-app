@@ -158,10 +158,12 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
         (0, 3, 0),
     ),
     (
-        '1行に複数マーカーが並んでも1件として数える',
+        '旧形式【スクリーンショット】もコロン有無どちらも数える',
         'day01_setup.md',
         table_rows(4)
-        + ''.join(f'📸 ![一覧](./shots/list{i}.png) 📸\n' for i in range(3)),
+        + '【スクリーンショット: 一覧画面】\n'
+        + '【スクリーンショット】\n'
+        + '【スクリーンショット:詳細画面】\n',
         0,
         (4, 3, 0),
     ),
@@ -194,17 +196,11 @@ CASES: list[tuple[str, str, str, int, tuple[int, int, int]]] = [
         (4, 0, 0),
     ),
     (
-        '旧式の目印【スクリーンショット】が残っていると落ちる',
+        '1行に複数マーカーが並んでも1件として数える',
         'day01_setup.md',
-        BASE + '【スクリーンショット】\n',
-        1,
-        (4, 3, 0),
-    ),
-    (
-        '旧式の目印はコロンありの書き方でも落ちる',
-        'day01_setup.md',
-        BASE + '【スクリーンショット: 一覧画面】\n',
-        1,
+        table_rows(4)
+        + ''.join(f'📸 ![一覧](./shots/list{i}.png) 【スクリーンショット】\n' for i in range(3)),
+        0,
         (4, 3, 0),
     ),
     (
@@ -370,7 +366,7 @@ DUPLICATE_CASES: list[tuple[str, str, str, bool, int, tuple[int, int, int], int]
         0,
     ),
     (
-        '📸 だけの日は画像パスが無いので重複ゼロ',
+        '📸 や【スクリーンショット】だけの日は画像パスが無いので重複ゼロ',
         'day01_setup.md',
         BASE,
         True,
@@ -577,16 +573,6 @@ def check_screenshot_exemption() -> list[str]:
     code, _, _ = run_checker(target, f'{tables}\n\n```mermaid\nflowchart LR\n  A --> B\n```\n')
     if code == 0:
         fails.append('❌ 図が足りんのに免除だけで通している')
-    # 図の下限は日次教材（dayNN）にだけ課す。索引・付録など画面操作を持たない
-    # 本には課さない — 表だけの本文で通るのが仕様。dayNN とそうでない本を
-    # 混同すると、どちらかの側が黙って骨抜きになる。
-    for name in SCREENSHOT_EXEMPT:
-        code, _, _ = run_checker(name, f'{tables}\n')
-        if re.search(r'day\d+', name.lower()):
-            if code == 0:
-                fails.append(f'❌ {name}: 図が無いのに日次教材の免除で通している')
-        elif code != 0:
-            fails.append(f'❌ {name}: 日次教材でない本に図の下限を課している')
     # 登録の無い日は、これまでどおり写真3箇所を要求する。
     code, _, _ = run_checker('day99_未登録.md', f'{tables}\n\n{figures}\n\n![a](./screenshots/x.png)\n')
     if code == 0:

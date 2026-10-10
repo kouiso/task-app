@@ -1,4 +1,45 @@
 {
   "schema_version": 1,
-  "overrides": []
+  "overrides": [
+    {
+      "document_id": "day02-af6ad2",
+      "source_sha256": "7394d8c218cf3018a2c9fc153f7debf25c6e8950064cf8d2a2ac7c4c0fff046d",
+      "table_source_order": 0,
+      "table_id": "pdf-table-b61a54718a98-00000",
+      "table_sha256": "fe99c5d431e21be28bb575f2fea975b98ac66b909f383b44c9772b4a88f098bd",
+      "column_percentages": [20, 15, 37, 28],
+      "evidence_pdf_sha256": "a3c0cb89b2d22ce13f79b76c449ca3075fc626de979277b6f716a1eef4f088ab",
+      "review": "Historical Day02 p6-7 PDF evidence informed these column widths. Current source and first-table text have changed and are rebound here; table position and four-column shape remain unchanged. Current final PDF DOM, copy, and visual review are still required."
+    },
+    {
+      "document_id": "append-7f35ce",
+      "source_sha256": "68d4ab3b32efd042781440e8d7811d77aa387238b30882292284e770bae9c1cc",
+      "table_source_order": 0,
+      "table_id": "pdf-table-bee3c58bd51f-00000",
+      "table_sha256": "3185974fc83878b1f76a147db88ae75c87451d4890b64357edcdbccdd18f4519",
+      "column_percentages": [24, 38, 38],
+      "evidence_pdf_sha256": "e916aeaa1c59c37a722ee074adadc45c7c763686ceea034c30cc5ffecaeb7d41",
+      "review": "Snap7 visual triage found reader-friction line breaks on this table; trial widens prose/URL columns while preserving fixed layout, wrapping, and font sizes. Fresh candidate DOM, copy, and visual review required."
+    },
+    {
+      "document_id": "day01-bf910a",
+      "source_sha256": "dcc268aacb28351e2b279e51e082a068b996098a39cc92ca0ac1f6a1552304f7",
+      "table_source_order": 0,
+      "table_id": "pdf-table-a513ece0384a-00000",
+      "table_sha256": "385e304545ccdc328ed128361c4a2620bfcc1301d26e6429e759431fb3370282",
+      "column_percentages": [20, 18, 30, 32],
+      "evidence_pdf_sha256": "fe81d192ee4af7fe6b86d2380510ab5231619578f912570b57c4bc7eccbe563a",
+      "review": "Historical Snap7 visual triage informed these column widths. Current source is rebound here; the first-table bytes remain unchanged. Fixed layout, wrapping, and font sizes are preserved. Current final PDF DOM, copy, and visual review are still required."
+    },
+    {
+      "document_id": "day07-ec8746",
+      "source_sha256": "d0255667c618150965078a5199f07432e108a19eaeb93aff5b96a8efe66c9349",
+      "table_source_order": 13,
+      "table_id": "pdf-table-fd90476cd346-00013",
+      "table_sha256": "225a6d62b6e6c0370f4bc36846fac0c8edd92ab82b4841a61b0816b1ee53136f",
+      "column_percentages": [45, 40, 15],
+      "evidence_pdf_sha256": "520a555aa25eb21cf7a6727828987d4a821eea350f39e5bdf4ec0d11febbf305",
+      "review": "Snap7 Day07 p92-95 showed the role and Step columns collapsing into 2-3 character fragments. This exact completed-code table gives those columns readable widths while preserving fixed layout and wrapping; fresh PDF review is required."
+    }
+  ]
 }

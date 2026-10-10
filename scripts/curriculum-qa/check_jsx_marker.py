@@ -21,7 +21,6 @@ import re
 import sys
 from pathlib import Path
 
-from curriculum_blocks import _split_target, filepath_value, first_filepath_match
 from markdown_scan import code_blocks
 
 # JSX を書きうる言語表記。ここに無い表記（bash, json 等）は最初から対象外。
@@ -38,87 +37,63 @@ CODE_LINE = re.compile(
     r"|^\s*[A-Za-z_$][\w$.]*\s*,\s*$"
     # 式が続く合図。行末のカンマやセミコロンは、文字の側にも出る（`Welcome&nbsp;`）ので見ない。
     r"|\(\s*$"
-    # 関数呼び出し。`refetchRequiredData();` は onClick の中に続く JS の文で、
-    # `//` が正しいコメントになる。`(` が識別子に直結する形だけを見るので、
-    # `Welcome (back)` のような空白を挟んだ文字の行には当たらない。
-    r"|^\s*[A-Za-z_$][\w$.]*\("
     r"|^\s*(?:return|if|else|for|while|switch|case|default|const|let|var|function"
     r"|export|import|await|async|try|catch|finally|throw|new|delete|typeof)\b"
     r"|^\s*[)\]}]"
 )
+CALL_STATEMENT = re.compile(r"^\s*[A-Za-z_$][\w$.]*\([^;\n]*\);\s*$")
+CALLBACK_CLOSE = re.compile(r"^\s*}}\s*$")
+JSX_ATTRIBUTE = re.compile(r"^\s*[A-Za-z_$][\w$.-]*\s*=")
+MODULE_DIRECTIVE = re.compile(r'''^\s*(["'])use (?:client|server)\1;?\s*$''')
 # 自分で閉じるタグは開きっぱなしにならない。数えると外側の閉じタグと
 # 対応してしまい、開いていない閉じタグを見落とす。
 OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)(?![^>]*/>)")
 SELF_CLOSING = re.compile(r"<([A-Za-z][\w.]*)[^>]*/>")
 # 断片の短縮形 `</>` も閉じタグである。名前が無いので別に拾う。
 CLOSE_TAG = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
-# 教材で実際に分割されている JSX 三項演算子の形。文字列や別の波括弧を含む行は
-# 式の開始だと推測せず、誤検知を残す側へ倒す。
-TERNARY_OPEN = re.compile(
-    r"^\s*(?:"
-    r"\{(?![/*])"
-    r"|(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*<[A-Za-z][\w.]*>\{"
-    r")[^{}\"'`]+\?[^{}\"'`]*\(\s*$"
-)
-TERNARY_ELSE_OPEN = re.compile(r"^\s*\)\s*:\s*\(\s*$")
-JSX_COMMENT = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
-# 枝の中で括弧を数える前に消すもの。JSX コメントと文字列の中の括弧やタグは
-# 式の入れ子に関係しない。`'` は画面文字の「Don't」にも出るので消さない。
-# 文字列は1行に限る。閉じ忘れた `"` が後ろの行まで飲み込むと、括弧を数え損ねる。
-NOT_NESTING = re.compile(r"(?s:\{/\*.*?\*/\})|\"(?:\\.|[^\"\\\n])*\"|`(?:\\.|[^`\\\n])*`")
 
 
-def block_target(body: list[tuple[int, str]]) -> str | None:
-    """filepath の末尾注記を除いた、写経先の同一性を返す。"""
-    match = first_filepath_match("\n".join(line for _, line in body))
-    if match is None:
-        return None
-    return _split_target(filepath_value(match))[0]
-
-
-def opens_ternary_else(lang: str, body: list[tuple[int, str]]) -> bool:
-    """ブロック末尾が、JSX 内の三項演算子の else 式を開いた状態か。"""
-    if lang not in JSX_LANGS:
+def is_callback_tail(body: list[tuple[int, str]], start: int) -> bool:
+    """イベントハンドラ末尾の関数呼び出しだけを JS の文として認める。"""
+    if not CALL_STATEMENT.match(body[start][1]):
         return False
 
-    lines = [line for _, line in body if line.strip()]
-    if not lines or not TERNARY_ELSE_OPEN.match(lines[-1]):
+    index = start + 1
+    while index < len(body) and not body[index][1].strip():
+        index += 1
+    if index >= len(body) or not CALLBACK_CLOSE.match(body[index][1]):
         return False
 
-    # filepath と完成版の目印を除いた最初の実体行だけを式の開始として認める。
-    # 後続行まで検索すると、JS コメントや JSX の画面文字にある同じ記号列を
-    # JavaScript 式だと誤認してしまう。
-    first = 0
-    while first < len(lines) - 1 and (
-        SLASH.match(lines[first]) or JSX_COMMENT.match(lines[first])
-    ):
-        first += 1
-    if not TERNARY_OPEN.match(lines[first]):
+    index += 1
+    while index < len(body):
+        line = body[index][1].strip()
+        if not line:
+            index += 1
+            continue
+        if line == ">":
+            return True
+        if JSX_ATTRIBUTE.match(line):
+            if line.endswith(">"):
+                return True
+            index += 1
+            continue
+        return False
+    return False
+
+
+def is_module_start(body: list[tuple[int, str]], start: int) -> bool:
+    """import/export が続く client/server directive をモジュール先頭と判定する。"""
+    if not MODULE_DIRECTIVE.match(body[start][1]):
         return False
 
-    arm = NOT_NESTING.sub("", "\n".join(lines[first + 1 : -1]))
-
-    # 開始行の `(` から数えて括弧が負になれば、外側の三項演算子は枝の途中で
-    # 閉じている。`)}` の行を見るだけだと、枝の中の `{loading && (` を閉じる
-    # `)}` まで外側の終わりと取り違える。行末ごとに見るのは、`) : (` のように
-    # 1行の中で閉じて開き直す形を途中の負で弾かないためである。
-    depth = 0
-    for line in arm.splitlines():
-        depth += line.count("(") - line.count(")")
-        if depth < 0:
-            return False
-
-    # 要素を開いたままなら末尾の記号は表示文字の可能性があるため除外しない。
-    opened: list[str] = []
-    for tag in re.finditer(r"</?([A-Za-z][\w.]*)\b[^<>]*>|</?>", arm):
-        text = tag.group(0)
-        name = tag.group(1) or "<>"
-        if text.startswith("</"):
-            if not opened or opened.pop() != name:
-                return False
-        elif not text.endswith("/>"):
-            opened.append(name)
-    return not opened
+    index = start + 1
+    while index < len(body):
+        line = body[index][1].strip()
+        if not line or SLASH.match(body[index][1]):
+            index += 1
+            continue
+        return bool(re.match(r"^(?:import|export)\b", line))
+    return False
 
 
 def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
@@ -126,11 +101,8 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     scanned = 0
 
     for path in sorted(root.rglob("*.md")):
-        previous: tuple[str, list[tuple[int, str]], str | None] | None = None
         for lang, body in code_blocks(path.read_text(encoding="utf-8")):
-            target = block_target(body)
             if lang not in JSX_LANGS:
-                previous = (lang, body, target)
                 continue
 
             scanned += 1
@@ -154,7 +126,14 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
             # 自分がいることの証拠になる。行数の窓では、閉じタグが遠い断片を
             # 取り落とす（codex 指摘）ので、ブロック全体を走る。
             text_child = False
-            if k < len(body) and not CODE_LINE.search(body[k][1]):
+            callback_tail = k < len(body) and is_callback_tail(body, k)
+            module_start = k < len(body) and is_module_start(body, k)
+            if (
+                k < len(body)
+                and not CODE_LINE.search(body[k][1])
+                and not callback_tail
+                and not module_start
+            ):
                 opened: list[str] = []
                 for _, line in body[k:]:
                     selfclosed = set(SELF_CLOSING.findall(line))
@@ -178,17 +157,9 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
                 or (first.startswith("{") and first != "{")
                 or text_child
             )
-            continues_expression = (
-                previous is not None
-                and target is not None
-                and previous[2] == target
-                and opens_ternary_else(previous[0], previous[1])
-            )
-            if in_jsx and not continues_expression:
+            if in_jsx:
                 for lineno, line in lead:
                     hits.append((str(path.relative_to(root)), lineno, line.strip()))
-
-            previous = (lang, body, target)
 
     return hits, scanned
 

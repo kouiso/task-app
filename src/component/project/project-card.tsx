@@ -16,8 +16,8 @@ interface ProjectCardProps {
     total: number;
     done: number;
   };
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
   onClick?: (id: string) => void;
   isArchived?: boolean;
 }
@@ -44,12 +44,12 @@ export function ProjectCard({
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onEdit(id);
+    onEdit?.(id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(id);
+    onDelete?.(id);
   };
 
   return (
@@ -60,7 +60,20 @@ export function ProjectCard({
     >
       <CardHeader className="pb-2">
         <CardTitle className="truncate text-lg" title={name}>
-          {name}
+          {onClick ? (
+            <button
+              type="button"
+              className="w-full truncate rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleCardClick();
+              }}
+            >
+              {name}
+            </button>
+          ) : (
+            name
+          )}
         </CardTitle>
         {isArchived && (
           <Badge variant="secondary" className="w-fit">
@@ -95,28 +108,34 @@ export function ProjectCard({
             <Users className="h-4 w-4 text-muted-foreground" />
             <Badge variant="outline">{memberCount} メンバー</Badge>
           </div>
-          <div className="flex shrink-0 gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label={`${name}を編集`}
-              onClick={handleEdit}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label={`${name}を削除`}
-              onClick={handleDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex shrink-0 gap-1">
+              {onEdit && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`${name}を編集`}
+                  onClick={handleEdit}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`${name}を削除`}
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

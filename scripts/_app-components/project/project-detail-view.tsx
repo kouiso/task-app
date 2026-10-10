@@ -33,10 +33,12 @@ interface ProjectDetailViewProps {
   onBack: () => void;
   onAddMemberClick: () => void;
   onRemoveMember: (userId: string) => void;
-  onUpdateMemberRole: (userId: string, role: ProjectMemberRole) => void;
+  // Day11 時点の呼び出しは権限 props とロール変更を渡さないため optional にする。
+  // 未指定時は従来どおり表示し、最終的な権限判定はサーバー側で行う。
+  onUpdateMemberRole?: (userId: string, role: ProjectMemberRole) => void;
   onArchive: (projectId: string, isArchived: boolean) => void;
-  canManageMembers: boolean;
-  canArchive: boolean;
+  canManageMembers?: boolean;
+  canArchive?: boolean;
 }
 
 export function ProjectDetailView({
@@ -46,8 +48,8 @@ export function ProjectDetailView({
   onRemoveMember,
   onUpdateMemberRole,
   onArchive,
-  canManageMembers,
-  canArchive,
+  canManageMembers = true,
+  canArchive = true,
 }: ProjectDetailViewProps) {
   if (!projectDetail) {
     return (

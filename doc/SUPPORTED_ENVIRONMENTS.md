@@ -10,7 +10,7 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 | OS | macOS 13 以上 | Day01 setup E2E の対象 | `sw_vers` |
 | OS | Windows 11 + WSL2 | Day01 setup E2E の対象 | `wsl.exe --version` / `lsb_release -a` |
 | OS | Ubuntu 22.04 LTS | Day01 setup E2E の対象 | `lsb_release -a` |
-| Node.js | 22.x | `.mise.toml` の `node = "22.22.2"` / `package.json` の `engines.node = "22.x"` | `node -v` |
+| Node.js | 22.12.0 以上 23 未満 | `.mise.toml` と `.node-version` は `22.22.2` / `package.json` の `engines.node = ">=22.12.0 <23"` | `node -v` |
 | npm | 10.x | Node.js 22 同梱 npm を基準 | `npm -v` |
 | PostgreSQL | 16-alpine | `docker-compose.yml` の `postgres:16-alpine` | `docker compose ps` |
 | Docker runtime | Docker Desktop / OrbStack / Docker Engine | ローカル PostgreSQL 起動に使用 | `docker -v` / `docker compose version` |
@@ -18,9 +18,9 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 
 ## バージョン管理方針
 
-- mise を使う場合は、同梱の `.mise.toml` を `mise trust` で許可してから `mise install` を実行します。
-- mise を使わない場合は、Day 01 の OS 別手順で Node.js 22 を導入します。
-- npm は Node.js 22 系に同梱される 10.x 系をサポート対象にします。
+- mise を使う場合は、同梱の `.mise.toml` を `mise trust` で許可してから `mise install` を実行します。`.node-version` を読む CI も同じ `22.22.2` を選びます。
+- mise を使わない場合は、Day 01 の OS 別手順で Node.js 22.12.0 以上 23 未満を導入します。検証に使う推奨版は 22.22.2 です。
+- npm は Node.js 22.12.0 以上 23 未満に同梱される 10.x 系をサポート対象にします。
 - PostgreSQL はローカルに直接インストールせず、`docker-compose.yml` の `postgres:16-alpine` を使います。
 - macOS は Docker Desktop または OrbStack を使います。Windows は WSL2 上で Docker Desktop 連携を有効にしてください。
 - Ubuntu は Docker Engine と Docker Compose plugin を使います。
@@ -31,7 +31,7 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 
 | 確認 | コマンド | 成功条件 |
 |------|----------|----------|
-| Node.js 固定 | `mise trust && mise install && node -v` | `v22.x.x` が表示される |
+| Node.js 固定 | `mise trust && mise install && node -v` | `v22.12.0` 以上 `v23.0.0` 未満が表示される |
 | npm 確認 | `npm -v` | `10.x.x` が表示される |
 | 依存関係インストール | `npm install` | エラーなく完了する |
 | PostgreSQL 起動 | `docker compose up -d` | `db` と `test-db` が起動する |
@@ -60,7 +60,7 @@ Day01 の環境構築手順、`README.md`、CI/ローカル検証の前提条件
 
 ## サポート外
 
-- Node.js 20.x 以下
+- Node.js 22.12.0 未満、または 23 以上
 - npm 9.x 以下または 11.x 以上を前提にした検証
 - PostgreSQL 15 以下、または Docker 以外で直接起動した PostgreSQL
 - Windows の PowerShell / cmd.exe だけでの実行

@@ -1,5 +1,6 @@
 """配布先へのリンク変換と、PDF内の中間URL検査を固定する。"""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,23 @@ class BookLinksTest(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+        # main() は書込み直前に証跡を失効させるため、mockでも実distへ到達させない。
+        # 実ファイルの書込み先を隔離し、リンク解析の既存Node依存だけ元の配置から読む。
+        parser_modules = str(build_pdf_book.REPO_ROOT / 'node_modules')
+        if os.environ.get('NODE_PATH'):
+            parser_modules += os.pathsep + os.environ['NODE_PATH']
+        self.enterContext(patch.dict(os.environ, {'NODE_PATH': parser_modules}))
+        self.enterContext(patch.object(build_pdf_book, 'REPO_ROOT', self.root))
+        self.enterContext(patch.object(build_pdf_book, 'SRC_DIR', self.root))
+        for name, relative in (
+            ('RELEASE_RECEIPT', 'release-build-receipt.json'),
+            ('OUT_DIR', 'pdf'),
+            ('WORK_DIR', 'work'),
+        ):
+            self.enterContext(patch.object(build_pdf_book, name, self.root / relative))
+        overrides = self.root / 'table-layout.json'
+        overrides.write_text(json.dumps({'schema_version': 1, 'overrides': []}))
+        self.enterContext(patch.object(build_pdf_book, 'TABLE_LAYOUT_OVERRIDES', overrides))
         self.source = self.root / 'day01.md'
         self.source.write_text('# Day01')
         (self.root / 'day02.md').write_text('# Day02')
@@ -47,70 +65,21 @@ class BookLinksTest(unittest.TestCase):
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
 <pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
-        expected = ('''<p class="lead"><a data-pdf-footnote="1" '''
-                    + 'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2"'
-                    + ''' class="cta" title="A &gt; B"
+        expected = '''<p class="lead"><a data-pdf-footnote="1" class="cta" title="A &gt; B"
  href="https://example.com/?a=1&amp;b=2"><span>装飾</span></a></p>
-<p><a data-pdf-footnote="2" '''
-                    + 'data-pdf-footnote-display="http\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060net/\u200bx"'
-                    + " href='http://example.net/x'>外部</a></p>\n"
-                    + '''<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
+<p><a data-pdf-footnote="2" href='http://example.net/x'>外部</a></p>
+<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
-<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>''')
+<pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
         self.assertEqual(number_external_link_footnotes(source), expected)
-
-    def test_heading_links_get_display_url_instead_of_footnote(self):
-        source = ('<h2><a href="https://example.com/docs">公式</a></h2>\n'
-                  '<p><a href="https://example.net/x">外部</a></p>')
-        result = number_external_link_footnotes(source)
-        # 見出しの中のリンクは番号を消費せず、表示用URLだけを受け取る（issue #474 直し4）
-        self.assertIn('<a data-pdf-heading-url='
-                      '"https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200bdocs"'
-                      ' href="https://example.com/docs">公式</a>', result)
-        # 本文のリンクは 1 から振られる
-        self.assertIn('data-pdf-footnote="1" ', result)
-        self.assertNotIn('data-pdf-footnote="2"', result)
-
-    def test_bare_url_link_is_not_numbered(self):
-        source = ('<p><a href="https://example.com/docs">https://example.com/docs</a></p>\n'
-                  '<p><a href="https://example.net/x">外部</a></p>')
-        result = number_external_link_footnotes(source)
-        # 文字列がURLそのものなら印だけ付けて脚注にしない（issue #474 直し5）
-        self.assertIn('<a data-pdf-bare-url="1" href="https://example.com/docs">', result)
-        self.assertIn('data-pdf-footnote="1" ', result)
-        self.assertNotIn('data-pdf-footnote="2"', result)
-
-    def test_bare_url_ignores_trailing_slash_and_invisible_wrap_chars(self):
-        source = ('<p><a href="https://example.com/docs/">https://example.com/docs</a></p>\n'
-                  '<p><a href="https://example.com/a?b=1&amp;c=2">'
-                  'https://example.com/a?b=1\u200b&amp;\u200bc=2</a></p>')
-        result = number_external_link_footnotes(source)
-        self.assertEqual(result.count('data-pdf-bare-url="1"'), 2)
-        self.assertNotIn('data-pdf-footnote', result)
-
-    def test_new_reserved_attributes_are_rejected(self):
-        for attribute in ('data-pdf-bare-url', 'data-pdf-heading-url'):
-            with self.assertRaises(ValueError):
-                number_external_link_footnotes(
-                    f'<p><a {attribute}="1" href="https://example.com">x</a></p>')
 
     def test_print_footnote_numbers_restart_for_each_book_and_survive_void_elements(self):
         source = '<p><br><a href="https://example.com">外部</a><img src="x"></p>'
-        expected = ('<p><br><a data-pdf-footnote="1" '
-                    'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com"'
-                    ' href="https://example.com">外部</a>'
+        expected = ('<p><br><a data-pdf-footnote="1" href="https://example.com">外部</a>'
                     '<img src="x"></p>')
         self.assertEqual(number_external_link_footnotes(source), expected)
         self.assertEqual(number_external_link_footnotes(source), expected)
-
-    def test_print_footnote_display_strips_usp_and_keeps_other_query(self):
-        source = ('<p><a href="https://drive.google.com/file/d/ID/view?usp=drivesdk">共有</a>'
-                  '<a href="https://example.com/?a=1&usp=sharing&b=2#sec">両方</a></p>')
-        result = number_external_link_footnotes(source)
-        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bdrive\u2060.\u2060google\u2060.\u2060com/\u200bfile/\u200bd/\u200bID/\u200bview"', result)
-        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2\u2060#\u2060sec"', result)
-        self.assertIn('href="https://drive.google.com/file/d/ID/view?usp=drivesdk"', result)
 
     def test_print_footnote_reserved_attribute_is_rejected(self):
         source = '<p><a data-pdf-footnote="99" href="https://example.com">外部</a></p>'
@@ -160,12 +129,25 @@ class BookLinksTest(unittest.TestCase):
                     'mermaid_bin': '/fixture/mmdc',
                     'theme_path': '/fixture/theme',
                 }) as prepare_toolchain, \
+                patch.object(build_pdf_book, 'validate_referenced_images', return_value={}) as validate_images, \
                 patch.object(build_pdf_book, 'find_browser', return_value=None), \
                 patch.object(build_pdf_book, 'build_one', return_value=[]) as build:
             self.assertEqual(build_pdf_book.main(['build_pdf_book.py', str(self.source)]), 0)
             self.assertEqual(prepare_toolchain.call_args.args[0]['npm_config_legacy_peer_deps'], 'false')
+            self.assertEqual(validate_images.call_args.args[1], '/fixture/vfm')
             self.assertEqual(build.call_args.args[2]['npm_config_legacy_peer_deps'], 'false')
             self.assertEqual(build_pdf_book.os.environ['npm_config_legacy_peer_deps'], 'true')
+
+    def test_mocked_main_keeps_another_build_receipt_untouched(self):
+        bystander = self.root / 'another-build-receipt.json'
+        bystander.write_bytes(b'owned-by-another-build')
+        case = BookLinksTest('test_generator_overrides_application_legacy_peer_deps_only_in_child_env')
+        result = unittest.TestResult()
+        with patch.object(build_pdf_book, 'RELEASE_RECEIPT', bystander):
+            case.run(result)
+            self.assertTrue(result.wasSuccessful(), (result.errors, result.failures))
+            self.assertEqual(build_pdf_book.RELEASE_RECEIPT, bystander)
+        self.assertEqual(bystander.read_bytes(), b'owned-by-another-build')
 
     def test_duplicate_json_keys_fail(self):
         metadata = self.root / 'map.json'

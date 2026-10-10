@@ -1,9 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useRef } from 'react';
+import { type FormEvent, useEffect, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
@@ -46,11 +45,10 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 interface TaskDialogProps {
   open: boolean;
   onClose: () => void;
-  // 非同期で送信する場合は Promise を返す。Promise が reject した時は失敗として扱い、
-  // ダイアログを閉じずに下書きを残す
-  onSubmit: (data: TaskFormData) => unknown;
+  onSubmit: (data: TaskFormData, isCurrent?: () => boolean) => void;
   initialData?: TaskFormData | undefined;
   projects: Array<{ id: string; name: string }>;
+  isPending?: boolean;
 }
 
 export interface TaskFormData {
@@ -86,7 +84,14 @@ function buildTaskFormValues(
   };
 }
 
-export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: TaskDialogProps) {
+export function TaskDialog({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+  projects,
+  isPending = false,
+}: TaskDialogProps) {
   const {
     register,
     handleSubmit,
@@ -94,25 +99,13 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     watch,
     reset,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: buildTaskFormValues(initialData, projects),
   });
-
-  // 送信応答が返る頃には下書きが変わっている可能性があるため、送信時点の
-  // 状態を世代（generation）と編集回数（revision）で記録して成功時に照合する。
-  // 世代はダイアログの開閉と編集対象の切り替わりで進め、revision は下書きの
-  // 変更ごとに進める。世代がずれた成功は別セッションのものとして触れない。
   const generationRef = useRef(0);
-  const draftRevisionRef = useRef(0);
-
-  useEffect(() => {
-    const subscription = watch(() => {
-      draftRevisionRef.current += 1;
-    });
-    return () => subscription.unsubscribe();
-  }, [watch]);
+  const revisionRef = useRef(0);
   const selectedProjectId = watch('projectId');
   const projectsRef = useRef(projects);
   const { data: projectMembers } = api.search.getMembersByProject.useQuery(
@@ -126,23 +119,27 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   }, [projects]);
 
   useEffect(() => {
-    // 開閉や編集対象の切り替わりは別セッションなので世代を進める
-    generationRef.current += 1;
-    draftRevisionRef.current = 0;
+    const subscription = watch((_values, { name }) => {
+      if (name) revisionRef.current += 1;
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
+  useEffect(
+    () => () => {
+      generationRef.current += 1;
+    },
+    [],
+  );
+
+  useEffect(() => {
     if (!open) {
       return;
     }
 
+    generationRef.current += 1;
     reset(buildTaskFormValues(initialData, projectsRef.current));
   }, [initialData, open, reset]);
-
-  useEffect(() => {
-    return () => {
-      // アンマウント（StrictMode の疑似再マウントを含む）も別セッションとみなす。
-      // 遅れて届く成功応答が、畳まれたフォームや親の状態に触れないようにする
-      generationRef.current += 1;
-    };
-  }, []);
 
   useEffect(() => {
     const firstProjectId = projects[0]?.id;
@@ -154,11 +151,16 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
   }, [initialData, open, projects, selectedProjectId, setValue]);
 
   const handleClose = () => {
+    generationRef.current += 1;
     reset(buildTaskFormValues(undefined, projects));
     onClose();
   };
 
-  const handleFormSubmit = async (data: TaskFormValues) => {
+  const handleFormSubmit = (
+    data: TaskFormValues,
+    submittedGeneration: number,
+    submittedRevision: number,
+  ) => {
     const submitData: TaskFormData = {
       ...(data.id !== undefined && { id: data.id }),
       title: data.title,
@@ -173,33 +175,21 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
       ...(data.id !== undefined &&
         data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
     };
-    const submitGeneration = generationRef.current;
-    const submitRevision = draftRevisionRef.current;
-    // この送信が「現在のセッションで、送信時点の下書きのまま」かを
-    // 応答時点に照合する
-    const isCurrent = () =>
-      submitGeneration === generationRef.current && submitRevision === draftRevisionRef.current;
-    try {
-      await onSubmit(submitData);
-    } catch {
-      // 失敗時はダイアログを閉じず下書きを残す。エラー通知は呼び出し側の責務
-      return;
-    }
-    // 成功通知はダイアログを閉じる・閉じないに関係なく必ず出す
-    toast.success(submitData.id ? 'タスクを更新しました' : 'タスクを作成しました');
-    if (submitGeneration !== generationRef.current) {
-      return;
-    }
-    if (!isCurrent()) {
-      // 送信後に書き足された下書きは保存されていないので、閉じずに理由を伝える
-      toast(
-        submitData.id
-          ? '送信後の変更は保存されていません。閉じて開き直してから保存してください'
-          : '送信後の変更は保存されていません。このまま作成すると別のタスクになります',
-      );
-      return;
-    }
-    handleClose();
+    onSubmit(
+      submitData,
+      () =>
+        generationRef.current === submittedGeneration && revisionRef.current === submittedRevision,
+    );
+  };
+
+  const handleSubmitEvent = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isPending) return;
+    const submittedGeneration = generationRef.current;
+    const submittedRevision = revisionRef.current;
+    void handleSubmit((data) => handleFormSubmit(data, submittedGeneration, submittedRevision))(
+      event,
+    );
   };
 
   return (
@@ -213,7 +203,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
               : 'プロジェクトに新しいタスクを追加します。'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <form onSubmit={handleSubmitEvent}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="title">
@@ -392,8 +382,14 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? '送信中...' : initialData?.id ? '更新' : '作成'}
+            <Button type="submit" disabled={isPending}>
+              {isPending
+                ? initialData?.id
+                  ? '更新中...'
+                  : '作成中...'
+                : initialData?.id
+                  ? '更新'
+                  : '作成'}
             </Button>
           </DialogFooter>
         </form>

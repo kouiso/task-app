@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
+  createTestComment,
   createTestProject,
   createTestTask,
   createTestUser,
@@ -60,6 +61,26 @@ describe('taskRouter', () => {
         'このプロジェクトへのアクセス権限がありません',
       );
     });
+
+    it('一覧にはコメント本文を含めず、同順位でも安定した順序で返す', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const first = await createTestTask(project.id, actor.id, { title: 'First', position: 0 });
+      const second = await createTestTask(project.id, actor.id, { title: 'Second', position: 0 });
+      await prisma.task.updateMany({
+        where: { id: { in: [first.id, second.id] } },
+        data: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
+      });
+      await createTestComment(first.id, actor.id, { content: '一覧へ出してはいけない本文' });
+
+      const result = await caller.task.getAll({ projectId: project.id });
+      const tiedIds = result
+        .filter((item) => item.id === first.id || item.id === second.id)
+        .map((item) => item.id);
+
+      expect(tiedIds).toEqual([first.id, second.id].sort());
+      expect(result.every((item) => !('comments' in item))).toBe(true);
+      expect(JSON.stringify(result)).not.toContain('一覧へ出してはいけない本文');
+    });
   });
 
   describe('getById（詳細）', () => {
@@ -68,6 +89,21 @@ describe('taskRouter', () => {
       const task = await createTestTask(project.id, actor.id);
       const result = await caller.task.getById({ id: task.id });
       expect(result.id).toBe(task.id);
+    });
+
+    it('詳細にはコメント本文と投稿者を返す', async () => {
+      const { actor, project, caller } = await setup('VIEWER');
+      const task = await createTestTask(project.id, actor.id);
+      await createTestComment(task.id, actor.id, { content: '詳細で読む本文' });
+
+      const result = await caller.task.getById({ id: task.id });
+
+      expect(result.comments).toEqual([
+        expect.objectContaining({
+          content: '詳細で読む本文',
+          user: expect.objectContaining({ id: actor.id, email: actor.email }),
+        }),
+      ]);
     });
 
     it('非メンバーは閲覧を拒否される', async () => {
@@ -91,16 +127,23 @@ describe('taskRouter', () => {
 
   describe('create（作成）', () => {
     it('DONEで作成したタスクには完了日時が記録される', async () => {
-      const { project, caller } = await setup('MEMBER');
-      const before = Date.now();
-      const task = await caller.task.create({
-        title: '完了した作業',
-        projectId: project.id,
-        status: 'DONE',
-      });
-      expect(task.completedAt).toBeInstanceOf(Date);
-      expect(task.completedAt?.getTime()).toBeGreaterThanOrEqual(before);
-      expect(task.completedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+      const completedAt = new Date('2026-02-03T04:05:06.000Z');
+      try {
+        // OSの時刻補正に依存せず、保存した完了日時を照合するためです。
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(completedAt);
+        const { project, caller } = await setup('MEMBER');
+        const task = await caller.task.create({
+          title: '完了した作業',
+          projectId: project.id,
+          status: 'DONE',
+        });
+        expect(task.status).toBe('DONE');
+        expect(task.completedAt).toBeInstanceOf(Date);
+        expect(task.completedAt).toEqual(completedAt);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('MEMBER(canEdit)はタスクを作成できる', async () => {
@@ -314,31 +357,41 @@ describe('taskRouter', () => {
       'bulkComplete',
       'bulkUpdateStatus',
     ] as const)('%s: 完了済みの日時を保持し、再実行でも変更しない', async (operation) => {
-      const { actor, project, caller } = await setup('MEMBER');
-      const done = await createTestTask(project.id, actor.id, { status: 'DONE' });
-      const todo = await createTestTask(project.id, actor.id, { status: 'TODO' });
-      const historicalDate = new Date('2026-01-01T00:00:00.000Z');
-      await prisma.task.update({ where: { id: done.id }, data: { completedAt: historicalDate } });
-      const ids = [done.id, todo.id];
-      const complete = () =>
-        operation === 'bulkComplete'
-          ? caller.task.bulkComplete({ ids })
-          : caller.task.bulkUpdateStatus({ ids, status: 'DONE' });
+      const completedAt = new Date('2026-02-03T04:05:06.000Z');
+      try {
+        // OSの時刻補正に依存せず、再実行で完了日時が上書きされないことも照合するためです。
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(completedAt);
+        const { actor, project, caller } = await setup('MEMBER');
+        const done = await createTestTask(project.id, actor.id, { status: 'DONE' });
+        const todo = await createTestTask(project.id, actor.id, { status: 'TODO' });
+        const historicalDate = new Date('2026-01-01T00:00:00.000Z');
+        await prisma.task.update({ where: { id: done.id }, data: { completedAt: historicalDate } });
+        const ids = [done.id, todo.id];
+        const complete = () =>
+          operation === 'bulkComplete'
+            ? caller.task.bulkComplete({ ids })
+            : caller.task.bulkUpdateStatus({ ids, status: 'DONE' });
 
-      const before = Date.now();
-      expect(await complete()).toEqual({ count: 2 });
-      const firstDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
-      const firstTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
-      expect(firstDone.completedAt).toEqual(historicalDate);
-      expect(firstTodo.status).toBe('DONE');
-      expect(firstTodo.completedAt?.getTime()).toBeGreaterThanOrEqual(before);
-      expect(firstTodo.completedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+        expect(await complete()).toEqual({ count: 2 });
+        const firstDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
+        const firstTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
+        expect(firstDone.status).toBe('DONE');
+        expect(firstDone.completedAt).toEqual(historicalDate);
+        expect(firstTodo.status).toBe('DONE');
+        expect(firstTodo.completedAt).toEqual(completedAt);
 
-      expect(await complete()).toEqual({ count: 2 });
-      const secondDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
-      const secondTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
-      expect(secondDone.completedAt).toEqual(historicalDate);
-      expect(secondTodo.completedAt).toEqual(firstTodo.completedAt);
+        vi.setSystemTime(new Date('2026-02-03T04:05:07.000Z'));
+        expect(await complete()).toEqual({ count: 2 });
+        const secondDone = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
+        const secondTodo = await prisma.task.findUniqueOrThrow({ where: { id: todo.id } });
+        expect(secondDone.status).toBe('DONE');
+        expect(secondTodo.status).toBe('DONE');
+        expect(secondDone.completedAt).toEqual(historicalDate);
+        expect(secondTodo.completedAt).toEqual(firstTodo.completedAt);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('bulkComplete: 対象タスクを完了にする', async () => {

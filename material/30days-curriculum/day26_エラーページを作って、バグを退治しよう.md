@@ -20,14 +20,16 @@ Day 25 ではプロフィール表示ページと
 DevTools の Console・Network・Elements タブの
 使い分けも身につけます。
 
+【スクリーンショット】今日つくる2枚のうち、存在しないURLで出る404画面です。
+
 ![404 の画面。大きな「404」と「ページが見つかりません」が中央に並び、その下に「ダッシュボードに戻る」ボタンが出ている](./screenshots/day26/error-page.png)
 
 ## 始める前の前提
 
-- Day 25 までの主要画面が動いている
-- ブラウザの DevTools を開ける
-- 一時的にエラーコードを入れて確認後に元へ戻せる
-- `npm run lint` と `npm run fix` を実行して修正後に指摘が残っていないか確認できる
+- Day 25 までの主要画面が動いています
+- ブラウザの DevTools を開けます
+- 一時的にエラーコードを入れて確認後に元へ戻せます
+- `npm run lint` と `npm run fix` を実行して修正後に指摘が残っていないか確認できます
 
 ## なぜこれを作るのか
 
@@ -95,28 +97,28 @@ Elements にはいま画面に出ている HTML と当たっている CSS の現
 | Optional Chaining | オプショナル・チェイニング | nullやundefinedで安全にアクセスする | 「もし存在すれば」の条件付きアクセス |
 | useEffectの依存配列 | — | 再実行の条件を指定するリスト | 「これが変わった時だけ再実行」の設定 |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
+| ステップ | 作業内容 | 読む時間の目安 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
 | Step 1 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryが分かる |
 | Step 2 | error.tsxの動作を確認する | 5分 | src/app/not-found.tsx・dashboard/page.tsx | エラーページが表示される |
-| Step 2.5 | 通信エラーを状態ごとに表示する | 35分 | 3画面・3テスト・Vitest設定 | 初回500・再取得500・401・403を区別できる |
+| Step 2.5 | 通信エラーを状態ごとに表示する | 55分 | 5画面・6つのテストファイル・Vitest設定 | 初回500・再取得500・401・403を区別できる |
 | Step 3 | バグA: Optional Chainingなし | 7分 | 教材内演習 | Console赤エラーを修正 |
 | Step 4 | バグB: useEffect依存配列ミス | 7分 | 教材内演習 | 無限リクエストを修正 |
 | Step 5 | バグC: console.log残し | 5分 | dashboard/page.tsx | Biome lintで検出・修正 |
 | Step 6 | DevTools 3タブの使い分けまとめ | 5分 | なし | いつ何を見るか分かる |
 | Step 7 | Biome lintで全体チェック | 4分 | ターミナル | `npm run fix` のあと lint 指摘ゼロ |
 
-**合計時間**: 約72分です。
+**読む時間の合計（仮）**: 約92分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 1: error.tsxのコードを書く（4分）
+### Step 1: error.tsxのコードを書く（読む目安: 4分）
 
 **ゴール**: Error Boundaryの仕組みを理解します。
 
@@ -172,10 +174,10 @@ HTTPステータスは、応答を送り始める前後で変わります。送�
       items-center justify-center">
       <div className="text-center space-y-4">
         <h2 className="text-2xl font-bold">
-          エラーが発生しました
+          ページを表示できませんでした
         </h2>
         <p className="text-muted-foreground">
-          予期しないエラーが発生しました。もう一度お試しください。
+          もう一度お試しください。
         </p>
         <Button onClick={reset}>
           もう一度試す
@@ -187,8 +189,8 @@ HTTPステータスは、応答を送り始める前後で変わります。送�
 ```
 
 **確認ポイント**:
-- `reset` 関数が「もう一度試す」ボタンに紐づいている
-- `error.tsx` が `error` と `reset` の2つの props を受け取ることがわかった
+- `reset` 関数が「もう一度試す」ボタンに紐づいています
+- `error.tsx` が `error` と `reset` の2つの props を受け取ることが分かりました
 
 **コード解説**:
 
@@ -224,7 +226,7 @@ flowchart TB
 
 ---
 
-### Step 2: error.tsxの動作を確認する（5分）
+### Step 2: error.tsxの動作を確認する（読む目安: 5分）
 
 **ゴール**: 作成した Error Boundary が
 どう動くか体験します。
@@ -276,20 +278,22 @@ npm run dev
 
 別のポートでもう1つ起動しても、両方がバグを入れた同じコードを配信するため、正常な画面との比較には使えません。開発サーバーは1つだけ起動してください。
 
+同じ `task-app` の開発サーバーを2台起動しません。3000番を別のアプリが使っている場合は付録「トラブルシューティング」のポート競合の手順を確認します。
+
 ここからはエラーの種類を2つ続けて見ます。
 1つ目は「そのページが存在しない」で、2つ目は「ページはあるが描画中に落ちた」です。
 出る画面が違うのでどちらの症状なのかを目で覚えてください。
 
 1. `http://localhost:3000/this-page-does-not-exist`
    をブラウザで開く
-2. 「404」と「ページが見つかりません」を確認する
+2. 「404」と「ページが見つかりません」を確認します
 
 ![404 の画面。赤枠の中に「ダッシュボードに戻る」ボタンが出ている](./screenshots/day26/not-found-action.png)
 
 いま書いた `not-found.tsx` のとおりの画面です。
 ここまでが1つ目の「そのページが存在しない」側になります。
 
-3. ダッシュボードへ一時的にエラーを追加する
+3. ダッシュボードへ一時的にエラーを追加します
 
 ```typescript
 // filepath: src/app/dashboard/page.tsx（一時的に追加）
@@ -317,15 +321,18 @@ DevTools を開いて Console タブを見てください。
 今回の `throw` なら「テストエラー: これは練習です」がそこに並びます。
 
 ここで`npm run dev` のターミナルにも同じ文言が出ていることを確かめてください。
-このダッシュボードは Day 02 で `'use client'` を外したページなので`throw` が起きる場所はサーバー側です。
-それでも文言がブラウザの Console にも出るのは開発モードがサーバー側のエラーをそのまま送り届けているためです。
+このダッシュボードは `'use client'` を持つクライアントコンポーネントです。
+ページを直接開くと、最初に表示する HTML はサーバーでも準備されます。
+今回の `throw` はその描画でも起きるため、ターミナルにも文言が出ます。
+開発中はエラーの文言がブラウザにも渡るので、Console でも確認できます。
 今回の関数先頭の `throw` は応答を送り始める前に起きるため、`/dashboard` は500を返して `error.tsx` の画面へ切り替わります。待機表示を送信した後のエラーでは、200のままでもエラー画面へ切り替わります。
 つまり開発中は文言が Console に出ているかどうかでサーバー側かブラウザ側かを決められません。
 開発モードは原因を追いやすくするために、どちらで起きたエラーも文言をそのまま見せます。
 
-伏せられるのは本番ビルドのときだけです。
-本番ではサーバー側で投げたエラーの文言が消え、`error.digest`（エラー1件ごとに振られる短い符号）だけがブラウザへ渡ります。
-本当の文言はサーバーのログに残るので公開後の調査ではそちらを読みます。
+本番ビルドでは、サーバーコンポーネントから渡るエラーの文言は一般的なメッセージに置き換わります。
+`error.digest`（エラー1件ごとに振られる短い符号）でサーバーのログと照合できます。
+クライアントコンポーネントから渡るエラーには元の文言が残るので、本番なら必ず伏せられるわけではありません。
+サーバーコンポーネントで起きたエラーの本当の文言はサーバーのログに残るので、公開後の調査ではそちらを読みます。
 文言を伏せるのはテーブル名やファイルのパスがそのままユーザーの画面へ漏れるのを防ぐためです。
 故障ではなく、意図してそう作られています。
 
@@ -333,24 +340,24 @@ DevTools を開いて Console タブを見てください。
 > 先に表示されます。右上の × ボタンで閉じると
 > 作成したフォールバック UI を確認できます。
 
-4. `src/app/dashboard/page.tsx` に足した `throw new Error(...)` の行を削除する
-5. ブラウザを読み込み直し、ダッシュボードが元どおり表示されることを確認する
+4. `src/app/dashboard/page.tsx` に足した `throw new Error(...)` の行を削除します
+5. ブラウザを読み込み直し、ダッシュボードが元どおり表示されることを確認します
 
 この削除を飛ばすとダッシュボードはこの先ずっとエラー画面のままになります。
 
 **確認ポイント**:
-1. 存在しないページで404画面が表示された
-2. 意図的なエラーで作成済みの画面が表示された
-3. 「もう一度試す」ボタンが機能した
-4. **追加した `throw` 行を必ず削除した**
+1. 存在しないページで404画面が表示されました
+2. 意図的なエラーで作成済みの画面が表示されました
+3. 「もう一度試す」ボタンが機能しました
+4. **追加した `throw` 行を必ず削除しました**
 
 このとき出るのは冒頭に載せた404の画面ではありません。
-`error.tsx` に書いた「エラーが発生しました」という見出しと、
-「予期しないエラーが発生しました。もう一度お試しください。」という説明、
+`error.tsx` に書いた「ページを表示できませんでした」という見出しと、
+「もう一度お試しください。」という説明、
 そして「もう一度試す」ボタンの3つが並びます。
 数字の 404 が出ていたらそれは存在しないURLを開いている合図です。
 
-![エラーの画面。「エラーが発生しました」の見出しと説明文と「もう一度試す」ボタンが中央に並んでいる](./screenshots/day26/error-fallback.png)
+![エラーの画面。「ページを表示できませんでした」の見出しと説明文と「もう一度試す」ボタンが中央に並んでいる](./screenshots/day26/error-fallback.png)
 
 いま見えたのが `error.tsx` の画面です。
 
@@ -360,11 +367,11 @@ DevTools を開いて Console タブを見てください。
 
 ---
 
-### Step 2.5: 通信エラーを画面の状態として扱う（35分）
+### Step 2.5: 通信エラーを画面の状態として扱う（読む目安: 55分）
 
-**ゴール**: ダッシュボード、マイタスク、レポートで、取得失敗の種類と取得済みデータの有無に合わせて表示を変えます。
+**ゴール**: 共通レイアウト、プロフィール、ダッシュボード、マイタスク、レポートで通信エラーを状態ごとに分けます。5画面をテストし、取得失敗を未ログインと取り違えないことを確かめます。
 
-この節のコードは説明用の抜粋です。ファイルへ追記せず変更の理由を読みます。3ページの置き換えは2.5-2の冒頭で案内します。
+2.5-1〜2.5-3では変更の理由と要点を読みます。コードは説明用の抜粋なので、この時点ではファイルに追記しません。共通レイアウトとプロフィールは2.5-3のあとで更新します。残る3ページの置き換えは、2.5-4の直前で案内します。
 
 `error.tsx` は描画中の例外を受け止めます。一方、`useQuery` が返す 500 は問い合わせの結果なので、ページ自身が `isError` を見て表示を決める必要があります。ここを分けないと、取得に失敗したのに「0件」と表示してしまいます。
 
@@ -377,11 +384,11 @@ DevTools を開いて Console タブを見てください。
 | 初回取得が500 | まだ無い | 全面エラー | 再読み込み |
 | 再取得が500 | 前回値がある | 前回値と警告 | 再試行 |
 | 401 | あっても隠す | セッション切れ | ログイン画面へ |
-| 403 | あっても隠す | 権限不足 | プロジェクト一覧へ |
+| 403 | あっても隠す | 権限不足 | 画面に応じて一覧へ戻るか、管理者へ確認する |
 
-401 と 403 で前回値を隠すのは、いま表示する権利が確認できないデータを画面に残さないためです。500 は権限が変わった証拠ではないので、取得済みの値があれば作業を続けられるように残します。
+401 と 403 で前回値を隠すのは、いま表示する権利が確認できないデータを画面に残さないためです。403の次の操作は画面ごとに決めます。ダッシュボードやレポートではプロジェクト一覧へ戻し、共通レイアウトとプロフィールでは管理者への確認を案内します。500 は権限が変わった証拠ではないので、取得済みの値があれば作業を続けられるように残します。
 
-`src/lib/query-error.ts` は Day 11 で作りました。本書の後半「通信エラー対応後の完成コード」に載せたコメント付きの完成形で丸ごと置き換えます。処理は Day 11 と同じです。分類の理由をコメントで足しています。開いて、HTTP ステータスの取り出し方と再試行の条件を確認します。
+`src/lib/query-error.ts` は scaffold に入っています。開いて、HTTP ステータスの取り出し方と再試行の条件を確認します。
 
 ```typescript
 // filepath: src/lib/query-error.ts
@@ -432,30 +439,45 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 
 #### 2.5-2. 画面で使う問い合わせをすべて監視する
 
-この節の3画面は本書の後半「通信エラー対応後の完成コード」に載せた完全なファイルで丸ごと置き換えます。断片を継ぎ足すのではありません。先に `src/app/dashboard/page.tsx`、`src/app/my-task/page.tsx`、`src/app/report/page.tsx` の3ファイルをそこから写して保存してください。この先は3ファイルを置き換えた状態で読み進めます。この節に載せる断片は置き換えたファイルの中で判定がどう組まれているかを読むためのものです。
+ダッシュボードはプロジェクト一覧と集計の2件を同時に取得します。片方だけを見ると、もう片方の 401 や 500 を成功として扱ってしまいます。次の完成コードでは両方から `isError`、`error`、`refetch` を受け取ります。
 
-置き換える前のダッシュボードは Day 02 で書いた固定メッセージの画面です。置き換えた後はプロジェクト一覧と集計の2件を同時に取得します。片方だけを見ると、もう片方の 401 や 500 を成功として扱ってしまいます。完成コードでは両方から `isError`、`error`、`refetch` を受け取ります。
-
-マイタスクはログインユーザー、プロジェクト、タスクの3件です。タスク取得だけへエラー処理を付けても、プロジェクト取得の初回 500 で空の絞り込み欄が表示されます。画面を作るために使う問い合わせは、3件とも判定へ含めます。
+マイタスクでは Day 17で、ログインユーザー、プロジェクト、タスクの3件を監視しました。ページ送りも残します。1回の取得は100件で、101件目からは「次へ」で読み込みます。100件取得できた場合は、続きがあるかを次の問い合わせで確かめます。総件数を別に取得していないため、100件ちょうどなら次のページは空になり、「前へ」で戻ります。ステータスやプロジェクトを変えたときは1ページ目へ戻り、開いていた編集ダイアログと削除確認ダイアログを閉じます。前のページの送信結果で、移動後に開いた編集ダイアログを閉じないためです。今日はその判定を残しているか照合します。タスク取得だけへエラー処理を付けても、プロジェクト取得の初回 500 で空の絞り込み欄が表示されます。画面を作るために使う問い合わせは、3件とも判定へ含めます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
 const queryErrors = [
-  isCurrentUserError ? currentUserQueryError : null,
-  isTasksError ? tasksQueryError : null,
-  isProjectsError ? projectsQueryError : null,
-];
-const hasFetchError =
-  isCurrentUserError || isTasksError || isProjectsError;
-const hasData =
-  (!isCurrentUserError || currentUser != null) &&
-  (!isTasksError || tasks != null) &&
-  (!isProjectsError || projects != null);
-const authFailed = queryErrors.some(isAuthError);
-const forbidden = queryErrors.some(isForbiddenError);
+    isCurrentUserError ? currentUserQueryError : null,
+    isTasksError ? tasksQueryError : null,
+    isProjectsError ? projectsQueryError : null,
+  ];
+  const hasFetchError = isCurrentUserError || isTasksError || isProjectsError;
+  // React Query は再取得に失敗しても前回のデータを保持する。
+  // 失敗したクエリ自身に前回値が残っている時だけバナーに留め、
+  // 一度も取れていないクエリがある場合は全面エラーにする。
+  const hasData =
+    (!isCurrentUserError || currentUser != null) &&
+    (!isTasksError || tasks != null) &&
+    (!isProjectsError || projects != null);
 ```
 
 `hasData` は「どれか1件にデータがあるか」ではありません。失敗した問い合わせのすべてに前回値があるかを調べます。たとえばタスクだけ取得済みでも、プロジェクトの初回取得が失敗したなら全面エラーにします。
+
+Day 17で作ったログイン切れの記録も残します。今回の取得結果が401でなくなっただけでは、問い合わせを再開しません。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (queryAuthFailed) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+    }
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
+  const forbidden = queryErrors.some(isForbiddenError);
+```
+
+`queryAuthFailed` は今回の取得エラーです。`authExpired` は、すでにログイン切れが出たという記録です。`useEffect` 内では `.current` を先に変え、送信処理が直ちにその記録を読めるようにします。そのあと state を更新し、3件の問い合わせの `enabled` を `false` にします。ログイン画面へ移動するまで、以前のデータは表示しません。
 
 再読み込みボタンでは、その画面で動いている問い合わせをすべて呼び直します。1件だけ再取得すると、別の問い合わせに残ったエラーのため全面エラーから戻れません。
 
@@ -476,30 +498,341 @@ onClick={() => {
 }}
 ```
 
-#### 2.5-3. 更新失敗では入力を残す
+#### 2.5-3. Day 17の更新失敗時の処理を確認する
 
-タスク更新に失敗したときダイアログを閉じると、利用者の入力した文が消えます。閉じる処理は `onSuccess` にだけ置き、`onError` では入力中のダイアログを残します。
+タスク更新に失敗したときダイアログを閉じると、利用者の入力した文が消えます。`onError` では入力中のダイアログを残します。成功時にも、Day 17で記録した対象ID・入力の世代・送信後に入力が変わっていないかを確かめ、送信した入力が現在のものと一致するときだけ閉じます。古い送信の成功で、開き直したダイアログを閉じないためです。
 
 応答が届かなかった場合は、サーバーで更新できたのかも判断できません。このとき「失敗しました」と断定して同じ操作を勧めると、削除や更新を二重に送るおそれがあります。「結果を確認できない」と伝え、一覧を取り直します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-onError: (error) => {
-  if (isUnknownResult(error)) {
-    toast.error(
-      '応答を確認できませんでした。' +
-        '一覧を更新して結果を確認してください。',
-    );
-    void utils.task.getAll.invalidate();
-    return;
-  }
-  toast.error(
-    error.message || 'タスクの更新に失敗しました',
-  );
-},
+const handleWriteError = async (
+    error: unknown,
+    operation: TaskWriteOperation,
+    targetId: string,
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      markAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    await refreshAfterWrite(targetId, true);
+  };
 ```
 
-2.5-2で保存した3ページを使ってテストします。完成コードの続きにある `src/lib/query-error.ts` はZIPには入っていません。Day 11 で自分で作成したファイルを開いて、掲載コードと手元の関数を照合したら「2.5-4. テストの準備をする」へ進みます。3ページの置き換えを終えていない場合は2.5-2へ戻って保存してください。取得失敗の表示を追加する前にテストを実行すると失敗します。
+`classifyTaskWriteError` は Day 15で使ったエラーの分類です。401ならログイン切れを記録して戻ります。ほかの失敗は通知し、更新した対象の詳細・一覧・権限を取り直します。表示の再取得に失敗しても、書き込みが失敗したとは断定しません。再取得が必要だと分かる通知を別に出します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+// updateMutation 内の失敗時の処理（説明用抜粋）
+onError: (error, variables) =>
+  handleWriteError(error, 'update', variables.id),
+```
+
+`variables.id` は送信した更新の対象です。いま編集画面が別のタスクを開いていても、送信した対象を確認します。この抜粋だけを追記せず、後半の完成コードでファイル全体を置き換えます。
+
+#### 2.5-3A. 共通レイアウトのセッション取得を直す
+
+Day 08では、取得結果が無いときにログイン画面へ移す処理を書きました。しかし、ネットワーク断や500でも`data`は`undefined`になります。成功して「セッションが無い」と分かった場合と、取得できなかった場合を`isError`で分けます。
+
+まず、`src/component/layout/app-layout.tsx`のimportへ3つの判定関数を追加します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  isAuthError,
+  isForbiddenError,
+  shouldRetryQuery,
+} from '@/lib/query-error';
+```
+
+この3関数を共通ファイルから読み込むと、各画面でHTTPステータスの読み方や再試行回数がずれません。401・403とそれ以外を、同じ基準で分けられます。
+
+`src/component/layout/app-layout.tsx`で、既存の`getSession.useQuery()`とエラー判定を次の形へ置き換えます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+const {
+  data: session,
+  isLoading,
+  isError,
+  isFetching,
+  error,
+  refetch,
+} = api.auth.getSession.useQuery(undefined, {
+  retry: shouldRetryQuery,
+});
+const authFailed = isError && isAuthError(error);
+const forbidden = isError && isForbiddenError(error);
+const sessionRefreshFailed =
+  isError && !authFailed && !forbidden;
+```
+
+`isFetching`は、再取得中かを表す値です。ボタンを連打して同じ問い合わせを重ねないために使います。
+
+ログイン画面へ移す`useEffect`は、正常応答でセッションが無い場合と401だけを対象にします。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+useEffect(() => {
+  if (
+    hasMounted &&
+    !isLoading &&
+    (authFailed || (!isError && !session))
+  ) {
+    router.push('/login');
+  }
+}, [
+  authFailed,
+  hasMounted,
+  isError,
+  isLoading,
+  session,
+  router,
+]);
+```
+
+`!isError && !session`が大切です。取得に失敗したときは`isError`が`true`なので、この条件ではログイン画面へ移りません。401だけは`authFailed`で別に移します。
+
+403ではログインし直しても権限は増えません。既存のローディング表示のあとへ、権限案内を追加します。再試行ボタンを出さないため、同じ拒否を繰り返しません。
+
+ローディング表示の条件も置き換えます。403が返ったあとまで読み込み表示を続けると権限案内へ進めないため、401・403ではローディングを終えます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+if (
+  !hasMounted ||
+  (isLoading && !authFailed && !forbidden)
+) {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <p className="text-muted-foreground">
+        読み込み中...
+      </p>
+    </div>
+  );
+}
+```
+
+`hasMounted`が`false`の間は、これまでどおり読み込み表示です。マウント後に401・403が分かった場合だけ、後ろの専用分岐へ進みます。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx
+if (forbidden) {
+  return (
+    <div className="flex min-h-screen flex-col
+      items-center justify-center px-4 text-center">
+      <p className="mb-2 text-base font-semibold">
+        画面を表示する権限がありません
+      </p>
+      <p className="text-sm text-muted-foreground">
+        管理者に確認してください。
+      </p>
+    </div>
+  );
+}
+```
+
+この分岐は403をログイン切れとして扱わず、権限が足りないことを利用者へ伝えます。`router.push('/login')`は呼ばないので、ログイン画面との往復も起きません。
+
+初回500では表示できるセッションがありません。空白画面にせず、同じ問い合わせを呼び直すボタンを出します。`isFetching`中はボタンを無効にします。
+
+```tsx
+// filepath: src/component/layout/app-layout.tsx
+if (sessionRefreshFailed && !session?.user) {
+  return (
+    <div className="flex min-h-screen flex-col
+      items-center justify-center px-4 text-center">
+      <p className="mb-2 text-base font-semibold">
+        ログイン情報を確認できませんでした
+      </p>
+      <p className="mb-6 text-sm text-muted-foreground">
+        通信状況を確認して、再読み込みしてください。
+      </p>
+      <Button type="button" onClick={() => void refetch()}
+        disabled={isFetching}>再読み込み</Button>
+    </div>
+  );
+}
+```
+
+その直後の早期`return`は、次の2段階にします。2つ目はTypeScriptに`session.user`が存在すると伝えるための絞り込みです。ここを省くと、後ろのユーザー名表示で「`session`は`undefined`かもしれない」という型エラーになります。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+if (authFailed || (!isError && !session?.user)) {
+  return null;
+}
+
+if (!session?.user) {
+  return null;
+}
+```
+
+通常画面の`<main>`の先頭には、再取得だけが失敗したときの警告を追加します。前回のセッションで表示できた画面は残します。
+
+```tsx
+{/* filepath: src/component/layout/app-layout.tsx */}
+{sessionRefreshFailed ? (
+  <div role="alert" className="mb-4 rounded-lg border
+    border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
+    text-amber-900">
+    <p>最新のログイン情報を確認できませんでした。
+      表示は前回取得時の内容です。</p>
+    <Button type="button" variant="outline" size="sm"
+      onClick={() => void refetch()} disabled={isFetching}>
+      再試行
+    </Button>
+  </div>
+) : null}
+```
+
+この警告は`session.user`が残っている場合だけ通常画面と一緒に表示されます。初回500は前の全面エラーで返すため、利用者情報が無いのに保護画面を出すことはありません。
+
+#### 2.5-3B. プロフィール取得を同じ基準へそろえる
+
+`src/app/profile/page.tsx`も、Day 25の時点では取得失敗を未ログインとして扱います。Day 26では`getCurrentUser`へ同じ再試行条件を渡します。先に判定関数をimportしてください。
+
+```typescript
+// filepath: src/app/profile/page.tsx
+import {
+  isAuthError,
+  isForbiddenError,
+  shouldRetryQuery,
+} from '@/lib/query-error';
+```
+
+共通レイアウトとプロフィールは別の問い合わせを使いますが、401・403・500の意味は同じです。判定関数を共有し、片方だけ再試行する状態を防ぎます。
+
+```typescript
+// filepath: src/app/profile/page.tsx
+const {
+  data: currentUser,
+  isLoading,
+  isError,
+  isFetching,
+  error,
+  refetch,
+} = api.auth.getCurrentUser.useQuery(undefined, {
+  retry: shouldRetryQuery,
+});
+const authFailed = isError && isAuthError(error);
+const forbidden = isError && isForbiddenError(error);
+const profileRefreshFailed =
+  isError && !authFailed && !forbidden;
+```
+
+`profileRefreshFailed`は、401と403以外の取得失敗です。`currentUser`の有無と組み合わせると、初回失敗と再取得失敗を同じ値から分けられます。
+
+ログイン画面へ移す条件も、正常応答で利用者がいない場合と401に限定します。取得できなかっただけなら、ログイン画面へ移しません。
+
+```typescript
+// filepath: src/app/profile/page.tsx
+useEffect(() => {
+  if (
+    !isLoading &&
+    (authFailed || (!isError && !currentUser))
+  ) {
+    router.push('/login');
+  }
+}, [
+  authFailed,
+  currentUser,
+  isError,
+  isLoading,
+  router,
+]);
+```
+
+`!isError && !currentUser`は、問い合わせが成功したのに利用者がいない状態です。500では`isError`が`true`になるため、ログイン画面へ移らず次のエラー表示へ進みます。
+
+プロフィールのローディング条件も、401・403では後ろの案内へ進む形に置き換えます。
+
+```typescript
+// filepath: src/app/profile/page.tsx
+if (isLoading && !authFailed && !forbidden) {
+  return <PageLoadingSpinner />;
+}
+```
+
+401・403は同じ要求を再試行しないため、`isLoading`だけで待ち続けません。ステータスが分かった時点で、ログイン画面または権限案内へ進みます。
+
+ローディング表示のあとに、403と初回500の表示を順に追加します。403を先に判定すると、利用者データが無くても権限案内を選べます。
+
+```tsx
+// filepath: src/app/profile/page.tsx
+if (forbidden) {
+  return (
+    <AppLayout>
+      <div className="py-24 text-center">
+        <p className="font-semibold">
+          プロフィールを表示する権限がありません
+        </p>
+        <p className="text-sm text-muted-foreground">
+          管理者に確認してください。
+        </p>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+この分岐ではプロフィールの内容を表示しません。403は「認証済みだが表示権限が無い」という応答なので、再ログインではなく管理者への確認を案内します。
+
+```tsx
+// filepath: src/app/profile/page.tsx（同じ位置の続き）
+if (profileRefreshFailed && !currentUser) {
+  return (
+    <AppLayout>
+      <div className="py-24 text-center">
+        <p className="font-semibold">
+          プロフィールを取得できませんでした
+        </p>
+        <p className="mb-6 text-sm text-muted-foreground">
+          通信状況を確認して、再読み込みしてください。
+        </p>
+        <Button type="button" onClick={() => void refetch()}
+          disabled={isFetching}>再読み込み</Button>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+初回500では`currentUser`が無いため、この全面エラーから返します。再読み込みは`refetch()`だけを呼び、画面全体を再読み込みせずに同じ問い合わせをやり直します。
+
+早期`return`のあとには、再取得500の警告をプロフィールカードより前へ追加します。前回のプロフィールは消しません。
+
+```tsx
+{/* filepath: src/app/profile/page.tsx */}
+{profileRefreshFailed ? (
+  <div role="alert" className="rounded-lg border
+    border-amber-300/60 bg-amber-50 px-4 py-3 text-sm
+    text-amber-900">
+    <p>最新のプロフィールを取得できませんでした。
+      表示は前回取得時の内容です。</p>
+    <Button type="button" variant="outline" size="sm"
+      onClick={() => void refetch()} disabled={isFetching}>
+      再試行
+    </Button>
+  </div>
+) : null}
+```
+
+ここではDay 08とDay 25の章を遡って書き換えません。当時の段階ではまだ`query-error.ts`を説明していないためです。Day 26で分類方法を学んだあとに、既存画面を直します。
+
+テストを作る前に、この章の後半にある「通信エラー対応後の完成コード」へ進みます。ダッシュボードとレポートは、次の見出しの完成コードでファイル全体を置き換えます。マイタスクは Day 17で書いた内容と照合します。共通レイアウトとプロフィールは、いま追加した分岐が残っているか確かめます。違いがあれば入力を控えてから、掲載コードにそろえて保存してください。
+
+- `src/app/dashboard/page.tsx`（ダッシュボード）
+- `src/app/my-task/page.tsx`（マイタスク）
+- `src/app/report/page.tsx`（レポート）
+- `src/component/layout/app-layout.tsx`（共通レイアウト）
+- `src/app/profile/page.tsx`（プロフィール）
+
+続く `src/lib/query-error.ts`（エラー判定）は scaffold に入っているファイルです。新しく作らず、掲載コードと手元の内容を照合します。
+
+5画面を保存してエラー判定のファイルを照合したら、この位置へ戻り「2.5-4. テストの準備をする」から続けます。完成コードを保存する前にテストを実行すると、追加した表示を確かめる検査が失敗します。
 
 #### 2.5-4. テストの準備をする
 
@@ -535,7 +868,585 @@ export default defineConfig({
 import '@testing-library/jest-dom/vitest';
 ```
 
-この1行で `toBeInTheDocument()` や `toHaveTextContent()` を使えます。各テスト先頭の `@vitest-environment jsdom` はそのファイルだけをブラウザに近い環境で動かす指定です。今回の3ファイルは API をモック（本物のAPIの代わりに指定した取得結果を返すテスト用の代用品）に置き換えるためPostgreSQL は使いません。
+この1行で `toBeInTheDocument()` や `toHaveTextContent()` を使えます。各テスト先頭の `@vitest-environment jsdom` は、そのファイルだけをブラウザに近い環境で動かす指定です。今回の6ファイルは API をモック（本物のAPIの代わりに、指定した取得結果を返すテスト用の代用品）に置き換えるため、PostgreSQL は使いません。
+
+#### 2.5-4A. 共通レイアウトの5状態をテストする
+
+`src/component/layout/app-layout.test.tsx`を作ります。テストでは`getSession.useQuery()`の戻り値と`router.push()`をモックし、次の5件を1件ずつ書きます。
+
+| テスト | モックする取得結果 | 確認すること |
+|-------|-------------------|--------------|
+| 正常な未ログイン | `data: undefined`、`isError: false` | `/login`へ移る |
+| 初回500 | `data: undefined`、`httpStatus: 500` | 再読み込みを表示し、`retry`が`true`になる |
+| 401 | `httpStatus: 401` | `/login`へ移り、`retry`が`false`になる |
+| 403 | `httpStatus: 403` | 権限案内を表示し、ログインへ移らない |
+| 再取得失敗 | 前回の`session.user`と通信エラー | 保護画面と古い表示の警告を残す |
+
+共通レイアウトのテストは、次のコードを上から順に同じファイルへ貼り付けます。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 1/7
+// @vitest-environment jsdom
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps, ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppLayout } from "./app-layout";
+
+const mocks = vi.hoisted(() => ({
+	push: vi.fn(),
+	refetch: vi.fn(),
+	options: null as null | {
+		retry?: (count: number, error: unknown) => boolean;
+	},
+	query: {
+		data: undefined as
+			| undefined
+			| { user: { name: string; role: "MEMBER"; avatar: null } },
+		isLoading: false,
+		isError: false,
+		isFetching: false,
+		error: null as unknown,
+		refetch: vi.fn(),
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 2/7
+	},
+}));
+
+vi.mock("next/link", () => ({
+	default: ({ children, href, ...props }: ComponentProps<"a">) => (
+		<a href={href} {...props}>
+			{children}
+		</a>
+	),
+}));
+vi.mock("next/navigation", () => ({
+	usePathname: () => "/dashboard",
+	useRouter: () => ({ push: mocks.push, refresh: vi.fn() }),
+}));
+vi.mock("@/component/ui/button", () => ({
+	Button: ({ children, ...props }: ComponentProps<"button">) => (
+		<button {...props}>{children}</button>
+	),
+}));
+vi.mock("@/component/ui/alert-dialog", () => ({
+	AlertDialog: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+	AlertDialogTrigger: ({ children }: { children: ReactNode }) => (
+		<>{children}</>
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 3/7
+	),
+	AlertDialogAction: ({ children }: { children: ReactNode }) => (
+		<button type="button">{children}</button>
+	),
+	AlertDialogCancel: ({ children }: { children: ReactNode }) => (
+		<button type="button">{children}</button>
+	),
+	AlertDialogContent: ({ children }: { children: ReactNode }) => (
+		<div>{children}</div>
+	),
+	AlertDialogDescription: ({ children }: { children: ReactNode }) => (
+		<p>{children}</p>
+	),
+	AlertDialogFooter: ({ children }: { children: ReactNode }) => (
+		<div>{children}</div>
+	),
+	AlertDialogHeader: ({ children }: { children: ReactNode }) => (
+		<div>{children}</div>
+	),
+	AlertDialogTitle: ({ children }: { children: ReactNode }) => (
+		<h2>{children}</h2>
+	),
+}));
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 4/7
+vi.mock("@/trpc/react", () => ({
+	api: {
+		auth: {
+			getSession: {
+				useQuery: (_input: undefined, options: typeof mocks.options) => {
+					mocks.options = options;
+					return mocks.query;
+				},
+			},
+			logout: { useMutation: () => ({ mutate: vi.fn() }) },
+		},
+	},
+}));
+
+beforeEach(() => {
+	mocks.push.mockReset();
+	mocks.refetch.mockReset();
+	mocks.options = null;
+	Object.assign(mocks.query, {
+		data: undefined,
+		isLoading: false,
+		isError: false,
+		isFetching: false,
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 5/7
+		error: null,
+		refetch: mocks.refetch,
+	});
+});
+
+const renderLayout = () =>
+	render(
+		<QueryClientProvider client={new QueryClient()}>
+			<AppLayout>
+				<div>保護画面</div>
+			</AppLayout>
+		</QueryClientProvider>,
+	);
+
+describe("共通レイアウトのセッション取得状態", () => {
+	it("正常応答でセッションが無い場合だけログインへ移す", async () => {
+		renderLayout();
+		await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login"));
+	});
+
+	it("初回500では再読み込みを案内する", async () => {
+		const error = { data: { httpStatus: 500 } };
+		Object.assign(mocks.query, { isError: true, error });
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 6/7
+		renderLayout();
+		expect(
+			await screen.findByText("ログイン情報を確認できませんでした"),
+		).toBeInTheDocument();
+		expect(mocks.push).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+		expect(mocks.refetch).toHaveBeenCalledOnce();
+		expect(mocks.options?.retry?.(0, error)).toBe(true);
+	});
+
+	it("401ではログインへ移し、再試行しない", async () => {
+		const error = Object.assign(new Error("expired"), {
+			data: { httpStatus: 401 },
+		});
+		Object.assign(mocks.query, { isError: true, error });
+		renderLayout();
+		await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login"));
+		expect(mocks.options?.retry?.(0, error)).toBe(false);
+	});
+
+	it("403では権限案内を表示する", async () => {
+		const error = Object.assign(new Error("forbidden"), {
+			data: { httpStatus: 403 },
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/component/layout/app-layout.test.tsx
+// 続き 7/7
+		});
+		Object.assign(mocks.query, { isError: true, error });
+		renderLayout();
+		expect(
+			await screen.findByText("画面を表示する権限がありません"),
+		).toBeInTheDocument();
+		expect(mocks.push).not.toHaveBeenCalled();
+	});
+
+	it("再取得失敗では前回の画面と警告を残す", async () => {
+		Object.assign(mocks.query, {
+			data: { user: { name: "利用者", role: "MEMBER", avatar: null } },
+			isError: true,
+			error: new Error("offline"),
+		});
+		renderLayout();
+		expect(await screen.findByText("保護画面")).toBeInTheDocument();
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"表示は前回取得時の内容です",
+		);
+		expect(mocks.push).not.toHaveBeenCalled();
+	});
+});
+```
+
+これで`src/component/layout/app-layout.test.tsx`のコードは終わりです。ファイルを保存し、下のまとめ実行まで進んでください。モックは本物のAPIを呼ばず、取得状態と画面の分岐だけを検査します。
+
+初回500は`new Error()`だけで済ませず、`{ data: { httpStatus: 500 } }`を返します。これで500の分類を画面の境界まで通せます。再取得失敗はHTTP応答を受け取れない場合もあるため、`new Error('offline')`で確認します。
+
+#### 2.5-4B. プロフィールの5状態をテストする
+
+`src/app/profile/page-query-state.test.tsx`を作り、`getCurrentUser.useQuery()`と`router.push()`をモックします。
+
+| テスト | モックする取得結果 | 確認すること |
+|-------|-------------------|--------------|
+| 正常な利用者なし | `data: undefined`、`isError: false` | `/login`へ移る |
+| 初回500 | `data: undefined`、`httpStatus: 500` | 空のプロフィールを出さず、再読み込みできる |
+| 401 | `httpStatus: 401` | `/login`へ移り、再試行しない |
+| 403 | `httpStatus: 403` | 権限案内を表示し、ログインへ移らない |
+| 再取得失敗 | 前回の利用者と通信エラー | 利用者名と古い表示の警告を残す |
+
+プロフィールのテストは、次のコードを上から順に同じファイルへ貼り付けます。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 1/8
+// @vitest-environment jsdom
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import ProfilePage from "./page";
+
+const mocks = vi.hoisted(() => ({
+	push: vi.fn(),
+	refetch: vi.fn(),
+	query: {
+		data: undefined as
+			| undefined
+			| {
+					name: string;
+					email: string;
+					avatar: null;
+					role: "MEMBER";
+					isActive: boolean;
+					createdAt: Date;
+					updatedAt: Date;
+			  },
+		isLoading: false,
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 2/8
+		isError: false,
+		isFetching: false,
+		error: null as unknown,
+		refetch: vi.fn(),
+	},
+	options: null as null | {
+		retry?: (failureCount: number, error: unknown) => boolean;
+	},
+}));
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("@/component/layout/app-layout", () => ({
+	AppLayout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+vi.mock("@/component/ui/loading-spinner", () => ({
+	PageLoadingSpinner: () => <div>loading</div>,
+}));
+vi.mock("@/component/ui/avatar", () => ({
+	Avatar: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+	AvatarFallback: ({ children }: { children: ReactNode }) => (
+		<div>{children}</div>
+	),
+	AvatarImage: () => null,
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 3/8
+}));
+vi.mock("@/component/ui/user-badges", () => ({
+	ActiveStatusBadge: () => null,
+	UserRoleBadge: () => null,
+}));
+vi.mock("@/trpc/react", () => ({
+	api: {
+		auth: {
+			getCurrentUser: {
+				useQuery: (
+					_input: undefined,
+					options: {
+						retry?: (failureCount: number, error: unknown) => boolean;
+					},
+				) => {
+					mocks.options = options;
+					return mocks.query;
+				},
+			},
+		},
+	},
+}));
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 4/8
+
+beforeEach(() => {
+	mocks.push.mockReset();
+	mocks.refetch.mockReset();
+	mocks.options = null;
+	Object.assign(mocks.query, {
+		data: undefined,
+		isLoading: false,
+		isError: false,
+		isFetching: false,
+		error: null,
+		refetch: mocks.refetch,
+	});
+});
+
+describe("プロフィール取得失敗の表示", () => {
+	it("正常応答で利用者がいない場合はログイン画面へ移す", async () => {
+		render(<ProfilePage />);
+
+		await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login"));
+		expect(
+			screen.queryByText("プロフィールを取得できませんでした"),
+		).not.toBeInTheDocument();
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 5/8
+	});
+
+	it("初回500を未ログイン扱いにせず、再読み込みできる", async () => {
+		const error = { data: { httpStatus: 500 } };
+		Object.assign(mocks.query, { isError: true, error });
+
+		render(<ProfilePage />);
+
+		expect(
+			await screen.findByText("プロフィールを取得できませんでした"),
+		).toBeInTheDocument();
+		expect(mocks.push).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+		expect(mocks.refetch).toHaveBeenCalledOnce();
+		expect(mocks.options?.retry?.(0, error)).toBe(true);
+	});
+
+	it("401だけを未ログインとしてログイン画面へ移す", async () => {
+		const error = Object.assign(new Error("expired"), {
+			data: { httpStatus: 401 },
+		});
+		Object.assign(mocks.query, { isError: true, error });
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 6/8
+
+		render(<ProfilePage />);
+
+		await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/login"));
+		expect(
+			screen.queryByText("プロフィールを取得できませんでした"),
+		).not.toBeInTheDocument();
+		expect(mocks.options?.retry?.(0, error)).toBe(false);
+	});
+
+	it("403をログイン画面へ送らず、権限エラーとして表示する", async () => {
+		const error = Object.assign(new Error("inactive"), {
+			data: { httpStatus: 403 },
+		});
+		Object.assign(mocks.query, { isError: true, error });
+
+		render(<ProfilePage />);
+
+		expect(
+			await screen.findByText("プロフィールを表示する権限がありません"),
+		).toBeInTheDocument();
+		expect(mocks.push).not.toHaveBeenCalled();
+		expect(mocks.options?.retry?.(0, error)).toBe(false);
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 7/8
+	});
+
+	it("再取得だけ失敗した場合は前回のプロフィールを残して警告する", async () => {
+		Object.assign(mocks.query, {
+			data: {
+				name: "利用者",
+				email: "user@example.test",
+				avatar: null,
+				role: "MEMBER",
+				isActive: true,
+				createdAt: new Date("2026-01-01T00:00:00Z"),
+				updatedAt: new Date("2026-01-02T00:00:00Z"),
+			},
+			isError: true,
+			error: new Error("offline"),
+		});
+
+		render(<ProfilePage />);
+
+		expect(await screen.findByText("利用者")).toBeInTheDocument();
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"表示は前回取得時の内容です",
+		);
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/profile/page-query-state.test.tsx
+// 続き 8/8
+		expect(mocks.push).not.toHaveBeenCalled();
+	});
+});
+```
+
+これで`src/app/profile/page-query-state.test.tsx`のコードは終わりです。ファイルを保存し、下のまとめ実行まで進んでください。モックは本物のAPIを呼ばず、取得状態と画面の分岐だけを検査します。
+
+この2ファイルでは、`retry`へ渡された関数も取り出して検査します。表示だけを確認すると、401と403で3回待ってから案内を出す退行を見落とすためです。
+
+#### 2.5-4C. 登録完了の固定マーカーをテストする
+
+Day 06で追加した登録後の導線も、同じjsdom設定で検査します。`src/app/login/registration-complete.test.tsx`を作り、次の3件を分けて書きます。
+
+| テスト | 操作 | 確認すること |
+|-------|------|--------------|
+| 登録成功 | 登録APIの`onSuccess`を呼ぶ | `/login?registered=1`へ移る |
+| 正しい固定値 | `registered=1`でログイン画面を開く | 固定の完了案内を`role="status"`で表示する |
+| 未知の値 | `registered=任意のメッセージ`で開く | 完了案内もURLの文字も表示しない |
+
+登録完了のテストは、次のコードを上から順に同じファイルへ貼り付けます。
+
+```tsx
+// filepath: src/app/login/registration-complete.test.tsx
+// 続き 1/4
+// @vitest-environment jsdom
+
+import { act, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import RegisterPage from "../register/page";
+import LoginPage from "./page";
+
+const mocks = vi.hoisted(() => ({
+	params: new URLSearchParams(),
+	push: vi.fn(),
+	registerOptions: null as null | { onSuccess?: () => void },
+}));
+
+vi.mock("next/navigation", () => ({
+	useRouter: () => ({ push: mocks.push }),
+	useSearchParams: () => mocks.params,
+}));
+vi.mock("next/link", () => ({
+	default: ({ children, href, ...props }: ComponentProps<"a">) => (
+		<a href={href} {...props}>
+			{children}
+		</a>
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/login/registration-complete.test.tsx
+// 続き 2/4
+	),
+}));
+vi.mock("react-hot-toast", () => ({ default: { success: vi.fn() } }));
+vi.mock("@/trpc/react", () => ({
+	api: {
+		auth: {
+			login: {
+				useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+			},
+			register: {
+				useMutation: (options: { onSuccess?: () => void }) => {
+					mocks.registerOptions = options;
+					return { mutate: vi.fn(), isPending: false };
+				},
+			},
+		},
+	},
+}));
+
+beforeEach(() => {
+	mocks.params = new URLSearchParams();
+	mocks.push.mockReset();
+	mocks.registerOptions = null;
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/login/registration-complete.test.tsx
+// 続き 3/4
+});
+
+describe("ユーザー登録完了の案内", () => {
+	it("登録成功後は固定フラグ付きのログイン画面へ移る", () => {
+		render(<RegisterPage />);
+
+		act(() => mocks.registerOptions?.onSuccess?.());
+
+		expect(mocks.push).toHaveBeenCalledWith("/login?registered=1");
+	});
+
+	it("正しい登録完了フラグだけで固定メッセージを表示する", () => {
+		mocks.params = new URLSearchParams("registered=1");
+
+		render(<LoginPage />);
+
+		const status = screen.getByRole("status");
+		expect(status).toHaveTextContent("登録が完了しました");
+		expect(status).toHaveTextContent("ログインしてください。");
+	});
+
+	it("未知の値を登録完了として表示しない", () => {
+		mocks.params = new URLSearchParams("registered=任意のメッセージ");
+```
+
+ここまでを同じファイルへ貼り付けたら、まだ保存せず、次のコードを直後へ続けて貼り付けます。途中の空行とインデントも残してください。すべて貼り終えてから保存します。
+
+```tsx
+// filepath: src/app/login/registration-complete.test.tsx
+// 続き 4/4
+
+		render(<LoginPage />);
+
+		expect(screen.queryByRole("status")).not.toBeInTheDocument();
+		expect(screen.queryByText("任意のメッセージ")).not.toBeInTheDocument();
+	});
+});
+```
+
+これで`src/app/login/registration-complete.test.tsx`のコードは終わりです。ファイルを保存し、下のまとめ実行まで進んでください。モックは本物のAPIを呼ばず、取得状態と画面の分岐だけを検査します。
+
+このテストは、URLの値を登録済みの証明として扱いません。案内を出す条件と、利用者が書き換えた文字を画面へ反映しないことだけを確認します。
 
 #### 2.5-5. ダッシュボードの状態をテストする
 
@@ -626,17 +1537,20 @@ describe('ダッシュボードの取得エラー', () => {
 // filepath: src/app/my-task/page.test.tsx
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import MyTasksPage from './page';
+import MyTasksPage from '@/app/my-task/page';
 
 const mocks = vi.hoisted(() => ({
   currentUser: vi.fn(),
   projects: vi.fn(),
   tasks: vi.fn(),
   push: vi.fn(),
-  updateOptions: null as null | { onError?: (error: ErrorShape) => void },
+  updateOptions: null as null | {
+    onError?: (error: ErrorShape, variables: { id: string }) => void;
+  },
 }));
 
 interface ErrorShape {
@@ -692,14 +1606,22 @@ vi.mock('@/trpc/react', () => ({
     task: {
       getAll: { useQuery: mocks.tasks },
       update: {
-        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+        useMutation: (options: {
+          onError?: (error: ErrorShape, variables: { id: string }) => void;
+        }) => {
           mocks.updateOptions = options;
           return { mutate: vi.fn() };
         },
       },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
-    useUtils: () => ({ task: { getAll: { invalidate: vi.fn() } } }),
+    useUtils: () => ({
+      task: {
+        getAll: { invalidate: vi.fn() },
+        getById: { invalidate: vi.fn() },
+      },
+      project: { getAll: { invalidate: vi.fn() } },
+    }),
   },
 }));
 
@@ -772,6 +1694,26 @@ describe('マイタスクの取得エラー', () => {
     ).toBeInTheDocument();
   });
 
+  it('取得401を固定して全ページクエリを停止する', async () => {
+    mocks.currentUser.mockReturnValue(queryResult(401, user));
+    render(<MyTasksPage />);
+
+    await waitFor(() => {
+      expect(mocks.currentUser).toHaveBeenLastCalledWith(
+        undefined,
+        expect.objectContaining({ enabled: false }),
+      );
+      expect(mocks.projects).toHaveBeenLastCalledWith(
+        undefined,
+        expect.objectContaining({ enabled: false }),
+      );
+      expect(mocks.tasks).toHaveBeenLastCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ enabled: false }),
+      );
+    });
+  });
+
   it.each([401, 403])('別クエリが500でも%sを優先して保護データを隠す', (status) => {
     mocks.currentUser.mockReturnValue(queryResult(500, user));
     mocks.tasks.mockReturnValue(queryResult(status, [task]));
@@ -803,14 +1745,17 @@ describe('マイタスクの取得エラー', () => {
     expect(screen.getByText('編集中: 前回取得したタスク')).toBeInTheDocument();
 
     act(() => {
-      mocks.updateOptions?.onError?.({ data: { httpStatus: 500 }, message: '更新失敗' });
+      mocks.updateOptions?.onError?.(
+        { data: { httpStatus: 500 }, message: '更新失敗' },
+        { id: task.id },
+      );
     });
     expect(screen.getByText('編集中: 前回取得したタスク')).toBeInTheDocument();
   });
 });
 ```
 
-`updateOptions` には `useMutation` へ渡した `onError` が入ります。テストから失敗時の処理だけを呼ぶことで、サーバーを起動せずにダイアログが閉じないことを確認できます。
+`updateOptions` には `useMutation` へ渡した `onError` が入ります。テストはエラーと送信対象IDを渡して、編集画面の初期入力元と開閉状態が残ることを確かめます。入力欄そのものはモックなので、このテストだけで文字を打ち直したあとの保持まで確認したことにはなりません。`waitFor`（指定した条件を満たすまで検査を繰り返す関数）は、401を記録したあとの問い合わせ停止を確認します。
 
 #### 2.5-7. レポートの状態をテストする
 
@@ -882,7 +1827,8 @@ describe('レポート概要の取得エラー', () => {
     render(<ReportPage />);
 
     expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText(/最新のレポートを取得できませんでした/)).toBeInTheDocument();
+    const staleMessage = '取得できませんでした。前回のレポートです。';
+    expect(screen.getByText(staleMessage)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '再試行' }));
     expect(mocks.refetch).toHaveBeenCalledOnce();
   });
@@ -908,29 +1854,39 @@ describe('レポート概要の取得エラー', () => {
 
 ダッシュボードとマイタスクは複数の問い合わせが同時に失敗する場合も検査します。レポートは1件の問い合わせについて、初回失敗・前回値あり・認証拒否の分岐を検査します。
 
-3ファイルを保存したら、まとめて実行します。
+6ファイルを保存したら、まとめて実行します。
 
 ```bash
 # filepath: ターミナル
 npx vitest run \
+  src/app/login/registration-complete.test.tsx \
+  src/component/layout/app-layout.test.tsx \
+  src/app/profile/page-query-state.test.tsx \
   src/app/dashboard/page.test.tsx \
   src/app/my-task/page.test.tsx \
   src/app/report/page.test.tsx
 ```
 
-`Test Files 3 passed` と表示されれば成功です。失敗した場合は最初の赤いテスト名を読み、期待した文言と画面に出た文言を照合してください。
+`Test Files 6 passed` と表示されれば成功です。失敗した場合は最初の赤いテスト名を読み、期待した文言と画面に出た文言を照合してください。
 
 **確認ポイント**:
-- [ ] 初回 500 と再取得 500 の表示を分けた
-- [ ] 401 と 403 では取得済みの保護データも隠した
-- [ ] 複数の問い合わせが同時に失敗しても401・403を優先した
-- [ ] 更新失敗時に編集ダイアログと入力値を残した
-- [ ] 応答が無い失敗を「結果不明」として案内した
-- [ ] 3つのテストファイルがすべて通った
+- [ ] 初回 500 と再取得 500 の表示を分けました
+- [ ] 401 と 403 では取得済みの保護データも隠しました
+- [ ] 複数の問い合わせが同時に失敗しても401・403を優先しました
+- [ ] 構造化された500応答のあとも編集ダイアログを開き、同じ初期入力元を残しました
+- [ ] 401が出たあとにマイタスクの3件の問い合わせを停止しました
+- [ ] 「次へ」で101件目のタスクへ進めました
+- [ ] 100件ちょうどの場合は次のページが空になり、「前へ」で戻れました
+- [ ] 絞り込みを変えると1ページ目へ戻り、開いていた編集ダイアログが閉じました
+- [ ] 絞り込みを変えると、開いていた削除確認ダイアログが閉じました
+- [ ] 完了済みとキャンセル済みが期限超過のグループに入りませんでした
+- [ ] 共通レイアウトとプロフィールで、正常な未ログインと取得失敗を区別しました
+- [ ] 登録完了の固定マーカーが未知の値を表示しないことを確かめました
+- [ ] 6つのテストファイルがすべて通りました
 
 ---
 
-### Step 3: バグA（Optional Chainingなし・7分）
+### Step 3: バグA（Optional Chainingなし・読む目安: 7分）
 
 **ゴール**: `?.`（Optional Chaining）を使わないとどうなるか体験し、修正します。
 
@@ -955,8 +1911,8 @@ Day 14 でタスクを作ったとき担当者を選ばないまま登録でき�
 そして TypeScript はこの `| null` を根拠に「そこは空かもしれない」と教えてくれます。
 
 **確認ポイント**:
-- assignee が `null` になり得ることを確認した
-- この型定義は次のステップで使用する
+- assignee が `null` になり得ることを確認しました
+- この型定義は次のステップで使用します
 
 **バグのあるコード**:
 
@@ -985,7 +1941,7 @@ function TaskCard(
 たった1件のデータで画面全体が消える点こそ、このバグの怖さです。
 
 **確認ポイント**:
-- `.name` へアクセスする前の null チェックが抜けていると分かった
+- `.name` へアクセスする前の null チェックが抜けていると分かりました
 
 Consoleに表示されるエラーメッセージの例です。行番号と列番号は、手元のファイルでコードを書いた位置によって変わります。
 
@@ -1003,7 +1959,7 @@ TypeError: Cannot read properties
 その下に続く長い呼び出し履歴（スタックトレース）は慣れるまで読まなくてかまいません。
 
 **確認ポイント**:
-- `reading 'name'` が問題のプロパティだとわかった
+- `reading 'name'` が問題のプロパティだと分かりました
 
 **修正後のコード**:
 
@@ -1024,7 +1980,7 @@ function TaskCard(
 ```
 
 **確認ポイント**:
-- `?.` と `??` の組み合わせで安全にアクセスしている
+- `?.` と `??` の組み合わせで安全にアクセスしています
 
 **修正前後の比較**:
 
@@ -1035,15 +1991,15 @@ function TaskCard(
 | — | `?? '未割り当て'`で代替テキスト | nullの時の表示指定 |
 
 **確認ポイント**:
-1. `?.`（Optional Chaining）の役割がわかった
-2. `??`（Nullish Coalescing）で代替値を指定する方法がわかった
-3. Consoleのエラーメッセージの読み方がわかった
+1. `?.`（Optional Chaining）の役割が分かりました
+2. `??`（Nullish Coalescing）で代替値を指定する方法が分かりました
+3. Consoleのエラーメッセージの読み方が分かりました
 
 **学んだこと**: `?.` は null/undefined のときエラーにせず `undefined` を返します。`??` と組み合わせて代替値を指定できます。
 
 ---
 
-### Step 4: バグB（useEffectの依存配列ミス・7分）
+### Step 4: バグB（useEffectの依存配列ミス・読む目安: 7分）
 
 **ゴール**: useEffectの依存配列を間違えると無限リクエストが発生することを理解し、修正方法を学びます。
 
@@ -1076,7 +2032,7 @@ function TaskList() {
 Step 1 の `[error]` を1回で済ませられたのは同じエラーのあいだ入れ物が変わらないからです。
 
 **確認ポイント**:
-- `filter` が関数の中で毎回作られることを確認した
+- `filter` が関数の中で毎回作られることを確認しました
 
 **症状**: DevTools Network タブに同じリクエストが
 無限に流れ続けます。
@@ -1102,7 +2058,7 @@ Network タブに赤い行（400 番台や 500 番台）が並んでいたらま
 放っておくとブラウザが重くなり、やがてタブごと固まります。
 
 **確認ポイント**:
-- Network タブで同じリクエストの繰り返しが無限ループの兆候だとわかった
+- Network タブで同じリクエストの繰り返しが無限ループの兆候だと分かりました
 
 **修正後のコード**:
 
@@ -1122,7 +2078,7 @@ function TaskList() {
 ```
 
 **確認ポイント**:
-- 文字列や数値は中身そのもので比べられるので同じ値なら再実行されない
+- 文字列や数値は中身そのもので比べられるので同じ値なら再実行されません
 
 無限ループが起きる流れは次のとおりです。
 
@@ -1137,15 +2093,15 @@ function TaskList() {
 > JavaScriptでは `{ status: 'TODO' } !== { status: 'TODO' }` です。見た目は同じでも、毎回「新しいオブジェクト」が作られるためuseEffectは「変わった」と判断します。
 
 **確認ポイント**:
-1. オブジェクトの参照が毎回変わる問題を理解できた
-2. Networkタブで無限リクエストを発見する方法がわかった
-3. プリミティブ値（string/number）を依存配列に使う修正方法がわかった
+1. オブジェクトの参照が毎回変わる問題を理解できました
+2. Networkタブで無限リクエストを発見する方法が分かりました
+3. プリミティブ値（string/number）を依存配列に使う修正方法が分かりました
 
 **学んだこと**: useEffectの依存配列にオブジェクトを入れると毎レンダリングで新しい参照になり無限ループを引き起こします。
 
 ---
 
-### Step 5: バグC（console.log残し・5分）
+### Step 5: バグC（console.log残し・読む目安: 5分）
 
 **ゴール**: `console.log`の残りをBiome lintで検出し、修正します。
 
@@ -1153,15 +2109,12 @@ function TaskList() {
 
 **実装**:
 
+2件目の `useQuery` で `overview` を受け取った直後、`const queryErrors` の前へ一時的に追加します。
+
 ```typescript
 // filepath: src/app/dashboard/page.tsx
-// queryErrors の定義直後に一時的に追加する
-console.log(
-  'DEBUG: projects =', projects
-);
-console.log(
-  'DEBUG: overview =', overview
-);
+console.log('DEBUG: overview =', overview);
+console.log('DEBUG: projects =', projects);
 ```
 
 この2行はデバッグ中なら誰でも書くコードです。
@@ -1171,8 +2124,8 @@ console.log(
 だから人の記憶ではなく、道具に見張らせます。
 
 **確認ポイント**:
-- 2行の `console.log` を追加した
-- ファイルを保存した
+- 2行の `console.log` を追加しました
+- ファイルを保存しました
 
 次にBiome lintを実行します。
 `npm run lint` は `src` 以下と主な設定ファイルをまとめてチェックしますが
@@ -1193,7 +2146,7 @@ npx biome check \
 直した場所を確かめているあいだは1ファイルに絞り、全体は Step 7 でまとめてかけます。
 
 **確認ポイント**:
-- `noConsole` エラーが検出された
+- `noConsole` エラーが検出されました
 
 Biome が以下のようなエラーを出します。
 
@@ -1220,7 +2173,7 @@ npx biome check \
 ```
 
 **確認ポイント**:
-- `lint/suspicious/noConsole` の指摘が消えた
+- `lint/suspicious/noConsole` の指摘が消えました
 
 確認メモ:
 ターミナルに `lint/suspicious/noConsole` が表示され、
@@ -1243,15 +2196,15 @@ npx biome check \
 | コードの品質低下 | デバッグ用のコードが散乱する |
 
 **確認ポイント**:
-1. `console.log`を追加してBiome lintがエラーを出した
-2. `console.log`を削除してBiomeのエラーが消えた
-3. **追加した`console.log`を必ず削除した**
+1. `console.log`を追加してBiome lintがエラーを出しました
+2. `console.log`を削除してBiomeのエラーが消えました
+3. **追加した`console.log`を必ず削除しました**
 
 **学んだこと**: Biome lintは`console.log`の残りを自動検出してくれます。本番コードには`console.log`を残さないようにしましょう。
 
 ---
 
-### Step 6: DevTools 3タブの使い分け（5分）
+### Step 6: DevTools 3タブの使い分け（読む目安: 5分）
 
 **ゴール**: 症状に応じて DevTools の
 どのタブを見るべきか整理します。
@@ -1269,7 +2222,7 @@ npm run dev
 ```
 
 **確認ポイント**:
-- DevTools が表示された
+- DevTools が表示されました
 
 | 症状 | 使うタブ | 確認するもの |
 |------|---------|------------|
@@ -1289,8 +2242,8 @@ npm run dev
 | Elementsタブ | Ctrl+Shift+C | Cmd+Shift+C |
 
 **確認ポイント**:
-1. 3つのタブの使い分けが理解できた
-2. 症状に応じてどのタブを見るか判断できる
+1. 3つのタブの使い分けが理解できました
+2. 症状に応じてどのタブを見るか判断できます
 
 DevTools の見た目はブラウザやOSで少し変わります。
 ここではスクリーンショットを暗記するのではなく、
@@ -1299,7 +2252,7 @@ DevTools の見た目はブラウザやOSで少し変わります。
 
 ---
 
-### Step 7: Biome lintで全体チェック（4分）
+### Step 7: Biome lintで全体チェック（読む目安: 4分）
 
 **ゴール**: `src` 以下と主な設定ファイルのコード品質をBiome lintで確認します。
 
@@ -1319,7 +2272,7 @@ Step 5 では1ファイルに絞りましたがここでは自分で書いたコ
 ここを片づけてから次の日へ進むとDay 27 以降で出たエラーが「今日書いた分のせい」だと切り分けられます。
 
 **確認ポイント**:
-- lintチェックが完了した
+- lintチェックが完了しました
 
 もし警告やエラーがあった場合は以下で自動修正できます。
 
@@ -1339,8 +2292,8 @@ npm run fix
 | `useConst` | `let`で再代入していない変数 | エラー |
 
 **確認ポイント**:
-1. `npm run lint` の指摘から `noConsole` が消えた
-2. Biomeの自動修正が使えることを理解した
+1. `npm run lint` の指摘から `noConsole` が消えました
+2. Biomeの自動修正が使えることを理解しました
 
 Day 05 で断ったとおり、この教材のコードは Biome の整形前の形で載せています。
 そのため `npm run lint` には整形の差分が残ります。写経の間違いではありません。
@@ -1365,7 +2318,7 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 
 ## 完成コード全体
 
-今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では3画面を更新し、テストに必要な5ファイルも作ります。Day 11 で作った `src/lib/query-error.ts` も含めて次の11ファイルが今日の確認対象です。
+今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では共通レイアウト、プロフィール、ダッシュボード、レポートを更新し、マイタスクは Day 17の処理を保っているか照合します。テスト設定2ファイルとテスト6ファイルも作ります。scaffold に入っている `src/lib/query-error.ts` を含め、次の16ファイルが今日の確認対象です。照合する相手は、この章に載せたコードです。販売用 ZIP に完成版の `src/` は入っていません。
 
 バグAとバグBは教材内で修正版を読むため、アプリのファイルは増えません。バグCで足した `console.log` と、Step 2 で足した `throw` は削除済みです。
 
@@ -1374,16 +2327,31 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 | `src/app/error.tsx` | 新しく作る | Step 1 |
 | `src/app/not-found.tsx` | 新しく作る | Step 2 |
 | `src/app/dashboard/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
-| `src/app/my-task/page.tsx` | 通信エラー表示と更新失敗時の処理を更新する | Step 2.5 |
+| `src/app/my-task/page.tsx` | Day 17の処理が残っているか、本章の掲載コードで確かめる | Step 2.5 |
 | `src/app/report/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
-| `src/lib/query-error.ts` | コメント付きの完成形で置き換える | Step 2.5 |
+| `src/component/layout/app-layout.tsx` | セッション取得失敗の表示を更新する | Step 2.5 |
+| `src/app/profile/page.tsx` | プロフィール取得失敗の表示を更新する | Step 2.5 |
+| `src/lib/query-error.ts` | scaffold の内容を確認する | Step 2.5 |
 | `vitest.config.ts` | 新しく作る | Step 2.5 |
 | `src/test/setup.ts` | 新しく作る | Step 2.5 |
 | `src/app/dashboard/page.test.tsx` | 新しく作る | Step 2.5 |
 | `src/app/my-task/page.test.tsx` | 新しく作る | Step 2.5 |
 | `src/app/report/page.test.tsx` | 新しく作る | Step 2.5 |
+| `src/component/layout/app-layout.test.tsx` | 新しく作る | Step 2.5 |
+| `src/app/profile/page-query-state.test.tsx` | 新しく作る | Step 2.5 |
+| `src/app/login/registration-complete.test.tsx` | 新しく作る | Step 2.5 |
 
-まず2つの画面を以下と見比べます。通信エラー対応の4ファイルは、そのあとの「通信エラー対応後の完成コード」で確認してください。テスト設定と3つのテストは Step 2.5-4〜2.5-7 に完全な形を載せています。
+ダッシュボードの5つの統計カードを、広い画面では横1列に並べます。Tailwind CSSの標準サイズに `xxl` は無いので、画面コードより先に追加します。`src/app/globals.css` の `@theme inline {` の直後へ次の宣言を書いてください。ほかの色やフォントの変数は残します。
+
+<!-- reader-css: theme-inline -->
+```css
+/* filepath: src/app/globals.css（@theme inline 内へ追加） */
+--breakpoint-xxl: 84.375rem;
+```
+
+ブレークポイントは、画面幅に応じて表示を切り替える境目の値です。既存の境目は `rem`（ブラウザの標準文字サイズを基準にする単位）なので、追加する値もそろえます。標準文字サイズが16pxの場合、84.375remは1350pxに相当します。単位を `px` と混ぜるとCSSの並び順が変わり、広い画面でも2列の指定に上書きされることがあります。`xxl:grid-cols-5` はこの境目から5列に切り替えます。同じ文字サイズなら、640px以上1350px未満では2列、640px未満では1列です。
+
+まず2つの画面を以下と見比べます。通信エラー対応の6ファイルは、Step 2.5の差分と、そのあとの「通信エラー対応後の完成コード」で確認してください。テスト設定と6つのテストは Step 2.5-4以降の手順で確認します。
 
 ### `src/app/error.tsx`
 
@@ -1413,7 +2381,7 @@ Step 1 では `import { Button }` と `from '@/component/ui/button';` を2行に
 
 引数の型を `{ error: ...; reset: ... }` と波括弧の中に直接書いているのはこの形をこのファイル以外で使わないからです。`interface ErrorPageProps` として名前を付けても動きますが名前が増えるぶん読む側は「どこか別の場所でも使うのか」と探すことになります。1か所でしか使わない形はその場に書いておくほうが読み手の手間が減ります。
 
-**フォールバック UI**:
+次のコードはフォールバック UI です。
 
 ```typescript
 // filepath: src/app/error.tsx
@@ -1421,9 +2389,9 @@ Step 1 では `import { Button }` と `from '@/component/ui/button';` を2行に
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center space-y-4">
-        <h2 className="text-2xl font-bold">エラーが発生しました</h2>
+        <h2 className="text-2xl font-bold">ページを表示できませんでした</h2>
         <p className="text-muted-foreground">
-          予期しないエラーが発生しました。もう一度お試しください。
+          もう一度お試しください。
         </p>
         <Button onClick={reset}>もう一度試す</Button>
       </div>
@@ -1456,7 +2424,7 @@ export default function NotFound() {
 
 `px-4` を付けているのはスマートフォンの幅で文字が画面の端に貼り付くのを防ぐためです。この画面は中央に置いた文字しか無いので余白が無いと窮屈に見えます。
 
-**戻り道のリンク**:
+次のコードはダッシュボードへ戻るリンクです。
 
 ```tsx
       {/* filepath: src/app/not-found.tsx */}
@@ -1479,7 +2447,7 @@ export default function NotFound() {
 
 ## 通信エラー対応後の完成コード
 
-Step 2.5 では次の4ファイルをここに載せた完成形で丸ごと置き換えます。長いページを部分ごとに置換すると、古い import や条件分岐が残って型検査を通っても誤った表示になる場合があります。ここでは状態と表示を切り離せないファイルだけを、完全なコピー単位として載せます。
+Step 2.5 の変更後は、次の4ファイルを現行の完成形と照合します。共通レイアウトとプロフィールは、先ほどの短い差分で確認します。長い3ページは、古い import や条件分岐が残るのを防ぐため、完全なコピー単位で載せます。
 
 ### `src/app/dashboard/page.tsx`（ダッシュボード）
 
@@ -1510,8 +2478,8 @@ import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  // ダッシュボードはアクティブな状況の概要のため、
-  // アーカイブ済みプロジェクトは除外する
+  // アクティブな状況の概要だけを表示するため、
+  // アーカイブ済みプロジェクトは除外する。
   const {
     data: projects,
     isLoading: projectsLoading,
@@ -1876,7 +2844,7 @@ export default function DashboardPage() {
 
 ### `src/app/my-task/page.tsx`（マイタスク）
 
-3件の問い合わせ、編集入力、更新と削除、4種類の表示が同じ state を共有しています。入力保持まで実行可能な形で照合するため、ファイル全体を1つのコピー単位にします。
+Day 17のページ送り、送信記録、入力の世代、ログイン切れの記録を残したまま、3件の問い合わせについて、初回500・再取得500・401・403の表示を照合します。完了済みとキャンセル済みのタスクも、それぞれのグループへ分けます。期限だけで分類すると、完了したタスクまで期限超過に入ってしまうためです。部分置換でこれらの処理を消さないよう、ファイル全体を1つのコピー単位にします。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -1885,7 +2853,7 @@ export default function DashboardPage() {
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -1909,13 +2877,9 @@ import {
   type TaskStatus,
 } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso, localDateOnly } from '@/lib/date';
-import {
-  isAuthError,
-  isForbiddenError,
-  isUnknownResult,
-  shouldRetryQuery,
-} from '@/lib/query-error';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
@@ -1925,6 +2889,7 @@ const ACTIVE_STATUSES: TaskStatus[] = [
   TASK_STATUS.IN_REVIEW,
   TASK_STATUS.DONE,
 ];
+const PAGE_SIZE = 100;
 const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'すべて', value: 'all' },
   ...ACTIVE_STATUSES.map((status) => ({
@@ -1932,6 +2897,17 @@ const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
     value: status,
   })),
 ];
+
+type UpdateSubmission = {
+  kind: 'update';
+  targetId: string;
+  title: string;
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+};
+type DeleteSubmission = { kind: 'delete'; targetId: string; pageIndex: number };
+type WriteSubmission = UpdateSubmission | DeleteSubmission;
 
 interface TaskGroupSectionProps {
   title: string;
@@ -1999,10 +2975,17 @@ export default function MyTasksPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const pageContext = `${activeTab}\u0000${filterProject}`;
+  const [pagination, setPagination] = useState({ context: pageContext, index: 0 });
+  const pageIndex = pagination.context === pageContext ? pagination.index : 0;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [authExpired, setAuthExpired] = useState(false);
+  const authExpiredRef = useRef(false);
+  const formGeneration = useRef(0);
+  const writeSubmission = useRef<WriteSubmission | null>(null);
 
   const {
     data: currentUser,
@@ -2010,17 +2993,24 @@ export default function MyTasksPage() {
     isError: isCurrentUserError,
     error: currentUserQueryError,
     refetch: refetchCurrentUser,
-  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
   const {
     data: projects,
     isLoading: isProjectsLoading,
     isError: isProjectsError,
     error: projectsQueryError,
     refetch: refetchProjects,
-  } = api.project.getAll.useQuery(undefined, { retry: shouldRetryQuery });
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
   const {
     data: tasks,
     isLoading,
+    isFetching,
     isError: isTasksError,
     error: tasksQueryError,
     refetch: refetchTasks,
@@ -2029,8 +3019,10 @@ export default function MyTasksPage() {
       assigneeId: currentUser?.id,
       status: activeTab === 'all' ? undefined : activeTab,
       projectId: filterProject === 'all' ? undefined : filterProject,
+      limit: PAGE_SIZE,
+      offset: pageIndex * PAGE_SIZE,
     },
-    { enabled: !!currentUser, retry: shouldRetryQuery },
+    { enabled: !!currentUser && !authExpired, retry: shouldRetryQuery },
   );
 
   // プロジェクトごとのログインユーザー自身のロールを引けるようにする
@@ -2065,84 +3057,198 @@ export default function MyTasksPage() {
     [myRoleByProject],
   );
 
+  const editableProjects = useMemo(
+    () => (projects ?? []).filter((project) => canEditProject(project.id)),
+    [projects, canEditProject],
+  );
+
   const utils = api.useUtils();
 
-  const handleTimeLogSuccess = useCallback(() => {
-    utils.task.getAll.invalidate();
-  }, [utils.task.getAll]);
+  const markAuthExpired = () => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  };
 
-  const updateMutation = api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setDialogOpen(false);
-    },
-    // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
-    // 成功したのか失敗したのか分からず、再入力を強いられる。
-    onError: (error) => {
-      // 応答そのものが届かなかった場合、サーバー側では処理が
-      // 成功している可能性がある。「失敗しました」と断定せず、
-      // 一覧を再取得して実際の結果を確認できるようにする。
-      if (isUnknownResult(error)) {
-        toast.error(
-          '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。'
-        );
-        void utils.task.getAll.invalidate();
+  const refreshAfterWrite = async (targetId: string, refreshPermissions: boolean) => {
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [
+        utils.task.getAll.invalidate(undefined, filters, { throwOnError: true }),
+        utils.task.getById.invalidate({ id: targetId }, filters, { throwOnError: true }),
+      ];
+      if (refreshPermissions) {
+        updates.push(utils.project.getAll.invalidate(undefined, filters, { throwOnError: true }));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+      if (isAuthError(error)) {
+        markAuthExpired();
         return;
       }
-      toast.error(error.message || 'タスクの更新に失敗しました');
+      console.error(`タスク ${targetId} の表示更新に失敗しました。`, error);
+      toast.error(
+        '最新の表示を取得できませんでした。' +
+          '再表示して操作結果を確認してください。'
+      );
+    }
+  };
+
+  const handleWriteError = async (
+    error: unknown,
+    operation: TaskWriteOperation,
+    targetId: string,
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      markAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    await refreshAfterWrite(targetId, true);
+  };
+
+  const mutationLifecycle = {
+    retry: false as const,
+    onMutate: () => writeSubmission.current,
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      _variables: unknown,
+      submitted: WriteSubmission | null | undefined,
+    ) => {
+      if (writeSubmission.current === submitted) writeSubmission.current = null;
     },
+  };
+
+  const finishSubmittedUpdate = (
+    submitted: WriteSubmission | null | undefined,
+    target: { id: string; title: string | undefined },
+  ) => {
+    const ownsSubmittedLifetime =
+      !authExpiredRef.current &&
+      submitted?.kind === 'update' &&
+      submitted.targetId === target.id &&
+      submitted.generation === formGeneration.current &&
+      submitted.pageIndex === pageIndex;
+    const canClose = ownsSubmittedLifetime && submitted.isCurrent();
+    if (canClose) closeTaskDialog();
+    if (authExpiredRef.current) return;
+
+    const submittedTitle =
+      submitted?.kind === 'update' && submitted.targetId === target.id
+        ? submitted.title
+        : target.title;
+    const name = submittedTitle ? `「${submittedTitle}」` : '先ほど送信したタスク';
+    toast.success(`${name}を更新しました。`);
+    if (canClose || !dialogOpen) return;
+
+    // 同じタスクの古い楽観ロック値で再送信しないため、再取得を明示します。
+    if (editingTask?.id === target.id) {
+      toast(
+        '送信後に入力した変更は保存されていません。' +
+          '入力内容を別の場所にコピーしてから、' +
+          'タスク編集画面を閉じて開き直し、' +
+          'もう一度保存してください。',
+      );
+    }
+  };
+
+  const updateMutation = api.task.update.useMutation({
+    ...mutationLifecycle,
+    onSuccess: async (_data, variables, submitted) => {
+      finishSubmittedUpdate(submitted, { id: variables.id, title: variables.title });
+      await refreshAfterWrite(variables.id, false);
+    },
+    onError: (error, variables) => handleWriteError(error, 'update', variables.id),
   });
 
   const deleteMutation = api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setDeleteDialogOpen(false);
-      setDeleteTargetId(null);
-    },
-    onError: (error) => {
-      if (isUnknownResult(error)) {
-        toast.error(
-          '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。'
-        );
-        void utils.task.getAll.invalidate();
-        return;
+    ...mutationLifecycle,
+    onSuccess: async (_data, variables, submitted) => {
+      if (submitted?.kind === 'delete' && submitted.targetId === variables.id) {
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
       }
-      toast.error(error.message || 'タスクの削除に失敗しました');
+      await refreshAfterWrite(variables.id, false);
     },
+    onError: (error, variables) => handleWriteError(error, 'delete', variables.id),
   });
+  const writePending = updateMutation.isPending || deleteMutation.isPending;
+
+  const closeTaskDialog = () => {
+    formGeneration.current += 1;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+  };
 
   const handleEdit = (taskId: string) => {
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
+      formGeneration.current += 1;
       setEditingTask(taskToFormData(task));
       setDialogOpen(true);
     }
   };
 
   const handleDelete = (taskId: string) => {
+    if (writeSubmission.current || writePending || authExpiredRef.current) return;
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: TaskFormData) => {
-    if (data.id) {
-      updateMutation.mutate({
-        id: data.id,
-        title: data.title,
-        description: data.description || null,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
-        estimatedHours: data.estimatedHours ?? null,
-        projectId: data.projectId,
-        assigneeId: data.assigneeId || null,
-        ...(data.expectedUpdatedAt !== undefined && {
-          expectedUpdatedAt: data.expectedUpdatedAt,
-        }),
-      });
-    }
+  const handleSubmit = (data: TaskFormData, isCurrent: () => boolean = () => true) => {
+    if (
+      !data.id ||
+      !dialogOpen ||
+      writeSubmission.current ||
+      writePending ||
+      authExpiredRef.current ||
+      !isCurrent()
+    )
+      return;
+    writeSubmission.current = {
+      kind: 'update',
+      targetId: data.id,
+      title: data.title,
+      generation: formGeneration.current,
+      pageIndex,
+      isCurrent,
+    };
+    updateMutation.mutate({
+      id: data.id,
+      title: data.title,
+      description: data.description || null,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
+      estimatedHours: data.estimatedHours ?? null,
+      projectId: data.projectId,
+      assigneeId: data.assigneeId || null,
+      ...(data.expectedUpdatedAt !== undefined && {
+        expectedUpdatedAt: data.expectedUpdatedAt,
+      }),
+    });
+  };
+
+  const leavePageContext = () => {
+    formGeneration.current += 1;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+  };
+
+  const moveToPage = (nextPage: number) => {
+    if (isFetching || nextPage < 0 || nextPage === pageIndex) return;
+    leavePageContext();
+    setPagination({ context: pageContext, index: nextPage });
+  };
+
+  const resetPageForFilter = () => {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
   };
 
   const groupedTasks = useMemo(() => {
@@ -2150,9 +3256,19 @@ export default function MyTasksPage() {
     const today: typeof tasks = [];
     const upcoming: typeof tasks = [];
     const noDueDate: typeof tasks = [];
+    const completed: typeof tasks = [];
+    const cancelled: typeof tasks = [];
     const todayKey = localDateOnly(new Date());
 
     for (const t of tasks ?? []) {
+      if (t.status === TASK_STATUS.DONE) {
+        completed.push(t);
+        continue;
+      }
+      if (t.status === TASK_STATUS.CANCELLED) {
+        cancelled.push(t);
+        continue;
+      }
       if (!t.dueDate) {
         noDueDate.push(t);
       } else {
@@ -2167,7 +3283,7 @@ export default function MyTasksPage() {
       }
     }
 
-    return { overdue, today, upcoming, noDueDate };
+    return { overdue, today, upcoming, noDueDate, completed, cancelled };
   }, [tasks]);
 
   const queryErrors = [
@@ -2183,7 +3299,14 @@ export default function MyTasksPage() {
     (!isCurrentUserError || currentUser != null) &&
     (!isTasksError || tasks != null) &&
     (!isProjectsError || projects != null);
-  const authFailed = queryErrors.some(isAuthError);
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (queryAuthFailed) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+    }
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
   const forbidden = queryErrors.some(isForbiddenError);
 
   return (
@@ -2233,8 +3356,7 @@ export default function MyTasksPage() {
               <span>
                 {authFailed
                   ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
-                  : '最新の情報を取得できませんでした。' +
-                    '表示は前回取得時の内容です。'}
+                  : '最新の情報を取得できませんでした。' + '表示は前回取得時の内容です。'}
               </span>
               <button
                 type="button"
@@ -2259,7 +3381,10 @@ export default function MyTasksPage() {
             <Tabs
               value={activeTab}
               onValueChange={(v) => {
-                if (v === 'all' || isTaskStatus(v)) setActiveTab(v);
+                if ((v === 'all' || isTaskStatus(v)) && v !== activeTab) {
+                  resetPageForFilter();
+                  setActiveTab(v);
+                }
               }}
               className="w-full sm:w-auto"
             >
@@ -2273,7 +3398,14 @@ export default function MyTasksPage() {
             </Tabs>
 
             <div className="ml-auto w-full sm:w-[200px]">
-              <Select value={filterProject} onValueChange={setFilterProject}>
+              <Select
+                value={filterProject}
+                onValueChange={(value) => {
+                  if (value === filterProject) return;
+                  resetPageForFilter();
+                  setFilterProject(value);
+                }}
+              >
                 <SelectTrigger id="project-filter" aria-label="プロジェクトフィルター">
                   <SelectValue placeholder="すべてのプロジェクト" />
                 </SelectTrigger>
@@ -2295,7 +3427,6 @@ export default function MyTasksPage() {
             tasks={groupedTasks.overdue ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimeLogSuccess={handleTimeLogSuccess}
             canEditProject={canEditProject}
             canDeleteProject={canDeleteProject}
           />
@@ -2306,7 +3437,6 @@ export default function MyTasksPage() {
             tasks={groupedTasks.today ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimeLogSuccess={handleTimeLogSuccess}
             canEditProject={canEditProject}
             canDeleteProject={canDeleteProject}
           />
@@ -2316,7 +3446,6 @@ export default function MyTasksPage() {
             tasks={groupedTasks.upcoming ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimeLogSuccess={handleTimeLogSuccess}
             canEditProject={canEditProject}
             canDeleteProject={canDeleteProject}
           />
@@ -2326,43 +3455,98 @@ export default function MyTasksPage() {
             tasks={groupedTasks.noDueDate ?? []}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onTimeLogSuccess={handleTimeLogSuccess}
             canEditProject={canEditProject}
             canDeleteProject={canDeleteProject}
           />
 
-          {tasks && tasks.length === 0 && (
+          <TaskGroupSection
+            title="完了済み"
+            tasks={groupedTasks.completed ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+
+          <TaskGroupSection
+            title="キャンセル済み"
+            tasks={groupedTasks.cancelled ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+
+          {tasks && tasks.length === 0 && pageIndex > 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>このページにはタスクがありません。</p>
+              <p>前のページへ戻ってください。</p>
+            </div>
+          )}
+
+          {tasks && tasks.length === 0 && pageIndex === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               <p>条件に合うタスクはありません</p>
             </div>
           )}
 
+          {(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="マイタスクのページ移動"
+            >
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isFetching || pageIndex === 0}
+                onClick={() => moveToPage(pageIndex - 1)}
+              >
+                前へ
+              </button>
+              <span className="text-sm text-muted-foreground">{pageIndex + 1}ページ目</span>
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+                onClick={() => moveToPage(pageIndex + 1)}
+              >
+                次へ
+              </button>
+            </nav>
+          )}
+
           <TaskDialog
             open={dialogOpen}
-            onClose={() => setDialogOpen(false)}
+            onClose={closeTaskDialog}
             onSubmit={handleSubmit}
             initialData={editingTask}
-            projects={projects ?? []}
+            projects={editableProjects}
+            isPending={writePending}
           />
         </div>
       )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open && !deleteMutation.isPending) setDeleteTargetId(null);
+        }}
         onConfirm={() => {
-          if (deleteTargetId) {
-            deleteMutation.mutate({ id: deleteTargetId });
-          }
+          if (!deleteTargetId || writeSubmission.current || writePending || authExpiredRef.current)
+            return;
+          writeSubmission.current = { kind: 'delete', targetId: deleteTargetId, pageIndex };
+          deleteMutation.mutate({ id: deleteTargetId });
         }}
         isPending={deleteMutation.isPending}
+        closeOnConfirm={false}
       />
     </AppLayout>
   );
 }
 ```
 
-この完成版では、どの取得処理が失敗しても判定から漏れません。更新に失敗したときはダイアログを開いたままにし、応答が無いときは一覧を再取得して実際の状態を確かめられます。
+3件の取得結果をまとめて判定し、401が出たあとは記録を残して問い合わせを停止します。更新・削除は同じ送信記録を使って重ねて送りません。成功しても入力を変えた後のダイアログは閉じず、送信したタスク名を通知します。手動で確認画面を閉じても削除は取り消せません。失敗時は送信対象の詳細・一覧・権限を再取得し、表示更新の失敗は書き込みの結果と分けて通知します。
 
 ### `src/app/report/page.tsx`（レポート）
 
@@ -2477,7 +3661,7 @@ export default function ReportPage() {
       <div className="space-y-6">
         {isError && overview != null ? (
           <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
-            <span>最新のレポートを取得できませんでした。表示は前回取得時の内容です。</span>
+            <span>取得できませんでした。前回のレポートです。</span>
             <Button
               type="button"
               variant="outline"
@@ -2652,7 +3836,7 @@ export default function ReportPage() {
 
 ### `src/lib/query-error.ts`（エラー判定）
 
-各ページと更新処理が同じ分類関数を使います。Day 11 で書いたファイルと処理は同じです。分類の理由をコメントに残した形を短いファイル全体で1つのコピー単位にします。
+各ページと更新処理が同じ分類関数を使います。コメントに分類理由も残した配布ファイルと照合できるよう、短いファイル全体を1つのコピー単位にします。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2698,28 +3882,61 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 
 401 と 403 の再試行を止め、応答が無い更新を結果不明として分ける基準が1か所にまとまりました。ページごとに別の判定を書かないため、同じ通信状態なら同じ案内になります。
 
-4ファイルを置き換えたら Step 2.5 のテストを実行します。テストが通れば、通常表示が出ることだけでなく、保護データを隠す条件と入力を残す条件も確認できます。
+3ページを置き換え、共通レイアウトとプロフィールを更新し、`src/lib/query-error.ts` の内容を照合したら、Step 2.5 のテストを実行します。6つのテストファイルが通れば、初回500と再取得500の表示、401・403時の保護データの非表示、401後の問い合わせ停止、登録完了マーカー、構造化された500応答のあとに編集画面と初期入力元が残ることを確認できます。文字を打ち直したあとの入力保持と、応答が無い更新の結果確認は、この33件のテストでは検査していません。
 
 ## 今日のまとめ
 
 - [ ] error.tsxの動作を確認した（意図的にエラーを起こして表示確認）
-- [ ] Error Boundaryの`error`と`reset` propsを理解した
-- [ ] バグA: Optional Chainingなしのクラッシュを修正できた
-- [ ] バグB: useEffect依存配列ミスの無限ループを理解した
-- [ ] バグC: console.log残りをBiome lintで検出・修正した
-- [ ] DevTools Console/Network/Elementsの使い分けがわかった
-- [ ] 初回500・再取得500・401・403の表示をテストした
-- [ ] 更新失敗時に入力を残し、応答なしを結果不明として扱った
-- [ ] `npm run lint` で `src` 以下と設定ファイルをチェックした
+- [ ] Error Boundaryの`error`と`reset` propsを理解しました
+- [ ] バグA: Optional Chainingなしのクラッシュを修正できました
+- [ ] バグB: useEffect依存配列ミスの無限ループを理解しました
+- [ ] バグC: console.log残りをBiome lintで検出・修正しました
+- [ ] DevTools Console/Network/Elementsの使い分けが分かりました
+- [ ] 初回500・再取得500・401・403の表示をテストしました
+- [ ] 更新失敗時に入力を残し、応答なしを結果不明として扱いました
+- [ ] `npm run lint` で `src` 以下と設定ファイルをチェックしました
 
 ## つまずきポイント
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| `Cannot read properties of null` | Optional Chainingなし | `?.`を追加する |
-| Networkタブでリクエストが止まらない | useEffect依存配列にオブジェクト | プリミティブ値に分解する |
-| Biome lintのエラーが消えない | 自動修正できないルール | 手動でコードを修正する |
-| error.tsxが表示されない | 開発モードではエラーオーバーレイが優先 | 本番ビルドで確認するか、オーバーレイを閉じる |
+#### `Cannot read properties of null`
+
+**原因**
+
+Optional Chainingがないためです。
+
+**解決方法**
+
+`?.`を追加してください。
+
+#### Networkタブでリクエストが止まらない
+
+**原因**
+
+useEffect依存配列にオブジェクトを指定しているためです。
+
+**解決方法**
+
+プリミティブ値に分解してください。
+
+#### Biome lintのエラーが消えない
+
+**原因**
+
+自動修正できないルールのためです。
+
+**解決方法**
+
+手動でコードを修正してください。
+
+#### error.tsxが表示されない
+
+**原因**
+
+開発モードではエラーオーバーレイが優先されるためです。
+
+**解決方法**
+
+本番ビルドで確認するか、オーバーレイを閉じてください。
 
 ## 今日学んだ用語
 

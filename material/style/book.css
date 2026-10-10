@@ -124,13 +124,6 @@ h6 {
   color: var(--book-head);
 }
 
-/* 見出しの直下の行内コードは帯を消して見出し色にそろえる（issue #474 直し1）。
-   等幅の書体は残す。 */
-h1 > code, h2 > code, h3 > code, h4 > code, h5 > code, h6 > code {
-  --vs-prism--background: transparent;
-  --vs-prism--color: var(--book-head);
-}
-
 h1 {
   border-bottom: 1px solid var(--book-head);
   padding-bottom: 0.4em;
@@ -171,22 +164,9 @@ code {
 
    実際に減らせたのは上の --vs--pre-font-size だけ。 */
 
-/* 強制改行（br.cw-force）の直後に置く空き要素。続き行の頭に
-   元の行の字下げ＋2桁ぶんの幅を持たせ、続き行が字下げを失って
-   左端に落ちる（外側の行に見えて入れ子を読み違える）のを防ぐ。
-   空の span は inline のままでは幅を持たないので inline-block にする。
-   空白文字で字下げしないのは、コピー時の文字列を変えないため。 */
-.cw-hang {
-  display: inline-block;
-}
-
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);
-  /* 1ページに収まる囲みは割らずに次のページへ送り、それより長い囲みは
-     割れた両側に四辺の枠を付ける（issue #474 直し2）。 */
-  break-inside: avoid;
-  box-decoration-break: clone;
 }
 
 /* ── 表 ─────────────────────────────────────────────────
@@ -200,73 +180,6 @@ blockquote {
 table {
   table-layout: fixed;
   width: 100%;
-}
-
-/* 長い識別子と説明の幅を奪い合わないよう、生成器が選んだ表だけ縦に展開する。 */
-.pdf-stacked-table {
-  margin-block: 1.2em;
-}
-.pdf-stacked-row {
-  border-block-start: 1px solid var(--book-rule);
-  padding-block: 0.6em;
-  /* 縦に並べ直した行がページの境で二つに割けると、見出しと説明が行き違いになる */
-  break-inside: avoid;
-}
-.pdf-stacked-row dl {
-  margin: 0;
-}
-.pdf-stacked-row dt {
-  color: var(--book-accent);
-  font-weight: bold;
-  margin-block-start: 0.55em;
-  break-after: avoid;
-}
-.pdf-stacked-row dd {
-  margin: 0.2em 0 0.7em;
-  text-align: start;
-  orphans: 2;
-  widows: 2;
-  /* 本文と同じく、末尾の不自然な一文字行を減らす */
-  text-wrap: pretty;
-}
-.pdf-table-caption {
-  font-weight: bold;
-  break-after: avoid;
-}
-
-/* ラベルや導入文が指すコード・箇条書き・図・表は break-inside: avoid で
-   丸ごと次ページへ送られる。そのままだと導入文だけが前のページの末尾に
-   残り、読者はページをめくるまで何を写すのか分からない（issue #475）。
-   見出しにテーマが掛けている指定と同じ「次と同じページに置く」を、
-   生成器が印を付けた段落へ掛ける。
-   break-inside: avoid は段落自身の途中改ページも防ぐ。付ける段落は
-   正規化して 90 字以下（3〜4行）しかないので、必ずページに収まる。
-   これが無いと2行に割れた段落の先頭行だけがページ末尾に取り残されて、
-   ラベルの断片が残るのと同じ見た目になる。 */
-.pdf-keep-next {
-  break-after: avoid;
-  break-inside: avoid;
-}
-/* theme-base は figure に display: flex を掛ける。flex コンテナは
-   ページ分割で「割れない箱」として別経路で置かれるため、手前の段落の
-   break-after: avoid も figure 側の break-before: avoid も効かず、
-   36冊の実測で3か所の取り残しが残った（Day 03/06/08 の図の直前の段落）。
-   直前が印付き段落の figure だけ display: block に倒して改ページ規則が
-   通る箱に戻す。flex の column + align-items: center と同じ見え方に
-   なるよう、画像は margin で中央寄せ、figcaption は display: table +
-   margin で中身の幅に縮めて中央に置く。 */
-.pdf-keep-next + figure {
-  display: block;
-  text-align: center;
-}
-.pdf-keep-next + figure img {
-  display: block;
-  margin-inline: auto;
-}
-.pdf-keep-next + figure figcaption {
-  display: table;
-  margin-inline: auto;
-  text-align: start;
 }
 
 td,
@@ -288,6 +201,11 @@ th code {
   /* 語の途中で切れる回数は、入る文字数で決まる。実測で効いたのは級数だけなので
      （下の端切れの覚え書きと同じ結論）、セルの中だけ少し落として切れ目を減らす。 */
   font-size: 0.85em;
+}
+
+/* Day 07 の完成コード一覧はパスを折り返すため、ファイル列だけ左右の飾り余白を外す。 */
+table[data-pdf-table-id="pdf-table-fd90476cd346-00013"] td:first-child code {
+  padding-inline: 0;
 }
 
 th {
@@ -324,16 +242,15 @@ tr {
   break-inside: avoid;
 }
 
-/* 行単位の分割を許しても、表の端には1行だけ残させない。
-   1行目だけがページ末尾に残ると、読者は1行のためにページをめくり、
-   めくった先で同じ見出し行を読み直すことになる（issue #469）。
-   1行目と2行目の間・最後から2行目と最後の行の間では切らせないため、
-   2行・3行の表はこの規則でページをまたがなくなる。 */
-tbody tr:first-child {
-  break-after: avoid;
+/* 目次の「完成するアプリの機能」だけは、番号付き項目名と直下の短い内訳を分離しない。 */
+h3#完成するアプリの機能 + ol > li {
+  break-inside: avoid;
 }
-tbody tr:last-child {
-  break-before: avoid;
+
+/* 明示的な前向き案内を、直後のコード・図・表・一覧から切り離さない。 */
+.pdf-keep-next {
+  break-after: avoid;
+  break-inside: avoid;
 }
 
 /* ── コードブロックの改ページ ─────────────────────────────
@@ -345,13 +262,6 @@ tbody tr:last-child {
    収まらん塊は CSS の規定どおり分割されるので、長いブロックが消えることはない。
    その代わりページ下部に空白が増えるが、写経が途切れるほうが商品としては重い。
 
-   ただし版面の大半を占める塊を丸ごと送ると、手前のページが説明文だけの
-   薄いページになる（issue #407。36冊・3410ページのうち本文35%未満の
-   薄いページが695ページ、空白ページ換算537ページ分を実測）。
-   そこで生成器が表示行数の大きい pre だけへ pdf-breakable を付け、
-   その塊はページの境で流し込む。しきい値は版面の約6割で、それ未満の塊は
-   送られても薄いページにならないため従来どおり丸ごと送る。
-
    分割される長い塊にも最低限の担保として orphans / widows を置く。
    ページの境に1〜2行だけ残る形を防ぐ。 */
 pre {
@@ -359,21 +269,17 @@ pre {
   orphans: 4;
   widows: 4;
 }
+
+/* 1ページに収まらないと実測したコードだけは build_pdf_book.py が印を付ける。
+   avoid のままだと先頭を次ページへ送っても結局分割され、前ページの空白だけが増える。
+   分割を許可しても pre の orphans / widows は継承され、境界の1〜2行は防ぐ。 */
 pre.pdf-breakable {
   break-inside: auto;
 }
 
-/* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
-   hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
-   なく「この枠がどのファイルか」の見出し。等幅で pre と同じ級数にし、
-   折返せないコメント行として縮まないよう枠の外に置く。長いファイル名は
-   ふつうに折り返す。break-after: avoid で直後のコード枠と同じページに留める。 */
-.code-filepath {
-  font-family: var(--vs--monospace-font-family);
-  font-size: var(--vs--pre-font-size);
-  color: var(--book-muted);
-  margin-block-end: 0.25em;
-  break-after: avoid;
+/* 完成コードが1ページを超え、原稿側で開始位置を指定した場合だけ新しいページから始める。 */
+pre.pdf-break-before-oversized-complete-copy {
+  break-before: page;
 }
 
 /* ── 図 ─────────────────────────────────────────────────
@@ -473,15 +379,10 @@ figure img[src$=".png"] {
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
-    /* 表示は生成器が作る data-pdf-footnote-display を使う。href には共有
-       パラメータ ?usp= や改行可能位置の制限が無く、テーマの break-all が
-       語の途中で切っていた。表示URLは `/ ? & =` の直後だけで折れる。 */
-    content: attr(data-pdf-footnote) ". " attr(data-pdf-footnote-display);
+    content: attr(data-pdf-footnote) ". " attr(href);
     clear: both;
     inline-size: 100%;
     max-inline-size: 100%;
-    word-break: normal;
-    overflow-wrap: normal;
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
@@ -490,84 +391,13 @@ figure img[src$=".png"] {
   }
 }
 
-/* 箇条書きの中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
-   次のページへ送る（issue #474 直し4）。段落の中のリンクへ当てると
-   Day 04 の組版が止まるので箇条書きに限る。 */
-@media print {
-  li > a[data-pdf-footnote][href^="http"]::before {
-    footnote-policy: line;
-  }
+/* 紙面で確認するファイル名だけを、元PNGを加工せず表示領域で拡大する。 */
+figure img[src$="day01-vscode-open.png"] {
+  object-view-box: inset(10.19% 66.15% 18.52% 3.91%);
+  max-block-size: 150mm;
 }
 
-/* 見出しの中のリンクは脚注にせず、表示用のURLを見出しの下の1行に出す
-   （issue #474 直し4）。 */
-@media print {
-  :not(.footnote) > a[data-pdf-heading-url][href^="http"] {
-    counter-increment: none;
-  }
-  :not(.footnote) > a[data-pdf-heading-url][href^="http"]::before {
-    content: none;
-    float: none;
-  }
-  :not(.footnote) > a[data-pdf-heading-url][href^="http"]::after {
-    content: attr(data-pdf-heading-url);
-    display: block;
-    color: var(--book-muted);
-    font-size: 0.6em;
-    font-weight: normal;
-    word-break: normal;
-    overflow-wrap: normal;
-  }
-}
-
-/* リンクの文字列がURLそのものなら脚注にしない（issue #474 直し5）。 */
-@media print {
-  :not(.footnote) > a[data-pdf-bare-url][href^="http"] {
-    counter-increment: none;
-  }
-  :not(.footnote) > a[data-pdf-bare-url][href^="http"]::before,
-  :not(.footnote) > a[data-pdf-bare-url][href^="http"]::after {
-    content: none;
-    float: none;
-  }
-}
-
-/* 段落末尾の数文字を一体にする。Vivliostyle の行分割は行長しか見ないので、
-   折れない塊にすると「末尾だけ1文字残る」切れ目が作れなくなる。
-   不可視文字だと pdftotext の語の結合が壊れるため、スパンで包む方式を取る。 */
-.pdf-tail {
-  white-space: nowrap;
-}
-
-/* 表の識別子は本文の書体を保ち、狭い列ではHTML変換側で行を展開する。 */
-.pdf-table-latin {
-  font: inherit;
-  white-space: nowrap;
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
-}
-
-/* #472: 空白を含む長い行内コードを語ごとの code に分けたとき、
-   間の空白だけが素の本文になると背景が切れて2つのコードに見える。
-   空白は code と同じ背景・書体の span に入れ、繋がる側の端は
-   余白と角丸を取って1本のコードに見せる。
-   組版前に scripts/pdf-book/inline_break.py が挿入する。 */
-:not(pre) > code.pdf-code-more {
-  padding-right: 0;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-:not(pre) > code.pdf-code-cont {
-  padding-left: 0;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-:not(pre) > .pdf-code-gap {
-  color: var(--vs-theme--inline-code-color-body);
-  background-color: var(--vs-theme--inline-code-color-bg);
-  /* 角丸は上の :not(pre) > code と同じ 2px（変数ではなく直接指定に合わせる） */
-  border-radius: 2px;
-  /* 空白も等幅でないと分けた片どうしの字面がずれる */
-  font-family: var(--vs--monospace-font-family);
+figure img[src$="day03-github-history.png"] {
+  object-view-box: inset(31.67% 49.65% 14.58% 6.25%);
+  max-block-size: 150mm;
 }

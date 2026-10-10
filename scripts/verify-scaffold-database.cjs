@@ -56,7 +56,11 @@ function connection(config, serviceName) {
     fail('教材の PostgreSQL 公開ポートを特定できません。docker-compose.yml を確認してください。');
   }
   const port = Number(ports[0].published);
-  if (port < 1 || port > 65535 || !['', '0.0.0.0', '127.0.0.1'].includes(ports[0].host_ip ?? '')) {
+  if (
+    port < 1 ||
+    port > 65535 ||
+    !['', '0.0.0.0', '127.0.0.1', '::', '::1'].includes(ports[0].host_ip ?? '')
+  ) {
     fail('教材の PostgreSQL はこのパソコンのポートで起動してください。');
   }
   return { port, service };
@@ -85,9 +89,7 @@ function validateUrl(value, config) {
       'DATABASE_URL が今回起動する教材用 DB と一致しません。シェルの DATABASE_URL と .env の接続先・ポートを確認してください。別の DB は自動変更しません。',
     );
   }
-  // localhost が別の IPv6 リスナーへ解決されないよう、検査する IPv4 接続先へ固定する。
-  url.hostname = '127.0.0.1';
-  return url.href;
+  return value;
 }
 
 function distroName(environment, kernelVersion) {
@@ -269,7 +271,7 @@ function validateRunning(config, containers) {
     databases.length !== 1 ||
     !databases[0].State?.Running ||
     !databases[0].NetworkSettings?.Ports?.['5432/tcp']?.some(
-      (item) => Number(item.HostPort) === port && ['0.0.0.0', '127.0.0.1'].includes(item.HostIp),
+      (item) => Number(item.HostPort) === port,
     )
   ) {
     fail(
@@ -299,10 +301,6 @@ function main(action, serviceName) {
     commands.push(['npm', ['run', 'db:seed', '--', '--yes']]);
   for (const [executable, args] of commands) {
     // 初期導入だけを自動化し、seed の --yes を非対話経路で明示的に使う。
-    if (args[1] === 'db:seed')
-      // stdout が pipe だと process.stdout.write は非同期で子プロセスの出力と
-      // 入れ替わり得るため、fd へ直接書いて「投入しています」の先行を保証する。
-      fs.writeSync(1, 'シードデータを投入しています...\n');
     const result = spawnSync(executable, args, { env, stdio: ['ignore', 'inherit', 'inherit'] });
     if (result.error || result.status !== 0)
       fail('DB セットアップに失敗しました。直前のエラーを確認してください。');

@@ -32,6 +32,15 @@ const projectUpdateSchema = z.object({
   endDate: z.string().datetime().optional().nullable(),
 });
 
+const assertProjectDateOrder = (startDate: Date | null, endDate: Date | null) => {
+  if (startDate && endDate && startDate > endDate) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '終了日は開始日以降の日付にしてください',
+    });
+  }
+};
+
 const projectMemberSchema = z.object({
   projectId: z.string().cuid(),
   userId: z.string().cuid(),
@@ -39,17 +48,23 @@ const projectMemberSchema = z.object({
 });
 
 const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
-  const userMember = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    // メンバー変更と同じ行を先にロックし、待機中に確定した現在の権限を確認する。
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    const userMember = await tx.projectMember.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
 
-  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+    assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
 
-  return await prisma.project.update({
-    where: { id: projectId },
-    data: { isArchived },
+    return await tx.project.update({
+      where: { id: projectId },
+      data: { isArchived },
+    });
   });
 };
 
@@ -178,11 +193,15 @@ export const projectRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const startDate = input.startDate ? new Date(input.startDate) : null;
+    const endDate = input.endDate ? new Date(input.endDate) : null;
+    assertProjectDateOrder(startDate, endDate);
+
     const createData: Prisma.ProjectCreateInput = {
       name: input.name,
       color: input.color,
-      startDate: input.startDate ? new Date(input.startDate) : null,
-      endDate: input.endDate ? new Date(input.endDate) : null,
+      startDate,
+      endDate,
       members: {
         create: {
           userId: ctx.session.userId,
@@ -211,65 +230,13 @@ export const projectRouter = createTRPCRouter({
   update: protectedProcedure.input(projectUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
-    const project = await prisma.project.findUnique({
-      where: { id },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
-        },
-      },
-    });
-
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-
-    assertMemberPermission(project.members, 'canManageMembers');
-
-    const updateData: Prisma.ProjectUpdateInput = {};
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-    if (data.description !== undefined) {
-      updateData.description = data.description;
-    }
-    if (data.color !== undefined) {
-      updateData.color = data.color;
-    }
-    if (data.isArchived !== undefined) {
-      assertMemberPermission(project.members, 'canArchive');
-      updateData.isArchived = data.isArchived;
-    }
-    if (data.startDate !== undefined) {
-      updateData.startDate = data.startDate ? new Date(data.startDate) : null;
-    }
-    if (data.endDate !== undefined) {
-      updateData.endDate = data.endDate ? new Date(data.endDate) : null;
-    }
-
-    return await prisma.project.update({
-      where: { id },
-      data: updateData,
-      include: {
-        members: {
-          include: {
-            user: {
-              select: USER_SELECT,
-            },
-          },
-        },
-      },
-    });
-  }),
-
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const project = await prisma.project.findUnique({
-        where: { id: input.id },
+    return await prisma.$transaction(async (tx) => {
+      // メンバーの降格・削除と同じ行を先にロックして、更新直前の権限を判定する。
+      await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${id} FOR UPDATE`,
+      );
+      const project = await tx.project.findUnique({
+        where: { id },
         include: {
           members: {
             where: { userId: ctx.session.userId },
@@ -284,69 +251,144 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      // canDeleteはタスク削除の権限でADMINにも付与されているため、
-      // プロジェクト削除はOWNER限定で明示チェック
-      const userMember = project.members[0];
-      if (!userMember || userMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'この操作を実行する権限がありません',
-        });
+      assertMemberPermission(project.members, 'canManageMembers');
+
+      const updateData: Prisma.ProjectUpdateInput = {};
+      if (data.name !== undefined) {
+        updateData.name = data.name;
+      }
+      if (data.description !== undefined) {
+        updateData.description = data.description;
+      }
+      if (data.color !== undefined) {
+        updateData.color = data.color;
+      }
+      if (data.isArchived !== undefined) {
+        assertMemberPermission(project.members, 'canArchive');
+        updateData.isArchived = data.isArchived;
+      }
+      const startDate =
+        data.startDate === undefined
+          ? project.startDate
+          : data.startDate
+            ? new Date(data.startDate)
+            : null;
+      const endDate =
+        data.endDate === undefined ? project.endDate : data.endDate ? new Date(data.endDate) : null;
+      if (data.startDate !== undefined || data.endDate !== undefined) {
+        assertProjectDateOrder(startDate, endDate);
+      }
+      if (data.startDate !== undefined) {
+        updateData.startDate = startDate;
+      }
+      if (data.endDate !== undefined) {
+        updateData.endDate = endDate;
       }
 
-      await prisma.project.delete({
-        where: { id: input.id },
+      return await tx.project.update({
+        where: { id },
+        data: updateData,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+        },
+      });
+    });
+  }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await prisma.$transaction(async (tx) => {
+        // 降格が先に確定した場合に古いOWNER権限で削除しないよう、
+        // メンバー変更と同じプロジェクト行を先にロックする。
+        const projects = await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.id} FOR UPDATE`,
+        );
+        if (projects.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'プロジェクトが見つかりません',
+          });
+        }
+        const currentMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: { userId: ctx.session.userId, projectId: input.id },
+          },
+          select: { role: true },
+        });
+        // canDeleteはADMINのタスク削除も含むため、プロジェクトはOWNERだけに限る。
+        if (!currentMember || currentMember.role !== PROJECT_MEMBER_ROLE.OWNER) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'この操作を実行する権限がありません',
+          });
+        }
+        await tx.project.delete({ where: { id: input.id } });
       });
       return { success: true };
     }),
 
   addMember: protectedProcedure.input(projectMemberSchema).mutation(async ({ ctx, input }) => {
-    const userMember = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: ctx.session.userId,
-          projectId: input.projectId,
+    return await prisma.$transaction(async (tx) => {
+      // 権限変更と同じプロジェクト行をロックし、追加直前の権限だけを判定に使う。
+      // ロック外のOWNER判定を使うと、降格後でも新しいOWNERを追加できる経路が残る。
+      await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+      );
+
+      const userMember = await tx.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
         },
-      },
-    });
-
-    assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
-
-    // OWNERロールの付与はOWNERのみに限定する。
-    // canManageMembersを持つADMINによる権限昇格を防ぐため。
-    if (
-      input.role === PROJECT_MEMBER_ROLE.OWNER &&
-      userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'オーナー権限の付与はオーナーのみ可能です',
       });
-    }
 
-    const existing = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: input.userId,
-          projectId: input.projectId,
+      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+
+      // OWNERロールの付与はOWNERのみに限定する。
+      // canManageMembersを持つADMINによる権限昇格を防ぐため。
+      if (
+        input.role === PROJECT_MEMBER_ROLE.OWNER &&
+        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'オーナー権限の付与はオーナーのみ可能です',
+        });
+      }
+
+      const existing = await tx.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: input.userId,
+            projectId: input.projectId,
+          },
         },
-      },
-    });
-
-    if (existing) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'このユーザーは既にプロジェクトのメンバーです',
       });
-    }
 
-    return await prisma.projectMember.create({
-      data: input,
-      include: {
-        user: {
-          select: USER_SELECT,
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このユーザーは既にプロジェクトのメンバーです',
+        });
+      }
+
+      return await tx.projectMember.create({
+        data: input,
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
         },
-      },
+      });
     });
   }),
 

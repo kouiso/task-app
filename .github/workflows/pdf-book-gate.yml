@@ -57,9 +57,6 @@ env:
   # find_browser() が既定で見る PLAYWRIGHT_BROWSERS_PATH をここへ寄せる。
   # 揃えておかんと Chromium が見つからず、mermaid 1図ごとに約650MBの Chrome を取りに行く。
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
-  # Makefile の既定と同じ配布先マップ。subset 経路は build_pdf_book.py を直接叩くため、
-  # ここで渡さんと冊またぎのリンク（前の日/次の日）が「配布先が未登録」で組版前に落ちる
-  PDF_BOOK_LINK_MAP: ${{ github.workspace }}/scripts/pdf-book/pdf-link-map.json
 
 jobs:
   pdf-check-selftest:
@@ -72,6 +69,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # test_book_links.py と test_code_wrap.py は node_modules のParser / TypeScriptを読む。
+      # checkout だけで走らせると、依存が偶然残るセルフホスト環境でしか再現せん。
       - name: Node.js を用意
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -79,15 +78,14 @@ jobs:
           cache: npm
 
       - name: 依存をインストール
-        # rewrite_book_links が node -e で @textlint/markdown-to-ast を require するため、
-        # node_modules 無しだと MODULE_NOT_FOUND でこのジョブ自体が落ちる（PR#419で発覚）。
         run: npm ci
 
-      - name: 判定境界の退行テスト（46ケース）
+      - name: 判定境界の退行テスト（PDF 46ケース / 紙面 89ケース）
         run: |
           make book-pdf-test | tee "$RUNNER_TEMP/selftest.log"
-          # 件数はスクリプト側で動的に算出しとる。減った時に緑で通さんよう突き合わせる
+          # 両スクリプトの件数は動的に算出しとる。片方だけ減っても緑にせん
           grep -q '✅ 46 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
+          grep -q '✅ 89 ケースすべて通過' "$RUNNER_TEMP/selftest.log"
 
   pdf-book-inspection:
     name: 教材PDF検査
@@ -95,10 +93,8 @@ jobs:
     # pdffonts の列レイアウトも poppler の版で変わる）。イメージが転がると無関係に赤くなるので固定する。
     runs-on: ubuntu-24.04
     # 全36冊を組む経路が入るので長め。provisioning のハングがビルドの持ち時間を
-    # 食わんよう、各ステップ側にも上限を置いとる。
-    # 全冊組版は runner 次第で60分をわずかに超えることがあり、境目で中止されると
-    # 検査 step に届かず緑にも赤にもならんので余裕を持たせる
-    timeout-minutes: 90
+    # 食わんよう、各ステップ側にも上限を置いとる
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -134,6 +130,47 @@ jobs:
           # 撮影まわりのファイルを消した・改名した PR こそ実ブラウザ検査を走らせなアカン。
           git -c core.quotePath=false diff -z --name-only "$base" HEAD \
             > "$RUNNER_TEMP/changed-with-deletes.z"
+
+          # --diff-filter=d の一覧には削除元が無く、削除だけの PR は対象0冊になってしまう。
+          # D は削除元、R は旧名と新名の両方を見る。現存ファイルの一覧には無い旧名でも、
+          # 正本36冊や全冊共通入力を減らす変更なら厳密な全冊検査へ送る。
+          git -c core.quotePath=false diff -z --name-status --diff-filter=DR "$base" HEAD \
+            > "$RUNNER_TEMP/deleted-or-renamed.z"
+          while IFS= read -r -d '' status; do
+            paths=()
+            case "$status" in
+              D)
+                IFS= read -r -d '' old_path
+                paths+=("$old_path")
+                ;;
+              R*)
+                IFS= read -r -d '' old_path
+                IFS= read -r -d '' new_path
+                paths+=("$old_path" "$new_path")
+                ;;
+              *)
+                echo "::error::削除・改名差分の形式を解釈できん: $status" >&2
+                exit 1
+                ;;
+            esac
+            for file in "${paths[@]}"; do
+              case "$file" in
+                material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
+                  blast=1
+                  ;;
+                material/30days-curriculum/screenshots/*)
+                  # 全画像が全冊証跡の入力になるため、参照の有無にかかわらず失効する。
+                  blast=1
+                  ;;
+                material/30days-curriculum/*/*)
+                  : # _meta/ 等は正本冊子や画像の削除ではない
+                  ;;
+                material/30days-curriculum/*.md)
+                  blast=1
+                  ;;
+              esac
+            done
+          done < "$RUNNER_TEMP/deleted-or-renamed.z"
 
           while IFS= read -r -d '' file; do
             case "$file" in
@@ -290,11 +327,6 @@ jobs:
         if: steps.select.outputs.scope != 'none'
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
-          # subset では make を通らず build_pdf_book.py を直接叩くので、
-          # Makefile の export が効かずリンクマップが空になる。
-          # すると冊またぎリンクが全部「配布先が未登録」で落ちる。
-          # Makefile の既定と同じ値をここでも明示する
-          PDF_BOOK_LINK_MAP: scripts/pdf-book/pdf-link-map.json
         run: |
           targets=()
           if [ "$SCOPE" != "all" ]; then
@@ -325,20 +357,24 @@ jobs:
 
       - name: 出力を検査
         if: steps.select.outputs.scope != 'none'
+        # dist は gitignore なので、dist/pdf にはこの実行で組んだ分しか入らん。
+        # full は36冊の在庫を厳密に検査する。subset だけ欠冊を明示的に許可し、
+        # 出力されたPDFに対応する原稿が無い場合や検査対象が空の場合はどちらも失敗させる。
         env:
           SCOPE: ${{ steps.select.outputs.scope }}
-        # dist は gitignore なので、dist/pdf にはこの実行で組んだ分しか入らん。
-        # check_pdf_book.py は1冊単位の検査だけで冊をまたがんため、部分的でも成立する。
-        # ただし day の連続性検査は全冊揃いが前提で、subset では抜けが仕様どおり
-        # 存在するため --allow-gaps で退ける（抜けの担保は全冊経路と release_manifest の側）。
-        # verify_pdf_copy.py も原稿36冊ぶんの PDF が揃う前提で、組んでいない冊を
-        # 「missing PDF for source」として落とす。--allow-missing で組んだ冊だけを照合する。
         run: |
-          if [ "$SCOPE" = "all" ]; then
-            make book-pdf-verify
-          else
-            make book-pdf-test
-            python3 scripts/pdf-book/check_pdf_book.py --allow-gaps
-            python3 scripts/pdf-book/check_page_layout.py
-            python3 scripts/pdf-book/verify_pdf_copy.py --allow-missing
-          fi
+          case "$SCOPE" in
+            all)
+              make book-pdf-verify
+              ;;
+            subset)
+              make book-pdf-test
+              python3 scripts/pdf-book/check_pdf_book.py --allow-gaps
+              python3 scripts/pdf-book/check_page_layout.py
+              python3 scripts/pdf-book/verify_pdf_copy.py --allow-gaps
+              ;;
+            *)
+              echo "::error::未知のPDF検査scope: $SCOPE" >&2
+              exit 1
+              ;;
+          esac

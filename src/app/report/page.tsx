@@ -103,7 +103,7 @@ export default function ReportPage() {
       <div className="space-y-6">
         {isError && overview != null ? (
           <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
-            <span>最新のレポートを取得できませんでした。表示は前回取得時の内容です。</span>
+            <span>取得できませんでした。前回のレポートです。</span>
             <Button
               type="button"
               variant="outline"

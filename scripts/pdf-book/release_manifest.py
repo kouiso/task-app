@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """release-manifest.json を生成する。
 
-現在状態の構造検査に加え、実際の全冊ビルドが発行した証跡を照合する。
+現在状態の構造検査に加え、実際の全冊ビルドと OAuth 読戻しの証跡を照合する。
 レビュー指摘 R06 の受入条件:
 
 - コミット SHA と dirty 状態を記録する。dirty のまま作った場合は
   `git diff` と未追跡ファイルのハッシュも残し、ツリー全体を一意にできる。
 - 成果物ごとに SHA256（PDF 36冊・配布 ZIP・スクショ束の集約ハッシュ）。
 - 組版に使った道具とフォントの版・ハッシュ。
-- 配布記録（metadata.json が残す Drive のファイル ID と共有リンク）。
-  Drive へのアクセスは持たない。
+- Drive のファイル ID と共有リンク。
+- ブラウザ・OAuth コネクタ・Remote MCP が保存した読戻しファイルを
+  --drive-proof で検査する。リポジトリ内のコードは Drive へ接続しない。
+- 共有権限は記録した checked_at の時点で有効かを判定する。有効期限後に
+  同じ証跡を再利用する場合は、その時点でもう一度検査する。
 
 使い方:
     python3 release_manifest.py --write dist/release-manifest.json
+    python3 release_manifest.py --drive-proof /path/to/proof.json
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -466,8 +471,14 @@ def drive_inventory() -> list[dict]:
     if not isinstance(data, list):
         raise ValueError("Drive metadata は配列でなければならない")
     return [
-        {"id": e["id"], "name": e["name"], "url": e["url"],
-         "uploaded_sha256": e.get("sha256")}
+        {
+            "id": e["id"],
+            "name": e["name"],
+            "url": e["url"],
+            "parents": e.get("parents"),
+            "size": e.get("size"),
+            "uploaded_sha256": e.get("sha256"),
+        }
         for e in data
     ]
 
@@ -570,6 +581,301 @@ def verify_correspondence(
     return problems
 
 
+DRIVE_FOLDER_ID = "1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU"
+DRIVE_PROOF_VERSION = 1
+DRIVE_PROOF_SCOPE = "oauth-drive-readback-37-artifacts"
+PERMISSION_TYPES = {"anyone", "domain", "user", "group"}
+PERMISSION_ROLES = {
+    "owner", "organizer", "fileOrganizer", "writer", "commenter", "reader",
+}
+RFC3339_TIMESTAMP = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?"
+    r"(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)"
+)
+
+
+def _verification_time(value: datetime | None = None) -> datetime:
+    checked_at = value or datetime.now(timezone.utc)
+    if checked_at.tzinfo is None or checked_at.utcoffset() is None:
+        raise ValueError("Drive検証時刻にはタイムゾーンが必要")
+    return checked_at.astimezone(timezone.utc)
+
+
+def _permission_expiration(permission: dict) -> tuple[bool, datetime | None]:
+    if "expirationTime" not in permission:
+        return True, None
+    value = permission["expirationTime"]
+    if permission.get("type") not in {"user", "group"}:
+        return False, None
+    if not isinstance(value, str) or RFC3339_TIMESTAMP.fullmatch(value) is None:
+        return False, None
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        expires_at = datetime.fromisoformat(normalized)
+    except ValueError:
+        return False, None
+    if expires_at.tzinfo is None or expires_at.utcoffset() is None:
+        return False, None
+    return True, expires_at.astimezone(timezone.utc)
+
+
+def _release_artifacts(manifest: dict) -> list[dict]:
+    items = list(manifest["artifacts"]["pdfs"])
+    archive = manifest["artifacts"].get("zip")
+    if isinstance(archive, dict):
+        items.append(archive)
+    return items
+
+
+def _duplicates(values: list[str]) -> list[str]:
+    return sorted(
+        value for value, count in Counter(values).items() if count > 1
+    )
+
+
+def _string_fields(items: list[object], field: str) -> tuple[list[str], int]:
+    values: list[str] = []
+    invalid = 0
+    for item in items:
+        value = item.get(field) if isinstance(item, dict) else None
+        if isinstance(value, str) and value:
+            values.append(value)
+        else:
+            invalid += 1
+    return values, invalid
+
+
+def _shared_permissions_unchanged(record: dict, verified_at: datetime) -> bool:
+    before = record.get("permissions_before")
+    after = record.get("permissions_after")
+    if not isinstance(before, list) or not before or not isinstance(after, list):
+        return False
+
+    def valid_permission(permission: object) -> bool:
+        if not isinstance(permission, dict):
+            return False
+        for field in ("id", "type", "role"):
+            value = permission.get(field)
+            if not isinstance(value, str) or not value.strip():
+                return False
+        permission_type = permission["type"]
+        if permission_type not in PERMISSION_TYPES:
+            return False
+        if permission["role"] not in PERMISSION_ROLES:
+            return False
+        if "deleted" in permission and not isinstance(permission["deleted"], bool):
+            return False
+        valid_expiration, _ = _permission_expiration(permission)
+        if not valid_expiration:
+            return False
+        if permission_type == "domain":
+            domain = permission.get("domain")
+            if not isinstance(domain, str) or not domain.strip():
+                return False
+        return True
+
+    if not all(valid_permission(permission) for permission in [*before, *after]):
+        return False
+    def canonical(items: list[object]) -> list[str]:
+        return sorted(
+            json.dumps(
+                item, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            )
+            for item in items
+        )
+
+    if canonical(before) != canonical(after):
+        return False
+    def is_effective_share(permission: dict) -> bool:
+        _, expires_at = _permission_expiration(permission)
+        return (
+            permission.get("type") in PERMISSION_TYPES
+            and permission.get("role") in {"reader", "commenter", "writer"}
+            and permission.get("deleted") is not True
+            and (expires_at is None or expires_at > verified_at)
+        )
+
+    return any(is_effective_share(permission) for permission in after)
+
+
+def _drive_file_url_id(value: object) -> str | None:
+    if not isinstance(value, str) or any(character.isspace() for character in value):
+        return None
+    try:
+        parsed = urlparse(value)
+        invalid_origin = (
+            parsed.scheme != "https"
+            or parsed.hostname != "drive.google.com"
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port is not None
+        )
+    except ValueError:
+        return None
+    if invalid_origin:
+        return None
+    match = re.fullmatch(
+        r"/file/d/([A-Za-z0-9_-]+)(?:/view)?/?", parsed.path
+    )
+    return match.group(1) if match else None
+
+
+def _proof_download(proof_file: Path, relative: object) -> tuple[Path | None, str | None]:
+    if not isinstance(relative, str) or not relative:
+        return None, "読戻しファイルの相対パスが無い"
+    supplied = Path(relative)
+    if supplied.is_absolute() or ".." in supplied.parts:
+        return None, "読戻しファイルのパスが証跡外を指す"
+    proof_root = proof_file.parent.resolve()
+    try:
+        downloaded = (proof_root / supplied).resolve(strict=True)
+        downloaded.relative_to(proof_root)
+    except (FileNotFoundError, OSError, RuntimeError, ValueError):
+        return None, "読戻しファイルが無いか証跡外を指す"
+    if not downloaded.is_file():
+        return None, "読戻し先が通常ファイルではない"
+    return downloaded, None
+
+
+def postupload_failures(
+    manifest: dict,
+    proof: dict,
+    proof_file: Path,
+    verified_at: datetime | None = None,
+) -> tuple[list[str], list[dict]]:
+    """OAuth 経路で保存した37成果物の証跡と生バイトをローカル検証する。"""
+    verification_time = _verification_time(verified_at)
+    failures = verify_correspondence(
+        manifest["correspondence"], {"drive-delivery"}
+    )
+    results: list[dict] = []
+    if proof.get("version") != DRIVE_PROOF_VERSION:
+        failures.append("Drive読戻し証跡のversionが不正")
+    if proof.get("scope") != DRIVE_PROOF_SCOPE:
+        failures.append("Drive読戻し証跡のscopeが不正")
+    if proof.get("folder_id") != DRIVE_FOLDER_ID:
+        failures.append("Drive読戻し証跡の親フォルダIDが不正")
+
+    expected_items = _release_artifacts(manifest)
+    expected_by_name = {item["name"]: item for item in expected_items}
+    if len(expected_items) != EXPECTED_PDFS + 1 or len(expected_by_name) != EXPECTED_PDFS + 1:
+        failures.append("ローカル成果物がPDF36冊と配布ZIPの37件一意ではない")
+
+    metadata = manifest.get("drive", [])
+    if not isinstance(metadata, list):
+        failures.append("Drive metadata が配列ではない")
+        metadata = []
+    metadata_names, invalid_metadata_names = _string_fields(metadata, "name")
+    metadata_ids, invalid_metadata_ids = _string_fields(metadata, "id")
+    if invalid_metadata_names or invalid_metadata_ids:
+        failures.append("Drive metadata に名前またはIDが無いレコードがある")
+    for label, duplicates in (
+        ("名前", _duplicates(metadata_names)), ("ID", _duplicates(metadata_ids)),
+    ):
+        if duplicates:
+            failures.append(f"Drive metadata の{label}が重複: " + ", ".join(duplicates[:5]))
+    metadata_by_name = {
+        item["name"]: item for item in metadata
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    missing_metadata = sorted(set(expected_by_name) - set(metadata_by_name))
+    extra_metadata = sorted(
+        str(name) for name in set(metadata_by_name) - set(expected_by_name) if name
+    )
+    if missing_metadata:
+        failures.append("Drive metadata が不足: " + ", ".join(missing_metadata[:5]))
+    if extra_metadata:
+        failures.append("Drive metadata に想定外の名前: " + ", ".join(extra_metadata[:5]))
+
+    records = proof.get("artifacts")
+    if not isinstance(records, list):
+        failures.append("Drive読戻し証跡のartifactsが配列ではない")
+        return failures, results
+    proof_names, invalid_proof_names = _string_fields(records, "name")
+    proof_ids, invalid_proof_ids = _string_fields(records, "id")
+    if invalid_proof_names or invalid_proof_ids:
+        failures.append("Drive読戻し証跡に名前またはIDが無いレコードがある")
+    for label, duplicates in (
+        ("名前", _duplicates(proof_names)), ("ID", _duplicates(proof_ids)),
+    ):
+        if duplicates:
+            failures.append(f"Drive読戻し証跡の{label}が重複: " + ", ".join(duplicates[:5]))
+    missing = sorted(set(expected_by_name) - set(proof_names))
+    extra = sorted(str(name) for name in set(proof_names) - set(expected_by_name) if name)
+    if missing:
+        failures.append("Drive読戻し証跡が不足: " + ", ".join(missing[:5]))
+    if extra:
+        failures.append("Drive読戻し証跡に想定外の名前: " + ", ".join(extra[:5]))
+
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        name = record.get("name")
+        if not isinstance(name, str):
+            continue
+        local = expected_by_name.get(name)
+        recorded = metadata_by_name.get(name)
+        item_failures: list[str] = []
+        if local is None or recorded is None:
+            continue
+        expected_parent = [DRIVE_FOLDER_ID]
+        if record.get("id_before") != record.get("id"):
+            item_failures.append("更新前後でIDが変わっている")
+        if record.get("name_before") != name:
+            item_failures.append("更新前後で名前が変わっている")
+        if record.get("parents_before") != expected_parent:
+            item_failures.append("更新前の親フォルダが不正")
+        if recorded.get("id") != record.get("id"):
+            item_failures.append("IDがmetadataと違う")
+        if recorded.get("parents") != expected_parent:
+            item_failures.append("metadataの親フォルダが不正")
+        if record.get("parents") != expected_parent:
+            item_failures.append("読戻し時の親フォルダが不正")
+        metadata_url = recorded.get("url")
+        url_before = record.get("url_before")
+        url_after = record.get("url_after")
+        expected_id = record.get("id")
+        if _drive_file_url_id(metadata_url) != expected_id:
+            item_failures.append("metadataの共有URLまたは埋込IDが不正")
+        if url_before != url_after:
+            item_failures.append("更新前後で共有URLが変わっている")
+        if url_after != metadata_url:
+            item_failures.append("読戻し時の共有URLがmetadataと違う")
+        if (
+            _drive_file_url_id(url_before) != expected_id
+            or _drive_file_url_id(url_after) != expected_id
+        ):
+            item_failures.append("更新前後の共有URLまたは埋込IDが不正")
+        if not _shared_permissions_unchanged(record, verification_time):
+            item_failures.append("共有権限の前後証拠が無いか変化している")
+        downloaded, path_error = _proof_download(proof_file, record.get("downloaded_file"))
+        if path_error:
+            item_failures.append(path_error)
+        else:
+            assert downloaded is not None
+            actual_sha, actual_size = _hash_file_stably(downloaded)
+            expected_sha = local.get("sha256")
+            expected_size = local.get("size")
+            if not (
+                actual_sha == record.get("downloaded_sha256")
+                == recorded.get("uploaded_sha256") == expected_sha
+            ):
+                item_failures.append("読戻し・記録・ローカルのSHA256が一致しない")
+            if not (
+                actual_size == record.get("size")
+                == recorded.get("size") == expected_size
+            ):
+                item_failures.append("読戻し・記録・ローカルのサイズが一致しない")
+        results.append({
+            "id": record.get("id"),
+            "name": name,
+            "ok": not item_failures,
+            "failures": item_failures,
+        })
+        failures.extend(f"{name}: {failure}" for failure in item_failures)
+    return failures, results
+
+
 def preupload_failures(manifest: dict, require_clean: bool = False) -> list[str]:
     """ローカル成果物をアップロード前に止める条件。"""
     failures: list[str] = []
@@ -619,18 +925,29 @@ def build_manifest() -> dict:
         },
         "drive": drive_inventory(),
         "correspondence": correspondence_section(),
+        "drive_readback": None,
         "verification": {
             "preupload": None,
+            "postupload": None,
         },
     }
     return manifest
 
 
-def main() -> int:
+def main(verified_at: datetime | None = None) -> int:
     parser = argparse.ArgumentParser()
+    if "--remote-check" in sys.argv[1:]:
+        parser.error(
+            "--remote-check は廃止しました。OAuth経路で保存した証跡を "
+            "--drive-proof へ指定してください"
+        )
     parser.add_argument("--write", type=Path, help="出力先 JSON")
     parser.add_argument("--require-clean", action="store_true",
                         help="git ツリーが dirty なら失敗にする")
+    parser.add_argument(
+        "--drive-proof", type=Path,
+        help="OAuth経路で保存した読戻し証跡JSON（ネットワーク操作は行わない）",
+    )
     args = parser.parse_args()
 
     manifest = build_manifest()
@@ -640,6 +957,30 @@ def main() -> int:
         "scope": "release-ready-with-full-build-receipt",
         "failures": failures.copy(),
     }
+
+    if args.drive_proof:
+        verification_time = _verification_time(verified_at)
+        try:
+            proof = json.loads(args.drive_proof.read_text(encoding="utf-8"))
+            if not isinstance(proof, dict):
+                raise ValueError("JSONの最上位がオブジェクトではない")
+            remote_failures, results = postupload_failures(
+                manifest, proof, args.drive_proof, verification_time
+            )
+        except (json.JSONDecodeError, OSError, ValueError) as error:
+            remote_failures = [f"Drive読戻し証跡を読めない: {error}"]
+            results = []
+        manifest["drive_readback"] = {
+            "checked_at": verification_time.isoformat(),
+            "proof_file": str(args.drive_proof),
+            "results": results,
+        }
+        manifest["verification"]["postupload"] = {
+            "ok": not remote_failures,
+            "checked_at": verification_time.isoformat(),
+            "failures": remote_failures,
+        }
+        failures += remote_failures
 
     if args.write:
         args.write.parent.mkdir(parents=True, exist_ok=True)
@@ -654,7 +995,13 @@ def main() -> int:
         for failure in failures:
             print(f"  - {failure}", file=sys.stderr)
         return 1
-    print("✅ 全冊ビルド証跡を含む release-ready 検証 OK")
+    if args.drive_proof:
+        print(
+            "✅ OAuth読戻しを含む Drive 配送検証 OK"
+            f"（検証時刻: {verification_time.isoformat()}）"
+        )
+    else:
+        print("✅ アップロード前のローカル release 検証 OK（Drive配送は未検証）")
     return 0
 
 

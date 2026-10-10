@@ -2,7 +2,7 @@
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
@@ -30,62 +30,133 @@ import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/c
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
-import { isAuthError, isUnknownResult } from '@/lib/query-error';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { classifyTaskBulkError, type TaskBulkOperation } from '@/lib/task-bulk-error';
 import {
   buildTaskFiltersQueryString,
   parseTaskFiltersFromSearchParams,
 } from '@/lib/task-filter-query';
 import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 
+const MAX_BULK_TASKS = 100;
+const PAGE_SIZE = 100;
+type BulkSelection = Map<string, number>;
+type BulkSubmission = { selection: BulkSelection };
+type SingleSubmission = {
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+  routeTaskId: string | null;
+  editLink: boolean;
+};
+
 function TaskPageContent() {
+  const searchParams = useSearchParams();
+  const urlFilters = parseTaskFiltersFromSearchParams(searchParams);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
-  const [filterProject, setFilterProject] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [filterProject, setFilterProject] = useState<string>(urlFilters.project);
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>(urlFilters.status);
   const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const pageContext = `${filterProject}\u0000${filterStatus}\u0000${filterPriority}\u0000${filterAssignee}`;
+  const [pagination, setPagination] = useState({ context: pageContext, index: 0 });
+  const pageIndex = pagination.context === pageContext ? pagination.index : 0;
+  const [selectedTasks, setSelectedTasks] = useState<BulkSelection>(new Map());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteTarget, setBulkDeleteTarget] = useState<BulkSelection | null>(null);
+  const selectionVersion = useRef(0);
+  const bulkSubmission = useRef<BulkSubmission | null>(null);
+  const singleSubmission = useRef<SingleSubmission | null>(null);
+  const formGeneration = useRef(0);
+  const linkedFormTarget = useRef<string | null>(null);
+  const dismissedDetailTaskId = useRef<string | null>(null);
+  const authExpiredRef = useRef(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const handleDetailAuthExpired = useCallback(() => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, []);
+  const leavePageContext = useCallback(() => {
+    formGeneration.current++;
+    selectionVersion.current++;
+    setSelectedTasks(new Map());
+    setBulkDeleteTarget(null);
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+    setSelectedTask(null);
+    setDetailOpen(false);
+    setDialogOpen(false);
+    setEditingTask(undefined);
+  }, []);
+  const desiredUrlFilterContext = useRef(`${urlFilters.project}\u0000${urlFilters.status}`);
 
-  const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const taskIdParam = searchParams.get('taskId');
   const isEditLink = searchParams.get('edit') === 'true';
-  const { data: linkedTask } = api.task.getById.useQuery(
+  useEffect(() => {
+    formGeneration.current++;
+    linkedFormTarget.current = null;
+  }, [taskIdParam, isEditLink]);
+  const {
+    data: linkedTask,
+    error: linkedTaskError,
+    isFetching: linkedTaskFetching,
+    refetch: refetchLinkedTask,
+  } = api.task.getById.useQuery(
     { id: taskIdParam ?? '' },
-    { enabled: !!taskIdParam && isEditLink },
+    { enabled: !authExpired && !!taskIdParam && isEditLink, retry: shouldRetryQuery },
   );
 
   useEffect(() => {
-    if (taskIdParam && !isEditLink) {
+    if (!taskIdParam || isEditLink || dismissedDetailTaskId.current !== taskIdParam) {
+      dismissedDetailTaskId.current = null;
+    }
+    if (taskIdParam && !isEditLink && dismissedDetailTaskId.current !== taskIdParam) {
       setSelectedTask(taskIdParam);
       setDetailOpen(true);
     }
   }, [isEditLink, taskIdParam]);
 
   useEffect(() => {
-    if (!isEditLink || !linkedTask) return;
+    if (!isEditLink) {
+      linkedFormTarget.current = null;
+      return;
+    }
+    if (!linkedTask || linkedFormTarget.current === linkedTask.id) return;
+    linkedFormTarget.current = linkedTask.id;
+    formGeneration.current++;
     setEditingTask(taskToFormData(linkedTask));
     setDetailOpen(false);
     setDialogOpen(true);
   }, [isEditLink, linkedTask]);
 
   useEffect(() => {
-    const parsed = parseTaskFiltersFromSearchParams(searchParams);
-    setFilterProject(parsed.project);
-    setFilterStatus(parsed.status);
-  }, [searchParams]);
+    const nextUrlFilterContext = `${urlFilters.project}\u0000${urlFilters.status}`;
+    if (desiredUrlFilterContext.current !== nextUrlFilterContext) {
+      leavePageContext();
+      setPagination({ context: '', index: 0 });
+    }
+    desiredUrlFilterContext.current = nextUrlFilterContext;
+    setFilterProject(urlFilters.project);
+    setFilterStatus(urlFilters.status);
+  }, [leavePageContext, urlFilters.project, urlFilters.status]);
 
   useEffect(() => {
+    const renderedUrlFilterContext = `${filterProject}\u0000${filterStatus}`;
+    if (renderedUrlFilterContext !== desiredUrlFilterContext.current) return;
     const params = new URLSearchParams(searchParams.toString());
     params.delete('project');
     params.delete('status');
+    if (dismissedDetailTaskId.current === taskIdParam && !isEditLink) {
+      params.delete('taskId');
+    }
 
     const filterQuery = buildTaskFiltersQueryString({
       project: filterProject,
@@ -105,30 +176,113 @@ function TaskPageContent() {
     if (nextQuery !== currentQuery) {
       router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
     }
-  }, [filterProject, filterStatus, pathname, router, searchParams]);
+  }, [filterProject, filterStatus, isEditLink, pathname, router, searchParams, taskIdParam]);
 
   const utils = api.useUtils();
 
-  const handleTimeLogSuccess = useCallback(() => {
-    void utils.task.getAll.invalidate();
-  }, [utils.task.getAll]);
-
-  const { data: session } = api.auth.getSession.useQuery();
-  const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
+  const {
+    data: session,
+    error: sessionError,
+    isSuccess: sessionLoaded,
+    isFetching: sessionFetching,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isFetching: tasksFetching,
+    error: tasksError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
     {
       projectId: filterProject === 'all' ? undefined : filterProject,
       status: filterStatus === 'all' ? undefined : filterStatus,
       priority: filterPriority === 'all' ? undefined : filterPriority,
       assigneeId: filterAssignee === 'all' ? undefined : filterAssignee,
+      limit: PAGE_SIZE,
+      offset: pageIndex * PAGE_SIZE,
     },
-    { refetchOnWindowFocus: false },
+    { enabled: !authExpired, retry: shouldRetryQuery, refetchOnWindowFocus: false },
   );
 
-  const { data: projects } = api.project.getAll.useQuery();
-  // getProjectMembers は protectedProcedure のため、セッション確定後にのみ実行する
-  const { data: users } = api.search.getProjectMembers.useQuery(undefined, {
-    enabled: !!session?.user,
+  const {
+    data: projects,
+    error: projectsError,
+    isFetching: projectsFetching,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
   });
+  // getProjectMembers は protectedProcedure のため、セッション確定後にのみ実行する
+  const {
+    data: users,
+    error: usersError,
+    isFetching: usersFetching,
+    refetch: refetchUsers,
+  } = api.search.getProjectMembers.useQuery(undefined, {
+    enabled: !authExpired && !!session?.user,
+    retry: shouldRetryQuery,
+  });
+
+  const queryAuthFailed =
+    (sessionLoaded && session === null) ||
+    [sessionError, tasksError, projectsError, usersError, linkedTaskError].some(isAuthError);
+  const queryForbidden = [
+    sessionError,
+    tasksError,
+    projectsError,
+    usersError,
+    linkedTaskError,
+  ].some(isForbiddenError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+
+  const taskReadFailed = !!tasksError && !isAuthError(tasksError) && !isForbiddenError(tasksError);
+  const projectReadFailed =
+    !!projectsError && !isAuthError(projectsError) && !isForbiddenError(projectsError);
+  const sessionReadFailed =
+    !!sessionError && !isAuthError(sessionError) && !isForbiddenError(sessionError);
+  const usersReadFailed = !!usersError && !isAuthError(usersError) && !isForbiddenError(usersError);
+  const linkedTaskReadFailed =
+    !!linkedTaskError && !isAuthError(linkedTaskError) && !isForbiddenError(linkedTaskError);
+  const taskReadFailedInitially = taskReadFailed && tasks === undefined;
+  const projectReadFailedInitially = projectReadFailed && projects === undefined;
+  const sessionReadFailedInitially = sessionReadFailed && session === undefined;
+  const sessionReadDataIsStale = sessionReadFailed && session !== undefined;
+  const usersReadFailedInitially = usersReadFailed && users === undefined;
+  const usersReadDataIsStale = usersReadFailed && users !== undefined;
+  const linkedTaskReadFailedInitially = linkedTaskReadFailed && linkedTask === undefined;
+  const linkedTaskReadDataIsStale = linkedTaskReadFailed && linkedTask !== undefined;
+  const requiredReadFailedInitially = taskReadFailedInitially || projectReadFailedInitially;
+  const requiredReadDataIsStale =
+    (taskReadFailed && tasks !== undefined) || (projectReadFailed && projects !== undefined);
+  const requiredReadRetrying =
+    (taskReadFailed && tasksFetching) || (projectReadFailed && projectsFetching);
+  const retryRequiredReads = () => {
+    const retries: Promise<unknown>[] = [];
+    if (taskReadFailed) retries.push(refetchTasks());
+    if (projectReadFailed) retries.push(refetchProjects());
+    void Promise.all(retries);
+  };
+  const initialReadErrorMessage =
+    taskReadFailedInitially && projectReadFailedInitially
+      ? 'タスクとプロジェクトを取得できませんでした。'
+      : taskReadFailedInitially
+        ? 'タスクを取得できませんでした。'
+        : 'プロジェクトを取得できませんでした。';
+  const staleReadErrorMessage =
+    taskReadFailed && projectReadFailed
+      ? '最新のタスクとプロジェクトを取得できませんでした。前回取得時の内容です。'
+      : taskReadFailed
+        ? '最新のタスクを取得できませんでした。前回取得時の内容です。'
+        : '最新のプロジェクトを取得できませんでした。前回取得時の内容です。';
 
   // プロジェクトごとのログインユーザー自身のロールを引けるようにする
   const myRoleByProject = useMemo(() => {
@@ -169,6 +323,7 @@ function TaskPageContent() {
   );
 
   const closeTaskDialog = useCallback(() => {
+    formGeneration.current++;
     setDialogOpen(false);
     setEditingTask(undefined);
 
@@ -181,96 +336,216 @@ function TaskPageContent() {
     }
   }, [isEditLink, pathname, router, searchParams]);
 
-  // タスク操作の失敗を利用者へ伝える。401 は再ログインが必要なので通常の
-  // 失敗と区別し、応答自体が届かなかった場合は結果不明として断定せず
-  // 再取得して実際の状態を表示する
-  const notifyMutationError = (error: { message?: string }, fallback: string) => {
-    if (isAuthError(error)) {
-      toast.error('ログインの有効期限が切れました');
-      return;
+  const ownsSubmittedLifetime = (submitted: SingleSubmission | null) =>
+    !authExpiredRef.current &&
+    submitted?.generation === formGeneration.current &&
+    submitted.pageIndex === pageIndex &&
+    submitted.routeTaskId === taskIdParam &&
+    submitted.editLink === isEditLink;
+
+  const finishSubmittedForm = (
+    submitted: SingleSubmission | null,
+    operation: 'create' | 'update',
+    target: { id: string; title: string | undefined },
+  ) => {
+    const canClose = ownsSubmittedLifetime(submitted) && submitted?.isCurrent();
+    if (canClose) closeTaskDialog();
+    if (authExpiredRef.current) return;
+    const name = target.title ? `「${target.title}」` : '先ほど送信したタスク';
+    toast.success(`${name}を${operation === 'create' ? '作成' : '更新'}しました。`);
+    if (canClose || !dialogOpen) return;
+    // 別の対象へ保存案内を出さず、残った入力から再操作する際の注意を伝えるためです。
+    if (operation === 'create' && !editingTask?.id) {
+      toast(
+        '送信後に入力を変えた場合、その変更は保存されていません。このまま作成すると別のタスクになります。',
+      );
+    } else if (operation === 'update' && editingTask?.id === target.id) {
+      toast(
+        '送信後に入力した変更は保存されていません。入力内容を別の場所にコピーしてから、タスク編集画面を閉じて開き直し、もう一度保存してください。',
+      );
     }
-    if (isUnknownResult(error)) {
-      toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
-      void utils.task.getAll.invalidate();
-      return;
-    }
-    toast.error(error.message || fallback);
   };
-
-  // ダイアログを閉じる判断は TaskDialog 側が持つ（送信後に下書きが
-  // 書き足されていた場合は閉じずに警告を出すため）
+  const handleSingleError = async (
+    error: unknown,
+    operation: TaskWriteOperation,
+    ids: string[],
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      handleDetailAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    await refreshTaskTargets(ids, true, true);
+  };
+  const singleMutationOptions = {
+    retry: false as const,
+    onMutate: () => singleSubmission.current,
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      _variables: unknown,
+      submitted: SingleSubmission | null | undefined,
+    ) => {
+      if (singleSubmission.current === submitted) singleSubmission.current = null;
+    },
+  };
   const createMutation = api.task.create.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
+    ...singleMutationOptions,
+    onSuccess: async (data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'create', { id: data.id, title: variables.title });
+      await refreshTaskTargets([data.id], false, true);
     },
-    // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
-    // 成功したのか失敗したのか分からず、再入力を強いられる。
-    onError: (error) => notifyMutationError(error, 'タスクの作成に失敗しました'),
+    onError: (error) => handleSingleError(error, 'create', []),
   });
-
   const updateMutation = api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      if (selectedTask) {
-        utils.task.getById.invalidate({ id: selectedTask });
-      }
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'update', { id: variables.id, title: variables.title });
+      await refreshTaskTargets([variables.id], false, true);
     },
-    onError: (error) => notifyMutationError(error, 'タスクの更新に失敗しました'),
+    onError: (error, variables) => handleSingleError(error, 'update', [variables.id]),
   });
-
   const deleteMutation = api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables) => {
       setDeleteDialogOpen(false);
       setDeleteTargetId(null);
+      setSelectedTask((current) => (current === variables.id ? null : current));
+      setSelectedTasks((current) => {
+        const next = new Map(current);
+        next.delete(variables.id);
+        return next;
+      });
+      await refreshTaskTargets([variables.id], false);
     },
-    onError: (error) => notifyMutationError(error, 'タスクの削除に失敗しました'),
+    onError: (error, variables) => handleSingleError(error, 'delete', [variables.id]),
+  });
+  const singlePending =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+  const refreshTaskTargets = async (
+    ids: string[],
+    refreshPermissions: boolean,
+    reportDetailFailure = false,
+  ) => {
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [
+        utils.task.getAll.invalidate(undefined, filters, { throwOnError: true }),
+        ...ids.map((id) =>
+          utils.task.getById.invalidate({ id }, filters, { throwOnError: reportDetailFailure }),
+        ),
+      ];
+      if (refreshPermissions)
+        updates.push(utils.project.getAll.invalidate(undefined, filters, { throwOnError: true }));
+      await Promise.all(updates);
+    } catch (error) {
+      if (isAuthError(error)) {
+        authExpiredRef.current = true;
+        setAuthExpired(true);
+        return;
+      }
+      // 書き込み結果と表示更新の失敗を混同しないためです。
+      console.error('操作後の表示更新に失敗しました。', error);
+      if (!authExpiredRef.current)
+        toast.error('最新の表示を取得できませんでした。再表示して操作結果を確認してください。');
+    }
+  };
+
+  const bulkMutationOptions = (operation: TaskBulkOperation) => ({
+    retry: false as const,
+    onMutate: () => bulkSubmission.current,
+    onSuccess: (_data: unknown, variables: { ids: string[] }, submitted: BulkSubmission | null) => {
+      void refreshTaskTargets(variables.ids, false);
+      if (authExpiredRef.current || !submitted) return;
+      setSelectedTasks((previous) => {
+        const next = new Map(previous);
+        for (const id of variables.ids) {
+          // 送信後に同じ項目を選び直した意思を古い応答で消さないためです。
+          if (operation === 'delete' || next.get(id) === submitted.selection.get(id))
+            next.delete(id);
+        }
+        return next;
+      });
+      if (operation === 'delete') {
+        setBulkDeleteTarget(null);
+        // 削除済みの内容を再取得失敗時のキャッシュから表示し続けないためです。
+        setSelectedTask((current) => (current && variables.ids.includes(current) ? null : current));
+      }
+    },
+    onError: (error: unknown, variables: { ids: string[] }) => {
+      const result = classifyTaskBulkError(error, operation);
+      if (result.kind === 'auth') {
+        authExpiredRef.current = true;
+        setAuthExpired(true);
+        return;
+      }
+      toast.error(result.message);
+      void refreshTaskTargets(variables.ids, true);
+    },
+    onSettled: () => {
+      bulkSubmission.current = null;
+    },
   });
 
-  const bulkCompleteMutation = api.task.bulkComplete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-  const bulkDeleteMutation = api.task.bulkDelete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-      setBulkDeleteDialogOpen(false);
-    },
-    onError: (error) => notifyMutationError(error, 'タスクの一括削除に失敗しました'),
-  });
-
-  const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
+  const bulkCompleteMutation = api.task.bulkComplete.useMutation(bulkMutationOptions('complete'));
+  const bulkDeleteMutation = api.task.bulkDelete.useMutation(bulkMutationOptions('delete'));
+  const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation(
+    bulkMutationOptions('status'),
+  );
+  const bulkPending =
+    bulkCompleteMutation.isPending ||
+    bulkDeleteMutation.isPending ||
+    bulkUpdateStatusMutation.isPending;
 
   const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formGeneration.current++;
     setEditingTask(undefined);
     setDialogOpen(true);
   };
 
   const handleEdit = (taskId: string) => {
+    if (authExpiredRef.current) return;
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
+      formGeneration.current++;
       setEditingTask(taskToFormData(task));
       setDialogOpen(true);
     }
   };
 
   const handleDelete = (taskId: string) => {
+    if (singleSubmission.current || singlePending || authExpiredRef.current) return;
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: TaskFormData): Promise<unknown> => {
+  const handleSubmit = (data: TaskFormData, isCurrent: () => boolean = () => true) => {
+    if (
+      singleSubmission.current ||
+      singlePending ||
+      authExpiredRef.current ||
+      !dialogOpen ||
+      !isCurrent()
+    )
+      return;
+    if (!data.id && !session?.user?.id) {
+      handleDetailAuthExpired();
+      return;
+    }
+    singleSubmission.current = {
+      generation: formGeneration.current,
+      pageIndex,
+      isCurrent,
+      routeTaskId: taskIdParam,
+      editLink: isEditLink,
+    };
     if (data.id) {
-      return updateMutation.mutateAsync({
+      updateMutation.mutate({
         id: data.id,
         title: data.title,
         description: data.description || null,
@@ -284,20 +559,18 @@ function TaskPageContent() {
           expectedUpdatedAt: data.expectedUpdatedAt,
         }),
       });
+    } else {
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
+        estimatedHours: data.estimatedHours,
+        projectId: data.projectId,
+        assigneeId: data.assigneeId || undefined,
+      });
     }
-    if (!session?.user?.id) {
-      return Promise.reject(new Error('セッションがありません'));
-    }
-    return createMutation.mutateAsync({
-      title: data.title,
-      description: data.description,
-      status: data.status,
-      priority: data.priority,
-      dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
-      estimatedHours: data.estimatedHours,
-      projectId: data.projectId,
-      assigneeId: data.assigneeId || undefined,
-    });
   };
 
   const handleTaskClick = (taskId: string) => {
@@ -308,14 +581,33 @@ function TaskPageContent() {
   const handleDetailClose = () => {
     setDetailOpen(false);
     setSelectedTask(null);
+    if (taskIdParam && !isEditLink) {
+      dismissedDetailTaskId.current = taskIdParam;
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
   };
 
   const handleTaskSelect = (taskId: string, checked: boolean) => {
-    setSelectedTasks((prev) => {
-      const next = new Set(prev);
-      checked ? next.add(taskId) : next.delete(taskId);
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) => {
+      const next = new Map(previous);
+      checked ? next.set(taskId, version) : next.delete(taskId);
       return next;
     });
+  };
+
+  const moveToPage = (nextPage: number) => {
+    if (tasksFetching || nextPage < 0 || nextPage === pageIndex) return;
+    leavePageContext();
+    setPagination({ context: pageContext, index: nextPage });
+  };
+
+  const resetPageForFilter = () => {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
   };
 
   // 編集も削除もできないタスク（閲覧のみ）は一括操作の対象から除外する
@@ -335,27 +627,54 @@ function TaskPageContent() {
     selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) =>
+      checked
+        ? new Map(selectableTasks.map((task) => [task.id, previous.get(task.id) ?? version]))
+        : new Map(),
+    );
   };
 
-  // 一括操作は「現在表示されている選択中タスク」のみを対象にする。
-  // フィルタで非表示になったタスクや権限外タスクを巻き込まないようにするため。
+  const currentBulkSelection = () =>
+    new Map(selectedTaskList.map((task) => [task.id, selectedTasks.get(task.id) ?? 0]));
+  const beginBulk = (selection: BulkSelection) => {
+    if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      selection.size === 0 ||
+      selection.size > MAX_BULK_TASKS
+    )
+      return false;
+    bulkSubmission.current = { selection };
+    return true;
+  };
+  const tooManySelected = selectedTaskList.length > MAX_BULK_TASKS;
+
+  // 非表示の選択を送信せず、確認画面では同意した対象を固定するためです。
   const handleBulkComplete = () => {
-    if (selectedTaskList.length > 0) {
-      bulkCompleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
-    }
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection)) bulkCompleteMutation.mutate({ ids: [...selection.keys()] });
   };
 
   const handleBulkDelete = () => {
-    if (selectedTaskList.length > 0) {
-      setBulkDeleteDialogOpen(true);
-    }
+    if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      !canDeleteSelected ||
+      tooManySelected
+    )
+      return;
+    setBulkDeleteTarget(currentBulkSelection());
   };
 
   const handleBulkUpdateStatus = (status: TaskStatus) => {
-    if (selectedTaskList.length > 0) {
-      bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((t) => t.id), status });
-    }
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection))
+      bulkUpdateStatusMutation.mutate({ ids: [...selection.keys()], status });
   };
 
   const selectAllState =
@@ -366,6 +685,53 @@ function TaskPageContent() {
           ? true
           : 'indeterminate'
       : false;
+
+  if (authExpired || queryAuthFailed) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">ログインの有効期限が切れました。もう一度ログインしてください。</p>
+          <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (queryForbidden) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">タスク情報を表示する権限がありません。</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (sessionReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">ログイン情報を取得できませんでした。</p>
+          <Button type="button" onClick={() => void refetchSession()} disabled={sessionFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (requiredReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">{initialReadErrorMessage}</p>
+          <Button type="button" onClick={retryRequiredReads} disabled={requiredReadRetrying}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -389,13 +755,19 @@ function TaskPageContent() {
                     variant="outline"
                     size="sm"
                     className="w-full sm:w-auto"
+                    disabled={bulkPending || tooManySelected}
                     onClick={handleBulkComplete}
                   >
                     <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        disabled={bulkPending || tooManySelected}
+                      >
                         ステータス変更
                       </Button>
                     </DropdownMenuTrigger>
@@ -403,6 +775,7 @@ function TaskPageContent() {
                       {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
                         <DropdownMenuItem
                           key={value}
+                          disabled={bulkPending || tooManySelected}
                           onClick={() => {
                             if (isTaskStatus(value)) handleBulkUpdateStatus(value);
                           }}
@@ -419,6 +792,7 @@ function TaskPageContent() {
                   variant="outline"
                   size="sm"
                   className="w-full text-destructive hover:text-destructive sm:w-auto"
+                  disabled={bulkPending || tooManySelected}
                   onClick={handleBulkDelete}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> 削除
@@ -432,6 +806,95 @@ function TaskPageContent() {
             </div>
           </div>
 
+          {requiredReadDataIsStale && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>{staleReadErrorMessage}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={retryRequiredReads}
+                disabled={requiredReadRetrying}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {sessionReadDataIsStale && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                最新のログイン情報を取得できませんでした。前回取得時の権限で表示しています。
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchSession()}
+                disabled={sessionFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {(usersReadFailedInitially || usersReadDataIsStale) && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                {usersReadDataIsStale
+                  ? '最新の担当者候補を取得できませんでした。前回取得時の候補です。'
+                  : '担当者候補を取得できませんでした。'}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchUsers()}
+                disabled={usersFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {(linkedTaskReadFailedInitially || linkedTaskReadDataIsStale) && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                {linkedTaskReadDataIsStale
+                  ? '最新の編集対象タスクを取得できませんでした。前回取得時の内容です。'
+                  : '編集するタスクを取得できませんでした。'}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchLinkedTask()}
+                disabled={linkedTaskFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {tooManySelected && (
+            <p role="alert">一括操作は100件までです。選択する件数を減らしてください。</p>
+          )}
+          {bulkPending && (
+            <p role="status">一括操作の結果を待っています。別の一括操作は完了後に実行できます。</p>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-4">
             {selectableTasks.length > 0 && (
               <div className="flex items-center space-x-2 shrink-0">
@@ -439,10 +902,10 @@ function TaskPageContent() {
                   id="select-all"
                   checked={selectAllState}
                   onCheckedChange={(checked) => handleSelectAll(checked === true)}
-                  aria-label="すべてのタスクを選択"
+                  aria-label="表示中のタスクをすべて選択"
                 />
                 <Label htmlFor="select-all" className="whitespace-nowrap">
-                  すべて選択
+                  表示中をすべて選択
                 </Label>
               </div>
             )}
@@ -452,7 +915,15 @@ function TaskPageContent() {
                 <Label htmlFor="task-project-filter" className="sr-only">
                   プロジェクトで絞り込み
                 </Label>
-                <Select value={filterProject} onValueChange={setFilterProject}>
+                <Select
+                  value={filterProject}
+                  onValueChange={(value) => {
+                    if (value === filterProject) return;
+                    desiredUrlFilterContext.current = `${value}\u0000${filterStatus}`;
+                    resetPageForFilter();
+                    setFilterProject(value);
+                  }}
+                >
                   <SelectTrigger id="task-project-filter" aria-label="プロジェクトで絞り込み">
                     <SelectValue placeholder="すべてのプロジェクト" />
                   </SelectTrigger>
@@ -473,7 +944,11 @@ function TaskPageContent() {
                 <Select
                   value={filterStatus}
                   onValueChange={(value) => {
-                    if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
+                    if ((value === 'all' || isTaskStatus(value)) && value !== filterStatus) {
+                      desiredUrlFilterContext.current = `${filterProject}\u0000${value}`;
+                      resetPageForFilter();
+                      setFilterStatus(value);
+                    }
                   }}
                 >
                   <SelectTrigger id="task-status-filter" aria-label="ステータスで絞り込み">
@@ -496,7 +971,10 @@ function TaskPageContent() {
                 <Select
                   value={filterPriority}
                   onValueChange={(value) => {
-                    if (value === 'all' || isTaskPriority(value)) setFilterPriority(value);
+                    if ((value === 'all' || isTaskPriority(value)) && value !== filterPriority) {
+                      resetPageForFilter();
+                      setFilterPriority(value);
+                    }
                   }}
                 >
                   <SelectTrigger id="task-priority-filter" aria-label="優先度で絞り込み">
@@ -516,7 +994,14 @@ function TaskPageContent() {
                 <Label htmlFor="task-assignee-filter" className="sr-only">
                   担当者で絞り込み
                 </Label>
-                <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+                <Select
+                  value={filterAssignee}
+                  onValueChange={(value) => {
+                    if (value === filterAssignee) return;
+                    resetPageForFilter();
+                    setFilterAssignee(value);
+                  }}
+                >
                   <SelectTrigger id="task-assignee-filter" aria-label="担当者で絞り込み">
                     <SelectValue placeholder="すべての担当者" />
                   </SelectTrigger>
@@ -561,7 +1046,6 @@ function TaskPageContent() {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onClick={handleTaskClick}
-                        onTimeLogSuccess={handleTimeLogSuccess}
                         canEdit={taskCanEdit}
                         canDelete={taskCanDelete}
                       />
@@ -569,25 +1053,60 @@ function TaskPageContent() {
                   </div>
                 );
               })
+            ) : pageIndex > 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <p>このページにはタスクがありません。</p>
+                <p>前のページへ戻ってください。</p>
+              </div>
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                 <p>タスクが見つかりません。</p>
-                {filterProject === 'all' && filterStatus === 'all' && (
-                  <p>最初のタスクを作成しましょう！</p>
-                )}
+                {filterProject === 'all' &&
+                  filterStatus === 'all' &&
+                  filterPriority === 'all' &&
+                  filterAssignee === 'all' && <p>最初のタスクを作成しましょう！</p>}
               </div>
             )}
           </div>
+
+          {(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="タスク一覧のページ移動"
+            >
+              <Button
+                variant="outline"
+                disabled={tasksFetching || pageIndex === 0}
+                onClick={() => moveToPage(pageIndex - 1)}
+              >
+                前へ
+              </Button>
+              <span className="text-sm text-muted-foreground">{pageIndex + 1}ページ目</span>
+              <Button
+                variant="outline"
+                disabled={tasksFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+                onClick={() => moveToPage(pageIndex + 1)}
+              >
+                次へ
+              </Button>
+            </nav>
+          )}
 
           <TaskDialog
             open={dialogOpen}
             onClose={closeTaskDialog}
             onSubmit={handleSubmit}
+            isPending={singlePending}
             initialData={editingTask}
             projects={editableProjects}
           />
 
-          <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
+          <TaskDetailDialog
+            open={detailOpen && selectedTask !== null}
+            taskId={selectedTask}
+            onClose={handleDetailClose}
+            onAuthExpired={handleDetailAuthExpired}
+          />
         </div>
       )}
 
@@ -595,21 +1114,39 @@ function TaskPageContent() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={() => {
-          if (deleteTargetId) {
+          if (
+            deleteTargetId &&
+            !singleSubmission.current &&
+            !singlePending &&
+            !authExpiredRef.current
+          ) {
+            singleSubmission.current = {
+              generation: formGeneration.current,
+              pageIndex,
+              isCurrent: () => false,
+              routeTaskId: taskIdParam,
+              editLink: isEditLink,
+            };
             deleteMutation.mutate({ id: deleteTargetId });
           }
         }}
-        isPending={deleteMutation.isPending}
+        isPending={singlePending}
+        closeOnConfirm={false}
       />
 
       <DeleteConfirmDialog
-        open={bulkDeleteDialogOpen}
-        onOpenChange={setBulkDeleteDialogOpen}
-        onConfirm={() => {
-          bulkDeleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
+        open={bulkDeleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteTarget(null);
         }}
-        isPending={bulkDeleteMutation.isPending}
-        title={`${selectedTaskList.length}件のタスクを削除しますか？`}
+        onConfirm={() => {
+          if (bulkDeleteTarget && beginBulk(bulkDeleteTarget)) {
+            bulkDeleteMutation.mutate({ ids: [...bulkDeleteTarget.keys()] });
+          }
+        }}
+        isPending={bulkPending}
+        closeOnConfirm={false}
+        title={`${bulkDeleteTarget?.size ?? 0}件のタスクを削除しますか？`}
       />
     </AppLayout>
   );

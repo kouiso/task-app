@@ -91,6 +91,18 @@ describe('authRouter', () => {
         caller.auth.register({ name: 'X', email: 'a@example.com', password: 'Password123' }),
       ).rejects.toThrow('パスワードには特殊文字を含める必要があります');
     });
+
+    it.each([
+      ['ASCII', `Aa1!${'x'.repeat(69)}`, 'byte-ascii@example.com'],
+      ['日本語', `Aa1!${'あ'.repeat(22)}xxx`, 'byte-japanese@example.com'],
+      ['絵文字', `Aa1!${'😀'.repeat(17)}x`, 'byte-emoji@example.com'],
+    ])('%sでUTF-8の73バイトになるパスワードを拒否する', async (_kind, password, email) => {
+      const caller = await createTestCaller();
+
+      await expect(caller.auth.register({ name: 'X', email, password })).rejects.toThrow(
+        'パスワードはUTF-8で72バイト以内にしてください',
+      );
+    });
   });
 
   describe('login（ログイン）', () => {
@@ -105,6 +117,22 @@ describe('authRouter', () => {
 
       expect(result.user.id).toBe(user.id);
       expect(result.user.email).toBe('login@example.com');
+    });
+
+    it('既存の73バイトパスワードは新規設定用の上限でログイン拒否しない', async () => {
+      const legacyPassword = `Aa1!${'x'.repeat(69)}`;
+      const user = await createTestUser({
+        email: 'login-legacy-long@example.com',
+        password: legacyPassword,
+      });
+      const caller = await createTestCaller();
+
+      const result = await caller.auth.login({
+        email: user.email,
+        password: legacyPassword,
+      });
+
+      expect(result.user.id).toBe(user.id);
     });
 
     it('パスワードが誤っている場合は認証エラー', async () => {
@@ -230,6 +258,17 @@ describe('authRouter', () => {
     it('無効化ユーザーのセッションは null を返す', async () => {
       const user = await createTestUser({ email: 'sess-inactive@example.com', isActive: false });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      expect(await caller.auth.getSession()).toBeNull();
+    });
+
+    it('DBのversionが進んだ古いセッションは null を返す', async () => {
+      const user = await createTestUser({ email: 'sess-stale@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { sessionVersion: { increment: 1 } },
+      });
 
       expect(await caller.auth.getSession()).toBeNull();
     });

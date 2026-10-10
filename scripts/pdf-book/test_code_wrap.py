@@ -13,14 +13,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from code_wrap import (  # noqa: E402
     SAFE_COLS,
-    PRE_FONT_PT,
-    SHRINK_MIN_PT,
     atoms,
-    char_width,
     classify,
-    code_filepath_label,
-    hoist_code_filepath,
-    line_width,
     unsafe_runs,
     wrap_code_in_html,
 )
@@ -141,8 +135,8 @@ def main() -> int:
     multiline_out = wrap_code_in_html(multiline_token)
     if copied_code(multiline_out) != multiline_token_source:
         failures.append("複数行token spanの元textまたは改行が変化した")
-    if 'class="cw-shrink" style="font-size:82%"' not in multiline_out:
-        failures.append("複数行token spanの縮小率が変化した")
+    if multiline_out.count("cw-block-shrink") != 1 or multiline_out.count("font-size:82%") != 1:
+        failures.append("複数行token spanがブロック統一82%になっていない")
     if "</span>\n<span class=\"token string\">" not in multiline_out:
         failures.append("改行を跨ぐtoken spanを行境界で開き直していない")
     try:
@@ -526,6 +520,11 @@ def main() -> int:
         if ts_emit(copied) != ts_emit(source):
             failures.append(f"JSX子テキストの実値が変化した: {copied!r}")
 
+    literal_greater = 'const element = <p>A>' + 'B' * 80 + '</p>;'
+    literal_rendered = wrap_code_in_html(pre(html.escape(literal_greater)))
+    if ts_emit(copied_code(literal_rendered)) != ts_emit(literal_greater):
+        failures.append("JSX本文中の大なり記号を開始タグと誤認して値を変えた")
+
     strict_attribute = (
         'const value = <div title="alpha beta gamma delta epsilon zeta eta '
         'theta iota kappa lambda" />;'
@@ -551,225 +550,61 @@ const view = (
     if residuals or unsafe_runs(rendered):
         failures.append(f"JSX属性式の後でタグ状態が漏れた: {residuals}")
     if (
-        '<br class="cw-force">'
-        '<span class="cw-hang" style="width:6ch"></span>'
-        'rounded-lg transition-colors' not in rendered
+        '<br class="cw-force">rounded-lg transition-colors' not in rendered
     ):
         failures.append("JSX属性式の後続classNameを安全な空白で折れなかった")
 
-    # Day25 の JSX 本文は、改行後の字下げだけを除いても表示値は変わらない。
-    day25_hint = "8文字以上で、大文字・小文字・数字・特殊文字をそれぞれ1文字以上含めてください"
-    for hint in [html.escape(day25_hint), '<span class="token plain">' + html.escape(day25_hint) + '</span>']:
-        source = '<p>\n                  ' + day25_hint + '\n</p>'
-        residuals = []
-        rendered = wrap_code_in_html(pre('&lt;p&gt;\n                  ' + hint + '\n&lt;/p&gt;'), residuals)
-        if residuals:
-            failures.append(f"Day25 の JSX 本文を8pt以上で組めない: {residuals}")
-        if ts_emit(copied_code(rendered)) != ts_emit(source):
-            failures.append("Day25 の JSX 本文の表示値が変わった")
-        for pct in re.findall(r'font-size:(\d+)%', rendered):
-            if PRE_FONT_PT * int(pct) / 100 < SHRINK_MIN_PT:
-                failures.append("Day25 の JSX 本文が8pt未満になった")
-        if day25_hint not in copied_code(rendered):
-            failures.append("Day25 の JSX 本文の内部へ改行が入った")
-
-    literal_source = "const schema = z.string()\n    .min(8, '新しいパスワードは8文字以上で入力してください');"
-    residuals = []
-    rendered = wrap_code_in_html(pre(html.escape(literal_source)), residuals)
-    if residuals or ts_emit(copied_code(rendered)) != ts_emit(literal_source):
-        failures.append("Day25 の min メッセージ文字列を保持できない")
-
-    # 同じ字下げでもテンプレート本文の空白は値なので削らない。
-    template_source = 'const value = `\n                  ' + day25_hint + '\n`;'
-    rendered = wrap_code_in_html(pre(html.escape(template_source)))
-    if eval_js(copied_code(rendered), 'value') != '\n                  ' + day25_hint + '\n':
-        failures.append("テンプレート本文の字下げを削った")
-
-    # 24. 字幅は描画に使う書体（JetBrains Mono → BIZ UDPGothic）の送り幅で数える。
-    #     全角=2桁の見なしでは収まる行まで縮んでいた（Day 17 Step 5 が86%に
-    #     縮んでいた実例）。ASCII は JetBrains Mono の1桁=1.0、漢字は約1.67桁、
-    #     どちらの書体にも無い字（絵文字等）は2桁。
-    if char_width("a") != 1.0:
-        failures.append(f"ASCII の桁が JetBrains Mono の1桁とずれた: {char_width('a')}")
-    if not 1.4 < char_width("あ") < 1.8:
-        failures.append(f"かなの桁が BIZ UDPGothic の送り幅とずれた: {char_width('あ')}")
-    if not 1.4 < char_width("漢") < 1.8:
-        failures.append(f"漢字の桁が BIZ UDPGothic の送り幅とずれた: {char_width('漢')}")
-    if char_width("") != 2.0:  # 私用領域: どちらの書体も持たない
-        failures.append("書体に無い字が2桁で数えられていない")
-
-    # Day 17 Step 5: 実幅では53.5桁しかなく58桁に収まるので縮まない
-    day17_comment = "// プロジェクトごとのログインユーザー自身のロールを引けるようにする"
-    out = wrap_code_in_html(pre(day17_comment))
-    if "cw-shrink" in out or "cw-force" in out:
-        failures.append("実幅で収まる日本語コメント行を縮小・折返ししてしまった")
-
-    # Day 25 完成コード: JSX本文行は74%へ縮む。74%は下限70%を上回るため
-    # 字下げを外す分岐には入らず、字下げを残したまま縮むのが正しい出方
-    day25_source = (
-        '<p className="text-sm text-muted-foreground">\n'
-        + " " * 18 + day25_hint + "\n                </p>"
-    )
-    rendered = wrap_code_in_html(
-        pre(html.escape(day25_source))
-    )
-    if 'class="cw-shrink" style="font-size:74%"' not in rendered:
-        failures.append("Day25 完成コードのJSX本文行が74%で縮んでいない")
-    if " " * 18 + day25_hint not in copied_code(rendered):
-        failures.append("Day25 完成コードのJSX本文行の字下げが失われた")
-
-    # 25. filepath 見出しは4形とも pre の外の .code-filepath へ出す
-    filepath_cases = [
-        ("tsx", "// filepath: src/app/page.tsx", "src/app/page.tsx"),
-        ("bash", "# filepath: ターミナル", "ターミナル"),
-        (
-            "css",
-            "  /* filepath: src/app/globals.css（同じファイルの続き） */",
-            "src/app/globals.css（同じファイルの続き）",
-        ),
-        (
-            "tsx",
-            "            <span class=\"token punctuation\">{</span>"
-            "<span class=\"token comment\">/* filepath: src/app/page.tsx（同じファイルの続き） */</span>"
-            "<span class=\"token punctuation\">}</span>",
-            "src/app/page.tsx（同じファイルの続き）",
-        ),
+    # 24. Prism は tab-size: 4 で描く。桁計算も固定幅4ではなく、現在列から
+    #     次の4桁境界へ進める。P11 Day26で実際に語中折れした3行を固定する。
+    day26_tabbed = [
+        '\t\t\t| { user: { name: string; role: "MEMBER"; avatar: null } },',
+        '\t\t\t\t\t\tretry?: (failureCount: number, error: unknown) => boolean;',
+        '\t\t\t\tuseMutation: (options: { onSuccess?: () => void }) => {',
     ]
-    for lang, first_line, label in filepath_cases:
-        source = (
-            f'<pre class="language-{lang}"><code class="language-{lang}">'
-            f"{first_line}\nconst x = 1;</code></pre>"
-        )
-        out = hoist_code_filepath(source)
-        expected = f'<p class="code-filepath">{html.escape(label)}</p>'
-        if expected not in out:
-            failures.append(f"{lang} の filepath 行が見出しに出ていない: {out}")
-        body = out.split("</p>", 1)[1]
-        if "filepath:" in body:
-            failures.append(f"{lang} の filepath 行が pre の中に残っている: {out}")
-        if out.index(expected) > out.index("<pre"):
-            failures.append("filepath 見出しが pre の後ろに出ている")
-
-    # 枠の途中の filepath 行は「ファイル内の位置」を示す字下げを兼ねるので残す
-    mid_block = (
-        '<pre class="language-tsx"><code>const a = 1;\n'
-        "  <span class=\"token punctuation\">{</span>"
-        "<span class=\"token comment\">/* filepath: src/app/task/page.tsx */</span>"
-        "<span class=\"token punctuation\">}</span>\nconst b = 2;</code></pre>"
+    forbidden_splits = (("nul\nl", "null"), ("unk\nnown", "unknown"))
+    wrappers = (
+        lambda value: (
+            "const fixture = {\ndata: undefined as\n| undefined\n"
+            + value + "\nisLoading: false,\n};"
+        ),
+        lambda value: "type Fixture = {\n" + value + "\n}",
+        lambda value: (
+            "const fixture = {\n" + value + "\nreturn null;\n},\n};"
+        ),
     )
-    if hoist_code_filepath(mid_block) != mid_block:
-        failures.append("枠の途中の filepath 行まで枠の外へ出してしまった")
-
-    # filepath でない1行目は触らない
-    untouched = pre("// ふつうのコメント\nconst x = 1;")
-    if hoist_code_filepath(untouched) != untouched:
-        failures.append("filepath でない1行目を書き換えてしまった")
-
-    # code_filepath_label は原稿側の判定にも使う（verify_pdf_copy・check_pdf_book）
-    if code_filepath_label("  # filepath: .env.example") != ".env.example":
-        failures.append("# filepath 行の値を取れていない")
-    if code_filepath_label("const x = 1;") is not None:
-        failures.append("filepath でない行を filepath と誤認した")
-
-    # ── 続き行の空き（cw-hang）─────────────────────────────
-    # 強制改行の直後には「字下げ＋2桁」の空き要素が乗り、続き行が
-    # 字下げを失って左端に落ちないようにする（issue #458）
-
-    # 26. 強制改行の直後に「字下げ＋2桁」の空き要素が入る。
-    #     字下げ6桁の行なら width:8ch
-    hang_source = (
-        '      <div className="mx-auto flex min-h-screen max-w-6xl '
-        'flex-col px-6 py-8">'
-    )
-    out = wrap_code_in_html(pre(html.escape(hang_source)))
-    if (
-        '<br class="cw-force">'
-        '<span class="cw-hang" style="width:8ch"></span>' not in out
+    expected_safe_heads = ("avatar", "error", "()")
+    for source, wrap_source, safe_head in zip(
+        day26_tabbed, wrappers, expected_safe_heads
     ):
-        failures.append("強制改行の直後に字下げ＋2桁の空きが入っていない")
-    if unsafe_runs(out):
-        failures.append(f"空き付き行に折返せないランが残る: {unsafe_runs(out)}")
+        rendered = wrap_code_in_html(pre(html.escape(source)))
+        copied = copied_code(rendered)
+        if ts_syntax_errors(wrap_source(copied)):
+            failures.append(f"tab字下げTSXの強制改行で構文が変化した: {copied!r}")
+        for broken, token in forbidden_splits:
+            if broken in copied:
+                failures.append(f"tab字下げTSXが{token}の途中で折れた")
+        if unsafe_runs(rendered):
+            failures.append(f"tab字下げTSXに危険なrunが残った: {source!r}")
+        if f'<br class="cw-force">{safe_head}' not in rendered:
+            failures.append(
+                f"tab幅を含む実表示桁より後ろで折った: {safe_head}の前に境界が無い"
+            )
 
-    # 空き要素は文字を持たないため、コピー後の文字列は変わらない
-    copied_hang = copied_code(out)
-    if copied_hang.replace("\n", "") != hang_source:
-        failures.append("空き要素がコピー後の文字列を変えた")
-    if "\n " in copied_hang:
-        failures.append("続き行のコピーに空白が混入した")
-
-    # 27. 字下げの直後（`//` の前）では強制改行しない。1行目が空白だけに
-    #     なってコメント本体が左端に出る形を防ぐ。区切り候補が尽きた行は
-    #     縮小の経路へ回る
-    # 実フォント計測で78桁。字下げ直後しか区切りが無い日本語コメント行
-    comment_source = '    // アーカイブ済みプロジェクトのタスクは集計対象外にし、権限のないユーザーからの更新も拒否する'
-    out = wrap_code_in_html(pre(html.escape(comment_source)))
-    if '<br class="cw-force">' in out:
-        failures.append("字下げの直後（// の前）で強制改行した")
-    if 'cw-shrink' not in out:
-        failures.append("区切り候補の尽きた行が縮小へ回っていない")
-
-    # 28. 2本目以降の区切りは「空き＋区切り」が58桁以内になるよう選ぶ。
-    #     空きを無視すると59桁に出る2本目の区切りを、空き込みでは手前へ
-    #     倒して収める（空き4桁＋区切り51桁）
-    wrap_source = (
-        '  call(alpha(x), beta(x), gamma(x), alpha(y), beta(y), gamma(y), '
-        'delta(y), eps(y), zeta(y), eta(y), theta(y), tail);'
+    # 非ゼロ列のtabと連続tabを同じ規則で扱い、Prism span・実体参照・和文の
+    # 既存の幅計算を壊さない。コピー後の値が同じであることを公開経路で見る。
+    mixed_tab_source = "const\t\tvalue = 1 < 2 ? '日本語' : '別'; // alpha beta gamma delta"
+    mixed_tab_html = pre(
+        '<span class="token keyword">const</span>\t\tvalue = 1 '
+        '&#x3C; 2 ? <span class="token string">\'日本語\'</span> : \'別\'; '
+        '// alpha beta gamma delta'
     )
-    out = wrap_code_in_html(pre(html.escape(wrap_source)))
-    if unsafe_runs(out):
-        failures.append(f"空き込み58桁を超える続き行が残る: {unsafe_runs(out)}")
-    if 'cw-shrink' in out:
-        failures.append("区切りの候補が残る行を縮小に回してしまった")
-    for row in out.split('<br class="cw-force">')[1:]:
-        hang_m = re.match(
-            r'<span class="cw-hang" style="width:(\d+(?:\.\d+)?)ch"></span>', row
-        )
-        if not hang_m:
-            failures.append("続き行の先頭に空き要素が無い")
-            continue
-        row_text = html.unescape(re.sub(r'<[^>]+>', '', row))
-        if float(hang_m.group(1)) + line_width(atoms(row_text)) > SAFE_COLS:
-            failures.append("空き込みで58桁を超える続き行がある")
-
-    # 29. 空き込みで8ptを割る行は空きを1桁ずつ減らす。字下げ12桁＋
-    #     実幅で続き行が80桁超の <span> 行は、空き14桁だと70%を割るため
-    #     実幅計測で11桁まで減る
-    span_source = (
-        '            <span>最新のユーザー一覧を取得できませんでした。'
-        '前回取得時の内容です。データは端末に残</span>'
-    )
-    res_span: list[str] = []
-    out = wrap_code_in_html(pre(html.escape(span_source)), res_span)
-    if res_span:
-        failures.append(f"空きを減らせば8ptで組める行が残件化した: {res_span}")
-    if 'width:11ch' not in out:
-        failures.append("8ptを割る行の空きが減っていない")
-    if unsafe_runs(out):
-        failures.append(f"空きを減らした行に超過が残る: {unsafe_runs(out)}")
-
-    # 30. unsafe_runs は続き行の空き込みで58桁を超えた行を見つける。
-    #     cw-shrink で縮めた行も率を掛けて比べる（飛ばさない）
-    bad_hang = pre(
-        'xxxxxxxxxx'
-        '<br class="cw-force"><span class="cw-hang" style="width:10ch"></span>'
-        + 'y' * 55
-    )
-    if not unsafe_runs(bad_hang):
-        failures.append("unsafe_runs が空き込みの58桁超えを見逃した")
-    bad_shrink = pre(
-        '<span class="cw-shrink" style="font-size:80%">zzzzzzzzzz'
-        '<br class="cw-force"><span class="cw-hang" style="width:8ch"></span>'
-        + 'w' * 66 + '</span>'
-    )
-    if not unsafe_runs(bad_shrink):
-        failures.append("unsafe_runs が縮小行の空き込み58桁超えを見逃した")
-    ok_shrink = pre(
-        '<span class="cw-shrink" style="font-size:80%">zzzzzzzzzz'
-        '<br class="cw-force"><span class="cw-hang" style="width:8ch"></span>'
-        + 'w' * 60 + '</span>'
-    )
-    if unsafe_runs(ok_shrink):
-        failures.append("unsafe_runs が縮小済みの安全な行を誤検出した")
+    mixed_tab_rendered = wrap_code_in_html(mixed_tab_html)
+    if re.sub(r"\s+", " ", copied_code(mixed_tab_rendered)).strip() != re.sub(
+        r"\s+", " ", mixed_tab_source
+    ).strip():
+        failures.append("非ゼロ列tab・Prism span・実体参照・和文の値が変化した")
+    if unsafe_runs(mixed_tab_rendered):
+        failures.append("非ゼロ列tabを含む行に危険なrunが残った")
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")

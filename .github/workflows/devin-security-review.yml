@@ -35,8 +35,6 @@ jobs:
           COGNITION_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           WINDSURF_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_OUTPUT_FILE: devin-security-review.md
-          # 任意: Devin CLI の --model（例: swe-2-max）。空なら Devin 側のデフォルト
-          DEVIN_MODEL: ${{ vars.DEVIN_MODEL }}
           DEVIN_PROMPT: |
             この変更のセキュリティ面を確認してください。ファイルの書き換えは行わないでください。
 

@@ -20,12 +20,12 @@ Day 22 では Recharts ライブラリを使ってステータス別・優先度
 
 ## 始める前の前提
 
-- Day 22 のグラフ表示が動いている
-- 直近数週間のうちに、自分が担当のタスクを「完了」にした記録が1件以上ある
-- `/report` を開いて統計カードとグラフを確認できる
-- 週次レポートは集計結果の読み方も大事なので数字が少ない場合は練習用データを追加してから確認する
+- Day 22 のグラフ表示が動いています
+- 直近数週間のうちに、自分が担当のタスクを「完了」にした記録が1件以上あります
+- `/report` を開いて統計カードとグラフを確認できます
+- 週次レポートは集計結果の読み方も大事なので数字が少ない場合は練習用データを追加してから確認します
 - 初期データの完了タスクは1件だけで、担当者も別の人
-- `/task` で自分を担当者にしたタスクを2〜3件作り、Day 16 の手順で「完了」にしてから開く
+- `/task` で自分を担当者にしたタスクを2〜3件作り、Day 16 の手順で「完了」にしてから開きます
 
 ## なぜこれを作るのか
 
@@ -72,21 +72,23 @@ flowchart TD
 | プロジェクト別統計テーブル | `/report` 側で `task.getAll` を再集計する実装 |
 | 週次レポートAPI呼び出し | ユーザー別フィルターUI |
 | 折れ線グラフで完了推移表示 | カスタムテーブル作成 |
-| 棒グラフで優先度・ステータス表示 | 新規グラフライブラリ導入 |
+| 棒グラフで高・緊急の完了推移と優先度別内訳を表示 | 新規グラフライブラリ導入 |
 | | 週次レポートの出力ページ（`/report/weekly/export`） |
 
 ### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| projectStats | — | プロジェクト別集計 | 通信簿の各教科 |
+| `projectStats` | — | プロジェクト別集計 | 通信簿の各教科 |
 | Table | テーブル | 表形式の表示 | Excel の表 |
-| getWeeklyReport | — | 週次データ取得API | 週間天気予報 |
+| `getWeeklyReport` | — | 週次データ取得API | 週間天気予報 |
 | LineChart | ラインチャート | 折れ線グラフ | 気温の推移グラフ |
+
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | 週次レポート API（getWeeklyReport）を自分で書く | 14分 |
 | Step 1 | プロジェクト統計の集計ロジック | 5分 |
@@ -97,15 +99,13 @@ flowchart TD
 | Step 6 | グラフを表示する | 5分 |
 | Step 7 | 動作確認 | 3分 |
 
-**合計時間**: 約45分です。
+**読む時間の合計（仮）**: 約45分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: 週次レポート API（getWeeklyReport）を自分で書く（14分）
+### Step 0: 週次レポート API（getWeeklyReport）を自分で書く（読む目安: 14分）
 
 **ゴール**: Day 21 で作った `src/server/api/routers/report.ts` に `getWeeklyReport` を追記し、`api.report.getWeeklyReport` を自分で生やします。今回の追加は `reportRouter` の2本目の procedure です。新規ファイルではなく、前回作った `getOverview` の **直後** に足します。
 
@@ -122,7 +122,6 @@ import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 ```
 
 `z` は入力検証、`TASK_PRIORITY` は優先度別の集計、`USER_ROLE` と `TRPCError` は他人のレポートを一般ユーザーから守る認可エラーに使います。
@@ -289,13 +288,13 @@ import { getUserProjectIds } from './_helpers/permission';
 これで `reportRouter` は `getOverview` と `getWeeklyReport` の2本立てになりました。`root.ts` は Day 21 で `report: reportRouter` を登録済みなので今日は追加の登録作業は不要です。
 
 **確認ポイント**:
-- `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できた
-- `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで 完成版と同じ順序で書けた
-- ファイルの最終行の `});` は Day 21 のまま1つで、増えていない
-- `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できた
-- `npx tsc --noEmit` で型エラーが出ていない
+- `src/server/api/routers/report.ts` の `getOverview` の直後に `getWeeklyReport` を追記できました
+- `weeks` / `userId` の入力検証、管理者チェック、週バケット生成まで 完成版と同じ順序で書けました
+- ファイルの最終行の `});` は Day 21 のまま1つで、増えていません
+- `root.ts` は Day 21 時点の `report: reportRouter` のままでよいと理解できました
+- `npx tsc --noEmit` で型エラーが出ていません
 
-### Step 1: プロジェクト統計の集計ロジック（5分）
+### Step 1: プロジェクト統計の集計ロジック（読む目安: 5分）
 
 **ゴール**: レポートページ（`/report`）に
 表示するプロジェクト統計の構造を理解します。
@@ -339,8 +338,8 @@ const { data: overview, isLoading } =
 > 画面はこの2つを見て表示を切り替えます。
 
 **確認ポイント**:
-- `overview` を取得できている
-- 表の5項目が `projectStats` に入っていると理解した
+- `overview` を取得できています
+- 表の5項目が `projectStats` に入っていると理解しました
 
 ```typescript
 // filepath: src/app/report/page.tsx
@@ -352,8 +351,8 @@ const projectStats = overview?.projectStats ?? [];
 > `overview` がまだ届いていない瞬間でも `projectStats` は空配列になり、後の `.map` がエラーになりません。
 
 **確認ポイント**:
-- クライアント側で再集計していない
-- `projectStats` が配列として扱える
+- クライアント側で再集計していません
+- `projectStats` が配列として扱えます
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -370,8 +369,8 @@ const projectStats = overview?.projectStats ?? [];
 ```
 
 **確認ポイント**:
-- `progress` / `totalTimeHours` を表示時だけ整形している
-- `projectStats` の各要素がそのままテーブル行になる
+- `progress` / `totalTimeHours` を表示時だけ整形しています
+- `projectStats` の各要素がそのままテーブル行になります
 
 > `projectStats` 自体は `reportRouter.getOverview`
 > の中で `groupBy` と `count` を使って作られています。
@@ -379,7 +378,7 @@ const projectStats = overview?.projectStats ?? [];
 
 ---
 
-### Step 2: 統計テーブルを表示（5分）
+### Step 2: 統計テーブルを表示（読む目安: 5分）
 
 **ゴール**: Table コンポーネントで
 プロジェクト統計を表形式で表示します。
@@ -400,7 +399,7 @@ import {
 shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に対応する小さな部品の集まりです。だから6つをまとめて取り込みます。1つでも書き漏らすとその名前が定義されていないというエラーで画面が真っ白になります。どの部品が HTML のどのタグに当たるかはすぐ下の表にまとめてあります。
 
 **確認ポイント**:
-- Table 関連の6つのコンポーネントをインポートした
+- Table 関連の6つのコンポーネントをインポートしました
 
 #### Table コンポーネントの構造
 
@@ -439,8 +438,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 ```
 
 **確認ポイント**:
-- `TableHeader` の中に `TableRow` と `TableHead` がある
-- ヘッダー5列を定義した
+- `TableHeader` の中に `TableRow` と `TableHead` があります
+- ヘッダー5列を定義しました
 
 > `TableHeader` の中に見出し行の `TableRow` を置き、その中へ見出しセルの `TableHead` を並べます。
 > この入れ子はブラウザに「ここが表の見出し行」と伝えるための形です。
@@ -467,8 +466,8 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 ```
 
 **確認ポイント**:
-- テーブルにプロジェクト名が並ぶ
-- 数値が `text-right` で右寄せ表示される
+- テーブルにプロジェクト名が並びます
+- 数値が `text-right` で右寄せ表示されます
 
 > shadcn/ui の Table はHTML の
 > テーブル要素をラップしたものです。
@@ -481,7 +480,7 @@ shadcn/ui の表は1つの万能部品ではなく、`<table>` の各要素に�
 
 ---
 
-### Step 3: 週次レポートAPIの概要（3分）
+### Step 3: 週次レポートAPIの概要（読む目安: 3分）
 
 **ゴール**: 週次レポートAPIの
 パラメータとレスポンス構造を理解します。
@@ -531,13 +530,13 @@ api.report.getWeeklyReport.useQuery({
 > フィルターし、週ごとに集計しています。
 
 **確認ポイント**:
-- APIのパラメータとレスポンスの構造を理解した
-- `weeklyData` が週ごとのデータ配列であることを把握した
-- `byStatus` と `byPriority` でグラフ用データが取れることを理解した
+- APIのパラメータとレスポンスの構造を理解しました
+- `weeklyData` が週ごとのデータ配列であることを把握しました
+- レスポンスに `byStatus` と `byPriority` があり、今日の画面では `byPriority` から2種類の棒グラフを作ることを理解しました
 
 ---
 
-### Step 4: 週次レポートページの基本構造（5分）
+### Step 4: 週次レポートページの基本構造（読む目安: 5分）
 
 **ゴール**: `/report/weekly` ページを作成し、
 API呼び出しと週数選択UIを実装します。
@@ -559,8 +558,8 @@ import { PageLoadingSpinner }
 ```
 
 **確認ポイント**:
-- `formatDateOnly` をインポートした
-- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` である
+- `formatDateOnly` をインポートしました
+- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` です
 
 > 先頭の `'use client'`（ブラウザ側で動く宣言）を書くとこのページはブラウザ側で動く画面になります。
 > `useState` などブラウザ側で動く機能を使うためこの宣言が必要です。
@@ -586,8 +585,8 @@ import { api } from '@/trpc/react';
 ```
 
 **確認ポイント**:
-- Recharts の10種類のコンポーネントをインポートした
-- `TASK_PRIORITY_COLORS` をインポートした
+- Recharts の10種類のコンポーネントをインポートしました
+- `TASK_PRIORITY_COLORS` をインポートしました
 
 > 今日初めて使う Recharts の部品を先に紹介します。
 > `CartesianGrid` はグラフ背景の目盛り線を引きます。
@@ -620,8 +619,8 @@ export default function WeeklyReportPage() {
 `isLoading` のうちに `return` で打ち切るのも大事です。この後に書くコードは `reportData?.totalCompleted ?? 0` のように `?.` と `?? 0` で守ってあるのでここを飛ばしても画面がエラーで止まるわけではありません。代わりに、まだ何も届いていない状態のまま数字の `0` と空っぽのグラフが一瞬だけ描かれます。読み手にはそれが「この期間は0件だった」という結果に見えてしまいます。まだ届いていないことはスピナーではっきり伝えます。Day 09 のプロジェクト一覧でも、`projectsLoading` が真の間はスピナーを返して先へ進ませませんでした。
 
 **確認ポイント**:
-- `useState('4')` で初期値4週間を設定している
-- `isLoading` のときスピナーを表示している
+- `useState('4')` で初期値4週間を設定しています
+- `isLoading` のときスピナーを表示しています
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -649,8 +648,8 @@ export default function WeeklyReportPage() {
 ```
 
 **確認ポイント**:
-- 4・8・12週間の選択肢がある
-- `onValueChange` で `setWeeks` を呼んでいる
+- 4・8・12週間の選択肢があります
+- `onValueChange` で `setWeeks` を呼んでいます
 
 > `useState` で週数を管理します。
 > ユーザーが週数を変更すると
@@ -698,8 +697,8 @@ export default function WeeklyReportPage() {
 カードとグラフも、対応するコメントの行と置き換えていきます。
 
 **確認ポイント**:
-- `return` の一番外側が `<AppLayout>` になっている
-- 関数を閉じる `}` まで書けている
+- `return` の一番外側が `<AppLayout>` になっています
+- 関数を閉じる `}` まで書けています
 
 スクリーンショット: 読み込んでいる間はスピナーだけが出ます。
 
@@ -735,12 +734,12 @@ import Link from 'next/link';
 `inline-flex items-center gap-2` は文字と矢印を横に並べ、縦位置を中央でそろえ、その間に隙間を空ける指定です。この3つを外すと矢印が文字の下端にずれて落ちたように見えます。
 
 **確認ポイント**:
-- `/report` から週次レポートを開ける
-- 「プロジェクト統計」テーブルは1つだけ表示される
+- `/report` から週次レポートを開けます
+- 「プロジェクト統計」テーブルは1つだけ表示されます
 
 ---
 
-### Step 5: サマリーカードを表示（5分）
+### Step 5: サマリーカードを表示（読む目安: 5分）
 
 **ゴール**: 完了タスク合計・週平均・
 対象期間の3枚のカードを表示します。
@@ -769,9 +768,11 @@ import Link from 'next/link';
 
 `?? 0` は失敗を見分けません。2つ目でも `0` と出るので読者には「今週は完了0件」との区別が付きません。`useQuery` は取得に失敗した理由を `error` にも入れて返すので失敗は本来そちらを見て「読み込みに失敗しました」と別に伝えます。この画面ではまだ `error` を受け取っていないため失敗を伝える表示がありません。`?? 0` がしているのは数字の場所が空欄になるのを防ぐことだけです。
 
+> **学習段階と現在の完成版の違い**: この Day 23 で作る週次ページは、週数を画面内の state だけで切り替える学習段階の実装です。現在の完成版には、通信エラーを本当の0件と分ける表示、選んだ `weeks` と URL パラメータの同期、CSV（カンマで項目を区切り、表計算ソフトで開けるファイル）出力へのリンクが加わっています。これらは現在の完成版で追加された機能なので、この Step ではコードを足しません。
+
 **確認ポイント**:
-- `grid-cols-3` で3列レイアウトになっている
-- 完了タスク合計の数値が表示される
+- `grid-cols-3` で3列レイアウトになっています
+- 完了タスク合計の数値が表示されます
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -799,8 +800,8 @@ import Link from 'next/link';
 `Number.parseInt(weeks, 10)` が 0 になることはありません。`Select` が返す値は `4` `8` `12` の3つだけなので0 で割ってしまう心配は要らないという理屈です。
 
 **確認ポイント**:
-- `Math.round` で小数を丸めている
-- `Number.parseInt` で文字列の `weeks` を数値に変換している
+- `Math.round` で小数を丸めています
+- `Number.parseInt` で文字列の `weeks` を数値に変換しています
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -809,7 +810,7 @@ import Link from 'next/link';
     <CardContent className="pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
-        対象期間（UTC）</p>
+        集計期間（UTC基準）</p>
       <p className="text-lg font-semibold">
         {reportData?.startDate
           && reportData?.endDate
@@ -822,8 +823,8 @@ import Link from 'next/link';
 ```
 
 **確認ポイント**:
-- `formatDateOnly` で UTC の日付を表示している
-- データがないときは `'-'` を表示している
+- `formatDateOnly` で UTC の日付を表示しています
+- データがないときは `'-'` を表示しています
 
 > 3枚のカードは1つの `reportData` から値を取り出し、合計・週平均・対象期間という3種類の見せ方にしています。
 > 対象期間は UTC で集計した日付です。`formatDateOnly` は日時文字列の日付部分を使うためブラウザのタイムゾーンで前日や翌日にずれません。見出しにも「UTC」を付け、集計の基準を伝えます。
@@ -838,7 +839,7 @@ import Link from 'next/link';
 
 ---
 
-### Step 6: グラフを表示する（5分）
+### Step 6: グラフを表示する（読む目安: 5分）
 
 **ゴール**: Recharts で折れ線グラフと
 棒グラフを表示して週次推移を可視化します。
@@ -863,7 +864,7 @@ const chartData =
 ```
 
 **確認ポイント**:
-- `chartData` は完了数と優先度データを持つ
+- `chartData` は完了数と優先度データを持っています
 
 > Recharts のグラフは1週分を1オブジェクトにまとめ、各系列の値をキーに持つ配列を受け取ります。
 > `weeklyData` はこの形と違うので`name` や `completed` をキーに持つ形へ組み替えています。
@@ -898,7 +899,7 @@ flowchart LR
 低・中・高・緊急の4系列を積み上げると棒の高さがその週の完了数になります。折れ線グラフと合計が一致するか確認してみましょう。
 
 **確認ポイント**:
-- `priorityData` は完了タスクの優先度別データを持つ
+- `priorityData` は完了タスクの優先度別データを持っています
 
 **実装**: Step 4 の骨格に置いた `{/* Step 6: グラフ3枚のグリッド */}` の行を、
 次の外枠と置き換えます。3枚のカードはこの `<div>` の中に入ります。
@@ -948,8 +949,8 @@ flowchart LR
 `type="monotone"` は点と点を緩い曲線でつなぐ指定です。`chartData` が空配列でも `LineChart` は軸だけを描いて止まらないので完了が1件も無い週があっても画面は壊れません。
 
 **確認ポイント**:
-- `LineChart` で折れ線グラフを描画している
-- `col-span-1 lg:col-span-2` で、画面が広いとき横幅いっぱいに表示される
+- `LineChart` で折れ線グラフを描画しています
+- `col-span-1 lg:col-span-2` で、画面が広いとき横幅いっぱいに表示されます
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -982,8 +983,8 @@ flowchart LR
 `fill` に `TASK_PRIORITY_COLORS` を渡すとDay 22 の円グラフと同じ色で棒が塗られます。色の文字列を直接書いてしまうとあとで優先度の色を変えたときにこのグラフだけ古い色で取り残されます。
 
 **確認ポイント**:
-- `BarChart` で棒グラフを描画している
-- `TASK_PRIORITY_COLORS` で色分けしている
+- `BarChart` で棒グラフを描画しています
+- `TASK_PRIORITY_COLORS` で色分けしています
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -1007,7 +1008,7 @@ flowchart LR
 このコードブロックはカードの前半だけで、`</BarChart>` から先の閉じ括弧は次のブロックにあります。途中で保存するとエラー表示が出ますが続きを書けば消えるので手を止めないでください。
 
 **確認ポイント**:
-- `priorityData` を `BarChart` に渡している
+- `priorityData` を `BarChart` に渡しています
 
 ```typescript
 {/* filepath: src/app/report/weekly/page.tsx */}
@@ -1029,9 +1030,9 @@ flowchart LR
 ```
 
 **確認ポイント**:
-- `stackId="priority"` で積み上げ棒グラフになっている
-- 4つの優先度が色分けで表示される
-- 3枚のグラフが `lg` 幅で2列に並び、折れ線グラフだけが横2つぶんを占める
+- `stackId="priority"` で積み上げ棒グラフになっています
+- 4つの優先度が色分けで表示されます
+- 3枚のグラフが `lg` 幅で2列に並び、折れ線グラフだけが横2つぶんを占めます
 
 > `stackId` は今日初登場の指定です。同じ `stackId` を持つ
 > `Bar` 同士は横に並ばず1本の棒として積み上がります。
@@ -1047,7 +1048,7 @@ flowchart LR
 
 ---
 
-### Step 7: 動作確認（3分）
+### Step 7: 動作確認（読む目安: 3分）
 
 **ゴール**: 全体の表示を確認します。
 
@@ -1060,21 +1061,21 @@ npm run dev
 ```
 
 **確認ポイント**:
-- 開発サーバーのターミナルにエラーが出ていない
+- 開発サーバーが正常に起動しました
 
 1. `/report` にアクセス
-2. 統計カード（Day 21）が表示される
-3. 円グラフ（Day 22）が表示される
-4. プロジェクト統計テーブルが表示される
+2. 統計カード（Day 21）が表示されます
+3. 円グラフ（Day 22）が表示されます
+4. プロジェクト統計テーブルが表示されます
 5. 各プロジェクトの進捗率が正しい
 6. `/report/weekly` にアクセス
-7. 3枚のサマリーカードが表示される
-8. 折れ線グラフが表示される
-9. 優先度別・完了タスクの優先度別棒グラフが表示される
+7. 3枚のサマリーカードが表示されます
+8. 折れ線グラフが表示されます
+9. 「高・緊急の完了タスク数」と「完了タスクの優先度別内訳」の棒グラフが表示されます
 
 スクリーンショット: 週次レポートページの全体です。
 
-![週次レポートページ。サマリーカードの下に週別完了タスク数の折れ線グラフ、その下に2つの棒グラフが横に並んでいる](./screenshots/day23/report-weekly.png)
+![週次レポートページ。サマリーカードの下に折れ線グラフ、その下に2つの棒グラフが並んでいる。横幅が1024px未満では棒グラフも縦に並ぶ](./screenshots/day23/report-weekly.png)
 
 グラフの数字は前提の手順で自分が完了にしたタスクのぶんです。件数が違っても実装の誤りではありません。写真では「高・緊急の完了タスク数」だけが空になっています。この棒グラフは `high` と `urgent` の2系列しか描かず、タスク作成ダイアログの既定は「中」だからです。優先度を「高」か「緊急」にしたタスクを完了にするとここにも棒が立ちます。
 
@@ -1170,8 +1171,8 @@ export async function fetchWeeklyReportTasks(
 
 **このコードの問題点**:
 
-- タスクが 30 件あれば最初の取得 1 回に加えてプロジェクト取得が 30 回走る
-- `Promise.all` を使っていてもDB への問い合わせ回数が増える構造は変わらない
+- タスクが 30 件あれば最初の取得 1 回に加えてプロジェクト取得が 30 回走ります
+- `Promise.all` を使っていてもDB への問い合わせ回数が増える構造は変わりません
 - 週次レポートに担当者やプロジェクト情報を増やすたび、同じ N+1 が別の relation でも起きやすい
 
 #### After（プロが書くコード）
@@ -1236,7 +1237,7 @@ export async function fetchWeeklyReportTasks(
 **このコードの強み**:
 
 - タスクとプロジェクト情報を Prisma にまとめて取得させるので問い合わせ回数が読みやすい
-- `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
+- `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなります
 - 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
 
 #### 覚えておきたいエッセンス
@@ -1268,40 +1269,21 @@ import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 ```
 
 Day 21 の時点では4つの import だけでした。今日足したのは `TRPCError`・`z`・`TASK_PRIORITY`・`USER_ROLE` の4つで、どれも `getWeeklyReport` だけが使います。使う予定の無い import を先に書かないのはBiome が未使用の名前をエラーとして報告するからです。実際に使う日まで待って足せば警告を抱えたまま次の日へ進まずに済みます。
 
-**プロジェクトが無いときの戻り値**:
+**getOverview の入口**:
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
 // 完成版: getOverview の入口
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
-    const projectIds = await getUserProjectIds(ctx.session.userId);
-
-    if (projectIds.length === 0) {
-      return {
-        totalProjects: 0,
-        totalTasks: 0,
-        completedTasks: 0,
-        inProgressTasks: 0,
-        inReviewTasks: 0,
-        todoTasks: 0,
-        completionRate: 0,
-        totalTimeSpent: 0,
-        averageTimePerTask: 0,
-        recentTasks: [],
-        statusData: [],
-        priorityData: [],
-        projectStats: [],
-      };
-    }
+    const userId = ctx.session.userId;
 ```
 
-参加中のプロジェクトが1件も無い人にはこの先の集計を走らせる意味がありません。ここで 0 と空配列を返しておくと画面側は「データが無い場合」の分岐を書かずに済みます。返す形をあとの `return` とそろえてあるのが要点で、片方だけ項目を足すとプロジェクトが無い人の画面でだけ値が欠けます。
+入口でログイン中の `userId` を受け取ります。この値を12本の問い合わせへ含め、取得時点で参加しているプロジェクトだけを集計します。参加中のプロジェクトが0件なら、各問い合わせが0または空配列を返し、最後の `return` が同じ形の空レポートを組み立てます。
 
 **集計範囲を決める2つの条件**:
 
@@ -1311,8 +1293,10 @@ export const reportRouter = createTRPCRouter({
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
-      projectId: { in: projectIds },
-      project: { isArchived: false },
+      project: {
+        isArchived: false,
+        members: { some: { userId } },
+      },
     } as const;
 
     // ダッシュボードの「アクティブな作業」を母数とするため、
@@ -1354,7 +1338,10 @@ export const reportRouter = createTRPCRouter({
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
 // 完成版: プロジェクト一覧と件数の集計
       prisma.project.findMany({
-        where: { id: { in: projectIds }, isArchived: false },
+        where: {
+          isArchived: false,
+          members: { some: { userId } },
+        },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
@@ -1864,7 +1851,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
             <CardContent className="pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
-                対象期間（UTC）</p>
+                集計期間（UTC基準）</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate
                   && reportData?.endDate
@@ -1964,13 +1951,13 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
                     {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
                     {/* 完成版: 積み上げの4本と閉じタグ */}
                     <Bar dataKey="low" stackId="priority" name="低"
-                      fill={TASK_PRIORITY_COLORS.LOW} />
-                    <Bar dataKey="medium" stackId="priority" name="中"
-                      fill={TASK_PRIORITY_COLORS.MEDIUM} />
-                    <Bar dataKey="high" stackId="priority" name="高"
-                      fill={TASK_PRIORITY_COLORS.HIGH} />
-                    <Bar dataKey="urgent" stackId="priority" name="緊急"
-                      fill={TASK_PRIORITY_COLORS.URGENT} />
+              fill={TASK_PRIORITY_COLORS.LOW} />
+            <Bar dataKey="medium" stackId="priority" name="中"
+              fill={TASK_PRIORITY_COLORS.MEDIUM} />
+            <Bar dataKey="high" stackId="priority" name="高"
+              fill={TASK_PRIORITY_COLORS.HIGH} />
+            <Bar dataKey="urgent" stackId="priority" name="緊急"
+              fill={TASK_PRIORITY_COLORS.URGENT} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1984,8 +1971,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 ```
 
 4本の `Bar` に同じ `stackId` を付けると横に並ばず1本の棒として積み上がります。週ごとの合計と内訳を同時に読ませたいので並べるのではなく積みます。`stackId` を1つでも書き忘れるとその系列だけが隣に独立した棒として立ちます。最後の閉じタグは `BarChart` から `AppLayout` まで開いた順の逆にたどります。
-
-> **完成形の参考コード**: 完成版には `src/app/report/weekly/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違いは3つです。1つ目は完成版が週数をURLのパラメータにも置いていて、更新や共有で同じ期間が開ける点です。2つ目は通信に失敗したときの案内とやり直しのボタンを持っている点です。3つ目は `src/lib/report-path.ts` を使ったCSV出力のボタンがある点です。グラフの組み立て方は今日書いたコードのほうを正としてください（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/app/report/page.tsx`
 
@@ -2363,22 +2348,64 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
 
 ## 今日のまとめ
 
-- [ ] プロジェクト別統計を計算できた
-- [ ] Table コンポーネントで一覧表示した
-- [ ] 週次レポートAPIを呼び出せた
-- [ ] サマリーカードを表示した
-- [ ] 折れ線グラフで完了推移を表示した
-- [ ] 棒グラフで完了タスクの優先度別分布を表示した
+- [ ] プロジェクト別統計を計算できました
+- [ ] Table コンポーネントで一覧表示しました
+- [ ] 週次レポートAPIを呼び出せました
+- [ ] サマリーカードを表示しました
+- [ ] 折れ線グラフで完了推移を表示しました
+- [ ] 棒グラフで完了タスクの優先度別分布を表示しました
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
-| 進捗率が NaN | 集計コードの写し間違いで `totalTasks > 0` の確認が抜けた | 完成コードの `totalTasks > 0 ? ... : 0` と照合 |
-| 週次データが空 | 初期データの完了タスクは2025年の日付で、しかも担当者が別のユーザー | 自分が担当のタスクを1件「完了」にしてから読み込み直す |
-| 型エラーが出る | weeks が string | Number.parseInt で変換 |
-| グラフが表示されない | recharts 未インストール | Day 01 の `scripts/scaffold-from-scratch.sh` が入れています。`npm list recharts` で `(empty)` と出たら `npm install recharts` で入れる（Day 22 Step 1 と同じ手順） |
+#### テーブルが空
+
+**原因**
+
+タスクやプロジェクトが0件か、`getOverview` の取得エラーが発生しているためです。
+
+**解決方法**
+
+データを追加し、開発者ツールの Network タブでエラーの有無を確認してください。
+
+#### 進捗率が NaN
+
+**原因**
+
+集計コードの写し間違いで `totalTasks > 0` の確認が抜けたためです。
+
+**解決方法**
+
+完成コードの `totalTasks > 0 ? ... : 0` と照合してください。
+
+#### 週次データが空
+
+**原因**
+
+初期データの完了タスクが2025年の日付で、担当者も別のユーザーのためです。
+
+**解決方法**
+
+自分が担当のタスクを1件「完了」にしてから読み込み直してください。
+
+#### 型エラーが出る
+
+**原因**
+
+weeks が string のためです。
+
+**解決方法**
+
+Number.parseInt で変換してください。
+
+#### グラフが表示されない
+
+**原因**
+
+recharts がインストールされていないためです。
+
+**解決方法**
+
+Day 01 のセットアップ用スクリプトがインストールしています。プロジェクトのフォルダで `npm list recharts` を実行してください。`(empty)` と出たら、Day 22 Step 1 と同じ `npm install recharts@^3.2.1` を実行し、開発サーバーを起動し直してください。
 
 ## 今日学んだ用語
 

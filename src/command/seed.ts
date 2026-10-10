@@ -46,7 +46,7 @@ class Seed {
   // 破壊的リセットの対象を実行前に明示する。教材の読者はこのコマンドを
   // 「データが増える操作」と思って実行しがちで、サンプルプロジェクト内に
   // 自分で追加したタスク・コメントまで消えることに気づかない。
-  // 対話端末では確認を求め、パイプ実行（自動化）では警告表示のみで進める。
+  // 対話端末では確認を求め、非対話では --yes か SEED_YES=1 がなければ中止する。
   async confirmDestructiveScope(): Promise<void> {
     const targets = Object.values(SEED_PROJECTS)
       .map((project) => `  - ${project.name} (id: ${project.id})`)

@@ -14,10 +14,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -39,6 +38,7 @@ import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import { Sheet, SheetContent, SheetTrigger } from '@/component/ui/sheet';
 import { UserRoleBadge } from '@/component/ui/user-badges';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 import { QuickSearch } from './quick-search';
@@ -62,20 +62,32 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const logoutLockedRef = useRef(false);
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: session, isLoading } = api.auth.getSession.useQuery();
+  const {
+    data: session,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+    refetch,
+  } = api.auth.getSession.useQuery(undefined, { retry: shouldRetryQuery });
+  const authFailed = isError && isAuthError(error);
+  const forbidden = isError && isForbiddenError(error);
+  const sessionRefreshFailed = isError && !authFailed && !forbidden;
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
   useEffect(() => {
-    if (hasMounted && !isLoading && !session) {
+    if (hasMounted && !isLoading && (authFailed || (!isError && !session))) {
       router.push('/login');
     }
-  }, [hasMounted, isLoading, session, router]);
+  }, [authFailed, hasMounted, isError, isLoading, session, router]);
 
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
@@ -85,11 +97,34 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       queryClient.clear();
       router.push('/login');
       router.refresh();
+      setLogoutDialogOpen(false);
+    },
+    onError: () => {
+      setLogoutError(
+        'ログアウトの完了を確認できませんでした。通信状況を確認して、もう一度お試しください。',
+      );
+    },
+    onSettled: () => {
+      logoutLockedRef.current = false;
     },
   });
 
   const handleLogout = () => {
+    if (logoutLockedRef.current || logoutMutation.isPending) return;
+    logoutLockedRef.current = true;
+    setLogoutError(null);
     logoutMutation.mutate();
+  };
+
+  const openLogoutDialog = () => {
+    setLogoutError(null);
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutDialogOpenChange = (open: boolean) => {
+    if (!open && (logoutLockedRef.current || logoutMutation.isPending)) return;
+    if (open) setLogoutError(null);
+    setLogoutDialogOpen(open);
   };
 
   const menuItems: MenuItem[] = [
@@ -101,11 +136,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // SSR時はqueryが無効(enabled:false)のため isLoading=false, session=undefined
   // ハイドレーション不一致を防ぐため、マウント後にのみ認証チェックを実行
-  if (hasMounted && isLoading) {
+  if (hasMounted && isLoading && !authFailed && !forbidden) {
     return <PageLoadingSpinner />;
   }
 
-  if (hasMounted && !session?.user) {
+  if (hasMounted && forbidden) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+        <p className="mb-2 text-base font-semibold text-foreground">
+          画面を表示する権限がありません
+        </p>
+        <p className="text-sm text-muted-foreground">管理者に確認してください。</p>
+      </div>
+    );
+  }
+
+  if (hasMounted && sessionRefreshFailed && !session?.user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+        <p className="mb-2 text-base font-semibold text-foreground">
+          ログイン情報を確認できませんでした
+        </p>
+        <p className="mb-6 text-sm text-muted-foreground">
+          通信状況を確認して、再読み込みしてください。
+        </p>
+        <Button type="button" onClick={() => void refetch()} disabled={isFetching}>
+          再読み込み
+        </Button>
+      </div>
+    );
+  }
+
+  if (hasMounted && (authFailed || (!isError && !session?.user))) {
     return null;
   }
 
@@ -169,7 +231,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                onClick={() => setLogoutDialogOpen(true)}
+                onClick={openLogoutDialog}
               >
                 <LogOut className="h-4 w-4" />
                 ログアウト
@@ -238,9 +300,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   プロフィール
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setLogoutDialogOpen(true)}>
-                  ログアウト
-                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={openLogoutDialog}>ログアウト</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
@@ -248,12 +308,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="flex flex-1 flex-col overflow-y-auto p-4 lg:p-6">
             {/* 広いモニターでコンテンツが間延びしないよう最大幅を設けて中央寄せする */}
             <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 lg:gap-6">
+              {sessionRefreshFailed && session?.user ? (
+                <div
+                  role="alert"
+                  className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+                >
+                  <span>
+                    最新のログイン情報を確認できませんでした。表示は前回取得時の内容です。
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refetch()}
+                    disabled={isFetching}
+                  >
+                    再試行
+                  </Button>
+                </div>
+              ) : null}
               {children}
             </div>
           </main>
         </div>
       </div>
-      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+      <AlertDialog open={logoutDialogOpen} onOpenChange={handleLogoutDialogOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ログアウトしますか？</AlertDialogTitle>
@@ -261,9 +340,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               ログアウトすると、再度ログインが必要になります。
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {logoutError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {logoutError}
+            </p>
+          ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout}>ログアウト</AlertDialogAction>
+            <AlertDialogCancel disabled={logoutMutation.isPending}>キャンセル</AlertDialogCancel>
+            <Button type="button" onClick={handleLogout} disabled={logoutMutation.isPending}>
+              {logoutMutation.isPending
+                ? 'ログアウト中...'
+                : logoutError
+                  ? 'もう一度試す'
+                  : 'ログアウト'}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

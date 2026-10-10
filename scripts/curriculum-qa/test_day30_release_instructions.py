@@ -34,8 +34,9 @@ class Day30ReleaseInstructionsTest(unittest.TestCase):
         steps = self.section('**確認手順**:', '> ブラウザの DevTools')
         expected = set(re.findall(r'`(/[^`]+)`', table))
         observed = set(re.findall(r'`(/[^`]+)`', steps))
-        self.assertEqual(len(expected), 8)
+        self.assertTrue(expected)
         self.assertEqual(expected - observed, set())
+        self.assertEqual(observed - expected, set())
 
     def test_commit_count_is_not_claimed_as_daily_activity_proof(self):
         self.assertNotIn('コミット数が 30 以上あれば毎日コミットできた証拠', self.text)

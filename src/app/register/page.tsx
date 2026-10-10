@@ -12,14 +12,15 @@ import { Button } from '@/component/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/component/ui/card';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { createPasswordSchema } from '@/lib/password';
 import { api } from '@/trpc/react';
 
 const registerSchema = z
   .object({
     name: z.string().min(1, '名前を入力してください'),
     email: z.string().email('有効なメールアドレスを入力してください'),
-    password: z.string().min(8, 'パスワードは8文字以上で入力してください'),
-    confirmPassword: z.string().min(1, 'パスワード(確認)を入力してください'),
+    password: createPasswordSchema('パスワードは8文字以上で入力してください'),
+    confirmPassword: z.string().min(1, 'パスワード（確認）を入力してください'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'パスワードが一致しません',
@@ -42,7 +43,7 @@ export default function RegisterPage() {
 
   const registerMutation = api.auth.register.useMutation({
     onSuccess: () => {
-      router.push('/login');
+      router.push('/login?registered=1');
     },
     onError: (err) => {
       try {
@@ -155,8 +156,13 @@ export default function RegisterPage() {
                 aria-required="true"
                 {...register('password')}
                 aria-invalid={!!errors.password}
-                aria-describedby={errors.password ? 'password-error' : undefined}
+                aria-describedby={
+                  errors.password ? 'password-hint password-error' : 'password-hint'
+                }
               />
+              <p id="password-hint" className="text-sm text-muted-foreground">
+                8文字以上で、大文字・小文字・数字・特殊文字を含め、UTF-8で72バイト以内にしてください
+              </p>
               {errors.password && (
                 <p id="password-error" className="text-sm text-destructive">
                   {errors.password.message}
@@ -165,7 +171,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
-                パスワード(確認){' '}
+                パスワード（確認）{' '}
                 <span aria-hidden="true" className="text-destructive">
                   *
                 </span>
@@ -198,7 +204,7 @@ export default function RegisterPage() {
                 href="/login"
                 className="text-primary underline underline-offset-4 hover:text-primary/80"
               >
-                こちら
+                ログイン
               </Link>
             </div>
           </form>

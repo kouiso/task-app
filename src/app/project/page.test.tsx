@@ -17,8 +17,13 @@ const mocks = vi.hoisted(() => ({
   refetchDetail: vi.fn(),
   getAllInvalidate: vi.fn(),
   getByIdInvalidate: vi.fn(),
-  addMemberOnSuccess: undefined as undefined | (() => void),
-  removeMemberOnSuccess: undefined as undefined | (() => void),
+  availableInvalidate: vi.fn(),
+  addMemberOnSuccess: undefined as
+    | undefined
+    | ((_data: unknown, variables: { projectId: string }) => void),
+  removeMemberOnSuccess: undefined as
+    | undefined
+    | ((_data: unknown, variables: { projectId: string }) => void),
   mutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
@@ -39,7 +44,21 @@ vi.mock('@/component/project/project-detail-view', () => ({
   ),
 }));
 vi.mock('@/component/project/project-card', () => ({
-  ProjectCard: ({ name }: { name: string }) => <p>{`カード:${name}`}</p>,
+  ProjectCard: ({
+    name,
+    onEdit,
+    onDelete,
+  }: {
+    name: string;
+    onEdit?: (id: string) => void;
+    onDelete?: (id: string) => void;
+  }) => (
+    <div>
+      <p>{`カード:${name}`}</p>
+      {onEdit && <span>{`編集可:${name}`}</span>}
+      {onDelete && <span>{`削除可:${name}`}</span>}
+    </div>
+  ),
 }));
 vi.mock('@/component/project/project-dialog', () => ({ ProjectDialog: () => null }));
 vi.mock('@/component/ui/delete-confirm-dialog', () => ({ DeleteConfirmDialog: () => null }));
@@ -50,6 +69,7 @@ vi.mock('@/trpc/react', () => ({
       project: {
         getAll: { invalidate: mocks.getAllInvalidate },
         getById: { invalidate: mocks.getByIdInvalidate },
+        getAvailableUsers: { invalidate: mocks.availableInvalidate },
       },
     }),
     auth: { getCurrentUser: { useQuery: mocks.currentUserQuery } },
@@ -61,13 +81,17 @@ vi.mock('@/trpc/react', () => ({
       update: { useMutation: mocks.mutation },
       delete: { useMutation: mocks.mutation },
       addMember: {
-        useMutation: (options: { onSuccess: () => void }) => {
+        useMutation: (options: {
+          onSuccess: (_data: unknown, variables: { projectId: string }) => void;
+        }) => {
           mocks.addMemberOnSuccess = options.onSuccess;
           return mocks.mutation();
         },
       },
       removeMember: {
-        useMutation: (options: { onSuccess: () => void }) => {
+        useMutation: (options: {
+          onSuccess: (_data: unknown, variables: { projectId: string }) => void;
+        }) => {
           mocks.removeMemberOnSuccess = options.onSuccess;
           return mocks.mutation();
         },
@@ -109,8 +133,9 @@ beforeEach(() => {
   mocks.refetchCurrentUser.mockReset();
   mocks.refetchProjects.mockReset();
   mocks.refetchDetail.mockReset();
-  mocks.getAllInvalidate.mockReset();
-  mocks.getByIdInvalidate.mockReset();
+  mocks.getAllInvalidate.mockReset().mockResolvedValue(undefined);
+  mocks.getByIdInvalidate.mockReset().mockResolvedValue(undefined);
+  mocks.availableInvalidate.mockReset().mockResolvedValue(undefined);
   mocks.addMemberOnSuccess = undefined;
   mocks.removeMemberOnSuccess = undefined;
   mocks.currentUserQuery
@@ -134,11 +159,16 @@ describe('プロジェクト詳細の取得状態', () => {
     mocks.search = 'projectId=project-1';
 
     render(<ProjectPage />);
-    callbackOf()?.();
+    callbackOf()?.({}, { projectId: 'project-1' });
 
     expect(callbackOf()).toBeTypeOf('function');
     expect(mocks.getAllInvalidate).toHaveBeenCalledOnce();
-    expect(mocks.getByIdInvalidate).toHaveBeenCalledWith({ id: 'project-1' });
+    expect(mocks.getByIdInvalidate.mock.calls.map(([input]) => input)).toContainEqual({
+      id: 'project-1',
+    });
+    expect(mocks.availableInvalidate.mock.calls.map(([input]) => input)).toContainEqual({
+      projectId: 'project-1',
+    });
   });
 
   it('詳細の初回取得中は「見つかりません」ではなくローディングを表示する', () => {
@@ -194,7 +224,7 @@ describe('プロジェクト詳細の取得状態', () => {
     expect(mocks.push).toHaveBeenCalledWith(route);
     expect(mocks.refetchDetail).not.toHaveBeenCalled();
 
-    const retry = mocks.detailQuery.mock.calls[0][1].retry;
+    const retry = mocks.detailQuery.mock.calls[0]?.[1].retry;
     expect(retry(0, { data: { httpStatus: status } })).toBe(false);
   });
 
@@ -206,7 +236,7 @@ describe('プロジェクト詳細の取得状態', () => {
 
     expect(screen.queryByText('詳細:保存済みプロジェクト')).not.toBeInTheDocument();
     expect(screen.getByText('ログインの有効期限が切れました')).toBeInTheDocument();
-    expect(mocks.currentUserQuery.mock.calls[0][1].retry(0, { data: { httpStatus: 401 } })).toBe(
+    expect(mocks.currentUserQuery.mock.calls[0]?.[1].retry(0, { data: { httpStatus: 401 } })).toBe(
       false,
     );
   });
@@ -221,11 +251,64 @@ describe('プロジェクト詳細の取得状態', () => {
     expect(screen.getByText('プロジェクトが見つかりません')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'プロジェクト一覧へ' }));
     expect(mocks.push).toHaveBeenCalledWith('/project');
-    expect(mocks.detailQuery.mock.calls[0][1].retry(0, { data: { httpStatus: 404 } })).toBe(false);
+    expect(mocks.detailQuery.mock.calls[0]?.[1].retry(0, { data: { httpStatus: 404 } })).toBe(
+      false,
+    );
   });
 });
 
 describe('プロジェクト一覧の取得状態', () => {
+  it.each([
+    ['OWNER', true, true],
+    ['ADMIN', true, false],
+    ['MEMBER', false, false],
+    ['VIEWER', false, false],
+    ['UNKNOWN', false, false],
+  ] as const)('%sにはサーバー権限と同じ操作だけを表示する', (role, canEdit, canDelete) => {
+    mocks.projectsQuery.mockReturnValue(
+      queryResult([
+        {
+          ...project,
+          members: [{ ...project.members[0], role }],
+        },
+      ]),
+    );
+
+    render(<ProjectPage />);
+
+    expect(screen.queryByText('編集可:保存済みプロジェクト') !== null).toBe(canEdit);
+    expect(screen.queryByText('削除可:保存済みプロジェクト') !== null).toBe(canDelete);
+  });
+
+  it('ログインユーザーのメンバー情報が無い場合は操作を表示しない', () => {
+    mocks.projectsQuery.mockReturnValue(
+      queryResult([{ ...project, members: [{ ...project.members[0], userId: 'other-user' }] }]),
+    );
+
+    render(<ProjectPage />);
+
+    expect(screen.queryByText('編集可:保存済みプロジェクト')).not.toBeInTheDocument();
+    expect(screen.queryByText('削除可:保存済みプロジェクト')).not.toBeInTheDocument();
+  });
+
+  it('進行中が0件ならアーカイブ表示への案内へ切り替える', () => {
+    mocks.projectsQuery.mockReturnValue(queryResult([]));
+
+    render(<ProjectPage />);
+
+    expect(screen.getByText('進行中のプロジェクトが見つかりません。')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'アーカイブ表示をオンにすると、アーカイブ済みのプロジェクトも確認できます。',
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'アーカイブ表示' }));
+
+    expect(screen.getByText('プロジェクトが見つかりません。')).toBeInTheDocument();
+    expect(screen.getByText('最初のプロジェクトを作成しましょう！')).toBeInTheDocument();
+  });
+
   it('初回500を0件の成功として表示しない', () => {
     mocks.projectsQuery.mockReturnValue(queryResult(undefined, 500, mocks.refetchProjects));
 
@@ -251,7 +334,7 @@ describe('プロジェクト一覧の取得状態', () => {
 
     expect(screen.queryByText('カード:保存済みプロジェクト')).not.toBeInTheDocument();
     expect(screen.getByText('ログインの有効期限が切れました')).toBeInTheDocument();
-    expect(mocks.projectsQuery.mock.calls[0][1].retry(0, { data: { httpStatus: 401 } })).toBe(
+    expect(mocks.projectsQuery.mock.calls[0]?.[1].retry(0, { data: { httpStatus: 401 } })).toBe(
       false,
     );
   });

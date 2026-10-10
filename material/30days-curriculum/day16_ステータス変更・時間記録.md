@@ -88,9 +88,11 @@ stateDiagram-v2
 | zod（Day 05 の復習） | ゾッド | 入力の形をルールとして検証する | 書類の記入漏れをチェックする係 |
 | refine | リファイン | 複数項目をまたぐ独自ルールを足す | 「合計が1以上」のような追加条件 |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | 作業時間の記録 API（addTime）を自分で書く | 12分 |
 | Step 1 | ステータス変更の仕組みを理解する | 3分 |
@@ -98,70 +100,117 @@ stateDiagram-v2
 | Step 3 | TaskCardに時間記録を組み込む | 15分 |
 | Step 4 | 動作確認 | 5分 |
 
-**合計時間**: 約65分です。
+**読む時間の合計（仮）**: 約65分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: 作業時間の記録 API（addTime）を自分で書く（12分）
+### Step 0: 作業時間の記録 API（addTime）を自分で書く（読む目安: 12分）
 
-**ゴール**: タスクに作業時間を積み上げる `addTime` を自分で書き、`api.task.addTime` を呼べる状態にします。この API はこのあと Step 2 で作る時間記録ダイアログから呼び出します。
+**ゴール**: タスクに作業時間を積み上げる `addTime` を作り、権限が変わった直後や同時送信でも合計を正しく保ちます。この API は Step 2 の時間記録ダイアログから呼び出します。
 
-Day 15 では `update` と `delete` を `task.ts` に足しました。今日はそこへ、作業時間を記録する `addTime` をもう1つ足します。骨組みは今までと同じで、入力・処理・戻り値の3部品でできています。今回の処理は「今ある時間に、入力された分数を足す」ところがポイントです。
+Day 14 で作り、Day 15 でも残した `lockTaskProjects` を使います。時間追加とメンバー削除・権限変更が同じプロジェクト行を先にロックすると、処理の順番が決まります。その順番で現在の権限を判定します。
 
 #### 0-1. 入力スキーマを足す
 
-まず受け取るデータの形を zod で定義します。`taskRouter` の前（Day 15 で足したスキーマの近く）に追加します。
+`taskRouter` の前に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
-  minutesToAdd: z.number().int().min(0),
+  minutesToAdd: z.number().int().min(1, '作業時間は1分以上で指定してください').safe(),
 });
 ```
 
-`id` はどのタスクに記録するかの指定で、`.cuid()`（この形式の id か）で検証します。`minutesToAdd` は今回足す分数です。`.int()` で整数だけを受け取り、`.min(0)` でマイナスの分数を拒否します。
-
-`.min(0)` を外すと何が起きるかを、具体的に見ておきます。次に書く処理は今ある値に入力値を足すので`-30` が届けば合計は30分ぶん減ります。タスクが持つのは `timeSpentMinutes` という合計1列だけで、1回ごとの記録を残す表はありません。だから合計が減っていても打ち間違いなのか意図した訂正なのかを後から見分けられません。入口で弾くのが唯一の防ぎ方です。
-
-単位を分に固定しているのも同じ理由です。この API は時間と分を区別しないので `2` が届けば2時間ではなく2分として足されます。時間と分を合計の分数に直す係はStep 2 で作る画面側に置きます。
+`.min(1)` は0分と負の値を拒否します。0分を記録しても合計は変わらないため、書き込みません。`.safe()` は JavaScript が1分の差を正確に扱える整数だけを通します。このアプリの作成処理と時間追加は、分を整数で保存します。
 
 #### 0-2. addTime 手続きを書く
 
-`addTime` を、Day 15 で書いた `delete` の直後に足します。
+Day 15 で書いた `delete` の直後に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（delete の直後に追加）
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+    const task = await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
 
-    return await prisma.task.update({
-      where: { id: input.id },
-      data: {
-        timeSpentMinutes: {
-          increment: input.minutesToAdd,
-        },
-      },
-    });
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // メンバー削除・降格やタスク移動と同じプロジェクト行をロックし、
+        // 加算直前の所属と権限だけを保存可否の判定に使う。
+        const lockedProjects = await lockTaskProjects(tx, [task.projectId]);
+        if (!lockedProjects.has(task.projectId)) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+          });
+        }
+```
+
+最初の確認は存在しないタスクと見えないタスクを今までどおり扱うために残します。ただし、その確認後に権限は変わる可能性もあります。そこでトランザクション内でプロジェクト行をロックし、次のコードでもう一度現在の権限を調べます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+        const currentMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: task.projectId,
+            },
+          },
+          select: { role: true },
+        });
+        assertMemberPermission(currentMember ? [currentMember] : [], 'canEdit');
+
+        return await tx.task.update({
+          where: {
+            id: input.id,
+            // 認可したプロジェクトから移動したタスクへ、古い権限で加算しない。
+            projectId: task.projectId,
+            // 整数の合計を正確に保存できる範囲を、同じUPDATEの条件で確認する。
+            timeSpentMinutes: {
+              lte: Number.MAX_SAFE_INTEGER - input.minutesToAdd,
+            },
+          },
+```
+
+`projectId` も更新条件に入れます。確認した後でタスクが別プロジェクトへ移動していたら、古いプロジェクトの権限では追加しません。`timeSpentMinutes` の条件は、現在の整数の合計へ足した結果が安全な整数の範囲を越える更新を同じSQLで拒否します。先に合計を読む方式ではないので、30分と45分の同時追加は両方とも残ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+          data: {
+            timeSpentMinutes: {
+              increment: input.minutesToAdd,
+            },
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
   }),
 ```
 
-最初の `findTaskWithPermission(input.id, ctx.session.userId, 'canEdit')` はそのタスクが自分の編集できるものかを確認する共有ヘルパーです。Day 15 の `update` でも使ったものと同じで、権限がなければここで弾かれます。
-
-処理の中心は `timeSpentMinutes` の `increment` です。`increment: input.minutesToAdd` は今の値に入力された分数を足すという Prisma の書き方です。現在の値を読み出して足し算してから書き戻すのではなく、DB に「この分だけ増やして」と直接頼みます。こうすると同じタスクにほぼ同時に2回記録しても片方の記録が消えずに両方とも正しく足されます。
+更新条件に合わなかったときの `P2025` は `CONFLICT` に変えます。タスク移動と数値上限のどちらで拒否されたかを外へ細かく出さず、一覧を取り直してから再操作してもらいます。
 
 **確認ポイント**:
-- `taskTimeUpdateSchema` を `taskRouter` の前に、`addTime` を `delete` の直後に足した
-- `increment` で今の作業時間に分数を足している
-- `npx tsc --noEmit` がエラーなしで終了する
+
+- 追加値は1分以上の安全な整数だけを受け取ります。
+- ロック後の所属と権限で保存可否を決めます。
+- `projectId` と現在の合計上限を同じ更新条件で確認します。
+- `increment` を使い、正当な同時追加を失いません。
+- `npx tsc --noEmit` がエラーなしで終了します。
 
 ---
 
-### Step 1: ステータス変更の仕組みを理解する（3分）
+### Step 1: ステータス変更の仕組みを理解する（読む目安: 3分）
 
 **ゴール**: タスクのステータスが
 どのように変更されるかを理解します。
@@ -188,7 +237,7 @@ const updateMutation =
   });
 ```
 
-このブロックは抜粋です。Day 15 で書いた `getById.invalidate` の分岐は手元のファイルにそのまま残しておいてください。
+このブロックは抜粋です。Day 15 で書いた対象付き再取得と送信世代の判定は、手元のファイルにそのまま残してください。
 
 `onSuccess` の中で `getAll.invalidate()` を呼ぶのが
 このコードの肝です。`invalidate` はキャッシュを
@@ -227,420 +276,561 @@ const updateMutation =
 そこから変更する操作はありません。変えたいときは編集ダイアログを開きます。
 
 **確認ポイント**:
-- 編集ダイアログでステータスの Select がある
-- ステータスを変更して保存すると Badge が変わる
-- 一覧画面に変更が即反映される
+- 編集ダイアログでステータスの Select があります。
+- ステータスを変更して保存すると Badge が変わります。
+- 一覧画面に変更が即反映されます。
 
 ---
 
-### Step 2: TimeLogDialogで手動時間記録を作る（30分）
+### Step 2: TimeLogDialogで手動時間記録を作る（読む目安: 30分）
 
-**ゴール**: 作業時間を後から手で記録する
-ダイアログを1ファイルで完成させます。
+**ゴール**: React Hook Form と Zod を使い、送信中の入力変更や通信結果の順番が入れ替わっても別の記録を誤って閉じない時間記録ダイアログを作ります。
 
-作業時間は自動では計測しません。
-「昨日このタスクに1時間30分かけた」のように
-終わったあとに自分で入力する後追いの記録です。
-入力した合計分を `api.task.addTime` に渡して
-サーバー側の合計へ足し込みます。
+作業時間は後から手で足します。配布コードの `src/component/task/time-log-dialog.tsx` を開き、次の20個のコードブロックを上から順に同じファイルへ書いてください。ブロックの間にある説明文はコードへ貼りません。
 
-1つ先に伝えておくことがあります。配布コードには最初から
-完成版の `time-log-dialog.tsx` が入っています。今日はこの機能が学習の主役なので
-完成版に頼らず自分の手で作り直します。次のコードは
-**既存の `src/component/task/time-log-dialog.tsx` を丸ごと上書き**してください。
-新しいファイルを作るのではなく、開いて中身を全部入れ替える、という操作です。
-上書きする前の配布版は `scripts/_app-components/task/time-log-dialog.tsx` に残っています。見比べるときはこちらを開いてください。配布版は `useState` だけで書いた別解なので写経が終わってから見比べると
-入力検証の置き場所（zod + react-hook-form）の違いも学べます。
+最初はインポートと入力スキーマです。入力欄は文字列で届くため、`normalizeNumberInput` が空文字だけを0にし、半角の0から9だけでできた文字列を10進数へ変換します。空白、英字、`0x10`のような別表記は欄ごとの入力エラーにし、無限大になるほど長い数字は桁数のエラーとして知らせます。
 
-**実装**:
+#### 2-1. インポートをそろえる
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
 'use client';
 
-import { zodResolver }
-  from '@hookform/resolvers/zod';
-import toast from 'react-hot-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
-```
-
-`react-hook-form` はフォームの入力値を管理する
-ライブラリで、`zod` は入力ルールを書く
-ライブラリです。`zodResolver` はこの2つを
-つなぐ接着剤です。zod のルールを
-フォームの検証へそのまま流用できます。
-
-Day 05 のログイン画面でも、この3つを組み合わせて
-フォームを作りました。今回は欄が2つある点は同じですが
-時間と分を足した合計が0より大きいか、という欄をまたぐ
-判定が加わります。検証を手で書くと送信のたびに
-呼び出す行を自分で並べる形になり、片方の欄で書き忘れが
-起きます。ルールを zod の1か所に置き、その結果を
-`react-hook-form` が各欄へ配る形にすると書き忘れる
-場所そのものが無くなります。`toast` は検証を通った
-あとにサーバー側で失敗したときの知らせに使います。
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 残りのインポート
 import {
-  Dialog, DialogContent,
-  DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/component/ui/dialog';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { httpStatusOf, isAuthError } from '@/lib/query-error';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 ```
 
-この一式はDay 15 の編集ダイアログで使ったものと同じです。
-中身が変わっても開き方と閉じ方の枠組みは変わりません。
-`DialogDescription` まで読み込んでいるのは画面読み上げに
-「何のためのダイアログか」を伝えるためです。省くと
-「作業時間の記録」という見出しだけが読まれ、時間を足す
-画面なのか消す画面なのかが伝わりません。`Label` と `Input` は
-このあと `htmlFor` と `id` をそろえて対で使います。
+React Hook FormとZodに加え、既存の読み取りエラー判定と書き込みエラー分類を読み込みます。通信エラーの生文をそのまま利用者へ出さないためです。
+
+#### 2-2. 空欄と巨大入力を整える
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// バリデーションスキーマ定義
-const timeLogSchema = z.object({
-  hours: z.number().int().min(0),
-  minutes: z.number().int().min(0).max(59),
-}).refine(
-  (data) => data.hours * 60 + data.minutes > 0,
-  { message: '1分以上入力してください',
-    path: ['minutes'] },
-);
-type TimeLogFormData =
-  z.infer<typeof timeLogSchema>;
+
+const normalizeNumberInput = (value: unknown) => {
+  if (value === '') return 0;
+  if (typeof value === 'string') {
+    if (!/^[0-9]+$/.test(value)) return value;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER + 1;
+  }
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    return Number.MAX_SAFE_INTEGER + 1;
+  }
+  return value;
+};
 ```
 
-`hours` と `minutes` を単体で見ると
-どちらも0が有効な値です。しかし
-「両方とも0」は記録として意味がありません。
-そこで `refine` を足して合計が1分以上かを
-最後にまとめて確かめています。
-`z.infer` はこのスキーマ（入力の形を定義したルール）から
-TypeScript の型を自動生成します。
-おかげで同じ型を二度書かずに済みます。
+空文字だけは0として合計検証へ進めます。文字列は半角の`0`から`9`だけでできている場合に限って10進数へ変換します。空白、英字、16進数風の入力を0や別の数へ読み替えないためです。変換結果が無限大になるほど長い数字は、安全な整数ではない値へ置き換えて桁数のエラーにします。
 
-`minutes` にだけ `.max(59)` が付いているのは単位の
-取り違えを入口で止めるためです。1時間30分のつもりで
-分の欄に `90` と打つ人がいます。上限が無ければ `90` は
-そのまま通り、時間の欄にも `1` を入れていれば150分が
-保存されます。59を上限にしておくとその場でエラーが出て
-入れ直せます。
-
-`.int()`・`.min()`・`.max()` には独自の文言を指定していないため、ここは Zod の英語のエラーが表示されます。たとえば分に `60` を入れると `Number must be less than or equal to 59`（59以下にしてください）と出ます。両方0の場合は、指定した「1分以上入力してください」が表示されます。
-
-ただしこの上限でも防げない取り違えがあります。2時間の
-つもりで分の欄に `2` と入れた場合は59以下なので検証を
-通り、2分として保存されます。118分足りない記録が残る
-わけです。保存したあとにカードの合計作業時間を目で
-確かめる習慣はここまでの検証を足しても要ります。
-
-#### Zod スキーマのルール
-
-| フィールド | 制約 | エラーになる例 |
-|-----------|------|--------------|
-| `hours` | 0以上の整数 | `-1`、`1.5` |
-| `minutes` | 0〜59の整数 | `60`、`-5` |
-| `refine` | 合計 > 0分 | 両方0のまま送信 |
+#### 2-3. 各入力欄のルールを書く
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// Props定義とコンポーネント宣言
+
+const timeLogSchema = z
+  .object({
+    hours: z.preprocess(
+      normalizeNumberInput,
+      z
+        .number({ invalid_type_error: '時間は0以上の整数で入力してください。' })
+        .int('時間は0以上の整数で入力してください。')
+        .min(0, '時間は0以上の整数で入力してください。'),
+    ),
+    minutes: z.preprocess(
+      normalizeNumberInput,
+      z
+        .number({ invalid_type_error: '分は0から59の整数で入力してください。' })
+        .int('分は0から59の整数で入力してください。')
+        .min(0, '分は0から59の整数で入力してください。')
+        .max(59, '分は0から59の整数で入力してください。'),
+    ),
+  })
+```
+
+時間と分には別々の日本語エラーを指定します。分は0から59までに絞り、60分を時間欄へ移すべき入力としてその場で止めます。
+
+#### 2-4. 合計0分を拒否する
+
+```typescript
+  .refine(
+    (data) =>
+      !Number.isInteger(data.hours) ||
+      !Number.isInteger(data.minutes) ||
+      data.hours < 0 ||
+      data.minutes < 0 ||
+      data.minutes > 59 ||
+      data.hours * 60 + data.minutes > 0,
+    {
+      message: '1分以上入力してください。',
+      path: ['minutes'],
+    },
+  )
+```
+
+最初の`refine`は2欄の合計が1分以上かを確認します。欄単体がすでに不正なときは合計エラーを重ねず、直すべき文言を1つに絞ります。
+
+#### 2-5. 安全な整数の範囲を守る
+
+```typescript
+  .refine(
+    (data) =>
+      !Number.isInteger(data.hours) ||
+      !Number.isInteger(data.minutes) ||
+      data.hours < 0 ||
+      data.minutes < 0 ||
+      data.minutes > 59 ||
+      data.hours * 60 + data.minutes <= 0 ||
+      Number.isSafeInteger(data.hours * 60 + data.minutes),
+    {
+      message: '入力した作業時間が大きすぎます。桁数を確認してください。',
+      path: ['hours'],
+    },
+  );
+
+type TimeLogFormData = z.infer<typeof timeLogSchema>;
+type RefreshResult = 'ok' | 'auth' | 'failed';
+type MessageTone = 'error' | 'neutral';
+```
+
+次の`refine`は合計が安全な整数かを確認します。画面独自の時間上限は作らず、APIと同じく1分の差を保てる範囲だけを送ります。
+
+#### 2-6. Propsと送信記録の型を作る
+
+```typescript
+
 interface TimeLogDialogProps {
   open: boolean;
   onClose: () => void;
   taskId: string;
-  onSuccess?: () => void;
+  onSuccess?: (() => void) | undefined;
 }
 
-export function TimeLogDialog({
-  open, onClose, taskId, onSuccess,
-}: TimeLogDialogProps) {
+interface TimeSubmission {
+  taskId: string;
+  totalMinutes: number;
+  generation: number;
+  revision: number;
+}
+```
+
+`TimeSubmission`には送信時の対象、合計、世代、入力の改訂番号を保存します。通信完了時の画面と同じ操作かを後から判定する材料です。
+
+#### 2-7. 画面状態と同期用refを作る
+
+```typescript
+export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialogProps) {
+  const utils = api.useUtils();
+  const [writePending, setWritePending] = useState(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const [writeMessage, setWriteMessage] = useState<{
+    text: string;
+    tone: MessageTone;
+  } | null>(null);
+  const mountedRef = useRef(true);
+  const openRef = useRef(open);
+  const taskIdRef = useRef(taskId);
+  const generationRef = useRef(0);
+  const revisionRef = useRef(0);
+  const writeLockedRef = useRef(false);
+  const authExpiredRef = useRef(false);
+  const submissionRef = useRef<TimeSubmission | null>(null);
+```
+
+Reactのstateは表示へ使い、refは再描画を待たない判定に使います。ボタンを連続で押した瞬間でも、先に立てた同期ロックが見えます。
+
+#### 2-8. React Hook Formを初期化する
+
+```typescript
   const {
-    register, handleSubmit, reset,
+    register,
+    handleSubmit,
+    reset,
+    getValues,
     formState: { errors },
   } = useForm<TimeLogFormData>({
     resolver: zodResolver(timeLogSchema),
     defaultValues: { hours: 0, minutes: 0 },
   });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 ```
 
-Props（親から受け取る値）には
-`onSuccess` を用意しています。
-記録が成功したときに親へ知らせるための
-コールバックです。`useForm` に `zodResolver` を渡すと
-この Step の冒頭で定義した `timeLogSchema` がそのまま入力検証に使われます。
-検証で引っかかった内容は `errors` に入るので
-あとで画面に表示できます。
+React Hook FormへZodのスキーマを接続し、時間と分を0から始めます。`getValues`は古い送信の完了後に現在の下書きを確かめるために使います。
 
-`defaultValues` で時間と分に0を入れているのは開いた
-直後の状態を決めておくためです。初期値が無いとどちらの
-欄も `undefined` から始まります。あとで足す数値変換の
-設定と組み合わさると `NaN` になり、`refine` の足し算が
-数として成立しません。0から始めておけば何も入力せずに
-送信したときも「合計0分」と判定され、狙いどおりエラーが
-出ます。
-
-`taskId` はこのあと `addTime` へそのまま渡す id です。
-どのタスクへ足すかを親から受け取る形にしたのでこの
-ダイアログはどのカードからでも使い回せます。
+#### 2-9. 開閉と対象変更を数える
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 閉じる処理をまとめる
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+
+  useEffect(() => {
+    if (openRef.current === open && taskIdRef.current === taskId) return;
+    generationRef.current += 1;
+    openRef.current = open;
+    if (!open || taskIdRef.current !== taskId) {
+      revisionRef.current += 1;
+      reset({ hours: 0, minutes: 0 });
+      setWriteMessage(null);
+    }
+    taskIdRef.current = taskId;
+  }, [open, reset, taskId]);
+
+  const addTimeMutation = api.task.addTime.useMutation({ retry: false });
+
+  const isCurrentSubmission = (submission: TimeSubmission) =>
+    mountedRef.current &&
+    openRef.current &&
+    taskIdRef.current === submission.taskId &&
+    generationRef.current === submission.generation &&
+    revisionRef.current === submission.revision;
 ```
 
-ダイアログを閉じる経路は複数あります。記録の成功後、
-キャンセルボタン、右上の×ボタン、背景クリックのどれでも閉じます。
-リセットと `onClose` を `handleClose` に1つへまとめると
-どの経路で閉じても入力欄が空に戻ります。まとめずに `onClose`
-だけを呼ぶと入力したまま閉じたとき値が残り、次に開いたときに
-古い入力が見えてしまいます。
+閉じる、開き直す、別タスクへ変わる操作で世代を進めます。通信開始時と世代が違えば、完了しても今の入力欄を閉じず、その内容を保ちます。
 
-残った値がとくにまずいのはこの画面が足し算だからです。
-Day 15 の編集ダイアログは開いたときに今の値が入っているのが
-正しい姿でした。時間記録はその逆です。前に入れた1時間30分が
-残ったまま別のタスクで開き、そのまま追加を押すと身に覚えの
-ない90分が合計へ乗ります。毎回0から始めるのが正しい姿です。
+#### 2-10. 送信結果の表示先を決める
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// mutation定義
-  const addTimeMutation =
-    api.task.addTime.useMutation({
-      onSuccess: () => {
-        onSuccess?.();
-        handleClose();
-      },
-    });
-```
 
-`addTime` の成功後にやることは2つです。
-まず `onSuccess?.()` で親のコールバックを呼びます。
-この呼び出しが親側の再取得（`getAll.invalidate`）を
-引き起こし、増えたあとの合計作業時間が
-カードへ流れて表示が更新されます。
-続いて `handleClose()` で入力欄を空に戻してから
-ダイアログを閉じます。
-
-合計を計算しているのはサーバー側だけで、カードは自分で
-足し算をしません。数字が動く道筋は決まっていてまず
-サーバーが `increment` で DB の値を増やし、次に一覧が
-取り直され、最後に新しい合計がカードへ届きます。画面は
-最後に受け取った値を映すだけです。
-
-`onSuccess?.()` を書き忘れると保存そのものは成功して
-いるのにカードの数字は古いままになります。利用者から
-見れば「押したのに増えない」という失敗にしか映りません。
-この1行が成功を画面へ届けています。
-
-```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 送信ハンドラー
-  const onSubmit = async (
-    data: TimeLogFormData,
+  const showSubmissionMessage = (
+    submission: TimeSubmission,
+    message: string,
+    tone: MessageTone = 'error',
   ) => {
-    const totalMinutes =
-      data.hours * 60 + data.minutes;
-    try {
-      await addTimeMutation.mutateAsync({
-        id: taskId,
-        minutesToAdd: totalMinutes,
-      });
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : '作業時間の追加に失敗しました',
-      );
+    if (isCurrentSubmission(submission)) {
+      setWriteMessage({ text: message, tone });
+    } else if (tone === 'neutral') {
+      toast(`先ほど送信した作業時間について、${message}`);
+    } else {
+      toast.error(`先ほど送信した作業時間について、${message}`);
     }
   };
 ```
 
-`addTime` API は分単位だけを受け取ります。
-そこで時間と分を `hours * 60 + minutes` で
-合計分に直してから渡します。
-`mutateAsync` は完了を `await` で待てる版なので
-`try` / `catch` で失敗を受け止められます。
-失敗時は握りつぶさず `toast.error` で
-利用者に理由を見せます。
-
-この変換の1行が抜けると何が保存されるかも見ておきます。
-`minutesToAdd` に `data.minutes` だけを渡すと1時間30分と
-入れても30分しか足されません。エラーは1つも出ないまま、
-合計だけが足りない状態で残ります。時間と分を1つの数に
-直す係をここへ1か所だけ置くのはこの取り違えが起きる
-場所を増やさないためです。
-
-`mutate` ではなく `mutateAsync` を選んだ理由も同じ方向を
-向いています。`mutate` は結果を待たないので通信が失敗
-しても画面は何も言わずに進みます。`await` で待てば失敗を
-`catch` で受け止めて `toast.error` に回せます。
-
-#### addTime APIのパラメータ
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `id` | string | タスクID |
-| `minutesToAdd` | number | 追加する分数 |
+`showSubmissionMessage` は、現在の入力に属する結果だけを欄内へ表示し、古い送信結果は通知へ回します。次の `expireAuth` は、この振り分けを使って認証切れ後の入力を勝手に消さないようにします。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// Dialog UIの前半部分
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  const expireAuth = (submission: TimeSubmission, writeCompleted: boolean) => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+    showSubmissionMessage(
+      submission,
+      writeCompleted
+        ? ('作業時間は追加されましたが、' +
+          'ログインの有効期限が切れました。' +
+          'もう一度ログインしてください。')
+        : 'ログインの有効期限が切れました。もう一度ログインしてください。',
+    );
+  };
+```
+
+同じ送信の結果ならダイアログ内へ表示し、古い送信の結果なら「先ほど送信した」と付けてtoastへ出します。対象の取り違えを防ぐためです。
+
+#### 2-11. 送信対象だけを再取得する
+
+```typescript
+
+  const refreshSubmittedTask = async (
+    submission: TimeSubmission,
+    writeCompleted: boolean,
+  ): Promise<RefreshResult> => {
+    try {
+      await Promise.all([
+        utils.task.getById.invalidate({ id: submission.taskId }, undefined, {
+          throwOnError: true,
+        }),
+        utils.task.getAll.invalidate(undefined, undefined, { throwOnError: true }),
+      ]);
+      return 'ok';
+    } catch (error) {
+      if (!mountedRef.current) return 'failed';
+      if (isAuthError(error)) {
+        expireAuth(submission, writeCompleted);
+        return 'auth';
+      }
+      return 'failed';
+    }
+  };
+```
+
+一覧だけでなく送信したタスク詳細も再取得します。再取得中の401は保存前の401と分け、保存済みかどうかを文言へ含めます。
+
+#### 2-12. 閉じる操作と入力改訂を記録する
+
+```typescript
+
+  const resetAndClose = () => {
+    generationRef.current += 1;
+    revisionRef.current += 1;
+    openRef.current = false;
+    reset({ hours: 0, minutes: 0 });
+    setWriteMessage(null);
+    onClose();
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetAndClose();
+  };
+
+  const markEdited = () => {
+    revisionRef.current += 1;
+    setWriteMessage(null);
+  };
+```
+
+閉じる操作では世代と改訂番号を進めてからフォームを0へ戻します。入力変更では改訂番号だけを進め、送信中でも新しい下書きを書けます。
+
+#### 2-13. 保存成功と再取得失敗を分ける
+
+```typescript
+  const handleWriteSuccess = async (submission: TimeSubmission) => {
+    const refreshResult = await refreshSubmittedTask(submission, true);
+    if (!mountedRef.current || refreshResult === 'auth') return;
+
+    onSuccess?.();
+    const currentSubmission = isCurrentSubmission(submission);
+    toast.success(
+      currentSubmission
+        ? `${submission.totalMinutes}分の作業時間を追加しました。`
+        : `先ほど送信した${submission.totalMinutes}分の作業時間を追加しました。`,
+    );
+    if (refreshResult === 'failed') {
+      toast.error(
+        ('作業時間の追加は完了しましたが、' +
+          '最新の合計を取得できませんでした。' +
+          '画面を開き直して確認してください。'),
+      );
+    }
+```
+
+書き込み成功を先に通知し、再取得だけ失敗した場合は最新合計を取れなかったと追加で知らせます。保存失敗へ言い換えないことが要点です。
+
+#### 2-14. 新しい下書きを残す
+
+```typescript
+
+    if (!currentSubmission) {
+      if (openRef.current && taskIdRef.current === submission.taskId) {
+        const currentDuration = timeLogSchema.safeParse(getValues());
+        if (
+          currentDuration.success &&
+          currentDuration.data.hours * 60 + currentDuration.data.minutes === submission.totalMinutes
+        ) {
+          toast(('先ほどの追加は完了しています。' +
+            '残った入力を再送すると' +
+            '重複して加算されます。'));
+        }
+      }
+      return;
+    }
+    resetAndClose();
+  };
+```
+
+古い送信と同じ分数が入力欄に残っていれば、再送による二重加算を警告します。新しい下書きなら値を残し、利用者の編集を消しません。
+
+#### 2-15. 失敗を分類して再取得する
+
+```typescript
+  const handleWriteError = async (error: unknown, submission: TimeSubmission) => {
+    if (!mountedRef.current) return;
+    const classified = classifyTaskWriteError(error, 'addTime');
+    if (classified.kind === 'auth') {
+      expireAuth(submission, false);
+      return;
+    }
+
+    const status = httpStatusOf(error);
+    if (status === 403 || classified.kind === 'unknown') {
+      const refreshResult = await refreshSubmittedTask(submission, false);
+      if (!mountedRef.current || refreshResult === 'auth') return;
+      if (refreshResult === 'failed') {
+        toast.error(('最新のタスクを取得できませんでした。' +
+          '画面を開き直して' +
+          '確認してください。'));
+      }
+    }
+    showSubmissionMessage(
+      submission,
+      classified.message,
+      classified.kind === 'unknown' ? 'neutral' : 'error',
+    );
+  };
+```
+
+401はその画面での再送を止めます。403と内容不明の応答では送信対象を再取得し、分類済みの公開文言だけを安全に表示します。
+
+#### 2-16. 送信内容を固定して同期ロックする
+
+```typescript
+
+  const onSubmit = async (data: TimeLogFormData) => {
+    if (writeLockedRef.current || authExpiredRef.current) return;
+
+    const submission: TimeSubmission = {
+      taskId,
+      totalMinutes: data.hours * 60 + data.minutes,
+      generation: generationRef.current,
+      revision: revisionRef.current,
+    };
+    writeLockedRef.current = true;
+    submissionRef.current = submission;
+    setWritePending(true);
+    setWriteMessage(null);
+```
+
+検証済みの時間、対象タスク、世代、改訂番号を1つの送信記録へ固定します。state更新より先に同期ロックを立て、二重送信を防ぎます。
+
+#### 2-17. 書き込みと後処理を順に待つ
+
+```typescript
+    try {
+      try {
+        await addTimeMutation.mutateAsync({
+          id: submission.taskId,
+          minutesToAdd: submission.totalMinutes,
+        });
+      } catch (error) {
+        await handleWriteError(error, submission);
+        return;
+      }
+      await handleWriteSuccess(submission);
+    } finally {
+      if (submissionRef.current === submission) submissionRef.current = null;
+      writeLockedRef.current = false;
+      if (mountedRef.current) setWritePending(false);
+    }
+  };
+```
+
+書き込み、分類済みの失敗処理、成功後の再取得を順番に待ちます。`finally`で同期ロックを必ず外し、途中の例外でも操作不能を残しません。
+
+#### 2-18. formと時間入力を結ぶ
+
+```typescript
   return (
-    <Dialog open={open}
-      onOpenChange={handleClose}>
-      <DialogContent className="space-y-4">
-        <DialogHeader>
-          <DialogTitle>
-            作業時間の記録
-          </DialogTitle>
-          <DialogDescription>
-            タスクに作業時間を記録します
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>作業時間の記録</DialogTitle>
+            <DialogDescription>タスクに作業時間を記録します</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="hours">時間</Label>
+              <Input
+                id="hours"
+                type="text"
+                step="any"
+                inputMode="numeric"
+                aria-invalid={errors.hours !== undefined}
+                {...register('hours', { onChange: markEdited })}
+              />
+              {errors.hours && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.hours.message}
+                </p>
+              )}
+            </div>
 ```
 
-背景をクリックしたときも、Esc キーを押したときも、
-`onOpenChange` が呼ばれます。`onClose` を直接渡さずに
-`handleClose` を挟んだのでどの閉じ方でも入力欄は空に
-戻ります。
+`form`の`onSubmit`へRHFの`handleSubmit`を置くため、Enterキーと送信ボタンが同じ入口を通ります。`type=text`で入力文字列を保ち、`inputMode=numeric`で数字キーボードを出します。時間欄の変更では改訂番号も進めます。
 
-`DialogTitle` と `DialogDescription` はこの小窓が何を
-する場所かを言葉で示します。「タスクに作業時間を記録します」
-と書いてあるとおり、ここでは時計が動きません。計測を始める
-ボタンは用意しません。終わった作業を後から書き足す画面
-だけがある、という前提を文言でも伝えています。
-
-続けて時間の入力欄です。`src/component/task/time-log-dialog.tsx` の
-`DialogHeader` の閉じタグの直後に書きます。
+#### 2-19. 分入力と通信メッセージを表示する
 
 ```typescript
-        {/* filepath: src/component/task/time-log-dialog.tsx */}
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label htmlFor="hours">時間</Label>
-            <Input id="hours"
-              inputMode="numeric"
-              {...register('hours',
-                { valueAsNumber: true })} />
-            {errors.hours && (
-              <p className="text-sm
-                text-destructive">
-                {errors.hours.message}
-              </p>
-            )}
+            <div className="flex-1">
+              <Label htmlFor="minutes">分</Label>
+              <Input
+                id="minutes"
+                type="text"
+                step="any"
+                inputMode="numeric"
+                aria-invalid={errors.minutes !== undefined}
+                {...register('minutes', { onChange: markEdited })}
+              />
+              {errors.minutes && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.minutes.message}
+                </p>
+              )}
+            </div>
           </div>
 ```
 
-`register('hours', ...)` は入力欄と
-フォームの状態を結び付けます。
-`valueAsNumber: true` を付けているのは
-入力欄が返す文字列を数値へ変換して
-スキーマの `z.number()` と型を合わせるためです。
-これを忘れると「数値のはずが文字列」になり
-検証で弾かれます。
-`errors.hours` の表示は次の分入力と同じ形です。
-これが無いと時間欄だけ検証エラーが
-画面に出ず、利用者は何が悪いのか分かりません。
+分欄も`type=text`で入力を保ち、文字列から数値への変換はZodの前処理へ集めます。入力改訂処理を付けるため、送信中の書き直しも区別できます。
 
-`inputMode="numeric"` はスマートフォンで数字のキーボードを
-先に出すための指定です。`type="number"` を使わないのは
-上下の矢印で値が意図せず動くのを避けるためです。入力欄には
-数字を打ちやすくする役目だけを持たせ、値が正しいかどうかの
-判定は zod 側に寄せます。
+#### 2-20. キャンセルと送信ボタンを置く
 
 ```typescript
-{/* filepath: src/component/task/time-log-dialog.tsx */}
-{/* 分入力フィールドとエラー表示 */}
-          <div className="flex-1">
-            <Label htmlFor="minutes">分</Label>
-            <Input id="minutes"
-              inputMode="numeric"
-              {...register('minutes',
-                { valueAsNumber: true })} />
-            {errors.minutes && (
-              <p className="text-sm
-                text-destructive">
-                {errors.minutes.message}
-              </p>
-            )}
-          </div>
-        </div>
-```
-
-`errors.minutes` があるときだけ
-エラーメッセージを表示します。
-`refine` の `path` に `['minutes']` を
-指定したので「合計0分」のエラーも
-この分欄の下に出ます。
-利用者はどこを直せばよいか
-すぐ分かります。
-
-`path` を書かずに `refine` だけを足すとそのエラーは
-どの欄にも結び付きません。`errors.hours` と
-`errors.minutes` のどちらにも入りません。だから画面には
-何も出ません。
-両方0のまま追加を押した人にはボタンが効かない画面に
-見えます。出す場所まで指定してはじめて検証の結果が
-利用者へ届きます。
-
-時間と分の欄はどちらも `flex-1` を持つので横幅を半分ずつ
-分け合って並びます。2つを隣り合わせに置くのはこれで
-1つの入力だと見せるためです。
-
-```typescript
-{/* filepath: src/component/task/time-log-dialog.tsx */}
-{/* フッターボタンとダイアログ終了 */}
-        <DialogFooter>
-          <Button variant="outline"
-            onClick={handleClose}>
-            キャンセル
-          </Button>
-          <Button
-            onClick={handleSubmit(onSubmit)}
-            disabled={addTimeMutation.isPending}>
-            {addTimeMutation.isPending
-              ? '追加中...' : '時間を追加'}
-          </Button>
-        </DialogFooter>
+          {writeMessage && (
+            <p
+              className={
+                writeMessage.tone === 'error'
+                  ? 'text-sm text-destructive'
+                  : 'text-sm text-foreground'
+              }
+              role="alert"
+            >
+              {writeMessage.text}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={resetAndClose}>
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={writePending || authExpired}>
+              {writePending ? '追加中...' : '時間を追加'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
 ```
 
-`handleSubmit(onSubmit)` は
-「検証を通ったときだけ `onSubmit` を呼ぶ」
-という包み方です。検証に失敗すれば
-`onSubmit` は呼ばれず、`errors` が更新されます。
-`disabled={addTimeMutation.isPending}` は
-送信中にボタンを押せなくして
-同じ記録が二重に登録されるのを防ぎます。
+通信結果はエラーと中立を色で分けます。キャンセルは送信中でも使えます。`writeLockedRef` はReactが再描画する前の2回目の送信入口を拒否します。`writePending` はmutationと一覧・詳細の再取得が終わるまで送信ボタンを無効にします。認証失効後もボタンを無効にし、入力欄は新しい下書きの編集を許します。
+
+`retry: false` を指定したので、結果が分からない書き込みを自動で再送しません。保存成功後の再取得が失敗しても「追加は完了」と「最新合計は未取得」を分けて知らせます。401ではその場の追加ボタンを止め、ログインし直すまで結果不明の送信を重ねません。
 
 **確認ポイント**:
-- `time-log-dialog.tsx` を保存できた
-- `npx tsc --noEmit` がエラーなしで終了する
 
-スクリーンショット: 下の画像は Step 3 まで書き終えてカードの「時間記録」ボタンから開いた状態です。いまの自分の画面にはまだこれを開く入口がありません。入口は Step 3 で足します。
+- 空欄・0・負数・小数・60分・大きすぎる値に日本語のエラーが出ます。
+- Enterキーとボタンが同じ送信処理を通ります。
+- 送信中に書き直した入力や、閉じて開き直したあとに入力した新しい下書きが残ります。
+- 401・403・不明な応答で非公開のサーバー文言を表示しません。
+- 保存成功と一覧の再取得失敗を別々に知らせます。
+- `npx tsc --noEmit` がエラーなしで終了します。
+
+スクリーンショットは Step 3 まで書き終え、カードの「時間記録」ボタンから開いた状態です。
 
 ![作業時間の記録ダイアログ。「時間」と「分」の2つの入力欄と「時間を追加」ボタンが並ぶ](./screenshots/day16/task-timer.png)
 
-
 ---
 
-### Step 3: TaskCardに時間記録を組み込む（15分）
+### Step 3: TaskCardに時間記録を組み込む（読む目安: 15分）
 
 **ゴール**: `TimeLogDialog` と「時間記録」ボタンを
 `TaskCard` に組み込みます。
@@ -712,7 +902,7 @@ flowchart TB
     M810 -->|"formatMinutes"| OUT["画面: 13h 30m"]
 ```
 
-行き帰りで通る形は「分の合計」1種類だけです。`1時間30分` と `13h 30m` は画面のすぐ手前でだけ現れる形です。データベースを覗いても `13h 30m` という文字は見つかりません。
+行き帰りで通る形は「分の合計」1種類だけです。入力時の `1時間30分` と表示時の `13h 30m` は画面のすぐ手前でだけ現れる形です。データベースを覗いても `13h 30m` という文字は見つかりません。
 
 `TaskCardProps` に合計作業時間と
 成功時コールバックを受け取る口を足します。
@@ -728,15 +918,15 @@ interface TaskCardProps {
 }
 ```
 
-`timeSpentMinutes` は表示する合計作業時間です。
-まだ記録がないタスクもあるのでオプショナル（`?`）にします。
-`onTimeLogSuccess` は記録成功を親へ伝える
-コールバックで、`TimeLogDialog` の `onSuccess` に
-そのまま渡します。
+`timeSpentMinutes` は表示する合計作業時間です。データベースは未記録でも既定値の0を返します。
+ここでオプショナル（`?`）にするのは、Day 13 から Day 15 で書いた呼び出し側を
+一度に直さなくても型が通るようにするためです。
+`onTimeLogSuccess` も既存の呼び出し側との互換性を保つためオプショナルにします。
+`TimeLogDialog` 自身がタスク詳細と一覧を再取得するため、別のキャッシュも
+更新したい画面だけがこのコールバックを渡します。
 
-オプショナルにしたので `TaskCard` 関数の引数（分割代入）では
-`timeSpentMinutes = 0` と既定値 0 を付けてください。
-渡されなかったタスクでも 0 として扱われ、
+`TaskCard` 関数の引数（分割代入）では `timeSpentMinutes = 0` と既定値を付けてください。
+まだこのpropを渡していない既存画面でも0として扱われ、
 次に書く `formatMinutes(timeSpentMinutes)` が `NaN` になりません。
 
 同じ引数の分割代入に `onTimeLogSuccess` も追加してください。
@@ -844,45 +1034,28 @@ return (
 1つの要素として返すためです。
 Reactは複数の要素を並べて返せないので
 この空タグ（フラグメント）でまとめます。
-`onSuccess={onTimeLogSuccess}` を渡すことで、
-記録が成功したら親のコールバックが呼ばれ、
-一覧の再取得を通じて合計作業時間の表示が
-最新の値に置き換わります。
+`onSuccess={onTimeLogSuccess}` は、カードを置いた画面が
+別のキャッシュも更新したい場合の受け口です。
+このタスク一覧の合計はダイアログ自身が `task.getAll` を
+再取得するため、親から同じ処理を重ねて渡しません。
 
 **確認ポイント**:
-- カードに合計作業時間が表示される
-- 「時間記録」ボタンが表示される
-- ボタンを押すとダイアログが開く
+- カードに合計作業時間が表示されます。
+- 「時間記録」ボタンが表示されます。
+- ボタンを押すとダイアログが開きます。
 
-最後に `page.tsx` から `TaskCard` へ合計作業時間と成功コールバックを渡します。これがないと記録しても一覧の合計が更新されず、Step 4 の「合計作業時間が増える」確認まで到達できません。
+最後に `page.tsx` から `TaskCard` へ合計作業時間を渡します。`TimeLogDialog` は保存後に送信対象の詳細と `task.getAll` を待って再取得するため、このページから同じ一覧の再取得を重ねて渡す必要はありません。
 
-まず記録成功後に一覧を取り直すハンドラーを追加します。`useCallback`（同じ関数を毎回作り直さないように覚えておく React の機能）を使います。`react` からのインポートは Day 13 で `useCallback` を足してあるので、そのまま使えます。
+`TaskCard` の `onTimeLogSuccess` はオプショナルのまま残します。別の画面が検索結果など別のキャッシュも更新したい場合に、その画面だけの処理を渡せるようにするためです。このタスク一覧はダイアログ内の `task.getAll` 再取得だけで表示が更新されます。
 
-```typescript
-// filepath: src/app/task/page.tsx（const utils の直後に追加）
-// 時間記録の成功後に一覧を取り直す
-// （useCallback は react から import）
-const handleTimeLogSuccess = useCallback(() => {
-  void utils.task.getAll.invalidate();
-}, [utils.task.getAll]);
-```
+Day 15 で置いた `<TaskCard ... />` 全体を、次のコードに置き換えます。既存の props を残し、作業時間の表示に使う1行を足します。
 
-先頭の `void` は「この関数の戻り値は使いません」と読み手へ示す書き方です。`invalidate` は待つこともできる関数ですがここでは待たずに先へ進みます。付けた場合と付けない場合で動きは変わりません。Day 10 の Step 7 と Day 11 の `invalidate` でも同じ書き方をしました。
-
-`invalidate` はキャッシュに「古い」という印を付けます。画面で表示中のクエリはこの印を見つけると自動で取り直されます。そのため `refetch` を重ねて呼ぶ必要はなく、`invalidate` の1回だけで記録した分がその場で合計作業時間へ反映されます。
-
-これは Day 15 の編集ダイアログで書いた `onSuccess` と同じ考え方です。保存したら一覧を取り直す、という1本の流れを、ステータス変更でも時間記録でも使い回しています。
-
-`useCallback` で包み、依存に `utils.task.getAll` を書いてあるのはこの関数の中身がそれだけに頼っているためです。包まずに書くと描き直しのたびに新しい関数が生まれます。`TaskCard` は `React.memo` を使っていないので今は影響しませんがあとで `memo` を付けたときに効いてくる書き方です。
-
-なおこの関数を作っただけでは何も起きません。次のブロックで `TaskCard` へ渡してはじめてダイアログの `onSuccess?.()` がこの中身につながります。渡し忘れると `onSuccess` は `undefined` のままで記録は保存されるのに合計は古い値で止まります。
-
-次にDay 15 で置いた `<TaskCard ... />` 全体を次のコードに置き換えます。既存の props は残します。作業時間の表示と記録後の再取得に使う2つを足します。
+Day 15で作ったページ送りは残します。`PAGE_SIZE`、`pageIndex`、一覧取得の `limit` と `offset`、前後ボタンを変更する手順ではありません。今日置き換えるのは1枚のカードへ渡す値なので、表示中のページと送信元のページを区別する処理も保ちます。
 
 ```typescript
 <TaskCard
   // filepath: src/app/task/page.tsx
-  // Day 15 の TaskCard に作業時間の2つの props を追加
+  // Day 15 の TaskCard に合計作業時間を追加
   key={task.id}
   id={task.id}
   title={task.title}
@@ -895,7 +1068,6 @@ const handleTimeLogSuccess = useCallback(() => {
   onEdit={handleEdit}
   onDelete={handleDelete}
   onClick={handleTaskClick}
-  onTimeLogSuccess={handleTimeLogSuccess}
   canEdit={canEditProject(task.projectId)}
   canDelete={canDeleteProject(task.projectId)}
 />
@@ -906,19 +1078,43 @@ const handleTimeLogSuccess = useCallback(() => {
 画面の動きを順に並べると追加を押した直後はまだ前の値が出ていて取り直しが終わった時点で新しい合計へ置き換わります。差は1秒に満たないので操作しているときはすぐ増えたように見えます。
 
 **確認ポイント**:
-- `handleTimeLogSuccess` を追加し、`<TaskCard>` に2つの props を渡した
-- カードの「時間記録」ボタンを押すとダイアログが開き、閉じられる
-- 「1時間30分」を入力して追加できる
-- 時間と分の両方を0のまま送信するとエラーが出る
+- `<TaskCard>` に `timeSpentMinutes` を渡し、一覧の再取得はダイアログ内の1回にしました。
+- カードの「時間記録」ボタンを押すとダイアログが開き、閉じられます。
+- 「1時間30分」を入力して追加できます。
+- 時間と分の両方を0のまま送信するとエラーが出ます。
 
 Step 2 で書いた検証は開く入口がそろったここで初めて動かせます。
 
 ---
 
-### Step 4: 動作確認（5分）
+### Step 4: 動作確認（読む目安: 5分）
 
 **ゴール**: ステータス変更と時間記録の
 両方が動くことを確認します。
+
+1. 編集ダイアログでステータスを変更します。
+2. 保存すると一覧の Badge が変わり、即反映されます。
+3. カードの「時間記録」ボタンを押します。
+4. 時間と分を入力して「時間を追加」を押します。
+5. 合計作業時間が入力した分だけ増えます。
+6. もう一度記録するとさらに加算されます。
+
+おめでとうございます。ステータス管理と
+作業時間の記録が動くようになり、
+本格的なタスク管理ツールに近づきました。
+
+**確認ポイント**:
+- ステータス変更が一覧に反映されます。
+- 時間を記録すると合計作業時間が増えます。
+- 続けて記録すると合計に加算されます。
+
+スクリーンショット: カードの下段に合計作業時間の行が増えたことを確認してください。
+
+![タスクカードの下段に「合計作業時間」と「時間記録」ボタンが並んだ一覧画面](./screenshots/day16/task-list.png)
+
+初期データのタスクには作業時間があらかじめ入っているので `12h 0m` や `20h 0m` のように0でない数字が並びます。3枚目の `1h 15m` はいまの手順で1時間15分を記録した直後の状態です。記録した時間はもともと入っていた合計へ足されます。
+
+---
 
 開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
 
@@ -928,34 +1124,14 @@ Step 2 で書いた検証は開く入口がそろったここで初めて動か�
 npm run dev
 ```
 
-`http://localhost:3000/task` を開いて次の手順を1つずつ試します。
+開発サーバーを起動すると書いたコードが
+すぐブラウザに反映されます。
+`http://localhost:3000/task` を開いて
+上の手順を1つずつ試します。
 
-1. 編集ダイアログでステータスを変更する
-2. 保存すると一覧の Badge が変わり、即反映される
-3. カードの「時間記録」ボタンを押す
-4. 時間と分を入力して「時間を追加」を押す
-5. 合計作業時間が入力した分だけ増える
-6. もう一度記録するとさらに加算される
-
-おめでとうございます。ステータス管理と
-作業時間の記録が動くようになり、
-本格的なタスク管理ツールに近づきました。
-
-**確認ポイント**:
-- ステータス変更が一覧に反映される
-- 時間を記録すると合計作業時間が増える
-- 続けて記録すると合計に加算される
-
-スクリーンショット: カードの下段に合計作業時間の行が増えたことを確認してください。
-
-![タスクカードの下段に「合計作業時間」と「時間記録」ボタンが並んだ一覧画面](./screenshots/day16/task-list.png)
-
-初期データのタスクには作業時間があらかじめ入っているので `12h 0m` や `20h 0m` のように0でない数字が並びます。3枚目の `1h 15m` はいまの手順で1時間15分を記録した直後の状態です。記録した時間はもともと入っていた合計へ足されます。
-
-確かめ方のこつを1つ書いておきます。30分を記録したあとに
-45分を記録して合計が `1h 15m` になるかを見てください。
-2回目が1回目を上書きしていれば `45m` のまま止まります。
-足し算になっているかどうかはこの2回で判別できます。
+確かめ方のこつを1つ書いておきます。記録前の合計を控えてから、30分と45分を続けて記録してください。
+合計が記録前より `1h 15m` 増えれば加算できています。合計が0分のタスクで試した場合は `1h 15m` になります。
+2回目が1回目を上書きする実装なら、増えるのは `45m` だけです。
 
 そのあとブラウザを再読み込みして同じ数字が残るかも
 見てください。再読み込み後も残っていれば値が DB に
@@ -963,8 +1139,8 @@ npm run dev
 表示ならここで元の数字へ戻ります。
 
 **確認ポイント**:
-- `npm run dev` でエラーが出ない
-- `http://localhost:3000/task` にアクセスできる
+- `npm run dev` でエラーが出ません。
+- `http://localhost:3000/task` にアクセスできます。
 
 ---
 
@@ -1067,9 +1243,9 @@ export function StatusActionButton({
 
 **このコードの問題点**:
 
-- 遷移先とボタン文言が別々の `if` に分かれ、対応関係を目で追いにくい
-- 新しい遷移を追加すると複数の関数を同じ順番で更新する必要がある
-- 「このステータスでは何ができるか」がコード上で一覧になっていない
+- 遷移先とボタン文言が別々の `if` に分かれ、対応関係を目で追いにくいです。
+- 新しい遷移を追加すると、複数の関数を同じ順番で更新しなければなりません。
+- 「このステータスでは何ができるか」がコード上で一覧になっていません。
 
 この3つはどれも情報が2か所に分かれていることから来ています。遷移先は `getNextStatus` にあり、文言は `getButtonLabel` にあります。人の頭の中では1つのルールでも、コードの上では別々の場所に置かれた形です。次の After ではその2つを同じ1か所へ寄せます。
 
@@ -1169,7 +1345,7 @@ export function StatusActionButton({
 
 `transition` が `undefined` のときはボタンを押せなくして `onClick` の先頭でも `return` します。同じ1つの値を、見た目と処理の両方が見ている形です。押せるのに何も起きない、という食い違いはここでは生まれません。
 
-`updateMutation.isPending` を `disabled` に混ぜているのは送信中の二度押しを止めるためです。Step 2 の時間記録ダイアログで `isPending` を使ったのと同じ考え方がここでも効いています。
+`updateMutation.isPending` を `disabled` に混ぜているのは送信中のボタンを押せなくするためです。時間記録ダイアログはさらに厳しく、`writeLockedRef` を通信前に立てて同じ描画中の2回目を拒否し、`writePending` を再取得の完了まで保ちます。この読み比べ用コードの `isPending` だけでは、時間記録と同じ送信契約にはなりません。
 
 ```typescript
       {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
@@ -1181,11 +1357,11 @@ export function StatusActionButton({
 
 **このコードの強み**:
 
-- `from` / `to` / `label` が1つの配列にまとまり、遷移ルールを一覧で読める
-- `find()` で該当する遷移だけを探すため分岐が増えても関数が太りにくい
-- 新しい遷移を追加するときは `STATUS_TRANSITIONS` に1要素足すだけで済む
+- `from` / `to` / `label` が1つの配列にまとまり、遷移ルールを一覧で読めます。
+- `find()` で該当する遷移だけを探すため分岐が増えても関数が太りにくいです。
+- 同じ `from` の要素がまだない一本道の遷移なら、`STATUS_TRANSITIONS` に1要素足すだけで追加できます。
 
-遷移のルールが配列という1つのデータになったので画面の選択肢をこの配列から組み立てる、といった使い回しもできます。ステータスを1つ足すときに触る場所は `STATUS_TRANSITIONS` の1か所だけになり、直し漏れの起きる余地が消えます。
+遷移のルールが配列という1つのデータになったので画面の選択肢をこの配列から組み立てる、といった使い回しもできます。既存ステータス間の一本道の遷移を足すときは `STATUS_TRANSITIONS` の1か所を直せば、遷移先と文言を一緒に更新できます。`find()` は最初に一致した1要素だけを返すため、同じ `from` から複数の遷移先を選ばせる場合は別の作りが必要です。
 
 #### 覚えておきたいエッセンス
 
@@ -1201,7 +1377,7 @@ export function StatusActionButton({
 | `src/server/api/routers/task.ts` | 作業時間をサーバー側で足し込む手続き | Step 0 |
 | `src/component/task/time-log-dialog.tsx` | 時間と分を入力して記録する小窓 | Step 2 |
 | `src/component/task/task-card.tsx` | 合計作業時間の表示と記録ボタン | Step 3 |
-| `src/app/task/page.tsx` | 記録の成功を受けて一覧を取り直す | Step 3 |
+| `src/app/task/page.tsx` | 合計作業時間を `TaskCard` へ渡す | Step 3 |
 
 ### `src/server/api/routers/task.ts`
 
@@ -1209,247 +1385,630 @@ export function StatusActionButton({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: addTime の入力スキーマ
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
-  minutesToAdd: z.number().int().min(0),
+  minutesToAdd: z.number().int().min(1, '作業時間は1分以上で指定してください').safe(),
 });
 ```
 
-このスキーマは `taskRouter` の前、Day 15 で足したスキーマの近くに置きます。手続きの中ではなく外に置くのは入口の検査を型と一緒に1か所へ集めるためです。`.min(0)` が入口に無いとマイナスの分数がそのまま加算へ流れ、合計が減った理由を後から追えなくなります。
+この入口で0以下と安全な整数の範囲外を拒否します。0分では合計が変わらないため記録しません。このアプリが扱う1分単位の整数を、JavaScriptが正確に扱える範囲へ絞ります。`lockTaskProjects` は Day 14 で作り、Day 15 の完成版にも残した関数をそのまま使います。
 
-**addTime 手続き**:
+**addTime 手続き前半**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: addTime 手続き
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+    const task = await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
 
-    return await prisma.task.update({
-      where: { id: input.id },
-      data: {
-        timeSpentMinutes: {
-          increment: input.minutesToAdd,
-        },
-      },
-    });
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // メンバー削除・降格やタスク移動と同じプロジェクト行をロックし、
+        // 加算直前の所属と権限だけを保存可否の判定に使う。
+        const lockedProjects = await lockTaskProjects(tx, [task.projectId]);
+        if (!lockedProjects.has(task.projectId)) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+          });
+        }
+```
+
+プロジェクト行をロックしてから現在の所属を調べる準備をします。先に権限変更が完了していれば、この後の再確認が新しい権限を見ます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+        const currentMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: task.projectId,
+            },
+          },
+          select: { role: true },
+        });
+        assertMemberPermission(currentMember ? [currentMember] : [], 'canEdit');
+
+        return await tx.task.update({
+          where: {
+            id: input.id,
+            // 認可したプロジェクトから移動したタスクへ、古い権限で加算しない。
+            projectId: task.projectId,
+            // 整数の合計を正確に保存できる範囲を、同じUPDATEの条件で確認する。
+            timeSpentMinutes: {
+              lte: Number.MAX_SAFE_INTEGER - input.minutesToAdd,
+            },
+          },
+```
+
+ロック後の役割を確認し、確認済みプロジェクトと整数の精度上限を同じ更新条件へ含めます。並行する正当な追加は`increment`へ進めます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+          data: {
+            timeSpentMinutes: {
+              increment: input.minutesToAdd,
+            },
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
   }),
 ```
 
-置き場所は Day 15 で書いた `delete` の直後です。合計の足し算をここへ集めたので画面側は増えたあとの数字を受け取るだけで済みます。`increment` を使うのは読み出してから書き戻す形だと2回の記録がほぼ同時に届いたときに片方が消えるからです。
+更新対象が移動済みか精度上限を越える場合は`P2025`を`CONFLICT`へ変えます。その他の例外は種類を変えず上位へ返します。
 
 ### `src/component/task/time-log-dialog.tsx`
 
-**インポート**:
+次の20個のコードブロックが完成版です。上から順に連結すると Step 2 で作ったファイルと一致します。
+
+完成版 1のコードです。
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: インポート
+// 完成版: Day 16 終了時点の時間記録ダイアログ
 'use client';
 
-import { zodResolver }
-  from '@hookform/resolvers/zod';
-import toast from 'react-hot-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
 import {
-  Dialog, DialogContent,
-  DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/component/ui/dialog';
 import { Input } from '@/component/ui/input';
 import { Label } from '@/component/ui/label';
+import { httpStatusOf, isAuthError } from '@/lib/query-error';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 ```
 
-先頭の `'use client'` はこの部品がブラウザ側で動くという宣言です。入力欄の値を持つ画面なのでサーバーだけで組み立てるわけにはいきません。並び順が手元と違っていても直す必要はありません。`npm run fix` を実行すると Biome が並べ替えます。
+React Hook FormとZodに加え、既存の読み取りエラー判定と書き込みエラー分類を読み込みます。通信エラーの生文をそのまま利用者へ出さないためです。
 
-**バリデーションスキーマ**:
+完成版 2のコードです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: バリデーションスキーマ
-const timeLogSchema = z.object({
-  hours: z.number().int().min(0),
-  minutes: z.number().int().min(0).max(59),
-}).refine(
-  (data) => data.hours * 60 + data.minutes > 0,
-  { message: '1分以上入力してください',
-    path: ['minutes'] },
-);
-type TimeLogFormData =
-  z.infer<typeof timeLogSchema>;
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+const normalizeNumberInput = (value: unknown) => {
+  if (value === '') return 0;
+  if (typeof value === 'string') {
+    if (!/^[0-9]+$/.test(value)) return value;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER + 1;
+  }
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    return Number.MAX_SAFE_INTEGER + 1;
+  }
+  return value;
+};
 ```
 
-このスキーマをコンポーネント関数の外に置いてあるのは画面が描き直されるたびにルールを組み立て直さないためです。欄をまたぐ判定である `refine` をここへ入れたので時間と分のどちらか片方だけを見る検査では拾えない「両方0」を、送信の直前に1回で弾けます。
+空文字だけは0として合計検証へ進めます。文字列は半角の`0`から`9`だけでできている場合に限って10進数へ変換します。空白、英字、16進数風の入力を0や別の数へ読み替えないためです。変換結果が無限大になるほど長い数字は、安全な整数ではない値へ置き換えて桁数のエラーにします。
 
-**Props とフォームの初期化**:
+完成版 3のコードです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: Props とフォームの初期化
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+const timeLogSchema = z
+  .object({
+    hours: z.preprocess(
+      normalizeNumberInput,
+      z
+        .number({ invalid_type_error: '時間は0以上の整数で入力してください。' })
+        .int('時間は0以上の整数で入力してください。')
+        .min(0, '時間は0以上の整数で入力してください。'),
+    ),
+    minutes: z.preprocess(
+      normalizeNumberInput,
+      z
+        .number({ invalid_type_error: '分は0から59の整数で入力してください。' })
+        .int('分は0から59の整数で入力してください。')
+        .min(0, '分は0から59の整数で入力してください。')
+        .max(59, '分は0から59の整数で入力してください。'),
+    ),
+  })
+```
+
+時間と分には別々の日本語エラーを指定します。分は0から59までに絞り、60分を時間欄へ移すべき入力としてその場で止めます。
+
+完成版 4のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+  .refine(
+    (data) =>
+      !Number.isInteger(data.hours) ||
+      !Number.isInteger(data.minutes) ||
+      data.hours < 0 ||
+      data.minutes < 0 ||
+      data.minutes > 59 ||
+      data.hours * 60 + data.minutes > 0,
+    {
+      message: '1分以上入力してください。',
+      path: ['minutes'],
+    },
+  )
+```
+
+最初の`refine`は2欄の合計が1分以上かを確認します。欄単体がすでに不正なときは合計エラーを重ねず、直すべき文言を1つに絞ります。
+
+完成版 5のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+  .refine(
+    (data) =>
+      !Number.isInteger(data.hours) ||
+      !Number.isInteger(data.minutes) ||
+      data.hours < 0 ||
+      data.minutes < 0 ||
+      data.minutes > 59 ||
+      data.hours * 60 + data.minutes <= 0 ||
+      Number.isSafeInteger(data.hours * 60 + data.minutes),
+    {
+      message: '入力した作業時間が大きすぎます。桁数を確認してください。',
+      path: ['hours'],
+    },
+  );
+
+type TimeLogFormData = z.infer<typeof timeLogSchema>;
+type RefreshResult = 'ok' | 'auth' | 'failed';
+type MessageTone = 'error' | 'neutral';
+```
+
+次の`refine`は合計が安全な整数かを確認します。画面独自の時間上限は作らず、APIと同じく1分の差を保てる範囲だけを送ります。
+
+完成版 6のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
 interface TimeLogDialogProps {
   open: boolean;
   onClose: () => void;
   taskId: string;
-  onSuccess?: () => void;
+  onSuccess?: (() => void) | undefined;
 }
 
-export function TimeLogDialog({
-  open, onClose, taskId, onSuccess,
-}: TimeLogDialogProps) {
+interface TimeSubmission {
+  taskId: string;
+  totalMinutes: number;
+  generation: number;
+  revision: number;
+}
+```
+
+`TimeSubmission`には送信時の対象、合計、世代、入力の改訂番号を保存します。通信完了時の画面と同じ操作かを後から判定する材料です。
+
+完成版 7のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+// 完成版: 時間記録ダイアログ本体の続き
+export function TimeLogDialog({ open, onClose, taskId, onSuccess }: TimeLogDialogProps) {
+  const utils = api.useUtils();
+  const [writePending, setWritePending] = useState(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const [writeMessage, setWriteMessage] = useState<{
+    text: string;
+    tone: MessageTone;
+  } | null>(null);
+  const mountedRef = useRef(true);
+  const openRef = useRef(open);
+  const taskIdRef = useRef(taskId);
+  const generationRef = useRef(0);
+  const revisionRef = useRef(0);
+  const writeLockedRef = useRef(false);
+  const authExpiredRef = useRef(false);
+  const submissionRef = useRef<TimeSubmission | null>(null);
+```
+
+Reactのstateは表示へ使い、refは再描画を待たない判定に使います。ボタンを連続で押した瞬間でも、先に立てた同期ロックが見えます。
+
+完成版 8のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
   const {
-    register, handleSubmit, reset,
+    register,
+    handleSubmit,
+    reset,
+    getValues,
     formState: { errors },
   } = useForm<TimeLogFormData>({
     resolver: zodResolver(timeLogSchema),
     defaultValues: { hours: 0, minutes: 0 },
   });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 ```
 
-`taskId` を親から受け取る形にしたのでこの小窓はどのカードからでも使い回せます。`defaultValues` に0を入れてあるのは初期値が無いと両方の欄が `undefined` から始まり、`refine` の足し算が `NaN` になって検証そのものが成り立たなくなるからです。
+React Hook FormへZodのスキーマを接続し、時間と分を0から始めます。`getValues`は古い送信の完了後に現在の下書きを確かめるために使います。
 
-**閉じる処理と通信**:
+完成版 9のコードです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 閉じる処理と通信
-  const handleClose = () => {
-    reset();
-    onClose();
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  useEffect(() => {
+    if (openRef.current === open && taskIdRef.current === taskId) return;
+    generationRef.current += 1;
+    openRef.current = open;
+    if (!open || taskIdRef.current !== taskId) {
+      revisionRef.current += 1;
+      reset({ hours: 0, minutes: 0 });
+      setWriteMessage(null);
+    }
+    taskIdRef.current = taskId;
+  }, [open, reset, taskId]);
+
+  const addTimeMutation = api.task.addTime.useMutation({ retry: false });
+
+  const isCurrentSubmission = (submission: TimeSubmission) =>
+    mountedRef.current &&
+    openRef.current &&
+    taskIdRef.current === submission.taskId &&
+    generationRef.current === submission.generation &&
+    revisionRef.current === submission.revision;
+```
+
+閉じる、開き直す、別タスクへ変わる操作で世代を進めます。通信開始時と世代が違えば、完了しても今の入力欄を閉じず、その内容を保ちます。
+
+完成版 10のコードです。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  const showSubmissionMessage = (
+    submission: TimeSubmission,
+    message: string,
+    tone: MessageTone = 'error',
+  ) => {
+    if (isCurrentSubmission(submission)) {
+      setWriteMessage({ text: message, tone });
+    } else if (tone === 'neutral') {
+      toast(`先ほど送信した作業時間について、${message}`);
+    } else {
+      toast.error(`先ほど送信した作業時間について、${message}`);
+    }
   };
 
-  const addTimeMutation =
-    api.task.addTime.useMutation({
-      onSuccess: () => {
-        onSuccess?.();
-        handleClose();
-      },
-    });
+  const expireAuth = (submission: TimeSubmission, writeCompleted: boolean) => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+    showSubmissionMessage(
+      submission,
+      writeCompleted
+        ? ('作業時間は追加されましたが、' +
+          'ログインの有効期限が切れました。' +
+          'もう一度ログインしてください。')
+        : 'ログインの有効期限が切れました。もう一度ログインしてください。',
+    );
+  };
 ```
 
-閉じる経路は記録の成功後・キャンセル・右上の×・背景クリックの4つあります。`reset()` と `onClose()` を `handleClose` に1つへまとめてあるのでどの経路をたどっても入力欄は空に戻ります。この画面は足し算なので前の入力が残ったまま次のタスクで開くと身に覚えのない分数が合計へ乗ります。
+同じ送信の結果ならダイアログ内へ表示し、古い送信の結果なら「先ほど送信した」と付けてtoastへ出します。対象の取り違えを防ぐためです。
 
-**送信ハンドラー**:
+完成版 11のコードです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 送信ハンドラー
-  const onSubmit = async (
-    data: TimeLogFormData,
-  ) => {
-    const totalMinutes =
-      data.hours * 60 + data.minutes;
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  const refreshSubmittedTask = async (
+    submission: TimeSubmission,
+    writeCompleted: boolean,
+  ): Promise<RefreshResult> => {
     try {
-      await addTimeMutation.mutateAsync({
-        id: taskId,
-        minutesToAdd: totalMinutes,
-      });
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : '作業時間の追加に失敗しました',
-      );
+      await Promise.all([
+        utils.task.getById.invalidate({ id: submission.taskId }, undefined, {
+          throwOnError: true,
+        }),
+        utils.task.getAll.invalidate(undefined, undefined, { throwOnError: true }),
+      ]);
+      return 'ok';
+    } catch (error) {
+      if (!mountedRef.current) return 'failed';
+      if (isAuthError(error)) {
+        expireAuth(submission, writeCompleted);
+        return 'auth';
+      }
+      return 'failed';
     }
   };
 ```
 
-時間と分を1つの数へ直す係を、この1か所だけに置いてあります。`addTime` は分しか受け取らないので変換をあちこちに散らすと片方だけ直し忘れたときに足りない記録が残ります。`mutate` ではなく `mutateAsync` を選んだのは `await` で待たないと失敗を `catch` で受け止められず、通信が落ちても画面が黙ってしまうからです。
+一覧だけでなく送信したタスク詳細も再取得します。再取得中の401は保存前の401と分け、保存済みかどうかを文言へ含めます。
 
-**ダイアログの見出し**:
+完成版 12のコードです。
 
 ```typescript
-// filepath: src/component/task/time-log-dialog.tsx
-// 完成版: ダイアログの見出し
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  const resetAndClose = () => {
+    generationRef.current += 1;
+    revisionRef.current += 1;
+    openRef.current = false;
+    reset({ hours: 0, minutes: 0 });
+    setWriteMessage(null);
+    onClose();
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetAndClose();
+  };
+
+  const markEdited = () => {
+    revisionRef.current += 1;
+    setWriteMessage(null);
+  };
+```
+
+閉じる操作では世代と改訂番号を進めてからフォームを0へ戻します。入力変更では改訂番号だけを進め、送信中でも新しい下書きを書けます。
+
+完成版 13のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+  const handleWriteSuccess = async (submission: TimeSubmission) => {
+    const refreshResult = await refreshSubmittedTask(submission, true);
+    if (!mountedRef.current || refreshResult === 'auth') return;
+
+    onSuccess?.();
+    const currentSubmission = isCurrentSubmission(submission);
+    toast.success(
+      currentSubmission
+        ? `${submission.totalMinutes}分の作業時間を追加しました。`
+        : `先ほど送信した${submission.totalMinutes}分の作業時間を追加しました。`,
+    );
+    if (refreshResult === 'failed') {
+      toast.error(
+        ('作業時間の追加は完了しましたが、' +
+          '最新の合計を取得できませんでした。' +
+          '画面を開き直して確認してください。'),
+      );
+    }
+```
+
+書き込み成功を先に通知し、再取得だけ失敗した場合は最新合計を取れなかったと追加で知らせます。保存失敗へ言い換えないことが要点です。
+
+完成版 14のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+    if (!currentSubmission) {
+      if (openRef.current && taskIdRef.current === submission.taskId) {
+        const currentDuration = timeLogSchema.safeParse(getValues());
+        if (
+          currentDuration.success &&
+          currentDuration.data.hours * 60 + currentDuration.data.minutes === submission.totalMinutes
+        ) {
+          toast(('先ほどの追加は完了しています。' +
+            '残った入力を再送すると' +
+            '重複して加算されます。'));
+        }
+      }
+      return;
+    }
+    resetAndClose();
+  };
+```
+
+古い送信と同じ分数が入力欄に残っていれば、再送による二重加算を警告します。新しい下書きなら値を残し、利用者の編集を消しません。
+
+完成版 15のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+  const handleWriteError = async (error: unknown, submission: TimeSubmission) => {
+    if (!mountedRef.current) return;
+    const classified = classifyTaskWriteError(error, 'addTime');
+    if (classified.kind === 'auth') {
+      expireAuth(submission, false);
+      return;
+    }
+
+    const status = httpStatusOf(error);
+    if (status === 403 || classified.kind === 'unknown') {
+      const refreshResult = await refreshSubmittedTask(submission, false);
+      if (!mountedRef.current || refreshResult === 'auth') return;
+      if (refreshResult === 'failed') {
+        toast.error(('最新のタスクを取得できませんでした。' +
+          '画面を開き直して' +
+          '確認してください。'));
+      }
+    }
+    showSubmissionMessage(
+      submission,
+      classified.message,
+      classified.kind === 'unknown' ? 'neutral' : 'error',
+    );
+  };
+```
+
+401はその画面での再送を止めます。403と内容不明の応答では送信対象を再取得し、分類済みの公開文言だけを安全に表示します。
+
+完成版 16のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+
+  const onSubmit = async (data: TimeLogFormData) => {
+    if (writeLockedRef.current || authExpiredRef.current) return;
+
+    const submission: TimeSubmission = {
+      taskId,
+      totalMinutes: data.hours * 60 + data.minutes,
+      generation: generationRef.current,
+      revision: revisionRef.current,
+    };
+    writeLockedRef.current = true;
+    submissionRef.current = submission;
+    setWritePending(true);
+    setWriteMessage(null);
+```
+
+検証済みの時間、対象タスク、世代、改訂番号を1つの送信記録へ固定します。state更新より先に同期ロックを立て、二重送信を防ぎます。
+
+完成版 17のコードです。
+
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
+    try {
+      try {
+        await addTimeMutation.mutateAsync({
+          id: submission.taskId,
+          minutesToAdd: submission.totalMinutes,
+        });
+      } catch (error) {
+        await handleWriteError(error, submission);
+        return;
+      }
+      await handleWriteSuccess(submission);
+    } finally {
+      if (submissionRef.current === submission) submissionRef.current = null;
+      writeLockedRef.current = false;
+      if (mountedRef.current) setWritePending(false);
+    }
+  };
+```
+
+書き込み、分類済みの失敗処理、成功後の再取得を順番に待ちます。`finally`で同期ロックを必ず外し、途中の例外でも操作不能を残しません。
+
+完成版 18のコードです。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き）
   return (
-    <Dialog open={open}
-      onOpenChange={handleClose}>
-      <DialogContent className="space-y-4">
-        <DialogHeader>
-          <DialogTitle>
-            作業時間の記録
-          </DialogTitle>
-          <DialogDescription>
-            タスクに作業時間を記録します
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>作業時間の記録</DialogTitle>
+            <DialogDescription>タスクに作業時間を記録します</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="hours">時間</Label>
+              <Input
+                id="hours"
+                type="text"
+                step="any"
+                inputMode="numeric"
+                aria-invalid={errors.hours !== undefined}
+                {...register('hours', { onChange: markEdited })}
+              />
+              {errors.hours && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.hours.message}
+                </p>
+              )}
+            </div>
 ```
 
-`onOpenChange` に `onClose` を直接渡さず `handleClose` を挟んであるのはEsc キーと背景クリックもここを通るためです。`DialogDescription` を省くと画面読み上げでは見出しの「作業時間の記録」しか読まれず、時間を足す画面なのか消す画面なのかが伝わりません。
+`form`の`onSubmit`へRHFの`handleSubmit`を置くため、Enterキーと送信ボタンが同じ入口を通ります。`type=text`で入力文字列を保ち、`inputMode=numeric`で数字キーボードを出します。時間欄の変更では改訂番号も進めます。
 
-**時間の入力欄**:
+完成版 19のコードです。
 
 ```typescript
-        {/* filepath: src/component/task/time-log-dialog.tsx */}
-        {/* 完成版: 時間の入力欄 */}
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label htmlFor="hours">時間</Label>
-            <Input id="hours"
-              inputMode="numeric"
-              {...register('hours',
-                { valueAsNumber: true })} />
-            {errors.hours && (
-              <p className="text-sm
-                text-destructive">
-                {errors.hours.message}
-              </p>
-            )}
+{/* filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き） */}
+            <div className="flex-1">
+              <Label htmlFor="minutes">分</Label>
+              <Input
+                id="minutes"
+                type="text"
+                step="any"
+                inputMode="numeric"
+                aria-invalid={errors.minutes !== undefined}
+                {...register('minutes', { onChange: markEdited })}
+              />
+              {errors.minutes && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.minutes.message}
+                </p>
+              )}
+            </div>
           </div>
 ```
 
-`valueAsNumber: true` が要るのは入力欄の返す値が文字列で、スキーマ側は `z.number()` を求めているためです。付け忘れると型が合わず、正しい数字を打っても検証で弾かれます。`inputMode="numeric"` は数字のキーボードを先に出すための指定で、値が正しいかどうかの判定は zod 側に寄せてあります。
+分欄も`type=text`で入力を保ち、文字列から数値への変換はZodの前処理へ集めます。入力改訂処理を付けるため、送信中の書き直しも区別できます。
 
-**分の入力欄**:
+完成版 20のコードです。
 
+<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
-          {/* filepath: src/component/task/time-log-dialog.tsx */}
-          {/* 完成版: 分の入力欄 */}
-          <div className="flex-1">
-            <Label htmlFor="minutes">分</Label>
-            <Input id="minutes"
-              inputMode="numeric"
-              {...register('minutes',
-                { valueAsNumber: true })} />
-            {errors.minutes && (
-              <p className="text-sm
-                text-destructive">
-                {errors.minutes.message}
-              </p>
-            )}
-          </div>
-        </div>
-```
-
-`errors.minutes` の表示がこの位置にあるので `refine` の `path` に `['minutes']` を指定した「合計0分」のエラーも分欄の下に出ます。表示先を決めずに `refine` だけを足すとエラーはどの欄にも結び付かず、利用者にはボタンが効かない画面として見えます。
-
-**フッターのボタン**:
-
-```typescript
-        {/* filepath: src/component/task/time-log-dialog.tsx */}
-        {/* 完成版: フッターのボタン */}
-        <DialogFooter>
-          <Button variant="outline"
-            onClick={handleClose}>
-            キャンセル
-          </Button>
-          <Button
-            onClick={handleSubmit(onSubmit)}
-            disabled={addTimeMutation.isPending}>
-            {addTimeMutation.isPending
-              ? '追加中...' : '時間を追加'}
-          </Button>
-        </DialogFooter>
+{/* filepath: src/component/task/time-log-dialog.tsx（同じファイルの続き） */}
+          {writeMessage && (
+            <p
+              className={
+                writeMessage.tone === 'error'
+                  ? 'text-sm text-destructive'
+                  : 'text-sm text-foreground'
+              }
+              role="alert"
+            >
+              {writeMessage.text}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={resetAndClose}>
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={writePending || authExpired}>
+              {writePending ? '追加中...' : '時間を追加'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
 ```
 
-`handleSubmit(onSubmit)` という包み方をしているので検証を通らないかぎり `onSubmit` は呼ばれません。通信中にボタンを押せなくしているのは返事が来る前にもう一度押されると同じ分数が2回足されて合計が狂うからです。
+通信結果はエラーと中立を色で分けます。キャンセルは送信中でも使えます。`writeLockedRef` はReactが再描画する前の2回目の送信入口を拒否します。`writePending` はmutationと一覧・詳細の再取得が終わるまで送信ボタンを無効にします。認証失効後もボタンを無効にし、入力欄は新しい下書きの編集を許します。
 
 ### `src/component/task/task-card.tsx`
 
@@ -1538,8 +2097,8 @@ export function TaskCard({
   onDelete,
   onClick,
   onTimeLogSuccess,
-  canEdit = true,
-  canDelete = true,
+  canEdit = false,
+  canDelete = false,
 }: TaskCardProps) {
 ```
 
@@ -1802,28 +2361,18 @@ export function TaskCard({
 }
 ```
 
-小窓を `<Card>` の外に置いてあるのはカードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。ボタンと同じ `canEdit` で囲ってあるので閲覧者の画面には小窓そのものが置かれません。`onSuccess={onTimeLogSuccess}` の受け渡しが1本つながっているので記録が成功すると親のコールバックが呼ばれ、一覧の取り直しを通じて合計作業時間が新しい値に置き換わります。
+小窓を `<Card>` の外に置いてあるのはカードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。ボタンと同じ `canEdit` で囲ってあるので閲覧者の画面には小窓そのものが置かれません。`onSuccess={onTimeLogSuccess}` は、カードを置いた画面が別のキャッシュも更新したい場合の受け口です。このタスク一覧の合計はダイアログ自身が `task.getAll` を再取得するため、親から同じ処理を重ねて渡しません。
 
 ### `src/app/task/page.tsx`
 
-**記録の成功を受け取るハンドラー**:
+`TimeLogDialog` が送信対象の詳細と `task.getAll` を再取得するため、このページには同じ一覧を再取得する成功ハンドラーを追加しません。再取得を2か所へ置くと、1回の保存で同じ一覧を2回取り直します。
 
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 記録の成功を受け取るハンドラー
-  const handleTimeLogSuccess = useCallback(() => {
-    void utils.task.getAll.invalidate();
-  }, [utils.task.getAll]);
-```
-
-`utils` の宣言のすぐ下に置きます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。だから `refetch` を重ねて呼ぶ必要はありません。先頭の `void` は戻り値を使わないことを読み手へ示す書き方で、動きは変わりません。
-
-**TaskCard へ渡す2つの props**:
+次のように `TaskCard` へ合計作業時間を渡します。
 
 ```typescript
                       <TaskCard
                         // filepath: src/app/task/page.tsx
-                        // 完成版: TaskCard へ渡す2つの props
+                        // 完成版: TaskCard へ合計作業時間を渡す
                         key={task.id}
                         id={task.id}
                         title={task.title}
@@ -1836,29 +2385,61 @@ export function TaskCard({
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onClick={handleTaskClick}
-                        onTimeLogSuccess={handleTimeLogSuccess}
                         canEdit={canEditProject(task.projectId)}
                         canDelete={canDeleteProject(task.projectId)}
                       />
 ```
 
-Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。
+Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` の1行だけを足しました。 ページ送りと送信時の `pageIndex` の記録はDay 15のまま残します。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 と Day 13 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。ダイアログ内の再取得が終わると、この値を含む一覧が1回だけ更新されます。
 
 ## 今日のまとめ
 
-- [ ] `api.task.update` でステータスを変更できた
-- [ ] TimeLogDialog で作業時間を手動記録できた
-- [ ] `api.task.addTime` で合計作業時間を加算できた
-- [ ] TaskCard に時間記録ボタンとダイアログを組み込めた
+- [ ] `api.task.update` でステータスを変更できました。
+- [ ] TimeLogDialog で作業時間を手動記録できました。
+- [ ] `api.task.addTime` で合計作業時間を加算できました。
+- [ ] TaskCard に時間記録ボタンとダイアログを組み込めました。
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| 手動記録が反映されない | invalidate忘れ | onSuccessで親の再取得を呼ぶ |
-| 数値が文字列扱いになる | valueAsNumber未指定 | registerにvalueAsNumberを付ける |
-| 両方0でも送信できる | refine未設定 | zodのrefineで合計>0を検証 |
-| 記録中も追加ボタンを押せる | `isPending` が未反映 | `disabled={addTimeMutation.isPending}` で連打を防ぐ |
+#### 手動記録が反映されない
+
+**原因**
+
+invalidateを呼び忘れたためです。
+
+**解決方法**
+
+`refreshSubmittedTask`で送信対象の詳細と`task.getAll`を再取得してください。親から同じ`task.getAll.invalidate()`を重ねて呼ばないでください。
+
+#### 数値が文字列扱いになる
+
+**原因**
+
+入力欄の文字列をスキーマの前処理で数値へ変換していないためです。
+
+**解決方法**
+
+`normalizeNumberInput`で空文字だけを0にし、半角の0から9だけの文字列を10進数へ変換してください。ほかの文字列は変換せず、欄ごとのエラーにします。
+
+#### 両方0でも送信できる
+
+**原因**
+
+refineを設定していないためです。
+
+**解決方法**
+
+zodのrefineで合計>0を検証してください。
+
+#### 記録中も追加ボタンを押せる
+
+**原因**
+
+同期ロックと再取得中の表示状態が、送信処理とボタンに反映されていないためです。
+
+**解決方法**
+
+`onSubmit`の先頭で`writeLockedRef`を確認し、通信前に`true`へ変えます。このrefはReactが再描画する前の2回目の送信入口を拒否します。ボタンは`disabled={writePending || authExpired}`にして、mutationと再取得が終わるまで押せない状態を保ってください。
 
 ## 今日学んだ用語
 
@@ -1880,11 +2461,11 @@ A. 今の値を読み出さずに、DB へ「この分だけ増やしてほし�
 
 **Q2. 時間記録の入力スキーマから `refine`（合計が0分より大きい）を外すと何が通ってしまいますか。**
 
-A. 時間と分の両方が0のまま送信できてしまいます。`hours` は0以上、`minutes` は0〜59を許すのでそれぞれの検査だけでは防げません。このアプリは履歴を追加せず、タスクの合計時間へ加算します。0分では合計が変わらないのに DB を更新してしまうため `refine` で2つの値を合わせて検査します。
+A. フロント側の検証を通り、`minutesToAdd: 0` のAPI呼び出しまで進んでしまいます。`hours` は0以上、`minutes` は0〜59を許すのでそれぞれの検査だけでは防げません。ただしAPI側の `.min(1)` が0分を拒否するため、タスクの検索やDB更新は行われません。`refine` は無効な送信を画面側で止め、その場で入力エラーを表示するために必要です。
 
-**Q3. 記録の成功後に `utils.task.getAll.invalidate()` を呼ぶのはなぜですか。**
+**Q3. `refreshSubmittedTask` が記録成功後に `utils.task.getAll.invalidate()` を呼ぶのはなぜですか。**
 
-A. 一覧が持っているキャッシュに「古い」という印を付けるためです。印を見つけたクエリは自動で取り直すので記録した分がその場でカードの合計作業時間へ反映されます。呼ばないと DB の値は増えているのに画面の数字が変わらず、読者には保存できていないように見えます。
+A. 一覧が持っているキャッシュに「古い」という印を付け、更新後の合計を取り直すためです。`refreshSubmittedTask`は詳細と一覧の再取得を待つので、完了するまで`writePending`も続きます。親から同じ`getAll.invalidate()`を重ねると1回の保存で一覧を2回取り直すため、一覧の更新はダイアログ内の1か所に置きます。
 
 ## 追加課題：15分以上の作業だけ記録する
 

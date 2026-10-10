@@ -19,13 +19,82 @@ TABLE_OVERFLOW_CHECKS = {
     "page_content_bounds",
     "sibling_cell_overlap",
 }
-_FRAGMENT_TARGET_KEYS = (
-    "row_index",
-    "cell_index",
-    "column_index",
-    "row_span",
-    "column_span",
-)
+
+
+def _entry_items(entry: dict, group: dict) -> list[dict]:
+    identifier = entry["id"]
+    items = group.get("items", [])
+    if not isinstance(items, list) or not items:
+        raise ValueError(f"{identifier}: コードを測定できません")
+    if entry.get("pagination_role") != "repeating_table_header":
+        if len(items) != 1:
+            raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
+        return items
+    expected = entry.get("table_cell")
+    pages = [item.get("page_index") for item in items]
+    first = items[0]
+
+    def same_number(left: object, right: object, epsilon: float = 0.25) -> bool:
+        return (
+            isinstance(left, (int, float))
+            and not isinstance(left, bool)
+            and isinstance(right, (int, float))
+            and not isinstance(right, bool)
+            and math.isfinite(left)
+            and math.isfinite(right)
+            and abs(left - right) <= epsilon
+        )
+
+    def same_columns(left: object, right: object) -> bool:
+        return (
+            isinstance(left, list)
+            and isinstance(right, list)
+            and len(left) == len(right)
+            and all(
+                column.get("column_index") == right[index].get("column_index")
+                and all(
+                    same_number(column.get(field), right[index].get(field))
+                    for field in ("left", "right", "width")
+                )
+                for index, column in enumerate(left)
+            )
+        )
+
+    visual_mismatch = any(
+        item.get("font_family") != first.get("font_family")
+        or not isinstance(item.get("font_family"), str)
+        or not item["font_family"]
+        or not same_number(item.get("font_size_pt"), first.get("font_size_pt"), 0.01)
+        or any(
+            not same_number(
+                (item.get("cell_content_rect") or {}).get(field),
+                (first.get("cell_content_rect") or {}).get(field),
+            )
+            for field in ("left", "right", "width")
+        )
+        or not same_number(
+            ((item.get("table_geometry") or {}).get("rect") or {}).get("left"),
+            ((first.get("table_geometry") or {}).get("rect") or {}).get("left"),
+        )
+        or not same_columns(
+            (item.get("table_geometry") or {}).get("columns"),
+            (first.get("table_geometry") or {}).get("columns"),
+        )
+        for item in items
+    )
+    if (
+        entry.get("context") != "table"
+        or not isinstance(expected, dict)
+        or expected.get("section") != "thead"
+        or expected.get("tag") != "TH"
+        or any(item.get("table_cell") != expected for item in items)
+        or any(not isinstance(page, int) or page < 0 for page in pages)
+        or len(set(pages)) != len(pages)
+        or pages != sorted(pages)
+        or visual_mismatch
+    ):
+        raise ValueError(f"{identifier}: 繰り返し表見出しの同一性を証明できません")
+    return items
 
 
 def _positive(value: object, label: str) -> float:
@@ -42,57 +111,6 @@ def _nonnegative(value: object, label: str) -> float:
     if not math.isfinite(value) or value < 0:
         raise ValueError(f"{label}: 0以上の有限値が必要です")
     return float(value)
-
-
-def _fragment_signature(item: object) -> tuple | None:
-    """同一セルが断片へ複写された観測だけが一致する手がかりを返す。"""
-    if not isinstance(item, dict):
-        return None
-    geometry = item.get("table_geometry")
-    if not isinstance(geometry, dict):
-        return None
-    identity = geometry.get("identity")
-    target = geometry.get("target")
-    columns = geometry.get("columns")
-    if (
-        not isinstance(identity, dict)
-        or identity.get("status") != "supported"
-        or not isinstance(target, dict)
-        or not isinstance(columns, list)
-        or not all(isinstance(column, dict) for column in columns)
-    ):
-        return None
-    code_rect = item.get("code_rect")
-    return (
-        item.get("text"),
-        identity.get("kind"),
-        identity.get("value"),
-        *(target.get(key) for key in _FRAGMENT_TARGET_KEYS),
-        tuple((column.get("column_index"), column.get("width")) for column in columns),
-        code_rect.get("width") if isinstance(code_rect, dict) else None,
-    )
-
-
-def _measured_item(identifier: str, group: dict) -> dict:
-    """一意の観測を返す。ページ分割で複写された見出しセルの重複は1件に畳む。"""
-    items = group.get("items")
-    if not isinstance(items, list):
-        raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
-    if len(items) == 1:
-        return items[0]
-    # theadが断片へ複写されると、同じ表・セル位置・文字列を持つ同一論理セルの
-    # 観測が断片ごとに現れる。ページが重ならず手がかりが一致する重複だけ畳む。
-    if len(items) > 1:
-        pages = [item.get("page_index") for item in items if isinstance(item, dict)]
-        signatures = {_fragment_signature(item) for item in items}
-        if (
-            len(pages) == len(items)
-            and len(set(pages)) == len(items)
-            and len(signatures) == 1
-            and None not in signatures
-        ):
-            return items[0]
-    raise ValueError(f"{identifier}: 1つのコードを一意に測定できません")
 
 
 def derive_flow_css(manifest: dict, report: dict) -> tuple[str, list[dict]]:
@@ -115,13 +133,22 @@ def derive_flow_css(manifest: dict, report: dict) -> tuple[str, list[dict]]:
         identifier = entry["id"]
         if not SAFE_ID.fullmatch(identifier):
             raise ValueError("生成属性ではないIDです")
-        item = _measured_item(identifier, group)
-        if item.get("text") != entry["expected_text"] or len(item.get("line_rects", [])) != 1:
+        items = _entry_items(entry, group)
+        if any(
+            item.get("text") != entry["expected_text"]
+            or (
+                len(item.get("line_rects", [])) < 1
+                if entry.get("allow_line_wrap") is True
+                else len(item.get("line_rects", [])) != 1
+            )
+            for item in items
+        ):
             raise ValueError(f"{identifier}: nowrapで本文を測定してください")
         if entry["context"] == "table":
             continue
         if entry["context"] != "flow":
             raise ValueError("未知のコード配置です")
+        item = items[0]
         flow = item.get("flow_geometry") or {}
         if flow.get("status") != "supported":
             raise ValueError(f"{identifier}: 段落幅を証明できません")
@@ -216,26 +243,40 @@ def derive_table_css(manifest: dict, report: dict) -> tuple[str, list[dict], lis
         identifier = entry.get("id")
         if not isinstance(identifier, str) or not SAFE_ID.fullmatch(identifier):
             raise ValueError("生成属性ではないIDです")
-        item = _measured_item(identifier, group)
-        if item.get("text") != entry.get("expected_text") or len(item.get("line_rects", [])) != 1:
+        items = _entry_items(entry, group)
+        if any(
+            item.get("text") != entry.get("expected_text")
+            or (
+                len(item.get("line_rects", [])) < 1
+                if entry.get("allow_line_wrap") is True
+                else len(item.get("line_rects", [])) != 1
+            )
+            for item in items
+        ):
             raise ValueError(f"{identifier}: nowrapで本文を測定してください")
         if entry.get("context") != "table":
             continue
-        geometry = item.get("table_geometry") or {}
-        identity = geometry.get("identity") or {}
-        table_id = identity.get("value")
-        if (
-            geometry.get("status") != "supported"
-            or identity.get("status") != "supported"
-            or identity.get("kind") != "data-pdf-table-id"
-            or table_id not in table_ids
-        ):
-            if identifier in overflow_ids:
-                unidentified_overflow_ids.add(identifier)
-            continue
-        measurements.setdefault(table_id, []).append(
-            {"inline_id": identifier, "item": item, "geometry": geometry}
-        )
+        for clone_index, item in enumerate(items):
+            geometry = item.get("table_geometry") or {}
+            identity = geometry.get("identity") or {}
+            table_id = identity.get("value")
+            if (
+                geometry.get("status") != "supported"
+                or identity.get("status") != "supported"
+                or identity.get("kind") != "data-pdf-table-id"
+                or table_id not in table_ids
+            ):
+                if identifier in overflow_ids:
+                    unidentified_overflow_ids.add(identifier)
+                continue
+            measurements.setdefault(table_id, []).append(
+                {
+                    "inline_id": identifier,
+                    "clone_index": clone_index,
+                    "item": item,
+                    "geometry": geometry,
+                }
+            )
 
     if unidentified_overflow_ids:
         unresolved.append(

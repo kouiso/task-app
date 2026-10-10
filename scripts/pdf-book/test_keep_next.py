@@ -1,172 +1,258 @@
+import re
 import unittest
+from html.parser import HTMLParser
+from pathlib import Path
 
-from keep_next import KEEP_NEXT_CLASS, mark_keep_next, normalize_text
+from keep_next import KEEP_NEXT_CLASS, collect_decisions, mark_keep_next
 
 
 def marked(source: str) -> bool:
     return KEEP_NEXT_CLASS in mark_keep_next(source)
 
 
-class NormalizeTextTest(unittest.TestCase):
-    def test_counts_ignore_space_and_invisible(self):
-        # 空白・改行・ZWSP・WJ・BOM・SOFT HYPHEN は字数に入れない
+class KeepNextTest(unittest.TestCase):
+    def test_build_order_keeps_measurement_before_structure_edit(self) -> None:
+        source = Path(__file__).with_name("build_pdf_book.py").read_text(encoding="utf-8")
+        apply_index = source.index("markup = apply_breakable_measurements(")
+        keep_index = source.index("markup = mark_keep_next(markup)")
+        footnote_index = source.index("markup = number_external_link_footnotes(markup)")
+        validation_index = source.index("validate_annotated_html(markup, inline_manifest)")
+        self.assertLess(apply_index, keep_index)
+        self.assertLess(keep_index, footnote_index)
+        self.assertLess(footnote_index, validation_index)
+
+    def test_known_labels_before_eligible_blocks(self):
+        for label in ("実装:", "実装：", "確認ポイント:", "確認ポイント："):
+            self.assertTrue(marked(f"<p>{label}</p><pre><code>x</code></pre>"), label)
+
+    def test_terminal_output_label_is_kept_only_for_exact_heading_adjacency(self):
+        source = (
+            "<h4>期待される出力</h4>"
+            "<p><strong>ターミナル出力（<code>~/workspace/task-app</code>）</strong></p>"
+            "<pre><code>npm test</code></pre>"
+        )
+        result = mark_keep_next(source)
+        self.assertIn('<p class="pdf-keep-next"><strong>ターミナル出力', result)
+        self.assertEqual(mark_keep_next(result), result)
         self.assertEqual(
-            normalize_text(" 実 装\u200b\u2060\ufeff\u00ad:\n"),
-            "実装:",
+            [(row.reason, row.target_tag) for row in collect_decisions(source)],
+            [("terminal-output-label", "pre")],
         )
 
-    def test_nfkc_folds_full_width(self):
-        # 全角の「：」と半角英数は NFKC でそろえる
-        self.assertEqual(normalize_text("実装：ＡＢ"), "実装:AB")
+    def test_terminal_output_label_rejects_broader_contexts(self):
+        samples = (
+            (
+                "<h4>期待される出力</h4><p>説明です。</p>"
+                "<p><strong>ターミナル出力（ローカル）</strong></p><pre>x</pre>"
+            ),
+            "<h4>実行結果</h4><p><strong>ターミナル出力（ローカル）</strong></p><pre>x</pre>",
+            "<p><strong>ターミナル出力（ローカル）</strong></p><pre>x</pre>",
+            (
+                "<ol><li><h4>期待される出力</h4>"
+                "<p><strong>ターミナル出力（ローカル）</strong></p><pre>x</pre></li></ol>"
+            ),
+            (
+                '<section class="footnotes"><h4>期待される出力</h4>'
+                "<p><strong>ターミナル出力（ローカル）</strong></p><pre>x</pre></section>"
+            ),
+            (
+                "<h4>期待される出力</h4>"
+                "<p><strong>ターミナル出力（ローカル）</strong></p><p>x</p>"
+            ),
+            (
+                "<h4>期待される出力</h4>"
+                "<p><code>ターミナル出力（ローカル）</code>の説明です。</p><pre>x</pre>"
+            ),
+        )
+        for source in samples:
+            self.assertFalse(marked(source), source)
 
+    def test_explicit_forward_phrases_before_eligible_blocks(self):
+        cases = (
+            ("次のコードを追加します。", "<pre><code>x</code></pre>"),
+            ("次のブロックを貼り付けてください。", "<pre><code>x</code></pre>"),
+            ("以下の図を確認します。", '<figure><img src="x.png"></figure>'),
+            ("次の表を確認します。", "<table><tr><td>x</td></tr></table>"),
+            ("この一覧を追加してください。", "<ul><li>x</li></ul>"),
+            ("以下の手順を確認します。", "<ol><li>x</li></ol>"),
+            ("次の一覧を確認します。", "<dl><dt>x</dt></dl>"),
+            ("以下の表を確認します。", '<section class="pdf-stacked-table"><div>x</div></section>'),
+        )
+        for phrase, target in cases:
+            self.assertTrue(marked(f"<p>{phrase}</p>{target}"), (phrase, target))
 
-class MarkKeepNextTest(unittest.TestCase):
-    def test_colon_label_gets_marked(self):
-        self.assertTrue(marked("<p>実装:</p><pre><code>x</code></pre>"))
-
-    def test_full_width_colon_label_gets_marked(self):
-        # 原稿の「：」は NFKC で半角にそろえて判定する
-        self.assertTrue(marked("<p>実装：</p><pre><code>x</code></pre>"))
-
-    def test_colon_label_over_limit_is_not_marked(self):
-        text = "あ" * 90 + "："
-        self.assertFalse(marked(f"<p>{text}</p><pre><code>x</code></pre>"))
-
-    def test_bold_only_paragraph_gets_marked(self):
-        source = "<p><strong>なぜ Set を使うのか</strong></p><p>説明です。</p>"
+    def test_comment_and_whitespace_are_skipped(self):
+        source = "<p>次のコードを追加します。</p>\n<!-- source note -->\n<pre>x</pre>"
         self.assertTrue(marked(source))
 
-    def test_partially_bold_paragraph_is_not_bold_only(self):
-        # 太字を含むが太字だけではない段落は、直後の要素が普通なら付かない
+    def test_explanation_after_prior_pre_is_not_marked(self):
         source = (
-            "<p><strong>なぜ</strong> Set を使うのか</p><p>説明です。</p>"
+            "<pre><code>old</code></pre>"
+            "<p>このコードは送信済みの値を照合します。</p>"
+            "<pre><code>next</code></pre>"
         )
         self.assertFalse(marked(source))
 
-    def test_bold_paragraph_with_nested_spans_gets_marked(self):
-        # strong の中に pdf-tail や行内コードの span が入れ子になっても
-        # 「太字だけ」と読む。実際の生成 HTML は常にこの形を取る
+    def test_generic_heading_bold_and_unknown_colon_are_not_marked(self):
+        samples = (
+            "<h2>見出し</h2><p>概要です。</p><pre>x</pre>",
+            "<p><strong>注意</strong></p><pre>x</pre>",
+            "<p>背景:</p><pre>x</pre>",
+            "<p>短い説明です。</p><pre>x</pre>",
+        )
+        for source in samples:
+            self.assertFalse(marked(source), source)
+
+    def test_ineligible_targets_are_not_marked(self):
+        for target in ("<p>next</p>", "<blockquote>x</blockquote>", "<section>x</section>", "<hr>"):
+            self.assertFalse(marked(f"<p>次のコードを追加します。</p>{target}"), target)
+
+    def test_footnote_caption_callout_and_nested_contexts_are_excluded(self):
+        samples = (
+            '<p class="footnote">次のコードを追加します。</p><pre>x</pre>',
+            '<section class="footnotes"><p>次のコードを確認します。</p><pre>x</pre></section>',
+            '<p class="caption">次の図を確認します。</p><figure>x</figure>',
+            '<aside class="callout"><p>次のコードを追加します。</p><pre>x</pre></aside>',
+            '<blockquote><p>次のコードを追加します。</p><pre>x</pre></blockquote>',
+            '<figure><p>次のコードを追加します。</p><pre>x</pre></figure>',
+        )
+        for source in samples:
+            self.assertFalse(marked(source), source)
+
+    def test_blockquote_screenshot_intro_is_kept_only_with_its_direct_figure(self):
         source = (
-            '<p><strong><span class="pdf-tail">1.</span> '
-            '今回展開したフォルダを '
-            '<span class="pdf-table-latin">VS</span> '
-            '<span class="pdf-table-latin">Code</span> '
-            'で開<span class="pdf-tail">きます。</span></strong></p>'
-            "<p>説明です。</p>"
+            "<blockquote><p>スクリーンショット: 編集ダイアログの画面</p>"
+            '<figure><img src="dialog.png"></figure></blockquote>'
         )
-        self.assertTrue(marked(source))
+        result = mark_keep_next(source)
+        self.assertIn('<p class="pdf-keep-next">スクリーンショット:', result)
+        self.assertEqual(
+            [(row.reason, row.target_tag) for row in collect_decisions(source)],
+            [("screenshot-introduction", "figure")],
+        )
+        for rejected in (
+            '<blockquote><p>引用文です。</p><figure>x</figure></blockquote>',
+            '<blockquote><p>スクリーンショット: 説明</p><p>間の説明</p><figure>x</figure></blockquote>',
+            '<blockquote><p>スクリーンショット: 説明</p><pre>x</pre></blockquote>',
+        ):
+            self.assertFalse(marked(rejected), rejected)
 
-    def test_screenshot_lead_gets_marked(self):
-        source = "<p>スクリーンショット：画面です。</p><p>説明です。</p>"
-        self.assertTrue(marked(source))
+    def test_adversarial_direction_target_and_polarity_cases(self):
+        rejected = (
+            "<p>直前のコードを貼り付けてください。</p><ul><li>別の確認事項</li></ul>",
+            "<p>先ほどのコードに項目を追加してください。</p><pre>unrelated()</pre>",
+            "<p>実装:先ほどのコードは入力を検証するために必要です。</p><ul><li>別の確認事項</li></ul>",
+            '<section class="footnotes"><p>次のコードを確認します。</p><pre>x()</pre></section>',
+            "<p>次のコードは貼り付けないでください。</p><pre>x()</pre>",
+            "<p>次のコードを確認します。</p><ul><li>コードではない一覧</li></ul>",
+        )
+        for source in rejected:
+            self.assertFalse(marked(source), source)
+        self.assertTrue(marked("<p>次のコードを貼り付けてください。</p><pre>x()</pre>"))
 
-    def test_screenshot_lead_over_limit_is_not_marked(self):
-        text = "スクリーンショット：" + "あ" * 80 + "。"
-        source = f"<p>{text}</p><p>説明です。</p>"
-        self.assertFalse(marked(source))
+    def test_named_target_does_not_mark_a_different_block_kind(self):
+        mismatches = (
+            ("次のコードを貼り付けてください。", "<figure>x</figure>"),
+            ("以下の図を確認します。", "<table><tr><td>x</td></tr></table>"),
+            ("次の表を確認します。", "<pre>x</pre>"),
+            ("以下の手順で確認します。", "<pre>x</pre>"),
+            ("次のブロックを続けます。", "<ol><li>x</li></ol>"),
+        )
+        for phrase, target in mismatches:
+            self.assertFalse(marked(f"<p>{phrase}</p>{target}"), (phrase, target))
 
-    def test_cause_lead_gets_marked(self):
-        source = "<p>原因：権限がありません。</p><p>解決方法を書きます。</p>"
-        self.assertTrue(marked(source))
-
-    def test_cause_lead_over_limit_is_not_marked(self):
-        text = "原因：" + "あ" * 87 + "。"
-        source = f"<p>{text}</p><p>説明です。</p>"
-        self.assertFalse(marked(source))
-
-    def test_paragraph_before_figure_gets_marked(self):
-        source = "<p>次の図を見ます。</p><figure><img></figure>"
-        self.assertTrue(marked(source))
-
-    def test_paragraph_before_figure_over_limit_is_not_marked(self):
-        text = "あ" * 90 + "。"
-        source = f"<p>{text}</p><figure><img></figure>"
-        self.assertFalse(marked(source))
-
-    def test_paragraph_before_pre_gets_marked(self):
-        source = "<p>インポートを追加します。</p><pre><code>x</code></pre>"
-        self.assertTrue(marked(source))
-
-    def test_paragraph_before_block_tags_gets_marked(self):
-        for tag in ("pre", "table", "ul", "ol", "dl"):
-            inner = "<code>x</code>" if tag == "pre" else "<li>x</li>"
-            source = f"<p>導入文です。</p><{tag}>{inner}</{tag}>"
-            self.assertTrue(marked(source), tag)
-
-    def test_paragraph_before_stacked_table_gets_marked(self):
+    def test_only_opening_p_class_changes(self):
         source = (
-            "<p>理由の説明です。</p>"
-            '<section class="pdf-stacked-table"><div>x</div></section>'
+            '<p id="lead" data-note="a > b" class="lead  wide">'
+            '次のブロックを貼り付けてください。<a data-pdf-footnote="7" href="x">資料</a>'
+            '</p><!-- keep --><pre data-pdf-pre-id="pdf-pre-00001-abc" class="language-ts">'
+            '<code><span class="pdf-inline-code" data-pdf-inline-id="inline-1">x &lt; y</span></code>'
+            '</pre>'
         )
-        self.assertTrue(marked(source))
+        result = mark_keep_next(source)
+        expected = source.replace('class="lead  wide"', 'class="lead  wide pdf-keep-next"', 1)
+        self.assertEqual(result, expected)
+        self.assertIn('data-pdf-footnote="7"', result)
+        self.assertIn('data-pdf-pre-id="pdf-pre-00001-abc"', result)
+        self.assertIn('data-pdf-inline-id="inline-1"', result)
+        self.assertEqual(re.sub(r" pdf-keep-next(?=[\"'])", "", result), source)
 
-    def test_intro_rule_needs_seventy_or_less(self):
-        # 直後の塊を導く段落の規則は 70 字まで。それを超えると付かない
-        text = "あ" * 70 + "。"
-        self.assertFalse(
-            marked(f"<p>{text}</p><pre><code>x</code></pre>"))
-        short = "あ" * 69 + "。"
-        self.assertTrue(
-            marked(f"<p>{short}</p><pre><code>x</code></pre>"))
-
-    def test_blockquote_does_not_use_intro_rule(self):
-        # 引用は例え話や補足なので、直前の段落が導入する中身ではない。
-        # 70 字の規則は当てない（ほかの規則は当たる）
-        self.assertFalse(
-            marked("<p>短い導入文</p><blockquote><p>引用</p></blockquote>"))
-        self.assertTrue(
-            marked("<p>実装:</p><blockquote><p>引用</p></blockquote>"))
-
-    def test_paragraph_after_heading_gets_marked(self):
-        for tag in ("h2", "h3", "h4"):
-            source = f"<{tag}>見出し</{tag}><p>短い段落です。</p><p>次</p>"
-            self.assertTrue(marked(source), tag)
-
-    def test_paragraph_after_heading_over_limit_is_not_marked(self):
-        text = "あ" * 90 + "。"
-        source = f"<h2>見出し</h2><p>{text}</p><p>次</p>"
-        self.assertFalse(marked(source))
-
-    def test_plain_paragraph_is_not_marked(self):
-        source = "<p>説明文です。</p><p>次の段落です。</p>"
-        self.assertFalse(marked(source))
-
-    def test_closing_tag_right_after_is_not_marked(self):
-        # 段落の直後が親の閉じタグなら、同じページに置く相手が無い
-        self.assertFalse(marked("<ul><li><p>実装:</p></li></ul>"))
-        self.assertFalse(marked("<section><p>実装:</p></section>"))
-
-    def test_hr_or_section_next_is_not_marked(self):
-        # 区切り線や節の終わりの直前は「前回の振り返り」などで、
-        # 同じページに置く相手が無い
-        self.assertFalse(marked("<p>実装:</p><hr><h2>次</h2>"))
-        self.assertFalse(marked("<p>実装:</p><section><p>次</p></section>"))
-
-    def test_html_comment_is_skipped_for_next_element(self):
-        # 原稿に書かれた HTML コメントを挟んでも次の要素を見る。
-        # 飛ばさないと完成コードの直前の段落に印が付かない
-        source = (
-            "<p>インポートを追加します。</p>"
-            "<!-- code-block-length-exception: complete-copy-unit -->"
-            "<pre><code>x</code></pre>"
-        )
-        self.assertTrue(marked(source))
-
-    def test_marker_is_added_to_existing_class(self):
-        out = mark_keep_next(
-            '<p class="lead">実装:</p><pre><code>x</code></pre>')
-        self.assertIn(f'class="lead {KEEP_NEXT_CLASS}"', out)
-
-    def test_marker_is_not_duplicated(self):
-        source = "<p>実装:</p><pre><code>x</code></pre>"
+    def test_single_quoted_class_and_idempotence(self):
+        source = "<p class='lead'>実装:</p><pre>x</pre>"
         once = mark_keep_next(source)
-        self.assertEqual(once.count(KEEP_NEXT_CLASS), 1)
+        self.assertIn("class='lead pdf-keep-next'", once)
         self.assertEqual(mark_keep_next(once), once)
 
-    def test_paragraph_inside_pre_is_not_touched(self):
-        # コードの中に見える <p> は導入文ではない
-        source = "<pre><code><p>実装:</p></code></pre><p>実装:</p>"
-        self.assertEqual(mark_keep_next(source), source)
+    def test_data_class_is_not_mistaken_for_class_attribute(self):
+        source = '<p data-class="lead">実装:</p><pre>x</pre>'
+        self.assertEqual(
+            mark_keep_next(source),
+            '<p data-class="lead" class="pdf-keep-next">実装:</p><pre>x</pre>',
+        )
+
+    def test_class_text_inside_quoted_attribute_is_not_an_attribute(self):
+        source = '<p title=" class=\'lead\'" data-note="x > y">実装:</p><pre>x</pre>'
+        result = mark_keep_next(source)
+        self.assertEqual(
+            result,
+            '<p title=" class=\'lead\'" data-note="x > y" class="pdf-keep-next">実装:</p><pre>x</pre>',
+        )
+
+        class AttributeParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.paragraph: list[tuple[str, str | None]] = []
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "p":
+                    self.paragraph = attrs
+
+        before = AttributeParser()
+        before.feed(source)
+        after = AttributeParser()
+        after.feed(result)
+        before_attrs = dict(before.paragraph)
+        after_attrs = dict(after.paragraph)
+        self.assertEqual(before_attrs, {"title": " class='lead'", "data-note": "x > y"})
+        self.assertEqual(
+            {key: value for key, value in after_attrs.items() if key != "class"},
+            before_attrs,
+        )
+        self.assertEqual(after_attrs["class"], KEEP_NEXT_CLASS)
+        self.assertEqual(mark_keep_next(result), result)
+
+    def test_unquoted_actual_class_becomes_one_quoted_class_attribute(self):
+        source = '<p title="keep" class=lead data-note="x">実装:</p><pre>x</pre>'
+        result = mark_keep_next(source)
+        self.assertEqual(
+            result,
+            '<p title="keep" class="lead pdf-keep-next" data-note="x">実装:</p><pre>x</pre>',
+        )
+        attributes: list[tuple[str, str | None]] = []
+
+        class ParagraphParser(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                if tag == "p":
+                    attributes.extend(attrs)
+
+        parser = ParagraphParser()
+        parser.feed(result)
+        self.assertEqual(
+            attributes,
+            [("title", "keep"), ("class", "lead pdf-keep-next"), ("data-note", "x")],
+        )
+        self.assertEqual(mark_keep_next(result), result)
+
+    def test_target_noun_requires_a_grammatical_boundary(self):
+        self.assertFalse(marked("<p>次の表示を確認します。</p><table><tr><td>x</td></tr></table>"))
+        self.assertTrue(marked("<p>次の表を確認します。</p><table><tr><td>x</td></tr></table>"))
+
+    def test_decisions_expose_reason_and_target_for_coverage(self):
+        rows = collect_decisions("<p>実装:</p><pre>x</pre><p>次の図を確認します。</p><figure>x</figure>")
+        self.assertEqual(
+            [(row.reason, row.target_tag) for row in rows],
+            [("implementation-label", "pre"), ("explicit-forward-instruction", "figure")],
+        )
 
 
 if __name__ == "__main__":

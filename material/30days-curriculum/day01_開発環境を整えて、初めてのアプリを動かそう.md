@@ -8,7 +8,7 @@
 
 ## 今日のゴール
 
-配布 ZIP を展開した場所で `task-app` の土台を起動して `http://localhost:3000` に最初の画面を表示します。そのあとで配色やフォントなどの見た目の設定（design token）を整えます。
+配布 ZIP を展開した場所で `task-app` の土台を起動して `http://localhost:3000` に最初の画面を表示します。そのあとで design token（色や角丸などの値に名前を付け、まとめて管理する変数）を整えます。
 
 今日つくるページは2枚です。トップページ（`/`）にはヘッダーと大きなカード、右側の小さなカード3枚が並びます。もう1枚は明日から編集する `/dashboard` です。下のスクリーンショットは `/dashboard` を示しています。
 
@@ -16,12 +16,12 @@
 
 スクリーンショット: Day 01 の最後に作る `/dashboard` の画面です。見出しと説明文の配置を確認するための見本です。
 
-- [ ] 配布 ZIP を展開して `README.md` と `scripts` が見える場所を `task-app` の作業場所にする
-- [ ] `scripts/scaffold-from-scratch.sh` を実行して開発に必要なファイルを作る
-- [ ] `npm run dev` で Next.js（React の画面を動かすための土台一式）の初期画面を表示する
-- [ ] `src/app/globals.css` に Linear 風 design token を入れる
-- [ ] `src/app/page.tsx` を自分専用の最初の画面に置き換える
-- [ ] `src/app/dashboard/page.tsx` を作って明日編集するページを用意する
+- [ ] 配布 ZIP を展開して `README.md` と `scripts` が見える場所を `task-app` の作業場所にします。
+- [ ] `scripts/scaffold-from-scratch.sh` を実行して開発に必要なファイルを作ります。
+- [ ] `npm run dev` で Next.js（React の画面を動かすための土台一式）の初期画面を表示します。
+- [ ] `src/app/globals.css` に Linear 風 design token を入れます。
+- [ ] `src/app/page.tsx` を自分専用の最初の画面に置き換えます。
+- [ ] `src/app/dashboard/page.tsx` を作って明日編集するページを用意します。
 
 ## なぜこれを作るのか
 
@@ -48,7 +48,7 @@
 
 ### 必須
 
-- Node.js `22.x`
+- Node.js `22.12.0` 以上 `23.0.0` 未満（`22.22.2` 推奨）
 - npm `10.x`
 - Docker Desktop または Docker Engine（この上で PostgreSQL を動かす環境）
 - エディタ（VS Code など）
@@ -77,16 +77,55 @@
 
 ターミナルには次の手順に載せたコマンドを1行ずつ入力します。
 
-### Node.js をインストールする
+Ubuntu と Windows の WSL2 では、`sudo` を付けたコマンドが登場します。`sudo` は管理者の権限でコマンドを実行する指定です。Ubuntu のログインパスワードを求められたら入力して Enter を押します。入力中は文字や `*` が表示されませんが、キー入力は受け付けられています。
 
-この教材で使うのは Node.js 22.x と npm 10.x です。`node -v` が `v22.`、`npm -v` が `10.` で始まる場合だけインストール手順を飛ばせます。別の番号が出る場合は次の手順で教材とそろえます。
+### VS Code をインストールする
+
+この教材の編集手順では VS Code を使います。すでに起動できる場合は本体のインストールを飛ばせます。Windows で WSL2 を使う方は、下の WSL 拡張機能も確認してください。
 
 **macOS の場合**
 
-1. [Node.js 22.22.2 の公式配布一覧](https://nodejs.org/dist/v22.22.2/)を開く
-2. `node-v22.22.2.pkg` をクリックしてダウンロードする
-3. ダウンロードした `.pkg` をダブルクリックする。案内に従って「続ける」を押す
-4. インストール後にターミナルをいったん閉じて開き直す
+[VS Code の公式 macOS 手順](https://code.visualstudio.com/docs/setup/mac)を開き、ページ内のダウンロードリンクから macOS 用のインストーラを入手します。
+
+ダウンロードした `.dmg` を開き、`Visual Studio Code.app` を `Applications`（アプリケーション）へドラッグします。
+
+`command + スペース` を押し、`Visual Studio Code` を検索して起動します。VS Code の画面が開けば準備完了です。
+
+**Windows (WSL2) の場合**
+
+VS Code 本体は Windows に入れ、WSL 拡張機能（Ubuntu 内のファイルを編集するための追加機能）で Ubuntu につなぎます。
+
+[VS Code の公式 Windows 手順](https://code.visualstudio.com/docs/setup/windows)から Windows 用の User Installer をダウンロードして実行します。
+
+インストーラの追加設定で `Add to PATH` を選びます。PATH はコマンドを探す場所の一覧です。インストール後は Ubuntu のターミナルを開き直します。
+
+Windows で VS Code を起動します。左側の四角が並んだ拡張機能アイコンを押し、`WSL` を検索します。Microsoft が提供する WSL 拡張機能をインストールします。
+
+Ubuntu 内のプロジェクトを開く操作は Step 4 で行います。[VS Code の公式 WSL 手順](https://code.visualstudio.com/docs/remote/wsl)にも、この接続方法が載っています。
+
+**Ubuntu 22.04 を直接使っている場合**
+
+Ubuntu のターミナルで、次を1行ずつ実行します。
+
+```bash
+sudo snap install --classic code
+code --version
+```
+
+1行目は Snap（Ubuntu のアプリ配布・更新の仕組み）から VS Code を入れます。2行目でバージョン番号が表示されればインストールできています。[VS Code の公式 Linux 手順](https://code.visualstudio.com/docs/setup/linux)で配布方法を確認できます。
+
+`snap: command not found` と出る環境では、まず [Ubuntu 向けの Snap 導入手順](https://snapcraft.io/docs/tutorials/install-the-daemon/ubuntu/)を確認します。導入後はログアウトして入り直し、上の2行を実行してください。
+
+### Node.js をインストールする
+
+この教材で使うのは Node.js 22.12.0 以上 23 未満と npm 10.x です。検証に使う推奨版は Node.js 22.22.2 です。`node -v` がこの範囲、`npm -v` が `10.` で始まる場合だけインストール手順を飛ばせます。テスト実行にも使う開発用ツールの Vite 7 は Node.js 22.12.0 以上を対応範囲としているため、次の手順で教材とそろえます。
+
+**macOS の場合**
+
+1. [Node.js 22.22.2 の公式配布一覧](https://nodejs.org/dist/v22.22.2/)を開きます。
+2. `node-v22.22.2.pkg` をクリックしてダウンロードします。
+3. ダウンロードした `.pkg` をダブルクリックします。案内に従って「続ける」を押します。
+4. インストール後にターミナルをいったん閉じて開き直します。
 
 **Windows (WSL2) / Ubuntu の場合**
 
@@ -97,7 +136,7 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-> 1行目は Node.js 22 の配布元を登録します。2行目は本体をインストールします。`sudo` の実行時にパソコンのパスワード入力を求められることがあります。
+> 1行目は Node.js 22 の配布元を登録します。2行目は本体をインストールします。
 
 ### Docker をインストールする
 
@@ -105,16 +144,16 @@ PostgreSQL（データベース）は Docker の上で動かします。Docker �
 
 **macOS / Windows (WSL2) の場合**
 
-1. [Docker Desktop 公式サイト](https://www.docker.com/products/docker-desktop/) を開く。自分の OS 用のインストーラをダウンロードする
-2. 案内に従ってインストールする。終了後に Docker Desktop を起動する
-3. 画面の隅にクジラのアイコンが表示されたら準備完了。macOS は上部のメニューバー、Windows は右下の通知領域に表示される
+1. [Docker Desktop 公式サイト](https://www.docker.com/products/docker-desktop/) を開きます。自分の OS 用のインストーラをダウンロードします。
+2. 案内に従ってインストールします。終了後に Docker Desktop を起動します。
+3. 画面の隅にクジラのアイコンが表示されたら準備完了です。macOS は上部のメニューバー、Windows は右下の通知領域に表示されます。
 
 **Ubuntu の場合**
 
-1. [Docker 公式の Ubuntu 手順](https://docs.docker.com/engine/install/ubuntu/)を開く
-2. `Install using the apt repository` の順に Docker Engine を入れる
-3. `docker-ce` と一緒に `docker-compose-plugin` も入れる
-4. `docker version` と `docker compose version` が表示されることを確認する
+1. [Docker 公式の Ubuntu 手順](https://docs.docker.com/engine/install/ubuntu/)を開きます。
+2. `Install using the apt repository` の順に Docker Engine を入れます。
+3. `docker-ce` と一緒に `docker-compose-plugin` も入れます。
+4. `docker version` と `docker compose version` が表示されることを確認します。
 
 > macOS と Windows では Docker Desktop を起動したままにします。Ubuntu では Docker Engine が起動していることを `sudo systemctl status docker` で確認します。
 
@@ -125,7 +164,7 @@ PostgreSQL は Docker の上で自動的に立ち上がります。パソコン�
 ```mermaid
 flowchart TB
     PC["あなたのパソコン"]
-    PC --> NODE["Node.js 22"]
+    PC --> NODE["Node.js 22.12.0 以上 23 未満"]
     PC --> DOCKER["Docker"]
     NODE --> NPM["npm"]
     NODE --> APP["task-app<br/>npm run dev"]
@@ -133,7 +172,7 @@ flowchart TB
     APP -->|"DATABASE_URL"| PG
 ```
 
-パソコンへ直接入れるのは Node.js と Docker の2つです。npm は Node.js に付いてきます。PostgreSQL は Docker の中で動かします。Docker が止まっているとアプリがデータベースにつなげないため `docker info` で起動状態を先に確かめます。
+アプリの実行には Node.js と Docker を使います。npm は Node.js に付いてきます。PostgreSQL は Docker の中で動かします。Docker が止まっているとアプリがデータベースにつなげないため `docker info` で起動状態を先に確かめます。
 
 ### 先に確認しておくコマンド
 
@@ -151,7 +190,7 @@ npm -v
 
 ### 期待する結果
 
-- `node -v` が `v22.x.x`（先頭が `v22.`）
+- `node -v` が `v22.12.0` 以上 `v23.0.0` 未満（推奨は `v22.22.2`）
 - `npm -v` が `10.x.x`（先頭が `10.`）
 
 ### Docker が動いているか確認する
@@ -168,8 +207,8 @@ docker info >/dev/null 2>&1 && echo "docker ok"
 
 何も表示されないときは次を確認してください。
 
-- macOS・Windows: Docker Desktop を開く。起動が完了したらコマンドを再実行する
-- Ubuntu: `sudo systemctl status docker` で Docker の状態を確認する
+- macOS・Windows: Docker Desktop を開きます。起動が完了したらコマンドを再実行します。
+- Ubuntu: `sudo systemctl status docker` で Docker の状態を確認します。
 
 Ubuntu で `docker info` に権限エラーが出た場合は Docker 公式の[Linux インストール後の手順](https://docs.docker.com/engine/install/linux-postinstall/)に従ってください。`docker` グループへの追加後はログアウトしてからログインし直します。
 
@@ -177,7 +216,7 @@ Ubuntu で `docker info` に権限エラーが出た場合は Docker 公式の[L
 
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 1 | 配布 ZIP を展開した場所から始める | 5分 |
 | Step 2 | scaffold-from-scratch.sh を走らせる | 10分 |
@@ -185,14 +224,16 @@ Ubuntu で `docker info` に権限エラーが出た場合は Docker 公式の[L
 | Step 4 | 自分専用の最初のページを作る | 25分 |
 | Step 5 | 仕上げた画面をブラウザで見る | 3分 |
 
-**合計時間**: 約46分です。
+**読む時間の合計（仮）**: 約46分です。
 
-Step 2 の10分には npm のダウンロードと PostgreSQL の起動を待つ時間が含まれます。Step 4 の25分はコードを20ブロックに分けて写す目安です。内訳は `globals.css` が11個、トップページが8個、ダッシュボードが1個です。調べものやエラーの修正にかかる時間は含みません。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
+
+Step 4 で入力するコードは20ブロックです。入力の時間は、表の目安に含めていません。内訳は `globals.css` が11個、トップページが8個、ダッシュボードが1個です。
 
 ---
 
 
-### Step 1: 配布 ZIP を展開した場所から始める（5分）
+### Step 1: 配布 ZIP を展開した場所から始める（読む目安: 5分）
 
 今日は配布 ZIP を展開した作業場所から始めます。
 スクリプトで開発に必要なファイルを作ります。
@@ -206,6 +247,8 @@ Step 2 の10分には npm のダウンロードと PostgreSQL の起動を待つ
 #### 作業用ディレクトリを用意して ZIP を展開する
 
 例としてホームディレクトリの `workspace` フォルダに配布 ZIP を展開します。
+
+次のコードの `if` から `fi` までは、mise が入っている場合だけ実行するひとまとまりです。1行ずつ入力すると途中で `>` や `then>` などの入力待ちの印が出ます。エラーではないため、印は入力せず、続く行を `fi` まで入力してください。
 
 **ターミナル（どこでもOK）**
 
@@ -231,22 +274,22 @@ pwd
 >
 > Windows の WSL2（Ubuntu）では `~/Downloads` は Windows のダウンロードフォルダ
 > ではありません。Windows 側に保存した ZIP を使うため次のように書き換えてください。
-> `unzip /mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip`
+> `unzip "/mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1.zip"`
 > `unzip: command not found` と出たら先に `sudo apt-get update && sudo apt-get install -y unzip` を実行します。
 >
-> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら `ls ~/Downloads` で実際のファイル名を確認してください。WSL2 では `ls /mnt/c/Users/<Windowsのユーザー名>/Downloads` で確認します。その名前で実行し直します。
+> ZIP の名前は手元のファイルと違うことがあります。バージョン番号の違いやブラウザが付けた末尾の `(1)` を確かめます。`unzip` で `cannot find` と出たら、macOS と直接利用の Ubuntu では `ls ~/Downloads` で実際のファイル名を確認します。WSL2 では `ls "/mnt/c/Users/<Windowsのユーザー名>/Downloads"` を使います。
 >
-> 空白や括弧を含む名前は `"` で囲みます。末尾に ` (1)` が付いた場合の例は `unzip "$HOME/Downloads/task-app-curriculum-v1.1 (1).zip"` です。`$HOME` はホームフォルダを表します。WSL2 では `unzip "/mnt/c/Users/<Windowsのユーザー名>/Downloads/task-app-curriculum-v1.1 (1).zip"` のように書きます。
+> 空白や括弧を含むパスは `"` で囲みます。macOS と直接利用の Ubuntu で末尾に `(1)` が付いた例は、`unzip "$HOME/Downloads/task-app-curriculum-v1.1 (1).zip"` です。`$HOME` はホームフォルダを表します。WSL2 では、上の `unzip` の引用符を残し、ZIP の名前を手元の名前へ置き換えます。
 >
-> `cd task-app` は配布 ZIP が `task-app` フォルダに展開される前提のコマンドです。
-> `cd task-app` で `No such file or directory` と出たら展開先のフォルダ名が違います。
-> `ls` で作られたフォルダ名を確認します。`cd そのフォルダ名` で中に入ってください。以降はこの場所を `task-app` と呼びます。
+> この教材の配布 ZIP は `task-app` フォルダに展開されます。
+> `cd task-app` で `No such file or directory` と出たら、`cd ~/workspace` で作業場所へ戻り、`ls` でフォルダ名を確認します。
+> `task-app` があれば `cd task-app` で入ります。なければ、配布された教材用 ZIP を取得し直し、展開手順へ戻ります。以降のコマンドは `~/workspace/task-app` を使うため、別の名前のフォルダで続けないでください。
 
 #### 期待する結果
 
-- `pwd` の結果が `/Users/あなたのユーザー名/workspace/task-app` のような形になっている（`pwd` は先頭からの完全なパスを表示する。先頭部分はパソコンによって変わる）
-- Windows の WSL2 では `/home/あなたのユーザー名/workspace/task-app` のような形になる
-- `README.md` と `scripts` が見える配布物ルートにいる
+- `pwd` の結果が `/Users/あなたのユーザー名/workspace/task-app` のような形になっている（`pwd` は先頭からの完全なパスを表示します。先頭部分はパソコンによって変わります）
+- Ubuntu を直接使う場合と Windows の WSL2 では `/home/あなたのユーザー名/workspace/task-app` のような形になります。
+- `README.md` と `scripts` が見える配布物ルートにいます。
 
 #### ここで置いておく配布物
 
@@ -270,16 +313,19 @@ pwd
 
 ```bash
 ls
+ls scripts/scaffold-from-scratch.sh
 ```
 
 `ls` はフォルダの中身を一覧にするコマンドです。`README.md` と `scripts` が見えないときは作業場所を確かめます。`task-app` フォルダが見えていれば `cd task-app` で中に入ります。それ以外の場所にいる場合は `cd ~/workspace/task-app` で移動してください。
 
+2行目は `scripts` の中に実行するファイルがあるかを確認します。ファイルがあれば `scripts/scaffold-from-scratch.sh` と表示されます。1行目の `ls` だけではフォルダの中までは表示されません。
+
 #### 期待する結果
 
-- `scripts` フォルダが見えている
-- `scripts/scaffold-from-scratch.sh` が見えている
+- `scripts` フォルダが見えています。
+- `scripts/scaffold-from-scratch.sh` が見えています。
 
-### Step 2: scaffold-from-scratch.sh を走らせる（10分）
+### Step 2: scaffold-from-scratch.sh を走らせる（読む目安: 10分）
 
 ここが Day 01 のいちばん大事なところです。
 
@@ -368,6 +414,10 @@ DB セットアップが完了しました。
 
 最後の `初期セットアップは完了しました。` が完了の目印です。それより前に DB 起動をスキップした案内やエラーがないかも確認します。`Docker で PostgreSQL を起動しています...` から進まない場合は Docker Desktop の起動状態を確かめます。まだ教材のコードを編集していない初期セットアップ中なら再実行してください。自分で書いたコードや初期プロジェクト内のデータが上書き・削除されるため Day 02 以降は実行しません。
 
+`npm install` の途中で `vulnerabilities`（取得した部品の脆弱性）の件数を表示する場合があります。件数の表示だけでは、インストールの失敗とは判断できません。上の完了の目印と、それまでにエラーが出ていないかを確認します。
+
+`npm audit fix --force` は実行しないでください。教材で使う主要バージョンも更新の対象になります。後のコードを動かせない場合があります。警告の内容は `npm audit` で確認できます。公開するアプリで使い続けてよいかは、指摘された部品と修正版の有無を確認して判断します。
+
 #### 成功判定
 
 次のファイルが見えていれば成功です。
@@ -428,7 +478,7 @@ JWT_SECRET="your-jwt-secret-key-32-chars-minimum-please-change"
 NODE_ENV="development"
 ```
 
-`DATABASE_URL` はアプリが使うデータベースの接続先です。`localhost:25532` の数字はポート番号(1台のパソコンの中で通信の入口を区別する番号)です。スクリプトが起動する PostgreSQL と同じ番号にしています。通常はこの値で進めます。付録の手順で別の DB とポートを分けた場合は、自分の `.env` に設定した番号を使います。後の Day で接続エラーが出た場合もこの値を確かめます。
+`DATABASE_URL` はアプリが使うデータベースの接続先です。`localhost:25532` の数字はポート番号（1台のパソコンの中で通信の入口を区別する番号）です。スクリプトが起動する PostgreSQL と同じ番号にしています。通常はこの値で進めます。付録の手順で別の DB とポートを分けた場合は、自分の `.env` に設定した番号を使います。後の Day で接続エラーが出た場合もこの値を確かめます。
 
 #### 危ないアンチパターン
 
@@ -436,7 +486,7 @@ NODE_ENV="development"
 
 今日は `.env.example`（設定の見本ファイル）を確認します。Step 2 のスクリプトが見本をコピーして `.env` も作成します。手元の練習では配布された設定値を使います。本番用のシークレットキーを用意したら公開対象から除外した `.env` に記入します。
 
-### Step 3: npm run dev で初期画面を起動する（3分）
+### Step 3: npm run dev で初期画面を起動する（読む目安: 3分）
 
 土台ができたら開発サーバーを起動します。ブラウザで画面を確認しましょう。
 
@@ -490,10 +540,7 @@ Next.js のロゴと
 
 #### スクリーンショットの見本
 
-見本として
-次の2枚も見ておくとイメージしやすいです。
-
-![VS Codeで配布物ルートを開いた状態](./screenshots/day01-vscode-open.png)
+初期画面の見本です。
 
 ![Next.jsの初期画面がブラウザに表示された状態](./screenshots/day01/nextjs-default.png)
 
@@ -503,7 +550,7 @@ Next.js のロゴと
 
 編集後にエラーが出た場合は直前に変更した箇所から確かめます。保存前後の表示を見比べながら進めましょう。
 
-### Step 4: 自分専用の最初のページを作る（25分）
+### Step 4: 自分専用の最初のページを作る（読む目安: 25分）
 
 ここからが今日のいちばん面白いところです。
 
@@ -513,33 +560,44 @@ Next.js のロゴと
 
 配色やレイアウトを `task-app` 用に変えます。
 
-今日やる編集は2つです。
+今日編集するファイルは3つです。
 
-1. `src/app/globals.css` に Linear 風 design token を入れる
-2. `src/app/page.tsx` を自分専用の最初の画面に置き換える
+1. `src/app/globals.css` に design token（色や角丸などの値に名前を付けて、まとめて管理する変数）を入れます。
+2. `src/app/page.tsx` を自分専用の最初の画面に置き換えます。
+3. `src/app/dashboard/page.tsx` を作り、Day 02 で使うページを用意します。
 
 #### 編集前に VS Code でプロジェクトを開く
 
-編集にはエディタを使います。開き方は OS によって違います。
+**macOS / Ubuntu を直接使っている場合**
 
-**macOS / Ubuntu の場合**
-
-VS Code の「ファイル」から「フォルダを開く...」を選びます。`workspace` の中の `task-app` を開いてください。
+VS Code を起動し、`File` → `Open Folder...`（日本語表示では「ファイル」→「フォルダを開く...」）を選びます。ホームフォルダ内の `workspace`、`task-app` の順で開いてください。
 
 **Windows (WSL2) の場合**
 
-`task-app` は Ubuntu の中にあります。`npm run dev` のターミナルは残したまま、スタートメニューからもう1つ Ubuntu のターミナルを開き、次を1行ずつ実行します。
+`npm run dev` の画面は残したまま、スタートメニューからもう1つ Ubuntu のターミナルを開きます。次を1行ずつ実行します。
 
 ```bash
 cd ~/workspace/task-app
 code .
 ```
 
-VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が出ていれば開けています。`code: command not found` と出る場合や左下に WSL の表示がない場合は、[付録のトラブルシューティング](./appendix_トラブルシューティング.md)の「別フォルダの DB と衝突した場合」の手順1で、`Add to PATH` と WSL 拡張機能を確認してください。`Add to PATH` はターミナルから `code` を呼び出すための設定です。WSL 拡張機能は、Ubuntu 内のファイルを VS Code で編集するための拡張機能です。
+`.` は今いるフォルダを指します。初回は Ubuntu 側で VS Code を動かす部品のダウンロードが始まるため、完了まで待ちます。VS Code の左下に `WSL: Ubuntu` など、使っている Ubuntu の名前が表示されることを確認してください。
+
+`code: command not found` と出たら、Windows 側で VS Code をインストールしたか、`Add to PATH` を選んだかを確認します。そのあと Ubuntu のターミナルを開き直して上の2行を実行します。
 
 **共通の確認**
 
-左側のファイル一覧に `src` や `package.json` があれば準備完了です。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
+左側のファイル一覧に `src` や `package.json` があれば、編集するフォルダを開けています。`src/app/globals.css` を開く場合は `src`、`app` の順でフォルダをクリックします。その中の `globals.css` を選びます。
+
+次は、セットアップ後の `task-app` を Ubuntu で開いた画面です。左側の Explorer に `src` と `package.json` が表示されています。OS や表示言語が違っても、この2つを確認します。
+
+![VS Codeでtask-appを開き、左側のExplorerにsrcとpackage.jsonが並んだ状態](./screenshots/day01-vscode-open.png)
+
+初めて開くと `Restricted Mode`（機能を制限した状態）と表示される場合があります。この状態でもファイルの閲覧と編集はできるため、そのまま次へ進めます。
+
+Workspace Trust（フォルダの信頼設定）は、そのフォルダ内のコードを VS Code や拡張機能が実行してよいかを決める設定です。拡張機能を使うため設定を変える場合は、画面上部の `Manage`、または下部の `Restricted Mode` を押します。管理画面で対象が教材用の `task-app` であることを確認し、配布元と内容を信頼できる場合に `Trust` を選びます。`Restricted Mode` の表示が消えれば設定できています。
+
+親の `workspace` 全体を信頼する必要はありません。判断に迷う場合は制限した状態で編集を続けます。詳しい説明は [Workspace Trust の公式手順](https://code.visualstudio.com/docs/editing/workspaces/workspace-trust)にあります。
 
 `npm run dev` のターミナルは起動したまま使います。ファイルを保存するとブラウザの画面が更新されます。
 
@@ -587,7 +645,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
 
 ```css
 /* filepath: src/app/globals.css */
-@import "tailwindcss";
+@import "tailwindcss" source("../");
 
 @plugin "tailwindcss-animate";
 
@@ -629,7 +687,7 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
   --color-secondary: hsl(var(--secondary));
 ```
 
-`@import "tailwindcss";` は Tailwind CSS 本体を読み込む宣言です。`@plugin "tailwindcss-animate";` は部品の出し入れに使う `animate-in` や `fade-in` といったクラスを足す拡張の読み込みで、この1行が無いとそれらのクラスが働きません。`@custom-variant dark` は `.dark` クラスが付いたときのスタイルを指定する準備です。`@theme inline { ... }` にクラス名と変数の対応を書きます。`--color-primary: hsl(var(--primary));` は `bg-primary` などで使う色を `--primary` に結び付けます。
+`@import "tailwindcss" source("../");` は Tailwind CSS 本体を読み込み、クラス名を探す場所を `src` フォルダに固定する宣言です。`globals.css` は `src/app` にあるため、`../` が1つ上の `src` を指します。実行ツールが別のフォルダから動いても、`src` 内の `bg-primary` や `min-h-screen` を見落とさないためです。`@plugin "tailwindcss-animate";` は部品の出し入れに使う `animate-in` や `fade-in` といったクラスを足します。この1行が無いと、それらのアニメーションクラスが働きません。`@custom-variant dark` は `.dark` クラスが付いたときのスタイルを指定する準備です。`@theme inline { ... }` にクラス名と変数の対応を書きます。`--color-primary: hsl(var(--primary));` は `bg-primary` などで使う色を `--primary` に結び付けます。
 
 **確認ポイント**: `@theme inline {` の中に `--color-` で始まる行が並んでいることを確認します。次のブロックを続けて書きます。
 
@@ -874,10 +932,15 @@ Day 01 は丸ごと入れ替えたほうが理解しやすいです。
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+    cursor: pointer;
+  }
 }
 ```
 
-`body { ... }` は変数をページに適用する部分です。背景色と文字色は HSL 形式で指定しています。フォントも変数で指定しているため変数の値を変えると表示に反映されます。`-webkit-font-smoothing` などは文字の輪郭をなめらかにするブラウザ向けの設定です。ここまでで `globals.css` の置き換えは終わりです。
+`body { ... }` は変数をページに適用する部分です。背景色と文字色は HSL 形式で指定しています。フォントも変数で指定しているため変数の値を変えると表示に反映されます。`-webkit-font-smoothing` などは文字の輪郭をなめらかにするブラウザ向けの設定です。有効なボタンへマウスを重ねると、cursor の指定で手の形を表示します。押せる要素を見分けるためです。button 要素は disabled で無効化されていないものに適用します。button 以外を role 属性でボタンとして扱う場合は、aria-disabled が true のものや data-disabled が付いたものを対象から外します。ここまでで `globals.css` の置き換えは終わりです。
 
 #### 4-2. `page.tsx` を最初の画面に置き換える
 
@@ -1067,8 +1130,8 @@ export default function HomePage() {
               {/* filepath: src/app/page.tsx（同じファイルの続き） */}
               </p>
               <p className="mt-4 text-sm leading-8 text-muted-foreground">
-                ここで決めた色と角丸と余白は、あとから変えない。
-                途中で変えると、画面ごとに見た目がばらつく。
+                色を変えるときは、globals.css の --primary などの色の変数を変更します。
+                同じ変数を使う部品に、変更がまとめて反映されます。
               </p>
 
               <div className="mt-5 rounded-2xl bg-primary px-4 py-4 text-primary-foreground shadow-sm">
@@ -1144,7 +1207,7 @@ export default function DashboardPage() {
 }
 ```
 
-Next.js はフォルダ名を URL の一部として使います。`src/app/dashboard/page.tsx` に置くと `/dashboard` で表示できます。トップページと同じ token を使うため共通の配色になります。保存したら `http://localhost:3000/dashboard` を開きます。「ダッシュボード」の見出しを確かめましょう。`404` が出たらフォルダ名とファイル名を確認します。
+Next.js はフォルダ名を URL の一部として使います。`src/app/dashboard/page.tsx` に置くと `/dashboard` で表示できます。トップページと同じ token を使うため共通の配色になります。保存したら `http://localhost:3000/dashboard` を開きます。「ダッシュボード」の見出しを確かめましょう。`404` は、接続したサーバーに指定したページが見つからないときの応答です。まずターミナルに表示された `Local` の URL と、ブラウザのアドレスを比べます。別のアプリが 3000 番ポートを使っていると、今回のアプリは 3001 番などで起動します。今回のアプリの URL に `/dashboard` を付けて開き、その URL でも `404` なら `src/app/dashboard/page.tsx` の置き場所と名前を確認します。接続できないというブラウザの表示は `404` とは別です。その場合は `npm run dev` が動いているかを確かめます。
 
 ```mermaid
 flowchart LR
@@ -1160,7 +1223,7 @@ flowchart LR
 
 - ルートの `src/app/page.tsx` はトップページ
 - `src/app/dashboard/page.tsx` は今後機能を追加するダッシュボード
-- Day 02 はダッシュボードに自分のメッセージを追加する
+- Day 02 はダッシュボードに自分のメッセージを追加します。
 
 #### できあがる見た目のポイント
 
@@ -1179,8 +1242,8 @@ flowchart LR
 
 だいたいこのどちらかです。
 
-- `src/app/globals.css` の貼り付けが途中で切れている
-- `npm run dev` が止まっている（ターミナルに `Ready` が出ていない）
+- `src/app/globals.css` の貼り付けが途中で切れています。
+- `npm run dev` が止まっている（ターミナルに `Ready` が出ていません）
 
 `globals.css` を開いて
 `@theme inline` と `:root` の貼り付け漏れを確認しましょう。
@@ -1240,9 +1303,9 @@ export default function HomePage() {
 
 **このコードの問題点**:
 
-- 別の画面で同じ見た目を使うたびに色や角丸の値をコピーする必要がある
-- `#6d5dfc` や `#0f1021` からは色の役割を読み取れない
-- 配色を変えるときに複数のファイルを検索する必要がある
+- 同じ色や角丸を別の画面で使うたびに、値をコピーしなければなりません。
+- `#6d5dfc` や `#0f1021` からは色の役割を読み取れません。
+- 配色を変えるときに、複数のファイルから指定箇所を探して直さなければなりません。
 
 #### After（プロが書くコード）
 
@@ -1294,17 +1357,17 @@ export default function HomePage() {
 
 **このコードの強み**:
 
-- `primary`、`card`、`accent` の名前で複数の画面に共通の色を指定できる
-- クラス名から色や面の用途を読み取れる
-- 色の変更箇所を `globals.css` にまとめられる
+- `primary`、`card`、`accent` の名前で複数の画面に共通の色を指定できます。
+- クラス名から色や面の用途を読み取れます。
+- 色の変更箇所を `globals.css` にまとめられます。
 
 #### 覚えておきたいポイント
 
-色や余白を直接指定すると共通の値を変える際に複数のファイルを編集します。変数を参照すればその変数の定義箇所を変更するだけで済みます。
+色や余白をファイルごとに直接書くと、共通の値を変えるたびに、複数のファイルを編集します。変数を参照すれば、その変数を定義した箇所を変えるだけで済みます。
 
 色に名前を付けるときは「主役か、補助か、背景か」という用途を考えましょう。名前と値の対応を決めてから部品で使います。
 
-### Step 5: 仕上げた画面をブラウザで見る（3分）
+### Step 5: 仕上げた画面をブラウザで見る（読む目安: 3分）
 
 編集が終わったら
 もう1回ブラウザを見ます。
@@ -1324,20 +1387,20 @@ npm run dev
 
 #### ブラウザ確認
 
-- `http://localhost:3000` を開く
+- `http://localhost:3000` を開きます。
 
 #### チェックポイント
 
 Step 3 で `3001` などのポートを使った場合は以下の `3000` をその番号に置き換えます。
 
-- 上に「タスク管理」と `TaskApp` が見える
-- 「作りかけ」の小さなバッジが見える
-- メインカードに「プロジェクトとタスクを、ひとつの画面で。」が見える
-- ボタンが `bg-primary` の主役色で表示されている
-- `ダッシュボードへ入る` ボタンが見える
-- 右側に「これから足すもの」「メモ」「次にやること」のカードが見える
-- `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開く
-- `/dashboard` で 「ダッシュボード」の見出しが見える
+- 上に「タスク管理」と `TaskApp` が見えます。
+- 「作りかけ」の小さなバッジが見えます。
+- メインカードに「プロジェクトとタスクを、ひとつの画面で。」が見えます。
+- ボタンが `bg-primary` の主役色で表示されています。
+- `ダッシュボードへ入る` ボタンが見えます。
+- 右側に「これから足すもの」「メモ」「次にやること」のカードが見えます。
+- `ダッシュボードへ入る` を押すと `http://localhost:3000/dashboard` が開きます。
+- `/dashboard` で 「ダッシュボード」の見出しが見えます。
 
 ![トップページの配置。上部にヘッダー、左にメインカードとボタン、右に3枚の小さなカード](./screenshots/day01/top-page.png)
 
@@ -1353,10 +1416,10 @@ Step 3 で `3001` などのポートを使った場合は以下の `3000` をそ
 
 #### うまく表示されないときの見直し順
 
-1. ターミナルにエラーが出ていないか見る
-2. `src/app/globals.css` の貼り付け漏れがないか見る
-3. `src/app/page.tsx` のクラス名を打ち間違えていないか見る
-4. 開発サーバーをいったん止めて `npm run dev` で起動し直す
+1. ターミナルにエラーが出ていないか確認します。
+2. `src/app/globals.css` の貼り付け漏れがないか確認します。
+3. `src/app/page.tsx` のクラス名を打ち間違えていないか確認します。
+4. 開発サーバーをいったん止めて `npm run dev` で起動し直します。
 
 ## 今日手に入れたもの
 
@@ -1364,18 +1427,69 @@ Step 3 で `3001` などのポートを使った場合は以下の `3000` をそ
 
 `globals.css` には部品で使う色の変数を定義しました。
 
-次の Day はダッシュボードの内容を編集します。
+明日はダッシュボードに自分のメッセージを追加します。
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| `Port 3000 is in use` と出て `http://localhost:3001` で起動する | ポート 3000 が使用中。Next.js 15 が空いている番号へ移る | 表示された URL を開く。以降の `3000` はその番号に読み替える |
-| Step 2 が `Cannot connect to the Docker daemon` で止まる | Docker が起動していない | Docker Desktop を起動する。教材のコードを編集していない初期セットアップ中に限りスクリプトを再実行する |
-| Step 2 が `Permission denied` で止まる | 実行権限の付いていないファイルを `./scripts/...` の形で直接呼んでいる | `bash scripts/scaffold-from-scratch.sh` の形で実行する。`bash` にファイルを渡す書き方なら実行権限は要らない |
-| `bash scripts/scaffold-from-scratch.sh` の形で実行しているのに `Permission denied` で止まる | 書き込みのできない場所でスクリプトを動かしている | `pwd` で `~/workspace/task-app` にいるか確認する。違う場所なら `cd ~/workspace/task-app` してから実行し直す |
-| Step 4 の途中でブラウザがエラー画面になる | 分割されたコードの途中では括弧やタグが閉じていない | 「確認ポイント」を読んで次へ進む。全ブロックを書いたあともエラーがあれば閉じタグと貼り付け漏れを確かめる |
-| `.env.example` に説明されていない行がある | 後の Day で使う設定も入っている | 今日は `DATABASE_URL` を確認する。空欄の `_DEVELOPER_EMAIL` はそのままにする |
+#### `Port 3000 is in use` と出て `http://localhost:3001` で起動する
+
+**原因**
+
+ポート 3000 が使用中のため、Next.js 15 が空いている番号へ移っています。
+
+**解決方法**
+
+表示された URL を開きます。以降の `3000` はその番号に読み替えてください。
+
+#### Step 2 が `Cannot connect to the Docker daemon` で止まる
+
+**原因**
+
+Docker が起動していません。
+
+**解決方法**
+
+Docker Desktop を起動します。教材のコードを編集していない初期セットアップ中に限り、スクリプトを再実行してください。
+
+#### Step 2 が `Permission denied` で止まる
+
+**原因**
+
+実行権限の付いていないファイルを `./scripts/...` の形で直接呼んでいます。
+
+**解決方法**
+
+`bash scripts/scaffold-from-scratch.sh` の形で実行します。`bash` にファイルを渡す書き方なら実行権限は要りません。
+
+#### `bash scripts/scaffold-from-scratch.sh` の形で実行しているのに `Permission denied` で止まる
+
+**原因**
+
+書き込みのできない場所でスクリプトを動かしています。
+
+**解決方法**
+
+`pwd` で `~/workspace/task-app` にいるか確認します。違う場所なら `cd ~/workspace/task-app` してから実行し直してください。
+
+#### Step 4 の途中でブラウザがエラー画面になる
+
+**原因**
+
+分割されたコードの途中では、括弧やタグが閉じていません。
+
+**解決方法**
+
+「確認ポイント」を読んで次へ進みます。全ブロックを書いたあともエラーがあれば、閉じタグと貼り付け漏れを確かめてください。
+
+#### `.env.example` に説明されていない行がある
+
+**原因**
+
+後の Day で使う設定も入っています。
+
+**解決方法**
+
+今日は `DATABASE_URL` を確認します。空欄の `_DEVELOPER_EMAIL` はそのままにしてください。
 
 ## 今日学んだ用語
 
@@ -1389,7 +1503,7 @@ Step 3 で `3001` などのポートを使った場合は以下の `3000` をそ
 | ポート番号 | 1台のパソコンの中で通信の入口を区別する番号。`localhost:3000` の `3000` がそれ |
 | 環境変数 | コードの外に置く設定値。接続先やパスワードなどを `.env` に書く |
 
-## 追加課題：角丸の変更が届く範囲を確かめる
+## 応用課題: 角丸の変更が届く範囲を確かめる
 
 見た目の値を1か所変えて影響する部品を確かめます。値を直接指定する部品と変数を参照する部品の違いを確認する課題です。
 

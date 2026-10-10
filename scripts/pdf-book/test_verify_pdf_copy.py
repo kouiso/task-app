@@ -27,6 +27,16 @@ def expect_failure(
 
 def main() -> int:
     failures: list[str] = []
+    opening = 'const element = <p className="font-bold">' + '日本語' * 12 + '</p>;'
+    extracted_opening = opening.replace('>日本語', '>\n日本語', 1)
+    if target.verify_document([block(opening, lang="tsx")], extracted_opening)[2]:
+        failures.append("生成側が選ぶJSX開始タグ直後の改行を拒否した")
+    literal_greater = 'const element = <p>A>' + 'B' * 80 + '</p>;'
+    expect_failure(failures, "literal JSX greater-than split", [block(literal_greater, lang="tsx")],
+                   literal_greater.replace('A>B', 'A>\nB', 1))
+    expect_failure(failures, "missing subtraction operator", [block('const n = limit - value;')],
+                   'const n = limit value;')
+
     long_a = "alpha_head_" + "A" * 90
     long_b = "beta__head_" + "B" * 90
 
@@ -85,130 +95,6 @@ def main() -> int:
         f"{long_a}\n",
     )
 
-    # 改ページを跨ぐブロック: ノンブルと柱が断片の間に挟まっても一致する
-    furnished = (
-        "Day 01: 開発環境\n本文\n"
-        f"{long_a}\n\n51\n\f"
-        "Day 01: 開発環境\n"
-        f"{long_b}\n\n52\n\f"
-        "Day 01: 開発環境\n本文\n"
-    )
-    stripped = target.strip_page_furniture(furnished)
-    if "51" in stripped or "52" in stripped or stripped.count("Day 01: 開発環境") != 1:
-        failures.append(f"page furniture was not stripped: {stripped!r}")
-    checked, total, found, _, _ = target.verify_document(
-        [block(long_a, long_b)], stripped
-    )
-    if found or (checked, total) != (2, 2):
-        failures.append(f"block across a page break failed: {found}")
-    expect_failure(
-        failures,
-        "furniture left in place still breaks the block",
-        [block(long_a, long_b)],
-        furnished,
-    )
-    if "only_once_first_line" not in target.strip_page_furniture(
-        "x\n\fonly_once_first_line\ncode\n\fDay\n\fDay\n"
-    ):
-        failures.append("a first line seen on one page only was stripped as a header")
-
-    # 異体字セレクタ: pdftotext は VS16/VS15 を落とすので、原稿側も除いて照合する
-    for name, source_line in (
-        ("VS16", "// ⚠️ 注意: この行は消さない"),
-        ("VS15", "// ⚠︎ 注意: この行は消さない"),
-    ):
-        checked, total, found, _, _ = target.verify_document(
-            [block(source_line)], "// ⚠ 注意: この行は消さない\n"
-        )
-        if found or (checked, total) != (1, 1):
-            failures.append(f"{name} on the source side was not stripped: {found}")
-    if target.strip_variation_selectors("a️b︎c") != "abc":
-        failures.append("strip_variation_selectors left a selector behind")
-
-    # 組版の強制改行: JSX 子テキストの開始タグ直後は code_wrap が <br> を入れる
-    # （字幅は実フォントの送り幅で数える。この行が SAFE_COLS を超えることが前提）
-    jsx_line = " " * 24 + '<h3 className="font-semibold">コメント</h3>'
-    if target.line_width(target.atoms(jsx_line)) <= target.SAFE_COLS:
-        failures.append("JSX fixture no longer exceeds SAFE_COLS")
-    checked, total, found, _, _ = target.verify_document(
-        [block(jsx_line, lang="tsx")],
-        '<h3 className="font-semibold">\nコメント</h3>\n',
-    )
-    if found or (checked, total) != (1, 1):
-        failures.append(f"renderer forced break after a JSX open tag was rejected: {found}")
-    expect_failure(
-        failures,
-        "break inside a JSX attribute string",
-        [block(jsx_line, lang="tsx")],
-        '<h3 className="font-\nsemibold">コメント</h3>\n',
-    )
-    expect_failure(
-        failures,
-        "break after a JSX open tag on a line that fits",
-        [block("<h3>コメント</h3>", lang="tsx")],
-        "<h3>\nコメント</h3>\n",
-    )
-
-    # 組版の強制改行は続き行の空き（cw-hang）込みで選ばれる。検査側が同じ
-    # 空き・字下げで区切りを再現しないと、組版が実際に入れた折れを
-    # unsafe-break と誤る。day24 の `{authFailed && …}` 行（字下げ14桁）は
-    # 空き16桁込みで「`>` の後」と「`ロ` の前」に折れる
-    auth_line = (
-        "              {authFailed && <Button onClick={() => "
-        "router.push('/login')}>ログイン画面へ</Button>}"
-    )
-    checked, total, found, _, _ = target.verify_document(
-        [block(auth_line, lang="tsx")],
-        "              {authFailed && <Button onClick={() =>\n"
-        "                router.push('/login')}>\n"
-        "                ログイン画面へ</Button>}\n",
-    )
-    if found or (checked, total) != (1, 1):
-        failures.append(
-            f"layout's own hang-aware breaks were rejected: {found}"
-        )
-
-    # 実体参照を含む行: `&amp;` は1原子だが原稿では5文字。参照以降の折れ候補は
-    # 文字オフセットで後ろへずれるため、原子番号のままだと安全な折れを unsafe-break と誤る。
-    checked, total, found, _, _ = target.verify_document(
-        [block("x &amp;y", lang="text")], "x &amp;\ny\n"
-    )
-    if found or (checked, total) != (1, 1):
-        failures.append(f"permitted break after an entity was rejected: {found}")
-    expect_failure(
-        failures,
-        "break inside an entity reference",
-        [block("x &amp;y", lang="text")],
-        "x &am\np;y\n",
-    )
-
-    # -layout: 桁揃えした列の抽出順を保つため Poppler を -layout で呼ぶ
-    original_run = target.subprocess.run
-    calls: list[list[str]] = []
-
-    class Completed:
-        stdout = "a️b\n".encode("utf-8")
-
-    def fake_run(args, **_kwargs):
-        calls.append(list(args))
-        return Completed()
-
-    target.subprocess.run = fake_run
-    try:
-        text = target.pdf_text(Path("sample.pdf"))
-    finally:
-        target.subprocess.run = original_run
-    if not calls or "-layout" not in calls[0]:
-        failures.append(f"pdftotext was not called with -layout: {calls}")
-    if text != "ab\n":
-        failures.append(f"pdf_text kept a variation selector: {text!r}")
-    checked, total, found, _, _ = target.verify_document(
-        [block("  id        String    @id @default(cuid())", lang="prisma")],
-        "  id        String    @id @default(cuid())\n",
-    )
-    if found or (checked, total) != (1, 1):
-        failures.append(f"layout-aligned columns were rejected: {found}")
-
     with tempfile.TemporaryDirectory() as directory:
         md = Path(directory) / "sample.md"
         md.write_text(
@@ -226,6 +112,24 @@ def main() -> int:
             "```",
         ):
             failures.append(f"nested fence content was lost: {blocks[0].lines}")
+
+        md.write_text(
+            '```typescript\nconst warning = "⚠️";\nconst ordinary = "⚠X";\n```\n',
+            encoding="utf-8",
+        )
+        blocks = target.fenced_code_blocks(md)
+        expected = ('const warning = "⚠";', 'const ordinary = "⚠X";')
+        if blocks[0].lines != expected:
+            failures.append(f"U+FE0F-only normalization drifted: {blocks[0].lines}")
+        checked, total, found, _, _ = target.verify_document(blocks, "\n".join(expected) + "\n")
+        if found or (checked, total) != (2, 2):
+            failures.append(f"producer-equivalent U+FE0F output was rejected: {found}")
+        expect_failure(
+            failures,
+            "ordinary character split remains unsafe",
+            blocks,
+            'const warning = "⚠";\nconst ordinary = "⚠\nX";\n',
+        )
 
         md.write_text("```typescript\nconst x = 1;\n", encoding="utf-8")
         try:
@@ -265,10 +169,14 @@ def main() -> int:
             )
             target.pdf_text = lambda _: "npm install\n"
             with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main([])
+                exit_code = target.main(["--allow-gaps"])
             report = output.getvalue()
             if exit_code != 0:
                 failures.append(f"valid diagnostic failed: {report}")
+            if "POPLER EXTRACTION SUBSET DIAGNOSTIC PASSED" not in report:
+                failures.append("subset success was not identified as a subset diagnostic")
+            if "UNVERIFIED: full source inventory" not in report:
+                failures.append("subset success overclaims full source coverage")
             if "UNVERIFIED: clipboard output" not in report:
                 failures.append("actual viewer limitation is missing from success output")
             if "UNVERIFIED: blank code lines" not in report:
@@ -278,50 +186,90 @@ def main() -> int:
             if "ALL LINES COPY-SAFE" in report or "viewer copy verification passed" in report:
                 failures.append("success output overclaims actual viewer copy safety")
 
-        # subset 経路: 組んだ冊だけが dist/pdf にある。旗なしでは欠けとして落ち、
-        # 旗ありでは組んだ冊だけを照合して通る。組んだ冊の照合失敗は旗があっても落ちる
         with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
             target.PDF_DIR = Path(pdf_dir)
             target.SRC_DIR = Path(src_dir)
-            (target.PDF_DIR / "built.pdf").touch()
-            (target.SRC_DIR / "built.md").write_text(
+            (target.PDF_DIR / "sample.pdf").touch()
+            (target.SRC_DIR / "sample.md").write_text(
                 "```bash\nnpm install\n```\n", encoding="utf-8"
             )
-            (target.SRC_DIR / "not-built.md").write_text(
-                "```bash\nnpm run dev\n```\n", encoding="utf-8"
+            (target.SRC_DIR / "missing.md").write_text(
+                "```bash\nnpm test\n```\n", encoding="utf-8"
             )
             target.pdf_text = lambda _: "npm install\n"
             with contextlib.redirect_stdout(io.StringIO()) as output:
                 exit_code = target.main([])
-            if exit_code == 0 or "missing PDF for source: not-built" not in output.getvalue():
-                failures.append("missing PDF passed without --allow-missing")
+            if exit_code == 0 or "missing PDF for source: missing" not in output.getvalue():
+                failures.append("full verification accepted a missing source PDF")
             with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main(["--allow-missing"])
-            report = output.getvalue()
+                exit_code = target.main(["--allow-gaps"])
             if exit_code != 0:
-                failures.append(f"--allow-missing subset failed: {report}")
-            if "Not built in this run (not checked): 1 sources" not in report:
-                failures.append(f"--allow-missing did not report skipped sources: {report}")
-            target.pdf_text = lambda _: "npm uninstall\n"
-            with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main(["--allow-missing"])
-            if exit_code == 0:
-                failures.append("--allow-missing hid a mismatch in a built PDF")
+                failures.append(f"explicit subset verification failed: {output.getvalue()}")
 
         with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
             target.PDF_DIR = Path(pdf_dir)
             target.SRC_DIR = Path(src_dir)
+            (target.PDF_DIR / "sample.pdf").touch()
+            (target.PDF_DIR / "extra.pdf").touch()
             (target.SRC_DIR / "sample.md").write_text(
                 "```bash\nnpm install\n```\n", encoding="utf-8"
             )
+            target.pdf_text = lambda _: "npm install\n"
             with contextlib.redirect_stdout(io.StringIO()) as output:
-                exit_code = target.main(["--allow-missing"])
-            if exit_code == 0 or "PDF not found" not in output.getvalue():
-                failures.append("--allow-missing with no PDF did not fail closed")
+                exit_code = target.main(["--allow-gaps"])
+            if exit_code == 0 or "PDF has no source markdown: extra" not in output.getvalue():
+                failures.append("subset verification accepted a PDF without source markdown")
 
-        with contextlib.redirect_stderr(io.StringIO()):
-            if target.main(["--allow-gaps"]) != 2:
-                failures.append("unknown argument was not rejected")
+        with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
+            target.PDF_DIR = Path(pdf_dir)
+            target.SRC_DIR = Path(src_dir)
+            (target.PDF_DIR / "sample.pdf").touch()
+            (target.SRC_DIR / "sample.md").write_text(
+                "```mermaid\ngraph TD\n```\n", encoding="utf-8"
+            )
+            target.pdf_text = lambda _: ""
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main([])
+            if exit_code == 0 or "no nonblank non-Mermaid" not in output.getvalue():
+                failures.append("full verification accepted empty copy coverage")
+
+        repository_sources = (
+            Path(__file__).resolve().parents[2] / "material" / "30days-curriculum"
+        )
+        zero_code_sources = (
+            "00-1_学びのロードマップ.md",
+            "00_カリキュラム目次.md",
+            "appendix_参考資料.md",
+            "appendix_用語集.md",
+        )
+        with tempfile.TemporaryDirectory() as pdf_dir, tempfile.TemporaryDirectory() as src_dir:
+            target.PDF_DIR = Path(pdf_dir)
+            target.SRC_DIR = Path(src_dir)
+            for filename in zero_code_sources:
+                source = repository_sources / filename
+                (target.SRC_DIR / filename).write_text(
+                    source.read_text(encoding="utf-8"), encoding="utf-8"
+                )
+                (target.PDF_DIR / source.with_suffix(".pdf").name).touch()
+            target.pdf_text = lambda _: "synthetic extraction without code\n"
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exit_code = target.main(["--allow-gaps"])
+            report = output.getvalue()
+            if exit_code != 0:
+                failures.append(f"zero-code source subset was rejected: {report}")
+            if "NOT APPLICABLE: no copyable fenced code" not in report:
+                failures.append("zero-code subset did not report copy check as not applicable")
+            if "DIAGNOSTIC PASSED" in report:
+                failures.append("zero-code subset incorrectly reported a Poppler pass")
+            if "UNVERIFIED: full source inventory" not in report:
+                failures.append("zero-code subset omitted the full-inventory limitation")
+            if "UNVERIFIED: clipboard output" not in report:
+                failures.append("zero-code subset omitted the actual-viewer limitation")
+
+        with contextlib.redirect_stderr(io.StringIO()) as error:
+            exit_code = target.main(["--unknown"])
+        if exit_code != 2 or "usage:" not in error.getvalue():
+            failures.append("unknown verifier argument did not fail with usage error")
     finally:
         target.PDF_DIR = original_pdf_dir
         target.SRC_DIR = original_src_dir

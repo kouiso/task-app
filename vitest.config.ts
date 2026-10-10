@@ -24,7 +24,11 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
     pool: 'forks',
-    fileParallelism: false,
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     env: {
       DATABASE_URL: testDatabaseUrl,
       JWT_SECRET: env['TEST_JWT_SECRET'] ?? 'test-secret-key-for-testing-only-32-chars-min',
@@ -32,6 +36,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
+      all: true,
       include: ['src/**/*.{ts,tsx}'],
       reporter: ['text', 'json', 'html'],
       exclude: [

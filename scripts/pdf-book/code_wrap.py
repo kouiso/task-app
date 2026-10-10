@@ -7,7 +7,7 @@ Vivliostyle の行分割は行長しか見ない。word-break / overflow-wrap / 
 
 桁あふれする行は、構文上改行できる境界を58桁以内になるよう選び、
 <br class="cw-force"> で強制改行する。境界間が長い場合は8ptを下回らない範囲で
-行を縮小する。どちらでも収まらない行は残件として組版を止める。
+同じコードブロック全体を必要最小率で縮小する。どちらでも収まらない行は残件として組版を止める。
 
 文字列リテラルの扱いはコピー可否で分ける。JSX / HTML の class / className
 属性値は空白位置だけを候補にする。JSX子テキストは開始タグ直後だけを候補にし、
@@ -23,12 +23,14 @@ from __future__ import annotations
 
 import html
 import re
-import struct
-from pathlib import Path
+import unicodedata
 
 # 実測の折れ桁は65。それより短い行は触らない。
 # 強制境界間の上限もこれで検査する。余裕はフォントの個体差ぶん。
 SAFE_COLS = 58
+# Prism の印刷テーマと同じtab stop。tabは常に4桁ではなく、現在列から次の
+# 4桁境界まで進む（例: 列2なら2桁、列4なら4桁）。
+TAB_SIZE = 4
 # コメント中の長い同種文字列へ候補を足す間隔。
 FORCE_SEGMENT = 40
 
@@ -88,16 +90,6 @@ SHRINK_MIN_PCT = int(SHRINK_MIN_PT * 100 / PRE_FONT_PT) + 1  # ≒70
 SHRINK_CLASS = "cw-shrink"
 BLOCK_SHRINK_CLASS = "cw-block-shrink"
 FORCE_BREAK_CLASS = "cw-force"
-# 強制改行の直後に置く空き要素。幅は元の行の字下げ＋2桁で、続き行が
-# 字下げを失って左端に落ちる（字下げの浅い外側の行に見える）のを防ぐ。
-# 空白文字ではなく空要素にするのは、コピー時の文字列を変えないため。
-HANG_CLASS = "cw-hang"
-HANG_EXTRA_COLS = 2
-HANG_RE = re.compile(
-    r'<span class="' + HANG_CLASS + r'" style="width:(\d+(?:\.\d+)?)ch"></span>'
-)
-SHRINK_PCT_RE = re.compile(rf'{SHRINK_CLASS}[^>]*font-size:(\d+)%')
-BLOCK_UNIFORM_LANGS = {"env", "dotenv"}
 
 # 実改行を空白として解釈できることを確認した文法だけを対象にする。
 # Python 等の `x =\ny` は構文エラーなので、未確認言語へ広げない。
@@ -109,156 +101,9 @@ FORCE_OUT_LANGS = JS_LANGS | {
 }
 
 
-# ── 1字の幅を実フォントの送り幅で数える ──────────────────────
-#
-# コードの字は book.css の --vs--monospace-font-family の順（JetBrains Mono →
-# BIZ UDPGothic → Noto Emoji → DejaVu Sans）で描かれる。字幅を「全角2桁・
-# 半角1桁」で数えると、実際は漢字が約1.67桁・かなが約1.5桁・括弧が約0.8桁の
-# ところを全部2桁と読み、収まる行まで縮小していた。描画側と同じ書体の送り幅で
-# 数えるため、前の2書体の TTF を読む。実体は build_pdf_book.py の FONT_SOURCES
-# と同じ node_modules のファイルを指す（FONT_SOURCES 側を変えたらここも追従する）。
-# pdf-book の Python は標準ライブラリだけで動く方針なので、TTF の読み取りは
-# struct で必要な4表（cmap・head・hhea・hmtx）だけを行う。
-REPO_ROOT = Path(__file__).resolve().parents[2]
-_CODE_FONT_FILES = (
-    REPO_ROOT / "node_modules" / "@expo-google-fonts" / "jetbrains-mono"
-        / "400Regular" / "JetBrainsMono_400Regular.ttf",
-    REPO_ROOT / "node_modules" / "@expo-google-fonts" / "biz-udpgothic"
-        / "400Regular" / "BIZUDPGothic_400Regular.ttf",
-)
-# 桁の単位は JetBrains Mono の送り幅 0.6em（等幅書体の1字ぶん）。
-_MONO_ADVANCE_EM = 0.6
-
-
-def _sfnt_tables(data: bytes) -> dict[str, bytes]:
-    """TTF の表ディレクトリを読み、表名→表のバイト列の辞書を返す。"""
-    table_count = struct.unpack_from(">H", data, 4)[0]
-    tables: dict[str, bytes] = {}
-    for i in range(table_count):
-        tag, _checksum, offset, length = struct.unpack_from(
-            ">4sIII", data, 12 + i * 16
-        )
-        tables[tag.decode("latin-1")] = data[offset : offset + length]
-    return tables
-
-
-def _cmap_format4(subtable: bytes) -> dict[int, int]:
-    """format 4（BMP 用の区間写像）から 字コード→グリフ番号 の辞書を返す。"""
-    seg_count = struct.unpack_from(">H", subtable, 6)[0] // 2
-    end_at = 14
-    end_codes = struct.unpack_from(f">{seg_count}H", subtable, end_at)
-    start_at = end_at + 2 * seg_count + 2  # reservedPad を跨ぐ
-    start_codes = struct.unpack_from(f">{seg_count}H", subtable, start_at)
-    delta_at = start_at + 2 * seg_count
-    deltas = struct.unpack_from(f">{seg_count}h", subtable, delta_at)
-    offset_at = delta_at + 2 * seg_count
-    range_offsets = struct.unpack_from(f">{seg_count}H", subtable, offset_at)
-    mapping: dict[int, int] = {}
-    for i in range(seg_count):
-        start, end = start_codes[i], end_codes[i]
-        if start > end or start == 0xFFFF:
-            continue  # 末尾の番兵区間（0xFFFF→0xFFFF）
-        delta, range_offset = deltas[i], range_offsets[i]
-        for code in range(start, end + 1):
-            if range_offset == 0:
-                mapping[code] = (code + delta) & 0xFFFF
-                continue
-            # idRangeOffset は「この uint16 の位置」を基点にした相対オフセット
-            glyph_at = offset_at + 2 * i + range_offset + 2 * (code - start)
-            if glyph_at + 2 > len(subtable):
-                continue
-            glyph = struct.unpack_from(">H", subtable, glyph_at)[0]
-            mapping[code] = (glyph + delta) & 0xFFFF if glyph else 0
-    return mapping
-
-
-def _cmap_format12(subtable: bytes) -> dict[int, int]:
-    """format 12（全 plane の連続グループ写像）から 字コード→グリフ番号 を返す。"""
-    group_count = struct.unpack_from(">I", subtable, 12)[0]
-    mapping: dict[int, int] = {}
-    offset = 16
-    for _ in range(group_count):
-        start, end, first_glyph = struct.unpack_from(">III", subtable, offset)
-        offset += 12
-        if start > end:
-            continue
-        for code in range(start, end + 1):
-            mapping[code] = first_glyph + code - start
-    return mapping
-
-
-def _cmap_lookup_table(cmap: bytes) -> dict[int, int]:
-    """cmap 表の全サブテーブルを1つの辞書へまとめる。"""
-    count = struct.unpack_from(">H", cmap, 2)[0]
-    mapping: dict[int, int] = {}
-    format12: dict[int, int] = {}
-    for i in range(count):
-        _platform, _encoding, offset = struct.unpack_from(">HHI", cmap, 4 + i * 8)
-        sub_format = struct.unpack_from(">H", cmap, offset)[0]
-        if sub_format == 4:
-            mapping.update(_cmap_format4(cmap[offset:]))
-        elif sub_format == 12:
-            format12.update(_cmap_format12(cmap[offset:]))
-    # format 12 は BMP 外（絵文字等）も届く。重なった BMP の字は同じ番号を指す
-    # のが普通なので、format 4 の写像を format 12 で上書きして合流させる
-    mapping.update(format12)
-    return mapping
-
-
-class _FontMetrics:
-    """TTF1本ぶんの 字コード→送り幅（em） の引き当て。"""
-
-    def __init__(self, path: Path) -> None:
-        data = path.read_bytes()
-        tables = _sfnt_tables(data)
-        self.units_per_em = struct.unpack_from(">H", tables["head"], 18)[0]
-        metric_count = struct.unpack_from(">H", tables["hhea"], 34)[0]
-        hmtx = tables["hmtx"]
-        self.advances = [
-            record[0]
-            for record in struct.iter_unpack(">Hh", hmtx[: 4 * metric_count])
-        ]
-        self.mapping = _cmap_lookup_table(tables["cmap"])
-
-    def advance_em(self, code: int) -> float | None:
-        """その字の送り幅を em で返す。書体が字を持たなければ None。"""
-        glyph = self.mapping.get(code, 0)
-        if glyph == 0:
-            return None
-        # グリフ番号が numberOfHMetrics を超える字は最後の送り幅を使う決まり
-        if glyph < len(self.advances):
-            advance = self.advances[glyph]
-        else:
-            advance = self.advances[-1] if self.advances else 0
-        return advance / self.units_per_em
-
-
-_font_metrics: list[_FontMetrics] | None = None
-
-
-def _code_fonts() -> list[_FontMetrics]:
-    global _font_metrics
-    if _font_metrics is None:
-        _font_metrics = [_FontMetrics(path) for path in _CODE_FONT_FILES]
-    return _font_metrics
-
-
-def char_width(char: str) -> float:
-    """1字の表示桁。実際に描く等幅書体の送り幅を JetBrains Mono の1桁で数える。
-
-    JetBrains Mono → BIZ UDPGothic の順に字を引き、見つかった書体の
-    「送り幅 ÷ unitsPerEm ÷ 0.6」を桁とする。どちらにも無い字（絵文字など）は
-    2桁と数える。Noto Emoji と DejaVu Sans は woff2 のため標準ライブラリでは
-    読めないが、1em は約1.67桁なので 2桁は多めに見積もる側（縮めすぎない側）。
-    """
-    if len(char) != 1:
-        return sum(char_width(part) for part in char)
-    code = ord(char)
-    for font in _code_fonts():
-        advance = font.advance_em(code)
-        if advance is not None:
-            return advance / _MONO_ADVANCE_EM
-    return 2.0
+def char_width(char: str) -> int:
+    """East Asian の W/F を2桁、その他を1桁として数える。"""
+    return 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
 
 
 def atoms(text: str) -> list[str]:
@@ -335,6 +180,7 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
     literal_escaped = False
     previous_literal_char_was_escaped = False
     str_tol = False
+    str_raw = False
     in_tag = False
     prev_sig = ""
     # 直前の識別子。return <p> の `<` を JSX 開始と見分けるために持つ
@@ -343,8 +189,11 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
     prev_atom_ch = ""
     comment_line = False
     comment_block = False
+    pending_context = ("", "", False)
     pending = ""  # "/" や "*" の直後に来る文字で意味が変わるもの
     for line_index, line_atoms in enumerate(lines_atoms):
+        # 行末のバックスラッシュが逃がすのは改行であり、次行の先頭文字ではありません。
+        literal_escaped = False
         states: list[str] = []
         line_chars = "".join(atom_char(item) for item in line_atoms)
         comment_line = False
@@ -352,6 +201,8 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
         for atom_index, atom in enumerate(line_atoms):
             ch = atom_char(atom)
             mode = stack[-1] if stack else "out"
+            context_before_atom = (prev_sig, prev_word, prev_was_word_char)
+            skip_context_update = comment_line or comment_block
             if (
                 mode == "out"
                 and lang in JS_LANGS
@@ -398,10 +249,14 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
             elif mode == "out":
                 if pending == "/" and ch == "/" and lang in SLASH_COMMENT_LANGS:
                     comment_line = True
+                    prev_sig, prev_word, prev_was_word_char = pending_context
+                    skip_context_update = True
                     pending = ""
                     states.append("strict")
                 elif pending == "/" and ch == "*" and lang in BLOCK_COMMENT_LANGS:
                     comment_block = True
+                    prev_sig, prev_word, prev_was_word_char = pending_context
+                    skip_context_update = True
                     pending = ""
                     states.append("comment")
                 elif pending == "-" and ch == "-" and lang in DASH_COMMENT_LANGS:
@@ -410,6 +265,8 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                     states.append("strict")
                 else:
                     pending = ch if ch in "/-" else ""
+                    if pending == "/":
+                        pending_context = context_before_atom
                     if ch == "{" and len(stack) > 1:
                         depth += 1
                     elif ch == "{" and in_tag:
@@ -435,8 +292,9 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                         prefix = "".join(
                             atom_char(item) for item in line_atoms[:atom_index]
                         )
+                        str_raw = lang in JS_LANGS and in_tag and tag_expr_depth == 0
                         str_tol = bool(
-                            in_tag
+                            str_raw
                             and re.search(
                                 r"(?:^|\s)(?:class|className)\s*=\s*$", prefix
                             )
@@ -454,10 +312,15 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                     elif lang in JS_LANGS:
                         # 識別子直後の `<T>` は型引数でありJSXタグではない。
                         # JSX開始になり得る式境界の `<` だけをタグとして追う。
-                        if ch == "<" and (
-                            not prev_sig
-                            or prev_sig not in ALNUM + "_$)]'\"`"
-                            or prev_word in EXPRESSION_KEYWORDS
+                        if (
+                            ch == "<"
+                            and atom_index + 1 < len(line_atoms)
+                            and not atom_char(line_atoms[atom_index + 1]).isspace()
+                            and (
+                                not prev_sig
+                                or prev_sig not in ALNUM + "+-!/_$)]'\"`"
+                                or prev_word in EXPRESSION_KEYWORDS
+                            )
                         ):
                             in_tag = True
                             tag_buffer = "<"
@@ -481,10 +344,13 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                     states.append("strict")
                 elif ch == "`":
                     stack.pop()
-                    states.append("out")
+                    # 境界判定は現在の文字の直前を見る。閉じ backtick 自体を out に
+                    # すると、直前のテンプレート本文との間へ実改行を入れ得る。
+                    states.append("strict")
                 elif (
                     ch == "{"
-                    and prev_sig == "$"
+                    and atom_index > 0
+                    and prev_atom_ch == "$"
                     and not previous_literal_char_was_escaped
                 ):
                     stack.append("out")
@@ -497,21 +363,23 @@ def classify_block(lines_atoms: list[list[str]], lang: str) -> list[list[str]]:
                 if literal_escaped:
                     literal_escaped = False
                     states.append("tolerant" if str_tol else "strict")
-                elif ch == "\\":
+                elif ch == "\\" and not str_raw:
                     literal_escaped = True
                     states.append("tolerant" if str_tol else "strict")
                 elif ch == mode[-1]:
                     stack.pop()
-                    states.append("out")
+                    # 閉じ quote の直前はまだ文字列内。次の原子から out へ戻る。
+                    states.append("strict")
                 else:
                     states.append("tolerant" if str_tol else "strict")
-            if not ch.isspace():
-                prev_sig = ch
-            if ch in ALNUM or ch in "_$":
-                prev_word = prev_word + ch if prev_was_word_char else ch
-            elif not ch.isspace():
-                prev_word = ""
-            prev_was_word_char = ch in ALNUM or ch in "_$"
+            if not (skip_context_update or comment_line or comment_block):
+                if not ch.isspace():
+                    prev_sig = ch
+                if ch in ALNUM or ch in "_$":
+                    prev_word = prev_word + ch if prev_was_word_char else ch
+                elif not ch.isspace():
+                    prev_word = ""
+                prev_was_word_char = ch in ALNUM or ch in "_$"
             previous_literal_char_was_escaped = (
                 was_escaped if mode == "tpl" else False
             )
@@ -614,25 +482,15 @@ def break_before(
     return marks
 
 
-def line_width(text_atoms: list[str]) -> float:
-    return sum(char_width(atom_char(a)) for a in text_atoms)
-
-
-def _leading_indent(text_atoms: list[str]) -> tuple[int, int]:
-    """行頭の字下げを (空白原子の数, 表示桁数) で返す。
-
-    原子数は区切り候補の下限（字下げの中と直後を外す境界）に、
-    桁数は続き行の頭へ置く空きの幅に使う。
-    """
-    count = 0
-    cols = 0
+def line_width(text_atoms: list[str]) -> int:
+    column = 0
     for atom in text_atoms:
-        ch = atom_char(atom)
-        if ch not in {" ", "\t"}:
-            break
-        count += 1
-        cols += char_width(ch)
-    return count, cols
+        char = atom_char(atom)
+        if char == "\t":
+            column += TAB_SIZE - column % TAB_SIZE
+        else:
+            column += char_width(char)
+    return column
 
 
 def _without_block_comments(prefix: str) -> str:
@@ -736,12 +594,6 @@ def forced_breaks(
     みなさない。`.` 後の候補は optional chain や数値リテラルを壊し得るため
     強制しない。テンプレート本文・通常文字列・行コメントは classify_block が
     strict にしているため対象外になる。
-
-    続き行の頭には字下げ＋2桁の空き（cw-hang）が乗る。1本目の区切りは
-    58桁以内で選び、2本目以降は「空き＋区切り」が58桁以内になるよう選ぶ。
-    字下げの中と直後は区切り候補にしない（1行目が空白だけの行になり、
-    コメント等の本体が左端へ出るため）。候補が尽きた行は呼び出し側の
-    縮小経路へ回る。
     """
     if lang not in FORCE_BREAK_LANGS:
         return set()
@@ -784,6 +636,7 @@ def forced_breaks(
             index
             for index in range(1, len(text_atoms))
             if states[index] == "jsx-text"
+            and states[index - 1] == "out"
             and atom_char(text_atoms[index - 1]) == ">"
             and not atom_char(text_atoms[index]).isspace()
             and classify(text_atoms[index]) in {"ALNUM", "WIDE"}
@@ -796,6 +649,7 @@ def forced_breaks(
             states[index] == "comment"
             or (
                 states[index] == "jsx-text"
+                and states[index - 1] == "out"
                 and atom_char(text_atoms[index - 1]) == ">"
                 and not atom_char(text_atoms[index]).isspace()
             )
@@ -823,22 +677,14 @@ def forced_breaks(
             )
         )
     ]
-    # 字下げの中と直後は区切りにしない。直後で折ると1行目が空白だけに
-    # なり、続きの本体が字下げを失って左端に出る
-    indent_atoms, indent_cols = _leading_indent(text_atoms)
-    candidates = [index for index in candidates if index > indent_atoms]
-    # 続き行の頭に乗る空き（cw-hang の width）。2本目以降の区切りは
-    # 空き込みの幅で58桁と比べる
-    hang = indent_cols + HANG_EXTRA_COLS
     selected: set[int] = set()
     start = 0
-    while line_width(text_atoms[start:]) + (hang if start else 0) > SAFE_COLS:
-        reserve = hang if start else 0
+    while line_width(text_atoms[start:]) > SAFE_COLS:
         fitting = [
             index
             for index in candidates
             if index > start
-            and line_width(text_atoms[start:index]) <= SAFE_COLS - reserve
+            and line_width(text_atoms[start:index]) <= SAFE_COLS
         ]
         if not fitting:
             later = [index for index in candidates if index > start]
@@ -850,45 +696,6 @@ def forced_breaks(
         selected.add(boundary)
         start = boundary
     return selected
-
-
-def _shrink_pct(
-    text_atoms: list[str], hard_marks: set[int], hang: int
-) -> int:
-    """行を1行分の高さへ収める縮小率(%)。続き行は空き込みの実効幅で最大を取る。
-
-    空きを足さないと縮小率が実際より大きくなり、縮めた続き行が58桁を
-    超えて Vivliostyle に語中で折られる。
-    """
-    if not text_atoms:
-        return 100
-    bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
-    max_row = max(
-        line_width(text_atoms[b1:b2]) + (hang if index else 0)
-        for index, (b1, b2) in enumerate(zip(bounds, bounds[1:]))
-    )
-    return min(100, int(SAFE_COLS * 100 / max_row))
-
-
-def wrap_layout(
-    text_atoms: list[str], states: list[str], lang: str
-) -> tuple[set[int], int, int]:
-    """1論理行の組版計画: (強制改行する原子index, 続き行の空き桁数, 縮小率%)。
-
-    _emit_line（組版）と verify_pdf_copy._allowed_breaks（写経検査）の
-    両方がここから区切りを取り、二箇所で選び方がずれないようにする。
-    空きは字下げ＋2桁。空きを足したことで縮小率が8pt相当を割る行は、
-    割らなくなるまで空きを1桁ずつ減らす。
-    """
-    marks = break_before(text_atoms, states, lang)
-    hard_marks = forced_breaks(text_atoms, states, marks, lang)
-    _, indent_cols = _leading_indent(text_atoms)
-    hang = indent_cols + HANG_EXTRA_COLS
-    pct = _shrink_pct(text_atoms, hard_marks, hang)
-    while hard_marks and hang > 0 and pct < SHRINK_MIN_PCT:
-        hang -= 1
-        pct = _shrink_pct(text_atoms, hard_marks, hang)
-    return hard_marks, hang, pct
 
 
 def _emit_line(
@@ -918,7 +725,14 @@ def _emit_line(
     width = line_width(text_atoms)
     if width <= SAFE_COLS:
         return "".join(body for _, body in chunks)
-    hard_marks, hang, pct = wrap_layout(text_atoms, states, lang)
+    marks = break_before(text_atoms, states, lang)
+    hard_marks = forced_breaks(text_atoms, states, marks, lang)
+    hard_bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
+    max_segment = max(
+        line_width(text_atoms[b1:b2])
+        for b1, b2 in zip(hard_bounds, hard_bounds[1:])
+    )
+    pct = min(100, int(SAFE_COLS * 100 / max_segment))
     if pct < SHRINK_MIN_PCT and lang in JS_LANGS and all(
         state == "jsx-text" for state in states
     ):
@@ -956,17 +770,12 @@ def _emit_line(
             continue
         piece_atoms = atoms(body)
         forced_in_piece = insert_at[ci]
-        pieces: list[str] = []
-        for ai, atom in enumerate(piece_atoms):
-            if ai in forced_in_piece:
-                # 強制改行の直後に空きを置き、続き行を元の行の字下げより
-                # 2桁深い位置から始める
-                pieces.append(
-                    f'<br class="{FORCE_BREAK_CLASS}">'
-                    f'<span class="{HANG_CLASS}" style="width:{hang:g}ch"></span>'
-                )
-            pieces.append(atom)
-        out.append("".join(pieces))
+        rebuilt = "".join(
+            (f'<br class="{FORCE_BREAK_CLASS}">' if ai in forced_in_piece else "")
+            + atom
+            for ai, atom in enumerate(piece_atoms)
+        )
+        out.append(rebuilt)
     joined = "".join(out)
     if pct < 100:
         code_open = re.search(r"<code\b[^>]*>", joined, re.IGNORECASE)
@@ -1055,32 +864,24 @@ def rewrite_pre_inner(
         for line in lines
     ]
 
-    # .env は実改行がレコード境界なので強制改行できない。行ごとに異なる
-    # font-size を付けたPDFはChromeのコピーで隣接行が結合した実測があるため、
-    # env/dotenv だけは最長行に合わせてコードブロック全体を同率で縮小する。
-    if lang in BLOCK_UNIFORM_LANGS and lines_atoms:
-        widest = max(lines_atoms, key=line_width)
-        max_width = line_width(widest)
-        pct = min(100, int(SAFE_COLS * 100 / max_width))
-        if pct < SHRINK_MIN_PCT:
-            residuals.append("".join(atom_char(a) for a in widest)[:80])
-            return inner
-        if pct < 100:
-            code_open = re.search(r"<code\b[^>]*>", inner, re.IGNORECASE)
-            code_close = inner.lower().rfind("</code>")
-            start = code_open.end() if code_open else 0
-            end = code_close if code_close >= start else len(inner)
-            return (
-                inner[:start]
-                + f'<span class="{SHRINK_CLASS} {BLOCK_SHRINK_CLASS}" '
-                  f'style="font-size:{pct}%">'
-                + inner[start:end]
-                + "</span>"
-                + inner[end:]
-            )
-        return inner
+    # 強制境界は論理行ごとに選ぶ。縮小が必要な行が1本でもあれば、
+    # 後段でその最小率をブロック全体へ揃える。行ごとの font-size 差は
+    # Chrome PDF viewer が元改行を再構築するときの手掛かりを不連続にするためです。
 
     states_per_line = classify_block(lines_atoms, lang)
+    if lang in JS_LANGS:
+        regex_state_ambiguous = False
+        for line_atoms, states in zip(lines_atoms, states_per_line):
+            if not regex_state_ambiguous:
+                regex_positions = _js_regex_positions(line_atoms, states)
+                regex_state_ambiguous = any(
+                    states[index] != "out" or atom_char(line_atoms[index]) in "{}<"
+                    for index in regex_positions
+                )
+            if regex_state_ambiguous:
+                # regex内の文字でコメント状態や補間の深さがずれると後続行にも残るため、
+                # 未確定のブロック末尾まで改行を足さず縮小か残件へ倒します。
+                states[:] = ["strict"] * len(states)
 
     line_residuals: list[str] = []
     out: list[str] = []
@@ -1095,7 +896,40 @@ def rewrite_pre_inner(
         if changed:
             return rewrite_pre_inner(balanced, lang, residuals, spans_balanced=True)
     residuals.extend(line_residuals)
-    return rendered
+    percentages = [
+        int(value)
+        for value in re.findall(
+            rf'<span class="{SHRINK_CLASS}" style="font-size:(\d+)%">', rendered
+        )
+    ]
+    if not percentages:
+        return rendered
+    # 既知の不正な終了タグは後段のDOM検証へそのまま渡す。外側のspanを足して
+    # 偶然均衡した形に見せると、fail-closed検査をすり抜けるためです。
+    if re.search(r"</span(?!>)", rendered, re.IGNORECASE):
+        residuals.append("コードブロックの終了spanを判定できないためuniform縮小を停止")
+        return rendered
+
+    # 各行で必要になった率のうち最小（最も小さい字）へ全行を揃える。
+    # 行ラッパーはPrism spanの均衡を保つため残し、font-sizeだけ外す。
+    pct = min(percentages)
+    rendered = re.sub(
+        rf'<span class="{SHRINK_CLASS}" style="font-size:\d+%">',
+        f'<span class="{SHRINK_CLASS}">',
+        rendered,
+    )
+    code_open = re.search(r"<code\b[^>]*>", rendered, re.IGNORECASE)
+    code_close = rendered.lower().rfind("</code>")
+    start = code_open.end() if code_open else 0
+    end = code_close if code_close >= start else len(rendered)
+    return (
+        rendered[:start]
+        + f'<span class="{SHRINK_CLASS} {BLOCK_SHRINK_CLASS}" '
+          f'style="font-size:{pct}%">'
+        + rendered[start:end]
+        + "</span>"
+        + rendered[end:]
+    )
 
 
 LANG_RE = re.compile(r"language-([a-zA-Z0-9]+)")
@@ -1120,90 +954,58 @@ def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str
     return PRE_RE.sub(repl, html_text)
 
 
-# ── filepath 見出しをコード枠の外へ出す ──────────────────────
-#
-# コード枠の1行目にある `// filepath: …` のような行は、どのファイルへの
-# 書き込みかを示す見出しであってコードではない。`//` や `#` の行コメントは
-# 途中で改行するとコピーした後半がコードとして読まれて壊れるため、長い
-# filepath 行は行ごと小さな字に縮んでいた。組版ではこの行を pre の直前へ
-# <p class="code-filepath"> として出し、縮小とコピー照合の対象から外す。
-FILEPATH_LABEL_CLASS = "code-filepath"
-_FILEPATH_LINE_RE = re.compile(
-    r"^[ \t]*(//|#|/\*|\{/\*)[ \t]*filepath:[ \t]*(.*?)[ \t]*$"
-)
-_FILEPATH_TAIL_RE = re.compile(r"[ \t]*\*/[ \t]*\}?[ \t]*$")
-
-
-def code_filepath_label(line: str) -> str | None:
-    """行が filepath 見出しなら、コメント記号と `filepath:` を外した表示文字を返す。
-
-    `// filepath:`・`# filepath:`・`/* filepath: … */`・`{/* filepath: … */}`
-    の4形を受ける。先頭の字下げは「ファイル内のどの位置の続きか」を示す
-    目印で、見出し化したときは要らないので落とす。
-    """
-    match = _FILEPATH_LINE_RE.match(line)
-    if not match:
-        return None
-    marker, body = match.group(1), match.group(2)
-    if marker in ("/*", "{/*"):
-        body = _FILEPATH_TAIL_RE.sub("", body)
-    return body
-
-
-def hoist_code_filepath(html_text: str) -> str:
-    """<pre> の1行目が filepath 見出しなら、pre の直前へ見出し段落として出す。
-
-    対象は1行目だけ。枠の途中にある filepath 行は「ファイル内のどの位置か」を
-    字下げで示す役割を持つので、コード枠の中に残す。
-    """
-    def repl(match: re.Match[str]) -> str:
-        block = match.group(0)
-        open_end = block.index(">") + 1
-        inner = block[open_end : -len("</pre>")]
-        first, newline, rest = inner.partition("\n")
-        if not newline:
-            return block
-        # 先頭の <code …> 開始タグは pre 側に残す。枠の中身だけを見て判定する
-        keep = ""
-        code_open = re.match(r"<code\b[^>]*>", first)
-        text_part = first
-        if code_open:
-            keep = code_open.group(0)
-            text_part = first[code_open.end() :]
-        label = code_filepath_label(html.unescape(TAG_RE.sub("", text_part)))
-        if label is None:
-            return block
-        # 1行目の span が行を跨いで閉じる形（Prism が複数行にまたぐ token を
-        # 出した場合）に断片を抜くとタグの対応が崩れる。その形だけは従来どおり
-        # 枠の中に残す
-        opens = len(re.findall(r"<span\b", text_part))
-        closes = text_part.count("</span>")
-        if opens != closes:
-            return block
-        return (
-            f'<p class="{FILEPATH_LABEL_CLASS}">{html.escape(label)}</p>\n'
-            + block[:open_end]
-            + keep
-            + rest
-            + "</pre>"
-        )
-
-    return PRE_RE.sub(repl, html_text)
-
-
 def unsafe_runs(html_text: str) -> list[str]:
     """強制改行間の表示桁が SAFE_COLS を超える論理行を返す（検査用）。
 
     Vivliostyle の break-all は <wbr> を無視して語中で折り得るため、<wbr> は
     境界として数えない。cw-force または元の論理改行だけを境界として扱う。
-    続き行の先頭には cw-hang の空きが乗るため、区切りごとの幅に直前の
-    空きを足して58桁と比べる。cw-shrink で縮めた行は率を掛けて比べる
-    （掛けないと縮小で収めた行まで超過と誤る）。
+    ブロック全体の縮小率を表示幅へ掛け、8pt下限と縮小指定の一意性も検査する。
     """
     bad: list[str] = []
     for match in PRE_RE.finditer(html_text):
         block = match.group(0)
-        if BLOCK_SHRINK_CLASS in block:
+        block_percentages = re.findall(
+            rf'<span class="{SHRINK_CLASS} {BLOCK_SHRINK_CLASS}" '
+            r'style="font-size:(\d+)%">', block
+        )
+        block_classes = re.findall(
+            r'<span\b[^>]*\bclass=["\']([^"\']*)["\'][^>]*>', block
+        )
+        block_shrink_count = sum(
+            classes.split().count(BLOCK_SHRINK_CLASS) for classes in block_classes
+        )
+        if block_shrink_count:
+            if block_shrink_count != 1 or len(block_percentages) != 1:
+                bad.append("コードブロックのuniform縮小率が一意ではありません")
+                continue
+            shrink_tags = re.findall(r'<span\b[^>]*>', block)
+            nested_font_shrink = any(
+                SHRINK_CLASS in classes.split()
+                and BLOCK_SHRINK_CLASS not in classes.split()
+                and re.search(r'\bstyle=["\'][^"\']*font-size\s*:', tag)
+                for tag in shrink_tags
+                for classes in re.findall(r'\bclass=["\']([^"\']*)["\']', tag)
+            )
+            if nested_font_shrink:
+                bad.append("コードブロックにuniform縮小以外の縮小指定があります")
+                continue
+            percentage = int(block_percentages[0])
+            if not SHRINK_MIN_PCT <= percentage <= 100:
+                bad.append("コードブロックのuniform縮小率が不正です")
+                continue
+            inner = block[block.index(">") + 1:-len("</pre>")]
+            inner = re.sub(
+                rf'<br class="{FORCE_BREAK_CLASS}">', "\u0000", inner
+            ).replace("<wbr>", "")
+            for raw_line in inner.split("\n"):
+                text = html.unescape(TAG_RE.sub("", raw_line))
+                for run in text.split("\u0000"):
+                    if sum(char_width(c) for c in run) * percentage > SAFE_COLS * 100:
+                        bad.append(text.strip()[:80])
+                        break
+            continue
+        if any(SHRINK_CLASS in classes.split() for classes in block_classes):
+            bad.append("uniform縮小指定のない行単位の縮小があります")
             continue
         inner = block[block.index(">") + 1:-len("</pre>")]
         # 強制改行だけを境界として論理行を切る。<wbr> は取り除く。
@@ -1211,15 +1013,12 @@ def unsafe_runs(html_text: str) -> list[str]:
             rf'<br class="{FORCE_BREAK_CLASS}">', "\u0000", inner
         ).replace("<wbr>", "")
         for raw_line in inner.split("\n"):
-            pct_m = SHRINK_PCT_RE.search(raw_line)
-            pct = int(pct_m.group(1)) if pct_m else 100
-            line_text = html.unescape(TAG_RE.sub("", raw_line))
-            for run in raw_line.split("\u0000"):
-                hang_m = HANG_RE.match(run)
-                hang = float(hang_m.group(1)) if hang_m else 0
-                text = html.unescape(TAG_RE.sub("", run))
-                run_width = line_width(atoms(text))
-                if (hang + run_width) * pct / 100 > SAFE_COLS:
-                    bad.append(line_text.strip()[:80])
+            text = TAG_RE.sub("", raw_line)
+            text = text.replace("&amp;", "&").replace("&#x27;", "'")
+            for entity in ENTITY_RE.findall(text):
+                text = text.replace(entity, "x", 1)
+            for run in text.split("\u0000"):
+                if sum(char_width(c) for c in run) > SAFE_COLS:
+                    bad.append(text.strip()[:80])
                     break
     return bad

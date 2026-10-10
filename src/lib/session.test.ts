@@ -1,6 +1,8 @@
+import { SignJWT } from 'jose';
 import type { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 import { cookies } from 'next/headers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { env } from './env';
 import {
   createSession,
   type SessionPayload,
@@ -12,6 +14,13 @@ import {
 describe('session', () => {
   const mockedCookies = vi.mocked(cookies);
 
+  const signRawPayload = async (payload: Record<string, unknown>) =>
+    await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(new TextEncoder().encode(env.JWT_SECRET));
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -21,6 +30,7 @@ describe('session', () => {
       userId: 'user_123',
       email: 'user@example.com',
       role: 'USER',
+      version: 7,
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
 
@@ -31,6 +41,7 @@ describe('session', () => {
       userId: payload.userId,
       email: payload.email,
       role: payload.role,
+      version: payload.version,
     });
     expect(decrypted?.exp).toBeTypeOf('number');
   });
@@ -59,6 +70,7 @@ describe('session', () => {
       id: 'user_123',
       email: 'user@example.com',
       role: 'ADMIN',
+      version: 3,
     });
 
     expect(token).toBeTypeOf('string');
@@ -80,6 +92,7 @@ describe('session', () => {
       userId: 'user_456',
       email: 'member@example.com',
       role: 'USER',
+      version: 5,
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
     const token = await signSessionToken(payload);
@@ -103,6 +116,54 @@ describe('session', () => {
       id: payload.userId,
       email: payload.email,
       role: payload.role,
+      version: payload.version,
     });
+  });
+
+  it('version claimが無い旧JWTだけをversion 0として受け入れる', async () => {
+    const token = await signRawPayload({
+      userId: 'legacy_user',
+      email: 'legacy@example.com',
+      role: 'USER',
+    });
+
+    await expect(verifySessionToken(token)).resolves.toMatchObject({ version: 0 });
+  });
+
+  it.each([
+    null,
+    '0',
+    0.5,
+    -1,
+    Number.POSITIVE_INFINITY,
+    2_147_483_648,
+  ])('異常なversion claim %sを拒否する', async (version) => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const token = await signRawPayload({
+      userId: 'invalid_version_user',
+      email: 'invalid@example.com',
+      role: 'USER',
+      version,
+    });
+
+    await expect(verifySessionToken(token)).resolves.toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith('Invalid session payload structure');
+  });
+
+  it.each([
+    'OWNER',
+    'constructor',
+    '__proto__',
+  ])('未定義のrole claim %sを拒否する', async (role) => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const token = await signRawPayload({
+      userId: 'invalid_role_user',
+      email: 'invalid-role@example.com',
+      role,
+      version: 0,
+    });
+
+    await expect(verifySessionToken(token)).resolves.toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith('Invalid session payload structure');
   });
 });

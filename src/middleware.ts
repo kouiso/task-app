@@ -79,8 +79,9 @@ export async function middleware(request: NextRequest) {
     return finalize(NextResponse.redirect(loginUrl), 307);
   }
 
+  const jwtSecret = getJwtSecret();
   try {
-    await jwtVerify(token, getJwtSecret(), {
+    await jwtVerify(token, jwtSecret, {
       algorithms: ['HS256'],
     });
     return finalize(NextResponse.next({ request: { headers: requestHeaders } }), 200);

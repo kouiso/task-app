@@ -17,10 +17,8 @@ export default function ErrorPage({
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center space-y-4">
-        <h2 className="text-2xl font-bold">エラーが発生しました</h2>
-        <p className="text-muted-foreground">
-          予期しないエラーが発生しました。もう一度お試しください。
-        </p>
+        <h2 className="text-2xl font-bold">ページを表示できませんでした</h2>
+        <p className="text-muted-foreground">もう一度お試しください。</p>
         <Button onClick={reset}>もう一度試す</Button>
       </div>
     </div>

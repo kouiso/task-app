@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 23 では週次レポートAPIの呼び出し・データ表示を実装し、プロジェクト統計ページへのリンクを付けました。Table コンポーネントでデータを一覧表示するパターンを学んだので今日は管理者専用のユーザー一覧ページに取り組みます。
+Day 23 ではプロジェクト別統計テーブルの表示と、週次レポートAPIの呼び出し・データ表示を実装しました。Table コンポーネントでデータを一覧表示するパターンを学んだので今日は管理者専用のユーザー一覧ページに取り組みます。
 
 ---
 
@@ -27,10 +27,10 @@ Day 23 では週次レポートAPIの呼び出し・データ表示を実装し�
 
 ## 始める前の前提
 
-- 管理者ユーザーでログインできる
-- 一般ユーザーも1人以上登録済みで、一覧に表示する対象がある
-- `src/server/api/root.ts` を開いて、今登録されているルーターを確認できる（user は今日追加する）
-- 管理者以外で開いたときのアクセス拒否も確認する
+- 管理者ユーザーでログインできます
+- 一般ユーザーも1人以上登録済みで、一覧に表示する対象があります
+- `src/server/api/root.ts` を開いて、今登録されているルーターを確認できます（user は今日追加する）
+- 管理者以外で開いたときのアクセス拒否も確認します
 
 ### ユーザー管理ページのフロー
 
@@ -91,9 +91,11 @@ flowchart TD
 | テーブル | ユーザー一覧 | Step 6-8 |
 | 空状態 | ユーザー0件時のメッセージ | Step 9 |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | ユーザー一覧 API（getAll）を自分で書く | 14分 |
 | Step 1 | 使用するAPIの確認 | 3分 |
@@ -106,15 +108,13 @@ flowchart TD
 | Step 8 | アクションボタンの追加 | 4分 |
 | Step 9 | 空状態UIと動作確認 | 3分 |
 
-**合計時間**: 約54分です。
+**読む時間の合計（仮）**: 約54分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: ユーザー一覧 API（getAll）を自分で書く（14分）
+### Step 0: ユーザー一覧 API（getAll）を自分で書く（読む目安: 14分）
 
 **ゴール**: `src/server/api/routers/user.ts` を新規作成し、まず `getAll` を写経して `api.user.getAll` を自分で生やします。管理者一覧ページの入口はここです。Day 21 の `report.ts` と同じく、ファイルを「登録するだけ」ではなく、最初の procedure から自分で作ります。
 
@@ -156,6 +156,8 @@ export const userRouter = createTRPCRouter({
 ```
 
 今日のページは管理者専用なので、入口に **`adminProcedure`** を使います。共通の認証処理がDBから最新の `role` と `isActive` を取得し、有効なユーザーか確かめます。その `role` で `ADMIN` 判定まで済ませるため、`getAll` の中で管理者かどうかを調べ直す必要はありません。ログイン後に権限が変更された場合も、次のAPI呼び出しにはDBの最新状態が使われます。
+
+管理者が `isActive` を変更するときは、同じ更新で `sessionVersion` も1増やします。`sessionVersion`（セッション版数）は、パスワード変更やアカウントの有効状態を切り替えたときに進む整数です。`POSTGRES_INTEGER_MAX` は PostgreSQL の4バイト整数型の最大値である2,147,483,647を表し、上限を超える更新を止めます。無効化時に版数を進めるため、あとで再有効化しても無効化前のトークンは使えません。Day 29 で `update` 手続きとして実装します。
 
 #### 0-3. 条件があるときだけ where に足す
 
@@ -227,14 +229,14 @@ export const appRouter = createTRPCRouter({
 Day 21 でも触れたとおり、root の順番は教材で作った時系列に揃えます。`user` は `report` のあとです。
 
 **確認ポイント**:
-- `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けた
-- `getAll` が `adminProcedure` になっている
-- `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けた
-- `npx tsc --noEmit` で型エラーが出ていない
+- `src/server/api/routers/user.ts` を新規作成し、今日使う import と `getAll` を書けました
+- `getAll` が `adminProcedure` になっています
+- `root.ts` に `userRouter` を import / registration の両方で追加し、最後尾に置けました
+- `npx tsc --noEmit` で型エラーが出ていません
 
 ---
 
-### Step 1: 使用するAPIの確認（3分）
+### Step 1: 使用するAPIの確認（読む目安: 3分）
 
 **ゴール**: ユーザー管理に使う2つのAPIを理解します。
 
@@ -266,12 +268,12 @@ api.user.getAll.useQuery();
 > `api.user.getAll` は管理者のみ呼べるAPIです。
 
 **確認ポイント**:
-- 2つのAPIの役割を理解した
-- getCurrentUser でロール判定することを理解した
+- 2つのAPIの役割を理解しました
+- getCurrentUser でロール判定することを理解しました
 
 ---
 
-### Step 2: インポート文（外部ライブラリ）（3分）
+### Step 2: インポート文（外部ライブラリ）（読む目安: 3分）
 
 **ゴール**: 外部ライブラリのインポートを追加します。
 
@@ -301,12 +303,12 @@ import { useRouter }
 | useRouter | ページ遷移 |
 
 **確認ポイント**:
-- `'use client'` がファイル先頭にある
-- 各ライブラリの役割を理解した
+- `'use client'` がファイル先頭にあります
+- 各ライブラリの役割を理解しました
 
 ---
 
-### Step 3: インポート文（プロジェクト内）（3分）
+### Step 3: インポート文（プロジェクト内）（読む目安: 3分）
 
 **ゴール**: プロジェクト内のコンポーネントと定数をインポートします。
 
@@ -358,18 +360,18 @@ import { api } from '@/trpc/react';
 > サイドバーやヘッダーは含みません。
 
 **確認ポイント**:
-- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` になっている
-- `USER_ROLE` 定数を `@/lib/constant/roles` からインポートしている
-- エラーの種類と再試行を判定する3つの関数をインポートしている
-- `UserRoleBadge` と `ActiveStatusBadge` をインポートしている
+- `PageLoadingSpinner` のパスが `@/component/ui/loading-spinner` になっています
+- `USER_ROLE` 定数を `@/lib/constant/roles` からインポートしています
+- エラーの種類と再試行を判定する3つの関数をインポートしています
+- `UserRoleBadge` と `ActiveStatusBadge` をインポートしています
 
 ---
 
-### Step 4: データ取得とエラー処理（7分）
+### Step 4: データ取得とエラー処理（読む目安: 7分）
 
 **ゴール**: APIからデータを取得し、エラー時の処理を追加します。
 
-Step 4 から Step 8 までは `src/app/user/page.tsx` を上から書き足す途中で、関数はまだ閉じていません。保存するたびにエラー表示が出ますがStep 9 の最後のコードブロックで `</AppLayout>`、`);`、`}` を書けば消えます。それまで `/user` は開けないので画面で見た目を確かめるのは Step 9 で `</AppLayout>` まで書き終えてからにしてください。Step 8 までの確認ポイントは書いたコードの上で確かめられることだけを挙げています。
+Step 4 から Step 8 までは `src/app/user/page.tsx` を上から書き足します。各 Step の最後では、途中の関数を一時コードで閉じて `npx tsc --noEmit` を実行します。エラーが表示されず入力待ちに戻ったら一時コードを削除し、次の Step を追記してください。画面のUIは Step 9 で閉じタグと空状態を加えたときに完成するので、そこまでは型エラーが無いことだけを確かめます。
 
 **実装**:
 
@@ -418,9 +420,9 @@ export default function UsersPage() {
 > これらを使い分けて画面表示を切り替えます。
 
 **確認ポイント**:
-- ADMIN のときだけ `getAll` を呼んでいる
-- 2つのqueryから読み込み・エラー・再取得の状態を取得している
-- 401と403を自動再試行しない `retry` を渡している
+- ADMIN のときだけ `getAll` を呼んでいます
+- 2つのqueryから読み込み・エラー・再取得の状態を取得しています
+- 401と403を自動再試行しない `retry` を渡しています
 
 #### 2つのqueryをまとめて判定する
 
@@ -460,9 +462,27 @@ export default function UsersPage() {
 
 再試行ではユーザー情報を必ず取り直し、管理者だと分かっている場合だけ一覧も取り直します。`void` は Promise（非同期処理の結果）をこの場では待たないと明示する書き方です。ボタンは `requiredFetching` を使って通信中の連打を防ぎます。
 
+この時点では表示用の `return` をまだ書いていません。ファイル末尾へ次の一時コードを追記して、型検査が最後まで読める形にします。`return null` は確認中だけ使う仮の出口なので、ユーザー一覧は表示しません。
+
+```typescript
+// BEGIN temporary-checkpoint
+  return null;
+}
+// END temporary-checkpoint
+```
+
+マーカーで囲んだ一時コードは、本番用のUIではありません。未完成の関数に仮の戻り値を足すと、今書いた範囲だけを TypeScript に検査させられます。プロジェクト直下で次のコマンドを実行します。
+
+```bash
+# filepath: ターミナル
+npx tsc --noEmit
+```
+
+エラーが表示されず、ターミナルが次の入力待ちに戻れば Step 4 までの構文と型は正常です。Step 5 のコードを追記する前に、`BEGIN temporary-checkpoint` の行から `END temporary-checkpoint` の行までをすべて削除してください。
+
 ---
 
-### Step 5: 取得状態と権限チェック（7分）
+### Step 5: 取得状態と権限チェック（読む目安: 7分）
 
 **ゴール**: ローディング表示とADMIN以外のアクセス拒否画面を実装します。
 
@@ -484,7 +504,7 @@ export default function UsersPage() {
 このスピナーは自分の情報または一覧の初回取得を待つ表示です。エラーが判明している場合はスピナーを優先せず、次に書くエラー表示へ進みます。`AppLayout` で囲むため待っている間もサイドバーから別のページへ移れます。
 
 **確認ポイント**:
-- 初回取得中は `AppLayout` の内側に `PageLoadingSpinner` を表示している
+- 初回取得中は `AppLayout` の内側に `PageLoadingSpinner` を表示しています
 
 次に、表示に必要なデータが無い取得失敗を判定します。401と403はこの分岐の後ろで専用の案内を出すため、ここでは除きます。
 
@@ -545,7 +565,7 @@ export default function UsersPage() {
 ただしこの判定は画面側の親切にすぎません。本当の防波堤は Step 0 で書いた `adminProcedure` のほうです。ブラウザの JavaScript は読者の手元で動くので書き換えればこの `if` は通り抜けられます。それでも `api.user.getAll` はサーバーで `管理者権限が必要です` と弾かれるため他人のメールアドレスは1件も返りません。画面の判定は表示を整えるためサーバーの判定は情報を守るためにあります。
 
 **確認ポイント**:
-- `USER_ROLE.ADMIN` を使っている（文字列 `'ADMIN'` ではない）
+- `USER_ROLE.ADMIN` を使っています（文字列 `'ADMIN'` ではない）
 
 ```typescript
               {/* filepath: src/app/user/page.tsx */}
@@ -589,13 +609,31 @@ export default function UsersPage() {
 > 定数を使うことでタイプミスを防げます。
 
 **確認ポイント**:
-- 認証・認可エラーの早期リターンを、テーブル本体より前に書いている
-- `!hasRequiredData` の条件で初回500だけを早期リターンしている
-- 早期リターンの `<AppLayout>` を `</AppLayout>` まで閉じている
+- 認証・認可エラーの早期リターンを、テーブル本体より前に書いています
+- `!hasRequiredData` の条件で初回500だけを早期リターンしています
+- 早期リターンの `<AppLayout>` を `</AppLayout>` まで閉じています
+
+Step 5 で追加した3つの早期リターンは閉じていますが、`UsersPage` 本体は開いたままです。ファイル末尾へ次の一時コードを追記します。
+
+```typescript
+// BEGIN temporary-checkpoint
+  return null;
+}
+// END temporary-checkpoint
+```
+
+仮の `return null` を足すと、Step 5 で書いた早期リターンと、データを表示する分岐へ進んだときの戻り値を分けて型検査できます。この `null` は次の Step で実際のページ本体に置き換えます。
+
+```bash
+# filepath: ターミナル
+npx tsc --noEmit
+```
+
+エラーが表示されず、ターミナルが次の入力待ちに戻れば、Step 6 へ進む前に `BEGIN temporary-checkpoint` の行から `END temporary-checkpoint` の行までをすべて削除してください。
 
 ---
 
-### Step 6: 警告・ページヘッダー・テーブル枠（5分）
+### Step 6: 警告・ページヘッダー・テーブル枠（読む目安: 5分）
 
 **ゴール**: ページのメインレイアウト、キャッシュが残る500の警告、テーブルのヘッダー行を作ります。
 
@@ -630,7 +668,7 @@ export default function UsersPage() {
 `max-w-6xl` は横幅の上限です。この表は6列あるのでDay 09 のカード一覧より広い枠を使います。上限を付けないとワイドモニターで名前と右端のボタンが離れすぎてどの行のボタンなのかを目で追えなくなります。
 
 **確認ポイント**:
-- `container` の `<div>` を開いた直後に `{hasFetchError && (` から `)}` までの警告を書けた
+- `container` の `<div>` を開いた直後に `{hasFetchError && (` から `)}` までの警告を書けました
 
 ```typescript
         {/* filepath: src/app/user/page.tsx */}
@@ -647,7 +685,7 @@ export default function UsersPage() {
 見出しは警告の下に置きます。警告が先にあると画面を開いた人は一覧を読む前に警告を目にします。表示中の内容が前回取得したものだと先に分かります。
 
 **確認ポイント**:
-- `<AppLayout>` の中に `<h1>` で「ユーザー管理」を書けた
+- `<AppLayout>` の中に `<h1>` で「ユーザー管理」を書けました
 
 ```typescript
         {/* filepath: src/app/user/page.tsx */}
@@ -672,7 +710,7 @@ export default function UsersPage() {
 `TableHead` はこの表の列そのものの定義です。ここに並べた個数と、Step 7 以降で書く `TableCell` の個数はそろえます。片方だけ増やすとその行から下の列がすべて1つずつ横にずれます。エラーは1件も表示されないので見た目のずれで気づくしかありません。列を足したくなったときはヘッダーと本体の両方を必ず同時に直してください。
 
 **確認ポイント**:
-- `<TableHeader>` の中に `<TableHead>` を3つ書けた
+- `<TableHeader>` の中に `<TableHead>` を3つ書けました
 
 ```typescript
                   {/* filepath: src/app/user/page.tsx */}
@@ -695,12 +733,35 @@ export default function UsersPage() {
 > HTMLの `<thead>` と `<tbody>` に対応しています。
 
 **確認ポイント**:
-- `<TableHead>` が合計6つになり、`</TableHeader>` まで閉じられた
-- 6つ目の `<TableHead>` に `className="text-right"` を付けている
+- `<TableHead>` が合計6つになり、`</TableHeader>` まで閉じられました
+- 6つ目の `<TableHead>` に `className="text-right"` を付けています
+
+テーブル本体は Step 7 で書くため、いまは `TableHeader` の後ろを一時コードで閉じます。ファイル末尾へ追記してください。
+
+```typescript
+{/* BEGIN temporary-checkpoint */}
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+// END temporary-checkpoint
+```
+
+`TableHeader` の中身はそのまま残し、まだ書いていない `TableBody` の代わりに外側のタグだけを閉じています。この形で型検査すると、ヘッダー行の閉じ忘れを Step 7 へ持ち越さずに済みます。
+
+```bash
+# filepath: ターミナル
+npx tsc --noEmit
+```
+
+エラーが表示されず、ターミナルが次の入力待ちに戻れば、Step 7 へ進む前に `BEGIN temporary-checkpoint` の行から `END temporary-checkpoint` の行までをすべて削除してください。Step 7 の `TableBody` は、今削除した `</Table>` の位置から書き始めます。
 
 ---
 
-### Step 7: アバターとバッジの表示（5分）
+### Step 7: アバターとバッジの表示（読む目安: 5分）
 
 **ゴール**: テーブル本体にアバター画像とロール・ステータスのバッジを表示します。
 
@@ -731,7 +792,7 @@ export default function UsersPage() {
 > AvatarFallback が自動的に表示されます。
 
 **確認ポイント**:
-- 条件付きレンダリングを使っている
+- 条件付きレンダリングを使っています
 
 ```typescript
                           {/* filepath: src/app/user/page.tsx */}
@@ -756,8 +817,8 @@ export default function UsersPage() {
 `user.name?.[0]?.toUpperCase()` は名前の1文字目を取り出して大文字にする式です。`?.` を2回はさむのは名前が未設定の場合と、名前はあっても空文字の場合の両方で途中停止できるようにするためです。`?.` を外すと名前が `null` のユーザーが1人いるだけでこの式が例外を投げ、一覧全体が真っ白になります。1件のデータ欠けで残り全員の行まで巻き添えにしないための書き方です。
 
 **確認ポイント**:
-- `<Avatar>` の中に `AvatarImage` と `AvatarFallback` の両方を書けた
-- `{user.name}` を1列目、`{user.email}` を2列目の `<TableCell>` に書けた
+- `<Avatar>` の中に `AvatarImage` と `AvatarFallback` の両方を書けました
+- `{user.name}` を1列目、`{user.email}` を2列目の `<TableCell>` に書けました
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
@@ -788,20 +849,46 @@ export default function UsersPage() {
 | アクティブ | green-500/10 | green-700 | アクティブ |
 | 無効 | gray-500/10 | gray-700 | 無効 |
 
-初期データのユーザーは全員アクティブなのでグレーのバッジは Day 29 でアカウントを無効にしてから確かめます。
+初期データのユーザーは全員アクティブなのでグレーのバッジは Day 29 でアカウントを無効にしてから確かめます。Day 29 では管理者が `isActive` を切り替えると同時に `sessionVersion` が加算され、PostgreSQL の整数上限（`POSTGRES_INTEGER_MAX`）未満の条件で更新されます。古いトークンは無効化時点の版数のまま残るため、後から再有効化しても旧トークンが復活することはありません。
 
 > `AvatarFallback` にはユーザー名の頭文字を
 > 大文字で表示します。画像がないユーザーでも
 > アイコンが表示されます。
 
 **確認ポイント**:
-- `UserRoleBadge` に `role={user.role}` を渡している
-- `ActiveStatusBadge` に `isActive={user.isActive}` を渡している
-- 3列目と4列目の `<TableCell>` を1つずつ閉じている
+- `UserRoleBadge` に `role={user.role}` を渡しています
+- `ActiveStatusBadge` に `isActive={user.isActive}` を渡しています
+- 3列目と4列目の `<TableCell>` を1つずつ閉じています
+
+日付とアクションの2列は Step 8 で追加します。いまの4列分だけで型検査するため、開いている `TableRow`、`map`、`TableBody` とページ本体を一時コードで閉じます。
+
+```typescript
+{/* BEGIN temporary-checkpoint */}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+// END temporary-checkpoint
+```
+
+一時コードは、今ある4つの `TableCell` を1行として閉じます。これで `users?.map` の1周分も閉じるため、アバターやバッジで使った `user` が正しい範囲にあるかをこの時点で検査できます。
+
+```bash
+# filepath: ターミナル
+npx tsc --noEmit
+```
+
+エラーが表示されず、ターミナルが次の入力待ちに戻れば、Step 8 へ進む前に `BEGIN temporary-checkpoint` の行から `END temporary-checkpoint` の行までをすべて削除してください。日付列は、今削除した `</TableRow>` の位置から書き始めます。
 
 ---
 
-### Step 8: アクションボタンの追加（4分）
+### Step 8: アクションボタンの追加（読む目安: 4分）
 
 **ゴール**: 各行に日付表示と、詳細・編集ボタンを追加します。
 
@@ -826,7 +913,7 @@ export default function UsersPage() {
 > `-` を表示して安全に処理しています。
 
 **確認ポイント**:
-- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡している
+- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡しています
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
@@ -854,7 +941,7 @@ export default function UsersPage() {
 `title="詳細"` はマウスを載せたときの吹き出しに使います。`aria-label="詳細"` は読み上げソフトへボタンの名前を伝える指定です。アイコンだけでも操作の目的が分かるよう、両方を付けます。
 
 **確認ポイント**:
-- 詳細ボタンの中に `<Eye />` を置き、`title="詳細"` を付けている
+- 詳細ボタンの中に `<Eye />` を置き、`title="詳細"` を付けています
 
 ```typescript
                         {/* filepath: src/app/user/page.tsx */}
@@ -881,8 +968,8 @@ export default function UsersPage() {
 このボタンが用意しているのは移動の入口だけで、権限を守る役目は持っていません。`/user/{id}/edit` はURLを手で打っても開けます。編集画面が安全なのはDay 29 で書く保存処理がサーバー側でロールを確かめ、管理者でなければ `管理者権限が必要です` を返すからです。ボタンを隠すことと、操作を禁じることは別の話だと覚えておいてください。
 
 **確認ポイント**:
-- 1つの `<TableCell>` の中に `<Button>` を2つ書けた
-- 2つとも `variant="ghost"` と `size="icon"` を指定している
+- 1つの `<TableCell>` の中に `<Button>` を2つ書けました
+- 2つとも `variant="ghost"` と `size="icon"` を指定しています
 
 ```typescript
                   {/* filepath: src/app/user/page.tsx */}
@@ -910,14 +997,34 @@ export default function UsersPage() {
 > `size="icon"` でアイコンサイズになります。
 
 **確認ポイント**:
-- `</TableRow>` `))}` `</TableBody>` `</Table>` `</CardContent>` `</Card>` を、開いた順の逆に閉じられた
-- `</div>` と `</AppLayout>` はまだ書いていない（Step 9 で書く）
+- `</TableRow>` `))}` `</TableBody>` `</Table>` `</CardContent>` `</Card>` を、開いた順の逆に閉じられました
+- `</div>` と `</AppLayout>` はまだ書いていません（Step 9 で書く）
+
+この Step でテーブルまでは閉じました。ページの外側だけを一時コードで閉じて、Step 8 までを型検査します。
+
+```typescript
+{/* BEGIN temporary-checkpoint */}
+      </div>
+    </AppLayout>
+  );
+}
+// END temporary-checkpoint
+```
+
+Step 8 では `TableRow` から `Card` までがすでに閉じているため、一時コードが閉じるのはページ外側の `div`、`AppLayout`、`return`、`UsersPage` だけです。ここで列の追加を含むページ本体全体を型検査できます。
+
+```bash
+# filepath: ターミナル
+npx tsc --noEmit
+```
+
+エラーが表示されず、ターミナルが次の入力待ちに戻れば、Step 9 へ進む前に `BEGIN temporary-checkpoint` の行から `END temporary-checkpoint` の行までをすべて削除してください。Step 9 では同じ位置へ空状態の分岐を先に書き、その後ろでページを閉じます。
 
 ---
 
-### Step 9: 空状態UIと動作確認（3分）
+### Step 9: 空状態UIと動作確認（読む目安: 3分）
 
-**ゴール**: ユーザー0件時のメッセージを追加し、全体の動作を確認します。
+**ゴール**: ユーザー0件時のメッセージを追加し、ページ全体のUIを完成させて動作を確認します。
 
 一覧を通常操作から開けるよう、
 `app-layout.tsx` に管理者専用リンクを加えます。
@@ -945,14 +1052,12 @@ Day 08 のデスクトップ用のナビゲーション内で、
     <Link
       href="/user"
       className={cn(
-        'flex items-center gap-3 rounded-md ' +
-          'px-3 py-2 text-sm transition-colors',
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
         pathname === '/user'
-          ? 'bg-sidebar-accent ' +
-            'text-sidebar-accent-foreground font-medium'
-          : 'text-sidebar-foreground/70 ' +
-            'hover:bg-sidebar-accent/50 ' +
-            'hover:text-sidebar-foreground',
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 ' +
+            'hover:text-sidebar-foreground ' +
+            'hover:bg-sidebar-accent',
       )}
     >
       <Users className="h-5 w-5" />
@@ -977,8 +1082,8 @@ flowchart TB
 上の2枚には「越える」と書いた矢印が付いています。この2枚は迷わせないための案内で、情報を止めているのはいちばん下の1枚だけです。画面の判定を消しても他人のデータは漏れませんがサーバーの判定を消すと漏れます。
 
 **確認ポイント**:
-- `menuItems.map(...)` の直後に、`session.user.role === USER_ROLE.ADMIN &&` で囲んだ `<li>` を置けた
-- 文字列の `'ADMIN'` ではなく `USER_ROLE.ADMIN` を使っている
+- `menuItems.map(...)` の直後に、`session.user.role === USER_ROLE.ADMIN &&` で囲んだ `<li>` を置けました
+- 文字列の `'ADMIN'` ではなく `USER_ROLE.ADMIN` を使っています
 
 このリンクが実際に出るかどうかは`page.tsx` を閉じ切ってから下のチェックリストで確かめます。
 
@@ -1002,6 +1107,14 @@ flowchart TB
 > ユーザーは混乱します。
 > 空状態メッセージを表示して安心させましょう。
 
+**確認ポイント:** ユーザーが0件のときメッセージが表示されます。
+
+【スクリーンショット】ここで完成した `/user` のUIを開きます。次の部分拡大で、ロールのバッジと右端のアクション列を確認してください。
+
+![ユーザー管理ページの部分拡大。赤枠①がロールのバッジが並ぶ列、赤枠②が右端のアクション列](./screenshots/day24/user-list-table.png)
+
+冒頭の全体図の左端にある丸は、ユーザーのアバターです。初期データのユーザーはアバター画像を持っていないので、丸には名前の頭文字だけが出ます。ロールのバッジは管理者が1人、それ以外が一般ユーザーになります。人数が違っても実装の誤りではありません。
+
 開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
 
 ```bash
@@ -1010,32 +1123,23 @@ flowchart TB
 npm run dev
 ```
 
-**確認ポイント**:
-- ユーザーが0件のときメッセージが表示される
-
-ここで初めて `/user` が開きます。アバターとロールのバッジが並んでいます。右端にアクション列が出ていることを確認してください。
-
-![ユーザー管理ページ。赤枠①がロールのバッジが並ぶ列、赤枠②が右端のアクション列](./screenshots/day24/user-list-table.png)
-
-初期データのユーザーはアバター画像を持っていないのでいちばん左の丸には名前の頭文字だけが出ます。ロールのバッジは管理者が1人、それ以外が一般ユーザーになります。人数が違っても実装の誤りではありません。
-
 **動作確認チェックリスト**:
 
-1. `admin@example.com` でログインする
-2. サイドバーに「ユーザー管理」のリンクが出ている
-3. そのリンクから `/user` を開く
-4. ユーザー一覧がテーブルで表示される
-5. アバターと名前が表示される
+1. `admin@example.com` でログインします
+2. サイドバーに「ユーザー管理」のリンクが出ています
+3. そのリンクから `/user` を開きます
+4. ユーザー一覧がテーブルで表示されます
+5. アバターと名前が表示されます
 6. ロールバッジが正しく色分けされる（管理者は Shield アイコン付き）
-7. ステータスバッジが正しい（初期データは全員アクティブなので緑だけが並ぶ）
-8. 登録日が `yyyy/MM/dd` 形式で並ぶ
-9. 各行の右端に詳細・編集のボタンが2つ並び、マウスを載せると背景色が変わる
+7. ステータスバッジが正しいです（初期データは全員アクティブなので緑だけが並ぶ）
+8. 登録日が `yyyy/MM/dd` 形式で並びます
+9. 各行の右端に詳細・編集のボタンが2つ並び、マウスを載せると背景色が変わります
 10. 詳細ボタンで URL が `/user/{id}` に変わる（ページは Day 29 で作るためこの時点では 404 表示）
 11. 編集ボタンで URL が `/user/{id}/edit` に変わる（ページは Day 29 で作るため、この時点では 404 表示）
-12. 一度ログアウトし、一般ユーザー（`user1@example.com`）でログインし直す
-13. サイドバーに「ユーザー管理」が出ていない
-14. `/user` をURL入力で開くと「アクセス権限がありません」が表示される
-15. 確認できたら `admin@example.com` でログインし直す（Day 25 以降も管理者アカウントを使う）
+12. 一度ログアウトし、一般ユーザー（`user1@example.com`）でログインし直します
+13. サイドバーに「ユーザー管理」が出ていません
+14. `/user` をURL入力で開くと「アクセス権限がありません」が表示されます
+15. 確認できたら `admin@example.com` でログインし直します（Day 25 以降も管理者アカウントを使う）
 
 #### 遷移先のURL構造
 
@@ -1045,9 +1149,9 @@ npm run dev
 | 編集 | /user/{id}/edit | /user/abc123/edit |
 
 **確認ポイント**:
-- 管理者のみアクセスできる
-- 全ユーザーがテーブルに表示される
-- 詳細・編集ボタンで正しく遷移する
+- 管理者のみアクセスできます
+- 全ユーザーがテーブルに表示されます
+- 詳細・編集ボタンで正しく遷移します
 
 チェック12〜14を行うと一般ユーザーの画面はこうなります。
 
@@ -1539,14 +1643,12 @@ import { USER_ROLE } from '@/lib/constant/roles';
     <Link
       href="/user"
       className={cn(
-        'flex items-center gap-3 rounded-md ' +
-          'px-3 py-2 text-sm transition-colors',
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
         pathname === '/user'
-          ? 'bg-sidebar-accent ' +
-            'text-sidebar-accent-foreground font-medium'
-          : 'text-sidebar-foreground/70 ' +
-            'hover:bg-sidebar-accent/50 ' +
-            'hover:text-sidebar-foreground',
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/60 ' +
+            'hover:text-sidebar-foreground ' +
+            'hover:bg-sidebar-accent',
       )}
     >
       <Users className="h-5 w-5" />
@@ -1560,11 +1662,11 @@ import { USER_ROLE } from '@/lib/constant/roles';
 
 ## 今日のまとめ
 
-- [ ] api.auth.getCurrentUser で権限チェックした
-- [ ] api.user.getAll でユーザー一覧を取得した
-- [ ] Avatar と UserRoleBadge/ActiveStatusBadge でユーザー情報を表示した
-- [ ] アクションボタンで詳細・編集に遷移できた
-- [ ] 空状態UIを実装した
+- [ ] api.auth.getCurrentUser で権限チェックしました
+- [ ] api.user.getAll でユーザー一覧を取得しました
+- [ ] Avatar と UserRoleBadge/ActiveStatusBadge でユーザー情報を表示しました
+- [ ] アクションボタンで詳細・編集に遷移できました
+- [ ] 空状態UIを実装しました
 
 ## つまずきポイント
 
@@ -1583,7 +1685,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 | getCurrentUser | ログイン中ユーザーの情報取得 |
 | USER_ROLE.ADMIN | 管理者ロールを表す定数 |
 | && (条件付きレンダリング) | 条件がtrueのときだけ要素を表示するパターン |
-| `?.` (オプショナルチェーン) | プロパティがnull/undefinedでもエラーにならない |
+| `?.` (オプショナルチェーン) | プロパティがnull/undefinedでもエラーになりません |
 | キャッシュ | 前回取得したデータをブラウザ内に一時保存したもの |
 | retry | 取得失敗時に同じqueryを再試行する設定 |
 | UserRoleBadge | ロール表示用の専用バッジコンポーネント |

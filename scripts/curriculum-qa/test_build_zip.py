@@ -24,6 +24,10 @@ REQUIRED_FILES = (
     "doc/SUPPORTED_ENVIRONMENTS.md",
     "scripts/scaffold-from-scratch.sh",
     "scripts/verify-scaffold-database.cjs",
+    "scripts/day17-test/page-pagination.test.tsx.template",
+    "scripts/day17-test/page-single-write.test.tsx.template",
+    "scripts/day17-test/setup.ts",
+    "scripts/day17-test/vitest.config.ts",
 )
 SUPPORT_DIRECTORIES = (
     "_app-api-trpc",

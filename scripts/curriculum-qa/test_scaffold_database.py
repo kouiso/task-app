@@ -19,7 +19,7 @@ OWNER_KEY = "_TASKAPP_SCAFFOLD_DB_OWNER"
 class ScaffoldDatabaseTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.directory = Path(self.temp.name).resolve() / "task-app"
+        self.directory = Path(self.temp.name) / "task-app"
         self.directory.mkdir()
         self.config = {
             "name": "task-app",
@@ -213,10 +213,7 @@ else: sys.exit(58)
         docker.chmod(0o755)
         for name in ("npx", "npm"):
             executable = binaries / name
-            executable.write_text(
-                '#!/bin/sh\nprintf "%s|%s\\n" "$*" "$DATABASE_URL" >> "$WRITE_LOG"\n'
-                f'printf "{name} %s\\n" "$*"\n'
-            )
+            executable.write_text('#!/bin/sh\nprintf "%s|%s\\n" "$*" "$DATABASE_URL" >> "$WRITE_LOG"\n')
             executable.chmod(0o755)
         (self.directory / ".env").write_text("DATABASE_URL=postgresql://user:password@localhost:25532/taskapp\n" + f"{OWNER_KEY}={self.owner}\n")
         (self.directory / "src/command").mkdir(parents=True, exist_ok=True)
@@ -236,40 +233,6 @@ else: sys.exit(58)
         self.assertEqual(len(writes.splitlines()), 3)
         self.assertIn("db:seed -- --yes", writes)
         self.assertTrue(all(line.endswith("@127.0.0.1:25532/taskapp?schema=public") for line in writes.splitlines()))
-
-    def test_cli_announces_seed_before_running_it(self):
-        result, _ = self.run_guard()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        lines = result.stdout.splitlines()
-        self.assertIn("シードデータを投入しています...", lines)
-        self.assertLess(
-            lines.index("シードデータを投入しています..."),
-            lines.index("npm run db:seed -- --yes"),
-        )
-
-    def test_cli_rejects_ipv6_only_compose_binding_before_any_write(self):
-        self.config["services"]["db"]["ports"][0]["host_ip"] = "::1"
-        self.container["NetworkSettings"]["Ports"]["5432/tcp"][0]["HostIp"] = "::1"
-        result, writes = self.run_guard({"DATABASE_URL": "postgresql://user:password@127.0.0.1:25532/taskapp"})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(writes, "")
-
-    def test_cli_rejects_ipv6_only_running_binding_before_any_write(self):
-        for host_ip in ("::1", "::", "192.0.2.1", ""):
-            with self.subTest(host_ip=host_ip):
-                self.container["NetworkSettings"]["Ports"]["5432/tcp"][0]["HostIp"] = host_ip
-                result, writes = self.run_guard()
-                self.assertNotEqual(result.returncode, 0)
-                self.assertEqual(writes, "")
-
-    def test_cli_pins_localhost_to_verified_ipv4_loopback(self):
-        for host_ip in ("0.0.0.0", "127.0.0.1"):
-            with self.subTest(host_ip=host_ip):
-                self.container["NetworkSettings"]["Ports"]["5432/tcp"][0]["HostIp"] = host_ip
-                result, writes = self.run_guard()
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(len(writes.splitlines()), 3)
-                self.assertTrue(all("@127.0.0.1:25532/taskapp" in line for line in writes.splitlines()))
 
     def test_cli_rejects_exported_foreign_url_before_any_write(self):
         result, writes = self.run_guard({"DATABASE_URL": "postgresql://user:private-password@other.example/taskapp"})

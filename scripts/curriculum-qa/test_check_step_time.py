@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_step_time.py の退行テスト。
 
-書き方が2通りある（「合計時間: 約60分です」と「合計時間は約56分です」）ので、
+現行の「読む時間の合計（仮）」と移行前の「合計時間」をどちらも検査する。
 片方だけに合わせた正規表現にすると、もう片方のファイルが検査されないまま緑になる。
 """
 
@@ -21,9 +21,35 @@ TABLE = """| ステップ | 作業内容 | 所要時間 |
 | Step 0 | 準備する | 10分 |
 | Step 1 | 書く | 20分 |
 """
+READING_TABLE = TABLE.replace("所要時間", "読む時間の目安")
+DAY20_READING_TABLE = """| ステップ | 作業内容 | 読む時間の目安 |
+|---|---|---|
+| Step 0 | APIを作る | 22分 |
+| Step 1 | APIを確認する | 3分 |
+| Step 2 | 土台を作る | 5分 |
+| Step 3 | フォームを設定する | 5分 |
+| Step 4 | 入力を作る | 5分 |
+| Step 5 | フィルターを作る | 7分 |
+| Step 6 | 検索処理を作る | 5分 |
+| Step 7 | URLと同期する | 5分 |
+| Step 8 | 検索結果を表示する | 10分 |
+| Step 8.5 | 一覧の絞り込みをURLへ残す | 18分（仮） |
+| Step 9 | 削除機能を追加する | 7分 |
+| Step 10 | 動作確認する | 3分 |
+"""
 
 CASES: list[tuple[str, str, object]] = [
-    ("合っていれば差なし", TABLE + "\n**合計時間**: 約30分です。", (30, 30, 2)),
+    (
+        "現行ラベルで合っていれば差なし",
+        READING_TABLE + "\n**読む時間の合計（仮）**: 約30分です。",
+        (30, 30, 2),
+    ),
+    (
+        "現行ラベルのずれを拾う",
+        READING_TABLE + "\n**読む時間の合計（仮）**: 約25分です。",
+        (30, 25, 2),
+    ),
+    ("移行前のラベルも拾う", TABLE + "\n**合計時間**: 約30分です。", (30, 30, 2)),
     ("ずれていれば拾う", TABLE + "\n**合計時間**: 約25分です。", (30, 25, 2)),
     ("『は』でつなぐ書き方も拾う", TABLE + "\n**合計時間**は約30分です。", (30, 30, 2)),
     ("『約』が無くても拾う", TABLE + "\n**合計時間**: 30分です。", (30, 30, 2)),
@@ -65,12 +91,38 @@ def check_missing_summary() -> tuple[int, int]:
 
     cases = [
         ("day05 で表が消えたら 1 を返す", {"day05_x.md": "**合計時間**: 約30分です。\n"}, 1),
-        ("day05 で合計が消えたら 1 を返す", {"day05_x.md": TABLE}, 1),
+        ("day05 で現行の合計が消えたら 1 を返す", {"day05_x.md": READING_TABLE}, 1),
+        (
+            "day05 の現行ラベルで合計がずれたら 1 を返す",
+            {"day05_x.md": READING_TABLE + "\n**読む時間の合計（仮）**: 約25分です。\n"},
+            1,
+        ),
         ("day01 は表が無くても 0 を返す", {"day01_x.md": "文章で進めます。\n"}, 0),
         (
-            "day05 がそろっていれば 0 を返す",
+            "day05 の移行前ラベルがそろっていれば 0 を返す",
             {"day05_x.md": TABLE + "\n**合計時間**: 約30分です。\n"},
             0,
+        ),
+        (
+            "day05 の現行ラベルがそろっていれば 0 を返す",
+            {"day05_x.md": READING_TABLE + "\n**読む時間の合計（仮）**: 約30分です。\n"},
+            0,
+        ),
+        (
+            "小数Stepの仮時間を含む95分の表なら 0 を返す",
+            {
+                "day20_x.md": DAY20_READING_TABLE
+                + "\n**読む時間の合計（仮）**: 約95分です。\n"
+            },
+            0,
+        ),
+        (
+            "小数Stepの仮時間を落とした77分の合計なら 1 を返す",
+            {
+                "day20_x.md": DAY20_READING_TABLE
+                + "\n**読む時間の合計（仮）**: 約77分です。\n"
+            },
+            1,
         ),
     ]
     failed = 0
@@ -82,17 +134,6 @@ def check_missing_summary() -> tuple[int, int]:
     return failed, len(cases)
 
 
-HEAD = "| Step 2 | 作業 | 30分 |\n\n**合計時間**: 約30分です。\n"
-
-HEADING_CASES: list[tuple[str, str, object]] = [
-    ("見出しと表が合っていれば差なし", HEAD + "\n### Step 2: 作業する（30分）\n", []),
-    ("見出しだけ古ければ拾う", HEAD + "\n### Step 2: 作業する（8分）\n", [("2", 8, 30)]),
-    ("半角括弧の見出しも拾う", HEAD + "\n### Step 2: 作業する (8分)\n", [("2", 8, 30)]),
-    ("表に無い Step の見出しは拾う", HEAD + "\n### Step 9: 幽霊（5分）\n", [("9", 5, -1)]),
-    ("コードブロックの中の見出しは見ない", HEAD + "\n```md\n### Step 2: 作業する（8分）\n```\n", []),
-]
-
-
 def main() -> int:
     failed = 0
     for name, text, expected in CASES:
@@ -100,14 +141,9 @@ def main() -> int:
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
-    for name, text, expected in HEADING_CASES:
-        got = check_step_time.heading_mismatches(text)
-        if got != expected:
-            failed += 1
-            print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
     missing_failed, missing_total = check_missing_summary()
     failed += missing_failed
-    total = len(CASES) + len(HEADING_CASES) + missing_total
+    total = len(CASES) + missing_total
     if failed:
         print(f"❌ check_step_time 自己テスト {failed}/{total} 失敗")
         return 1

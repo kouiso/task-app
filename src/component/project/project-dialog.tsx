@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/component/ui/button';
@@ -18,21 +18,32 @@ import { Label } from '@/component/ui/label';
 import { Textarea } from '@/component/ui/textarea';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
 
-const projectFormSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'プロジェクト名は必須です'),
-  description: z.string().optional(),
-  color: z.string(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
+const projectFormSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().min(1, 'プロジェクト名は必須です'),
+    description: z.string().optional(),
+    color: z.string(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startDate && data.endDate && data.startDate > data.endDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endDate'],
+        message: '終了日は開始日以降の日付にしてください',
+      });
+    }
+  });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 interface ProjectDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: ProjectFormData) => void;
+  onSubmit: (data: ProjectFormData) => void | Promise<void>;
+  isPending?: boolean;
   initialData?: ProjectFormData | undefined;
 }
 
@@ -56,7 +67,14 @@ function buildProjectFormValues(initialData: ProjectFormData | undefined): Proje
   };
 }
 
-export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectDialogProps) {
+export function ProjectDialog({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+  isPending = false,
+}: ProjectDialogProps) {
+  const submitLocked = useRef(false);
   const {
     register,
     handleSubmit,
@@ -80,7 +98,9 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
     onClose();
   };
 
-  const handleFormSubmit = (data: ProjectFormValues) => {
+  const handleFormSubmit = async (data: ProjectFormValues) => {
+    if (isPending || submitLocked.current) return;
+    submitLocked.current = true;
     const submitData: ProjectFormData = {
       ...(data.id !== undefined && { id: data.id }),
       name: data.name,
@@ -89,7 +109,11 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
       ...(data.startDate && { startDate: data.startDate }),
       ...(data.endDate && { endDate: data.endDate }),
     };
-    onSubmit(submitData);
+    try {
+      await onSubmit(submitData);
+    } finally {
+      submitLocked.current = false;
+    }
   };
 
   return (
@@ -151,7 +175,18 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="endDate">終了日</Label>
-                <Input id="endDate" type="date" {...register('endDate')} />
+                <Input
+                  id="endDate"
+                  type="date"
+                  aria-invalid={!!errors.endDate}
+                  aria-describedby={errors.endDate ? 'end-date-error' : undefined}
+                  {...register('endDate')}
+                />
+                {errors.endDate && (
+                  <p id="end-date-error" className="text-sm text-destructive">
+                    {errors.endDate.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -159,7 +194,9 @@ export function ProjectDialog({ open, onClose, onSubmit, initialData }: ProjectD
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit">{initialData?.id ? '更新' : '作成'}</Button>
+            <Button type="submit" disabled={isPending}>
+              {initialData?.id ? '更新' : '作成'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

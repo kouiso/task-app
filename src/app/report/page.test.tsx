@@ -61,7 +61,8 @@ describe('レポート概要の取得エラー', () => {
     render(<ReportPage />);
 
     expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText(/最新のレポートを取得できませんでした/)).toBeInTheDocument();
+    const staleMessage = '取得できませんでした。前回のレポートです。';
+    expect(screen.getByText(staleMessage)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '再試行' }));
     expect(mocks.refetch).toHaveBeenCalledOnce();
   });

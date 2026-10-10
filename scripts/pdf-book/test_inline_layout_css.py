@@ -190,6 +190,14 @@ class TableCssTest(unittest.TestCase):
         self.assertNotIn("font-size", css)
         self.assertEqual(before, (self.manifest, self.report))
 
+    def test_explicit_table_path_wrap_accepts_multiple_measured_lines(self):
+        self.manifest["entries"][1]["allow_line_wrap"] = True
+        self.report["dom_audit"]["observed"][1]["items"][0]["line_rects"] = [{}, {}]
+        css, adjustments, unresolved = derive_table_css(self.manifest, self.report)
+        self.assertEqual(unresolved, [])
+        self.assertTrue(adjustments)
+        self.assertIn(self.table_id, css)
+
     def test_overflowing_initial_table_uses_floor_page_budget_and_ceil_minimum(self):
         geometry = self._geometry(widths=[210, 210, 210], fixed=17)
         items = [
@@ -256,38 +264,6 @@ class TableCssTest(unittest.TestCase):
         self.report["dom_audit"]["violations"] = []
         self.assertEqual(derive_table_css(self.manifest, self.report), ("", [], []))
 
-    def test_thead_code_duplicated_across_pages_is_folded_to_one(self):
-        # ページ分割で複写される thead セルは、同じ識別子で断片ごとに観測される。
-        self.report["dom_audit"]["observed"][1]["items"] = [
-            self._item(1, 150, 1, self._geometry(1)),
-            self._item(1, 150, 2, self._geometry(2)),
-        ]
-        self.report["dom_audit"]["table_inventory"]["tables"][0][
-            "fragments"
-        ].append({
-            "page_index": 2,
-            "page_content_rect": {"left": 0, "right": 300, "width": 300},
-            "geometry": self._geometry(2),
-        })
-
-        css, adjustments, unresolved = derive_table_css(self.manifest, self.report)
-        self.assertEqual(unresolved, [])
-        self.assertEqual(adjustments[0]["minimum_widths"], [50, 160, 70])
-        self.assertNotIn("font-size", css)
-        self.assertEqual(derive_flow_css(self.manifest, self.report), (NOWRAP_CSS, []))
-
-    def test_conflicting_duplicate_observations_still_raise(self):
-        conflicting = self._item(1, 150, 2)
-        conflicting["table_geometry"]["target"]["column_index"] = 2
-        self.report["dom_audit"]["observed"][1]["items"] = [
-            self._item(1, 150, 1),
-            conflicting,
-        ]
-        with self.assertRaisesRegex(ValueError, "1つのコード"):
-            derive_table_css(self.manifest, self.report)
-        with self.assertRaisesRegex(ValueError, "1つのコード"):
-            derive_flow_css(self.manifest, self.report)
-
     def test_all_fragments_must_have_the_same_simple_grid(self):
         second = self._item(1, 150, 2, self._geometry(2, widths=[90, 110, 100]))
         self.report["dom_audit"]["observed"][1]["items"] = [second]
@@ -302,6 +278,49 @@ class TableCssTest(unittest.TestCase):
         _, adjustments, unresolved = derive_table_css(self.manifest, self.report)
         self.assertEqual(adjustments, [])
         self.assertEqual(unresolved[0]["reason"], "inconsistent_fragment_column_widths")
+
+    def test_repeated_header_uses_worst_clone_and_rejects_unproven_clones(self):
+        identity = {
+            "table_id": self.table_id,
+            "section": "thead",
+            "row_index": 0,
+            "cell_index": 1,
+            "column_index": 1,
+            "row_span": 1,
+            "column_span": 1,
+            "tag": "TH",
+            "code_index": 0,
+        }
+        entry = self.manifest["entries"][1]
+        entry["pagination_role"] = "repeating_table_header"
+        entry["table_cell"] = identity
+        first = self.report["dom_audit"]["observed"][1]["items"][0]
+        first["table_cell"] = copy.deepcopy(identity)
+        second = self._item(1, 170, 2)
+        second["table_cell"] = copy.deepcopy(identity)
+        for item in (first, second):
+            item["font_family"] = "monospace"
+            item["font_size_pt"] = 9
+            left = 0
+            for column in item["table_geometry"]["columns"]:
+                column["left"] = left
+                left += column["width"]
+                column["right"] = left
+        self.report["dom_audit"]["observed"][1]["items"].append(second)
+
+        _, adjustments, unresolved = derive_table_css(self.manifest, self.report)
+        self.assertEqual(unresolved, [])
+        self.assertEqual(adjustments[0]["minimum_widths"][1], 180)
+
+        for mutate in (
+            lambda item: item.update(page_index=1),
+            lambda item: item["table_cell"].update(column_index=2),
+            lambda item: item.update(text="tampered"),
+        ):
+            report = copy.deepcopy(self.report)
+            mutate(report["dom_audit"]["observed"][1]["items"][1])
+            with self.assertRaises(ValueError):
+                derive_table_css(self.manifest, report)
 
     def test_spanning_cells_and_overwide_minimum_are_unresolved(self):
         geometry = self._geometry(1, spans=True)

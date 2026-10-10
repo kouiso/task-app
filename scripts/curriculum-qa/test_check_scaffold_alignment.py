@@ -9,6 +9,8 @@
 実際に2026-07-29 時点で、旧判定は144件の貼り先のうち9件を取り落としていた。
 """
 
+import copy
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -98,28 +100,109 @@ def main() -> int:
     if by_day.get(10) != {"src/app/task/page.tsx"}:
         fails.append(f"❌ 先頭行以外の目印を読めていない: {by_day.get(10)}")
 
-    # scaffold が engines.node="22.x" を書く契約。本物のスクリプトで True、
-    # その行を消した文字列で False になる両方を見ないと、契約の行が
-    # 形だけ置かれて判定が常に True になる壊れ方を取りこぼす。
-    scaffold_script = (target.SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(
-        encoding="utf-8"
-    )
-    if not target.scaffold_pins_node(scaffold_script):
-        fails.append("❌ 本物の scaffold-from-scratch.sh が engines.node を pin していない")
-    without_engines = "\n".join(
-        line for line in scaffold_script.splitlines() if 'engines.node="22.x"' not in line
-    )
-    if target.scaffold_pins_node(without_engines):
-        fails.append("❌ engines.node の行を消した scaffold でも True を返している")
-    commented_out = scaffold_script.replace(
-        '    engines.node="22.x" \\\n', '    # engines.node="22.x" \\\n'
-    )
-    if commented_out == scaffold_script:
-        fails.append("❌ engines.node の継続行が見つからず、コメントアウトの検査を組めない")
-    elif target.scaffold_pins_node(commented_out):
-        fails.append("❌ engines.node の行をコメントアウトした scaffold でも True を返している")
+    scaffold = (target.SCRIPTS_DIR / "scaffold-from-scratch.sh").read_text(encoding="utf-8")
+    if not hasattr(target, "scaffold_security_contract"):
+        fails.append("❌ scaffold の依存固定契約を単体検査できない")
+    else:
+        if not target.scaffold_security_contract(scaffold):
+            fails.append("❌ 現在の guarded main と依存固定を受理できない")
+        unsafe_scaffolds = {
+            "古い postcss override": scaffold.replace(
+                'overrides.postcss="8.5.23"', 'overrides.postcss="8.5.22"'
+            ),
+            "古い sharp override": scaffold.replace(
+                'overrides.sharp="0.35.5"', 'overrides.sharp="0.35.4"'
+            ),
+            "スコープ外の deepmerge override": scaffold.replace(
+                'overrides.@prisma/config.deepmerge-ts="8.0.2"',
+                'overrides.deepmerge-ts="8.0.2"',
+            ),
+            "deepmerge override 欠落": scaffold.replace(
+                '    overrides.@prisma/config.deepmerge-ts="8.0.2"\n', ""
+            ),
+            "古い deepmerge override": scaffold.replace(
+                'overrides.@prisma/config.deepmerge-ts="8.0.2"',
+                'overrides.@prisma/config.deepmerge-ts="8.0.1"',
+            ),
+            "スコープ内外の deepmerge override 併存": scaffold.replace(
+                '    overrides.@prisma/config.deepmerge-ts="8.0.2"',
+                '    overrides.deepmerge-ts="8.0.2"\n'
+                '    overrides.@prisma/config.deepmerge-ts="8.0.2"',
+            ),
+            "override が install より後": scaffold.replace(
+                "  configure_security_overrides\n  install_dependencies",
+                "  install_dependencies\n  configure_security_overrides",
+            ),
+        }
+        for name, candidate in unsafe_scaffolds.items():
+            if candidate == scaffold:
+                fails.append(f"❌ {name}の負例 fixture が入力を変更していない")
+            elif target.scaffold_security_contract(candidate):
+                fails.append(f"❌ {name}を受理した")
 
-    total = 9
+    package_json = json.loads((target.REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+    if not hasattr(target, "source_security_contract"):
+        fails.append("❌ 本体 package.json の依存固定契約を単体検査できない")
+    elif not target.source_security_contract(package_json):
+        fails.append("❌ 現在の本体 package.json の依存固定を受理できない")
+    else:
+        unsafe_packages = {}
+        missing = copy.deepcopy(package_json)
+        del missing["overrides"]["@prisma/config"]
+        unsafe_packages["本体の scoped deepmerge override 欠落"] = missing
+        wrong = copy.deepcopy(package_json)
+        wrong["overrides"]["@prisma/config"]["deepmerge-ts"] = "8.0.1"
+        unsafe_packages["本体の古い scoped deepmerge override"] = wrong
+        coexist = copy.deepcopy(package_json)
+        coexist["overrides"]["deepmerge-ts"] = "8.0.2"
+        unsafe_packages["本体の scoped/unscoped deepmerge override 併存"] = coexist
+        for name, candidate in unsafe_packages.items():
+            if target.source_security_contract(candidate):
+                fails.append(f"❌ {name}を受理した")
+
+    day30_candidates = sorted(target.MATERIAL_DIR.glob("day30_*.md"))
+    day30 = day30_candidates[0].read_text(encoding="utf-8") if len(day30_candidates) == 1 else ""
+    if not hasattr(target, "day30_production_schema_contract"):
+        fails.append("❌ Day 30 の本番 schema 安全契約を単体検査できない")
+    else:
+        if not target.day30_production_schema_contract(day30):
+            fails.append("❌ 現在の guarded production schema 手順を受理できない")
+        unsafe_day30 = {
+            "Preview の接続先": day30.replace(
+                "file, '--environment=production'", "file, '--environment=preview'"
+            ),
+            "取得値と異なる DB の検査": day30.replace(
+                "new URL(values.DATABASE_URL)", "new URL(process.env.DATABASE_URL)"
+            ),
+            "親プロセスの別 DB": day30.replace(
+                "const env = { ...process.env, DATABASE_URL: values.DATABASE_URL };",
+                "const env = process.env;",
+            ),
+            "既存データ DB の確認": day30.replace(
+                "教材用の新規・空の DB と確認できたら ${confirmation}",
+                "既存データのある DB でも ${confirmation}",
+            ),
+            "固定確認文字列": day30.replace(
+                "const confirmation = `apply ${randomBytes(4).toString('hex')}`;",
+                "const confirmation = 'apply';",
+            ),
+            "確認不一致でも続行": day30.replace(
+                "if (answer !== confirmation) throw new Error",
+                "if (false) throw new Error",
+            ),
+            "Prisma 自動導入を許可": day30.replace("'--yes=false', 'prisma'", "'prisma'"),
+            "Prisma へ確認後の入力を渡す": day30.replace(
+                "env, [\n    'ignore',", "env, [\n    'inherit',"
+            ),
+            "無確認の直接 db push": "```bash\nnpx prisma db push\n```\n",
+        }
+        for name, candidate in unsafe_day30.items():
+            if candidate == day30:
+                fails.append(f"❌ {name}の負例 fixture が入力を変更していない")
+            elif target.day30_production_schema_contract(candidate):
+                fails.append(f"❌ {name}を受理した")
+
+    total = 28
     if fails:
         for msg in fails:
             print(msg)

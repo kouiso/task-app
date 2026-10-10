@@ -9,7 +9,8 @@ Day 17 ではログインユーザー専用の「マイタスク」ページを�
 ## 今日のゴール
 
 タスクの詳細ダイアログにコメント機能を追加します。
-コメント API を自分の手で書き、配布済みの詳細ダイアログにその API をつないで動かします。
+コメント API（画面と server をつなぐ呼び出し口）を自分の手で書き、配布済みの詳細ダイアログにその API をつないで動かします。
+TaskDetailDialog はコンポーネント（画面を構成する部品）です。React（画面を部品で組み立てるライブラリ）と TypeScript（JavaScript に型を加えた言語）で書き、shadcn/ui（プロジェクト内で編集できる UI 部品集）を使います。
 
 スクリーンショット: 今日を終えたタスク詳細ダイアログです。ステータスや期限の下にコメント欄が付きます。
 
@@ -44,14 +45,13 @@ flowchart TD
     style F fill:#fff3e0
 ```
 
-図の `F → G → C` と進む線が今日いちばん大事な部分です。
-投稿が成功した直後に「取得をやり直せ」とサーバーへ伝える合図です。
-この線を消すと投稿自体は通っているのに画面のコメント欄が古いままになります。
-Day 13 でタスク詳細を開いたとき一度取ってきたデータはブラウザ側へ残り、次に開いたときも再利用されました。
-その手元のコピーを捨てさせる役目が `invalidate` です。
-図では投稿フォーム `E` から取得 `C` へ直接つながる線を引いていません。
-フォームは自分でコメント一覧を書き換えません。
-サーバーへ取り直しを頼むだけです。
+図の「api.comment.create → キャッシュ更新 invalidate → api.task.getById で取得」と進む線が、投稿後にコメント欄を更新する部分です。
+投稿が成功したら、表示中のコメント欄で使っているタスクデータを取り直します。
+この更新をしないと、投稿自体は成功していても画面のコメント欄が古いままになります。
+Day 13 でタスク詳細を開いたとき、一度取得したデータはブラウザ側へ残り、次に開いたときも再利用されました。
+`invalidate` は、取得済みのデータを古いものとして扱う操作です。表示中のデータは取り直します。
+図では「コメント投稿フォーム」から「api.task.getById で取得」へ直接つながる線を引いていません。
+フォームは自分でコメント一覧を書き換えず、投稿が成功したあとに `invalidate` を呼んで取得し直します。
 
 > コメント機能は `TaskDetailDialog`
 > コンポーネントの内部で完結しています。
@@ -76,44 +76,40 @@ Day 13 でタスク詳細を開いたとき一度取ってきたデータはブ�
 | invalidate | インバリデート | キャッシュを再取得させる | 棚卸しして最新に更新 |
 | useForm + zodResolver | ユーズフォーム＋ゾッドリゾルバー | フォーム状態管理＋バリデーション（Day 14 復習） | 記入欄のルールを自動チェック |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
-| Step 0 | `comment.ts` を写経する | 11分 |
+| Step 0 | コメント API の read/create 基盤を作る | 18分 |
 | Step 1 | コメント API の形を整理する | 3分 |
-| Step 2 | タスク詳細でコメントを取得 | 5分 |
-| Step 3 | コメント一覧の表示コードを書く | 7分 |
-| Step 4 | コメント投稿フォームを書く | 5分 |
-| Step 5 | 投稿処理と mutation を書く | 5分 |
-| Step 6 | キャッシュ更新の仕組みを理解 | 3分 |
-| Step 7 | 動作確認 | 3分 |
+| Step 2 | タスク詳細でコメントを取得する | 5分 |
+| Step 3 | コメント一覧を表示する | 7分 |
+| Step 4 | 投稿フォームと送信対象を固定する | 10分 |
+| Step 5 | 成功・失敗・再取得失敗を分ける | 10分 |
+| Step 6 | 二重送信と古い完了を確認する | 4分 |
+| Step 7 | 動作確認 | 5分 |
 
-**合計時間**: 約42分です。
+**読む時間の合計（仮）**: 約62分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: `comment.ts` を写経する（11分）
+### Step 0: `comment.ts` を写経する（読む目安: 18分）
 
-**ゴール**: コメント機能の土台になる server 側コードを、
-空の状態から自分で組み立てます。
+**ゴール**: コメントを読む入口と投稿する入口を作ります。投稿では、権限を確認してから保存するまで、対象プロジェクトの行をロックします。
 
-今日は `src/server/api/routers/comment.ts` が配布されていません。
-だから「有効化する」では足りません。まず router 本体を作ります。
-`TaskDetailDialog` が使う `task.getById` は Day 13 で書いてあるため
-今日はコメント固有の API に集中できます。
+API（画面と server をつなぐ呼び出し口）は tRPC（TypeScript の型を画面と server で共有する道具）で作ります。DB の読み書きには Prisma（TypeScript から DB を操作する道具）を使います。
 
-#### 0-1. `comment.ts` を新規作成して入口を書く
+#### 0-1. 入力とプロジェクトロックを用意する
 
-次に `src/server/api/routers/comment.ts` を新規作成します。
-まずは import と入力スキーマです。
+`src/server/api/routers/comment.ts` を新規作成します。`Prisma` は型だけでなく `Prisma.sql` にも使うため、`import type` にはしません。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { PermissionKey } from '@/lib/constant/roles';
@@ -126,35 +122,34 @@ const commentCreateSchema = z.object({
   content: z.string().trim().min(1, 'コメント内容は必須です'),
   taskId: z.string().cuid(),
 });
+
+const lockCommentProject = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  return rows.length > 0;
+};
 ```
 
-`trim().min(1)` の組み合わせは空白だけの投稿を止めるための入口です。
-まず `trim()` が前後の空白を削ります。
-削ったあとの文字列へ `min(1)` が長さの下限をかけます。
-順番を逆にすると半角スペース3つだけの本文が長さ3として通過してしまいます。
-そのあと `trim()` が空白を削るので中身の無い文字列が DB に保存されます。
-画面ではアバターと投稿日時だけが並び、中身の無い吹き出しに見えます。
-`taskId` に付けた `.cuid()` はPrisma が発行する ID の形と違う文字列を弾きます。
-存在しない task にコメントがぶら下がる事故を、入口の時点で防いでいます。
-ただし `.cuid()` が確かめるのは ID の形だけで、形は合っていて実在しない ID を弾くのはこのあと書く `findTaskAndAssertMembership` の役目です。
-フォーム側にも同じ検証を Step 4 で書きますが最後に守るのは server 側です。
-ブラウザの検証ツールから直接この API へリクエストが届いてもここを通らない限り保存されません。
+`commentCreateSchema` では、投稿先の `taskId` と、前後の空白を除いたうえで1文字以上ある `content` を受け取るバリデーションを定義します。ブラウザ側に加えてサーバー側でも Zod で検証し、未入力や空白文字だけのコメントをデータベースへ保存しません。
 
-#### 0-2. タスク存在確認と権限確認を関数にまとめる
+`FOR UPDATE` は、同じプロジェクトのメンバー変更やタスク移動とコメント投稿の順番を決めます。別処理が先にロックしていれば、その処理が終わるまで待ちます。対象のプロジェクト行が無い場合だけ `lockCommentProject` が `false` を返し、`CONFLICT` で止めます。
 
-コメントは単独で存在しません。必ず task にぶら下がります。
-だから `create` と `getByTaskId` の両方で、
-「その task があるか」「自分はその project のメンバーか」を
-先に確かめます。
+#### 0-2. transaction client を受け取れる確認関数を書く
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
+/**
+ * getByTaskId/createの両方で同一のタスク存在確認+メンバー権限検証が必要なため集約。
+ * findTaskWithPermission（_helpers）はtask routerに特化しているためcomment独自で定義。
+ */
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
   permission?: PermissionKey,
+  db: Pick<Prisma.TransactionClient, 'task'> = prisma,
 ) => {
-  const task = await prisma.task.findUnique({
+  const task = await db.task.findUnique({
     where: { id: taskId },
     include: {
       project: {
@@ -164,33 +159,15 @@ const findTaskAndAssertMembership = async (
       },
     },
   });
-```
 
-ここまでで探しているのはその ID を持つ task 1件だけです。
-`include` に書いた `members: { where: { userId } }` が今日の勘所です。
-メンバー全員ではなく、いまログインしている本人の行だけに絞って取ってきます。
-本人がそのプロジェクトに参加していれば配列は1件、参加していなければ空配列になります。
-誰ならコメントしてよいかはtask を1回引くついでに分かります。
-Day 12 で作ったプロジェクトメンバーの一覧がここまで効いてきます。
-コメント専用の権限テーブルを別に作らずに済みます。
-参加者がすでにそこへ登録されているからです。
-配列が空だったときに何が起きるかは次のブロックで決めます。
-
-```mermaid
-flowchart TB
-    Q["findUnique: taskId で1件だけ引く"] --> T["Task"]
-    T --> P["Project"]
-    P --> M["members（where userId は本人だけ）"]
-    M -->|"1件ある"| OK["メンバーなので通す"]
-    M -->|"0件"| NG["メンバーでないので FORBIDDEN"]
-```
-
-コメントしてよい人かどうかの判定がこの1回の問い合わせの中に入っています。`include` の中の `where` で本人の行だけに絞るため返ってきた配列の長さがそのまま答えになります。コメント用の権限テーブルを別に作らずに済むのはこの形のおかげです。
-
-```typescript
-// filepath: src/server/api/routers/comment.ts（続き）
   if (!task) {
     throw new TRPCError({
+```
+
+`findTaskAndAssertMembership` は、指定されたタスクの存在と、ログイン中ユーザーが所属プロジェクトで必要な権限を持つかをまとめて確かめます。引数 `db` には、通常の `prisma` とトランザクション内の `tx` のどちらも渡せます。そのため、通常の読み取り時とトランザクション内で同じ検証を再利用できます。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
       code: 'NOT_FOUND',
       message: 'タスクが見つかりません',
     });
@@ -202,23 +179,11 @@ flowchart TB
 };
 ```
 
-`if (!task)` で先に止める理由はこの後の `task.project.members` を安全に読むためです。
-task が `null` のまま次の行へ進むと`null` から `project` を読もうとして実行時エラーになります。
-存在しない ID が届いたときはこの 4 行のおかげで `NOT_FOUND` として返せます。
-続く `assertMemberPermission` は1つ前のブロックの `include` でログインユーザー分だけに絞り込んだ `members` の1件目を見ます。
-本人がメンバーでなければ配列は空です。
-1件目は `undefined` になるため `FORBIDDEN` を投げます。
-権限キーを渡した場合はそのメンバーの役割まで確認します。
-`canEdit` を持たない閲覧者ロールはコメントを読めても投稿できません。
-同じ確認を毎回ベタ書きすると
-Day 19 の update/delete でも同じ形が増えて読みづらくなります。
-先に関数へ抜いておくとrouter 本体では
-「何を確認してから何を返すか」が見やすくなります。
+task が無ければ NOT_FOUND を返し、存在する場合だけ現在の member role へ必要権限を確認して task を返します。存在確認だけで返すと、project に所属しない利用者も後続の読取や書き込みへ進めます。
 
-#### 0-3. `getByTaskId` と `create` を書く
+第4引数を省略した呼び出しは通常の `prisma` を使います。transaction 内では `tx` を渡します。同じ関数でロック前の対象確認と、ロック後の現在の権限を確かめるためです。
 
-ここで初めて `commentRouter` 本体を組み立てます。
-Day 18 の完成形は `getByTaskId` と `create` の2つです。
+#### 0-3. 読み取りと投稿を書く
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
@@ -226,10 +191,15 @@ export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
-
-      return await prisma.comment.findMany({
-        where: { taskId: input.taskId },
+      const comments = await prisma.comment.findMany({
+        where: {
+          taskId: input.taskId,
+          task: {
+            project: {
+              members: { some: { userId: ctx.session.userId } },
+            },
+          },
+        },
         include: {
           user: {
             select: USER_SELECT,
@@ -237,106 +207,103 @@ export const commentRouter = createTRPCRouter({
         },
         orderBy: { createdAt: 'desc' },
       });
-    }),
 ```
 
-`getByTaskId` の1行目は `findTaskAndAssertMembership` の呼び出しです。
-コメントを取り出すのはその確認を通り抜けた後です。
-順番が逆だと権限の無い人にもコメント本文が返ってしまいます。
-権限チェックは必ずデータを取る前に置きます。
-`orderBy: { createdAt: 'desc' }` で新しい順に並べているので直近のやりとりが先頭へ来ます。
-`include` の `user` は表示用です。
-名前とアバターをここで一緒に取っておかないとコメント1件ごとに追加の通信が発生します。
-`USER_SELECT` を挟むとパスワードなど返してはいけない項目が自動で外れます。
-Day 09 の `getAll` で使ったのと同じ道具です。
-
-ここから先の「（続き）」のブロックはいま書いた `getByTaskId` の最後の行 `}),` の下へ続けて貼ります。このブロックの最後の `});` が `createTRPCRouter({` を閉じる行なので貼り終えた時点でそれが `comment.ts` の最終行になります。
+`where` にはタスク ID だけでなく、ログイン中ユーザーが現在のプロジェクトメンバーである条件も入れます。コメントを返す読み取りそのものに所属条件を持たせるためです。
 
 ```typescript
-// filepath: src/server/api/routers/comment.ts（続き）
-  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+      if (comments.length === 0) {
+        await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+      }
 
-    return await prisma.comment.create({
-      data: {
-        content: input.content,
-        taskId: input.taskId,
-        userId: ctx.session.userId,
-      },
-      include: {
-        user: {
-          select: USER_SELECT,
+      return comments;
+    }),
+
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    const task = await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.$transaction(async (tx) => {
+      if (!(await lockCommentProject(tx, task.projectId))) {
+        throw new TRPCError({
+```
+
+`commentRouter` には、タスクに紐づくコメントを取得する `getByTaskId` と、新規投稿を担う `create` を定義します。閲覧処理（`getByTaskId`）では、コメント取得の `where` にログイン中ユーザーの所属条件も入れます。所属確認とコメント取得を同じ読み取りへ結び付け、確認直後にメンバーから外れたユーザーへコメントを返さないためです。コメントが0件なら `findTaskAndAssertMembership` を呼び、空の一覧・存在しないタスク・権限不足を区別します。投稿処理（`create`）では書き込み権限が必要なので、`'canEdit'` を指定してプロジェクトの行ロックへ進みます。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+
+      const currentTask = await findTaskAndAssertMembership(
+        input.taskId,
+        ctx.session.userId,
+        'canEdit',
+        tx,
+      );
+      if (currentTask.projectId !== task.projectId) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+
+      return await tx.comment.create({
+        data: {
+          content: input.content,
+          taskId: currentTask.id,
+          userId: ctx.session.userId,
+```
+
+プロジェクト行をロックした直後に `currentTask` をトランザクション内で再取得し、現在のタスク状態と編集権限（`canEdit`）を改めて確かめます。ロック獲得の待機中にタスクが別プロジェクトへ移動されていたり、自身のメンバー権限が変更されたりした場合に、古い権限のまま不正にコメントが保存されてしまうのを防ぐためです。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
         },
-      },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+      });
     });
   }),
 });
 ```
 
-投稿者 ID は `ctx.session.userId` から取ります。
-フォーム経由で他人の userId を送られても信用しないためです。
-入力スキーマに `userId` を入れていないためclient からは投稿者を指定できません。
-なりすまし投稿を防ぐいちばん確実な方法はclient に選ばせないことです。
-`findTaskAndAssertMembership` の第3引数へ `'canEdit'` を渡している点にも注目してください。
-`getByTaskId` は参加者なら誰でも通ります。
-`create` を通れるのは編集権限を持つ役割だけです。
-閲覧者ロールのメンバーがコメントを送るとここで `FORBIDDEN` が返ります。
-最後の `include` で投稿者情報を付けて返します。
-投稿直後の1件を、そのまま画面へ描けるようにするためです。
+作成した comment と投稿者の表示名・メール・画像を transaction の結果として返します。現在の画面はこの戻り値を一覧へ直接加えず、成功後に送信対象の task query を取り直して comment 一覧を更新します。
+
+投稿前の最初の確認だけでは足りません。その直後にメンバーから外れたり VIEWER へ変わったりする可能性があります。そこで project 行をロックした後、`currentTask` を読み直します。タスクが別の project へ移っていた場合も `projectId` の比較で保存を止めます。
+
+投稿者は `ctx.session.userId` から決めます。ブラウザから他人の ID を送る入力欄は作りません。
 
 #### 0-4. `root.ts` に登録する
 
-router だけ書いても `api.comment.create` はまだ呼べません。
-最後に appRouter へ登録します。
-Day 14 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。
-増えるのは `commentRouter` の import 1行と `comment: commentRouter,` の1行だけです。ほかの行は貼り足しません。
-`appRouter` の中は Day 07 から router を足した順（`auth` → `project` → `task` → `search` → `comment`）に並べます。
-手元の `appRouter` の中で `search: searchRouter,` が `task: taskRouter,` より上にある場合はこの2行を入れ替えてください。
-`searchRouter` と `taskRouter` の import 行は入れ替えません。
-import の並びは Biome（コード整形ツール）がアルファベット順にそろえます。`searchRouter` が `taskRouter` より上のままで正しい形です。
-並びを入れ替えても `api.task` や `api.search` の呼び名は変わりません。Day 20 と Day 21 はこの並びを前提に `root.ts` を説明するのでそろえておきます。
+`commentRouter` の import と `comment: commentRouter` を追加します。既存の router は消しません。
 
 ```typescript
 // filepath: src/server/api/root.ts
-import { authRouter } from './routers/auth';
 import { commentRouter } from './routers/comment';
-import { projectRouter } from './routers/project';
-import { searchRouter } from './routers/search';
-import { taskRouter } from './routers/task';
-import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
 
-この import 行はDay 07 の `auth` から少しずつ増えてきた並びです。
-今日は `commentRouter` の1行を足しましたがこれだけではまだ何も有効になりません。
-import は「この名前をこのファイルで使う」と宣言するだけの行だからです。
-外から呼べるようになるのは次のブロックで `appRouter` へ登録した瞬間です。
-import を書き忘れると `commentRouter` が未定義になり、型エラーで起動できません。
-逆に import だけ書いて登録を忘れると`api.comment` と書いた行が型エラーになります。
-後者のほうが原因を見つけにくいので2つの作業は続けて済ませます。
+この import は、作成したコメント用 router を API の入口へ渡すために必要です。ここで読み込まないと、次の登録で名前を参照できず、型検査の時点で実装の不足に気づきます。
 
 ```typescript
-// filepath: src/server/api/root.ts（続き）
-export const appRouter = createTRPCRouter({
-  auth: authRouter,
-  project: projectRouter,
-  task: taskRouter,
-  search: searchRouter,
-  comment: commentRouter,
-});
+// filepath: src/server/api/root.ts（appRouter の中に追加）
+comment: commentRouter,
 ```
 
-このオブジェクトがサーバー側の手続きの全体像です。ここに載っていない router はファイルが存在していても外からは呼べません。`root.ts` は Day 07 で書いたとおり、この `appRouter` から `AppRouter` 型を作って書き出しています。client 側の `api` はその型を読んで呼び名と引数を決めるため登録を忘れると `api.comment` と書いた行そのものが型エラーになります。動かす前に間違いが分かる代わりに、エラーの表示はコメント画面側に出ます。原因はこのファイルなので赤い波線が出たらまず `appRouter` を見てください。
+この登録によって、画面は `api.comment` という名前から読み取りと投稿を呼べます。登録を省くと server 側に処理があっても画面側の型へ現れず、投稿フォームを接続できません。
 
 **確認ポイント**:
-- Day 13 で追加した `task.getById` が残っている
-- `comment.ts` を新規作成し、`getByTaskId` と `create` を書いた
-- `root.ts` に `commentRouter` を登録した
-- `appRouter` の中が `auth` → `project` → `task` → `search` → `comment` の順に並んでいる
-- `npx tsc --noEmit` で型エラーが出ていない
+- `Prisma.TransactionClient` と `Prisma.sql` を使っています
+- lock 後に現在のメンバー権限と project を確認しています
+- 保存には `currentTask.id` と session の user ID を使っています
+- `getByTaskId` は読み取り権限、`create` は `canEdit` を確認しています
 
----
-
-### Step 1: コメント API の形を整理する（3分）
+### Step 1: コメント API の形を整理する（読む目安: 3分）
 
 **ゴール**: Step 0 で写経した `src/server/api/routers/comment.ts` を、
 「何を受け取って何をして何を返すか」で整理します。
@@ -393,12 +360,12 @@ tRPC で「サーバーに書いた関数をそのまま client から呼べる�
 | `delete` | mutation | コメント削除（Day 19） |
 
 **確認ポイント**:
-- Step 0 で書いた `getByTaskId` と `create` が上の表の 2 行と一致している
-- 4 つのメソッドの名前と種別を把握した
+- Step 0 で書いた `getByTaskId` と `create` が上の表の 2 行と一致しています
+- 4 つのメソッドの名前と種別を把握しました
 
 ---
 
-### Step 2: タスク詳細でコメントを取得する（5分）
+### Step 2: タスク詳細でコメントを取得する（読む目安: 5分）
 
 **ゴール**: `TaskDetailDialog` コンポーネント内で
 コメントデータがどこから来るかを理解します。
@@ -408,33 +375,35 @@ Day 13 の Step 7 で配置した `TaskDetailDialog`
 内部で `api.task.getById` を呼んでいます。
 このレスポンスにコメントも含まれています。
 
-**この Step は読むだけです。** 次のコードは配布ファイルの 27 行目あたりにすでに書いてあります。同じものを貼り足すと `taskDetail` が二重に宣言され、ビルドが止まります。エディタで開いて同じ行があることを目で確かめてください。
-
-**配布ファイルにすでにある行**:
+**この Step は読むだけです。** 配布ファイルには task query だけがあります。`data: cachedTask` の行を探してください。session query はまだ無く、投稿者の権限を判定する Step 4 で追加します。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// TaskDetailDialog 内でタスク詳細データを取得
-// （配布済み・書き足し不要）
-const { data: taskDetail } =
-  api.task.getById.useQuery(
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+  const {
+    data: cachedTask,
+    error: taskError,
+    failureReason: taskFailure,
+    isFetching,
+    refetch,
+  } = api.task.getById.useQuery(
     { id: taskId ?? '' },
-    { enabled: !!taskId },
+    {
+      enabled: open && !!taskId && !authExpired,
+      retry: (count, error) => httpStatusOf(error) !== 404 && shouldRetryQuery(count, error),
+    },
   );
 ```
 
-`enabled: !!taskId` はダイアログを開く前に問い合わせが走らないよう止めるスイッチです。
-`taskId` が `null` のあいだ、`useQuery` は待機したまま何も送りません。
-これが無いとまだタスクを開いていない状態でも空文字の `id` が送られ、`.cuid()` の検証に引っかかります。
-`{ id: taskId ?? '' }` に書いた `?? ''` は型を `string` へそろえるための保険です。
-`enabled` で止めているのでこの空文字が実際にサーバーへ届くことはありません。
-Step 0 で書いた server 側と違い、画面側に権限チェックはありません。
-その確認は `task.getById` の中で済んでいるため画面側へ書き足す必要はありません。
+取得値には以前の成功結果も残るため、配布ファイルは task query の401、403、404を分けて表示します。配布済みの認証切れ処理は `setAuthExpired(true)` と `onAuthExpired?.()` を呼ぶ形です。Step 4 では session query、`authExpiredRef`、`mountedRef` を追加し、「取得は成功したが session が `null`」の場合と、閉じた後に届く応答も扱います。
+
+`cachedTask` は前回の取得値を含むデータです。`taskDetail` は表示してよい場合だけ、その値を受け取ります。`error` は確定した取得エラー、`failureReason` は再試行中の失敗理由です。task または session の401、task の403・404では保護された内容を隠します。
+
+401はログイン切れ、403は表示権限なし、404は対象なしを表します。500などの一時的な失敗では、前回の内容と更新失敗の案内を表示します。`enabled` は開いていること、ID があること、ログイン切れではないことを確認します。`?? ''` の空文字は型をそろえる値で、この条件では送信されません。`onAuthExpired` は親へログイン切れを知らせる省略可能な関数です。
 
 **確認ポイント**:
-- `taskDetail?.comments` でデータが取得できる
-- コメントデータはタスク詳細に含まれている
-- このファイルの実装が終わったら、`npx tsc --noEmit` で型エラーがないことを確認する
+- `taskDetail?.comments` でデータが取得できます
+- コメントデータはタスク詳細に含まれています
+- このファイルの実装が終わったら、`npx tsc --noEmit` で型エラーがないことを確認します
 
 > `api.task.getById` のレスポンスには
 > `comments` が含まれています。
@@ -456,7 +425,7 @@ Step 0 で書いた server 側と違い、画面側に権限チェックはあ�
 
 ---
 
-### Step 3: コメント一覧の表示コードを書く（7分）
+### Step 3: コメント一覧の表示コードを書く（読む目安: 7分）
 
 配布されている `task-detail-dialog.tsx` にコメント欄はありません。ここから先はダイアログの中へ自分で書き足していきます。ただしコメント欄で使う `Avatar` と `Badge` のインポートは配布ファイルにすでに書いてあります。
 
@@ -466,7 +435,7 @@ Step 0 で書いた server 側と違い、画面側に権限チェックはあ�
 `task-detail-dialog.tsx` にコメント一覧セクションを書き足します。
 まずそこで使う部品のインポートを確かめます。
 
-**次の 2 行は読むだけです。** 配布ファイルの 3 行目と 4 行目にすでに書いてあります。同じものを貼り足すと `Avatar` と `Badge` が二重に宣言され、ビルドが止まります。エディタで開いて同じ行があることを目で確かめてください。
+**次の 2 行は読むだけです。** 配布ファイルにすでに書いてあります。`@/component/ui/avatar` と `@/component/ui/badge` からの import を探してください。同じものを貼り足すと `Avatar` と `Badge` が二重に宣言され、ビルドが止まります。エディタで開いて同じ行があることを目で確かめてください。
 
 **配布ファイルにすでにある行**:
 
@@ -490,9 +459,9 @@ import { Badge }
 自分のプロジェクト内へファイルとして置いてあるため色や角丸を変えたくなったら直接編集できます。
 
 **確認ポイント**:
-- 配布ファイルの 3 行目に `Avatar, AvatarFallback, AvatarImage` のインポートがある
-- 配布ファイルの 4 行目に `Badge` のインポートがある
-- どちらも書き足していない
+- `@/component/ui/avatar` から `Avatar, AvatarFallback, AvatarImage` をインポートしています
+- `@/component/ui/badge` から `Badge` をインポートしています
+- どちらも書き足していません
 
 コメントセクションのヘッダー部分を確認しましょう。
 
@@ -513,7 +482,7 @@ import { Badge }
 ```
 
 `taskDetail.comments?.length ?? 0` の `?.` と `?? 0` は保険です。
-いちばん外側の `<div>` は見出し・一覧・投稿フォームをまとめて包む箱です。ここで開いたまま Step 4 まで進み、Step 4 の最後に閉じます。この箱が無いと`<Separator />` の下に置いた3つの部品が親のレイアウトへ直接並び、間隔の指定が効かなくなります。
+いちばん外側の `<div>` は見出し・一覧・投稿フォームをまとめて包む箱です。ここで開いたまま Step 5 まで進み、Step 5 のフォーム末尾で閉じます。この箱が無いと`<Separator />` の下に置いた3つの部品が親のレイアウトへ直接並び、間隔の指定が効かなくなります。
 
 このコメント欄は `taskDetail` が届いたあとだけ描かれ、`task.getById` は `comments` を必ず含めて返します。
 つまりここでの `comments` は常に配列で、1件も無ければ空の配列です。
@@ -522,8 +491,8 @@ import { Badge }
 コメントが1件も無いタスクと、20件たまったタスクを一目で見分けられます。
 
 **確認ポイント**:
-- Badge でコメント件数が表示される
-- コメントが1件も無いタスクでは `0` と表示される
+- Badge でコメント件数が表示されます
+- コメントが1件も無いタスクでは `0` と表示されます
 
 次にコメント一覧を包む外側の箱を開きます。
 その中で、0 件のときは案内メッセージを表示し、
@@ -548,10 +517,15 @@ import { Badge }
 何も無い画面は読者にとって「壊れている画面」と見分けが付きません。
 
 **確認ポイント**:
-- コメントが無い時に案内が表示される
+- コメントが無い時に案内が表示されます
 
 続けて各コメントのアバター・ユーザー名・日時を
 表示する部分です。
+
+`key` は、配列から作った各要素を React が区別するための値です。
+ここではコメントの ID を渡します。新しいコメントが先頭に加わっても、既存のコメントの ID は変わりません。
+配列の位置を使うと追加後に位置がずれ、同じ位置が別のコメントを指します。
+今回の表示には入力欄はありません。将来、各コメントに編集用の入力欄を加える場合は、ID を使うことで、入力中の文章が別のコメントの欄に残るのを防げます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
@@ -575,9 +549,9 @@ import { Badge }
 
 **確認ポイント**:
 - `AvatarImage` は `{comment.user.avatar && ...}` で条件付きレンダリング（画像URLがある場合のみ表示）
-- `alt=""` は「読み上げなくてよい画像」の指定。隣に投稿者名が文字で出ているため画像まで読み上げると同じ名前を二度聞くことになる。名前が隣に無い場所へ置くときは `alt={user.name}` のように誰の画像かを入れる
-- `AvatarFallback` の名前取得には `||` を使い、name がなければ email、両方なければ `'?'` を使う
-- AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示する
+- `alt=""` は「読み上げなくてよい画像」の指定です。隣に投稿者名が文字で出ているため画像まで読み上げると同じ名前を二度聞くことになります。名前が隣に無い場所へ置くときは `alt={user.name}` のように誰の画像かを入れます
+- `AvatarFallback` の名前取得には `||` を使い、name がなければ email、両方なければ `'?'` を使います
+- AvatarFallback で頭文字（先頭 1 文字を大文字化）を表示します
 
 > `comment.user.name` が空のときは email を、
 > それも無いときは `'?'` を使います。
@@ -613,19 +587,19 @@ import { ja } from 'date-fns/locale';
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: 外側にアイコンの右側の箱、内側に名前と日時の箱を開く */}
+{/* .map ループ内: 名前と日時を包む2つの箱を開く */}
 <div className="flex-1 space-y-1">
   <div className="flex items-center
     justify-between">
 ```
 
-外側の箱は `flex-1` でアイコンの右側の残り幅をすべて使います。これを「アイコンの右側の箱」と呼びます。
-内側の箱は `justify-between` で名前を左端、日時を右端へ寄せます。これを「名前と日時の箱」と呼びます。
-2つとも開いたままにしておきます。名前と日時の箱は次のブロックの最後で、アイコンの右側の箱は本文を書いたあとで閉じます。
+外側の `flex-1` はアイコンの右側の残り幅をすべて使うための指定です。
+内側の `justify-between` は名前を左端、日時を右端へ寄せるための指定です。
+この2つはあとで閉じるのでいまは開いたままにしておきます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: ユーザー名と投稿日時。最後の行で名前と日時の箱を閉じる */}
+{/* .map ループ内: ユーザー名と投稿日時 */}
 <span className="font-medium">
   {comment.user.name
     || comment.user.email
@@ -639,15 +613,7 @@ import { ja } from 'date-fns/locale';
     { locale: ja },
   )}
 </span>
-</div>
 ```
-
-最後の `</div>` で名前と日時の箱を閉じます。
-この箱は `flex` で中身を横一列に並べます。
-閉じずに本文まで入れると名前・日時・本文の3つが横一列に並びます。
-日時は右端を離れて名前と本文のあいだへ移ります。
-本文が長いと名前や日時が折り返して縦に伸びます。
-本文を名前の下に置きたいので日時を書いたらすぐ閉じます。
 
 表示名の `||` は`AvatarFallback` に渡す頭文字と同じ順でたどります。
 順番をそろえてあるのでアイコンの頭文字が「T」なのに名前が別人、という食い違いは起きません。
@@ -658,43 +624,43 @@ import { ja } from 'date-fns/locale';
 読者が追いたいのは本文であり、時刻は補足だからです。
 
 **確認ポイント**:
-- 投稿日時が表示される
+- 投稿日時が表示されます
 - `date-fns` の `format` と `ja` ロケールを使用
 
-最後にコメント本文の表示部分です。
-名前と日時の箱を閉じた `</div>` の下へ続けます。
+最後にコメント本文の表示部分です。まず名前と日時の行を閉じ、本文をその下に置きます。
 
 ```typescript
 {/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* .map ループ内: 名前と日時の箱の下にコメント本文 */}
-<p className="text-muted-foreground">
+{/* .map ループ内: コメント本文 */}
+</div>
+<p className="text-muted-foreground whitespace-pre-wrap">
   {comment.content}
 </p>
 ```
+
+名前と日時の行を閉じたので、本文は次の行に表示されます。`whitespace-pre-wrap`（改行と空白を保ち、長い行を折り返す指定）で投稿した本文の改行を表示に残します。Enter キーで分けた行が1行に詰まらず、箇条書きも読みやすくなります。
 
 ここまでで `.map` の中身が揃いました。最後に開いたタグと括弧を閉じます。
 `{comment.content}` の `</p>` の下へ続けてください。
 
 ```typescript
-    {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+      {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
     </div>
   </div>
 ))}
 </div>
 ```
 
-`</div>` の2つは内側から順に「アイコンの右側の箱」「1件分の箱」を閉じます。
-「名前と日時の箱」は日時の下ですでに閉じたのでここには入りません。
+名前と日時の箱は本文の前で閉じています。この区切りの2つの `</div>` は、内側から順に「アイコンの右側の箱」と「1件分の箱」を閉じます。
 `))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じます。
 いちばん下の `</div>` は0 件の案内の前で開いた外側の箱を閉じます。これでコメント一覧は閉じ切ります。
 
 **確認ポイント**:
-- `.map` の中身を、閉じるところまで書けた
-- 本文の `<p>` が名前と日時の箱の外、閉じた `</div>` の下にある
-- `</div>` が2つ、`))}` が1つ、いちばん下にもう1つ `</div>` が並んでいる
-- コメント欄全体の div はまだ開いている。Step 4 で閉じ、Step 5 の処理を書いてから画面を確認する
+- `.map` の中身を、閉じるところまで書けました
+- `</div>` が2つ、`))}` が1つ、いちばん下にもう1つ `</div>` が並んでいます
+- コメント欄全体の div はまだ開いています。Step 5 のフォーム末尾で閉じ、送信処理を書いてから画面を確認します
 
-スクリーンショット: 下の画像は Step 5 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したコメント一覧です。投稿フォームは Step 4 で足します。今は外側の div が開いたままなのでまだ画面で確認できません。
+スクリーンショット: 下の画像は Step 5 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したコメント一覧です。投稿フォームは Step 5 で足します。今は外側の div が開いたままなのでまだ画面で確認できません。
 
 ![完成後のタスク詳細ダイアログ。赤枠の中はコメント1件で、アバター・投稿者名・日時・本文が並ぶ](./screenshots/day18/comments-list.png)
 
@@ -707,354 +673,533 @@ import { ja } from 'date-fns/locale';
 
 ---
 
-### Step 4: コメント投稿フォームを書く（5分）
+### Step 4: 投稿フォームと送信対象を固定する（読む目安: 10分）
 
-**ゴール**: react-hook-form + zod で管理された
-コメント投稿フォームを作ります。
+**ゴール**: 投稿ボタンから送信するとき、開始時点の task ID、本文、世代、入力版を保存します。Textarea で Enter を押した場合は送信せず、本文内で改行します。
 
-Day 14 で学んだ `useForm + zodResolver` パターンを
-コメントフォームにも使います。
-次の4つは配布ファイルにまだ無いため、ファイル冒頭の既存importの下へ追加します。
+TaskDetailDialog はコンポーネント（画面を構成する React 部品）です。見た目には shadcn/ui（プロジェクト内へ置いて編集できる UI 部品集）を使います。
+
+Day 14 までに作った `query-error.ts` と `task-write-error.ts` を使います。コメント専用のエラー分類を増やさず、401、403、404、409、不明な結果を同じ基準で扱います。
+
+最初に、既存の `react` import を次の行へ置き換えます。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// フォーム関連のインポート
-import { zodResolver }
-  from '@hookform/resolvers/zod';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
+```
+
+続いて、配布ファイルに無い次の import を追加します。`httpStatusOf`、`isAuthError`、`isForbiddenError`、`shouldRetryQuery` の import は配布済みなので貼り直しません。Step 3 で追加した `format` と `ja` も残します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { z } from 'zod';
-import { Textarea }
-  from '@/component/ui/textarea';
+import { Textarea } from '@/component/ui/textarea';
+import { hasPermission, isProjectMemberRole } from '@/lib/constant/roles';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 ```
 
-`useForm`・`zodResolver`・`z` の3つはDay 05 と Day 16 で使ったものと同じ役割です。
-`Textarea` は複数行を書ける入力欄で、改行を含むコメントを受け取れます。
-1行だけの `Input` にすると長い経過報告を書きたい人がすぐ困ります。
+`zodResolver` と `useForm` は入力値を `commentSchema` で検証し、`toast` は送信結果を知らせます。`Textarea`、権限判定、送信エラー分類も先に取り込むので、後続のフォームと投稿処理で必要な道具が揃います。
 
-**確認ポイント**:
-- `zodResolver` は `@hookform/resolvers/zod` から
-- `useForm` は `react-hook-form` から
-
-zod スキーマとフォーム初期化を確認しましょう。
-
-**実装**:
+`TaskDetailDialogProps` の直後へ、フォームの検証規則を追加します。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// コメント用 zod スキーマ定義
 const commentSchema = z.object({
-  content: z.string().trim()
-    .min(1, 'コメントを入力してください'),
+  content: z.string().trim().min(1, 'コメントを入力してください'),
 });
-type CommentFormValues =
-  z.infer<typeof commentSchema>;
+type CommentFormValues = z.infer<typeof commentSchema>;
 ```
 
-画面側のスキーマはStep 0 で書いた `commentCreateSchema` とほぼ同じ形です。
-違いは `taskId` が無い点です。
-`taskId` はフォームへ入力する値ではなく、開いているダイアログが持っています。
-同じ検証を2か所に書くのは無駄に見えますが役割が違います。
-画面側の役目は不正な入力を送る前に止めることです。
-server 側の役目は送られてきたものを最後に弾くことです。
-画面側だけだとAPI を直接叩かれた時点で守りがゼロになります。
-server 側だけだと送信して往復するまで入力ミスに気づけません。
-`z.infer<typeof commentSchema>` はスキーマから型を作り直す書き方です。
-ルールを1か所直せば型も追随します。型とルールがずれる心配はありません。
-
-**確認ポイント**:
-- `trim()` → `min(1)` の順でバリデーションする
-- `z.infer` で型を自動生成している
+`commentSchema` は空白だけの本文を `trim()` で空文字にしてから拒否します。`CommentFormValues` をこの規則から作るので、フォームの値と検証規則で `content` の型がずれません。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// useForm でフォームを初期化
-const commentForm =
-  useForm<CommentFormValues>({
+type CommentSubmission = {
+  taskId: string;
+  generation: number;
+  formRevision: number;
+  content: string;
+};
+```
+
+コメント送信時の情報を表す型として `CommentSubmission` を定義します。送信ボタンを押した時点の対象タスク ID、ダイアログの表示世代、フォームの編集版番号、トリム済みの本文をまとめて保持します。非同期通信の完了前に画面が変わっても、どのリクエストへの応答かを判定するためです。
+
+`generation` はダイアログを閉じた、別のタスクへ移った、権限を失った、という境界を表します。`formRevision` は送信後に入力が変わったかを表します。2つを分けると、古い成功が新しい下書きを消しません。
+
+`TaskDetailDialog` 関数にある既存の `authExpired` state の直後へ、次の state、ref、フォーム、utils、マウント確認を追加します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（TaskDetailDialog 関数内）
+  const [commentWriteError, setCommentWriteError] = useState<string | null>(null);
+  const createGenerationRef = useRef(0);
+  const createRevisionRef = useRef(0);
+  const openRef = useRef(open);
+  const taskIdRef = useRef(taskId);
+  const writeLockedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const authExpiredRef = useRef(false);
+  const createSubmissionRef = useRef<CommentSubmission | null>(null);
+
+  const commentForm = useForm<CommentFormValues>({
     resolver: zodResolver(commentSchema),
     defaultValues: { content: '' },
   });
+
+  const utils = api.useUtils();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
 ```
 
-`defaultValues: { content: '' }` を書いておくと`content` は最初から空文字になります。
-初期値を省くと `undefined` から始まります。後で `watch('content').trim()` を呼んだ瞬間、エラーになります。
-Step 4 の投稿ボタンは `watch` の結果を見て有効と無効を切り替えます。
-だから初期値が必ず要ります。
-`resolver: zodResolver(commentSchema)` を渡すと送信ボタンを押した時点で zod が入力値を検査します。
-検査に落ちた場合`handleSubmit` は先へ進みません。
-投稿ハンドラーも呼ばれません。
-検査結果は`formState.errors`に入りますが、今日の完成コードはその文言を画面へ表示しません。
-そのためハンドラーの中で空文字かどうかを自分で調べる必要がありません。
-
-**確認ポイント**:
-- Day 14 と同じ `zodResolver` パターンを使っている
-
-フォームを書く前に、props を1つ増やします。
-配布ファイルにある `type TaskDetailDialogProps` と関数の先頭行を次の形に書き換えます。
-増えるのは `canEditProject` の行だけです。型と関数を新しく足すのではありません。
+画面表示用の状態（`useState`）と、非同期処理の制御に使う参照（`useRef`）を分けて初期化します。二重送信の防止や、閉じた後に届いたレスポンスの無視には、再レンダリングを待たず更新できる `useRef` を使います。
 
 ```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// props に権限判定を追加
-type TaskDetailDialogProps = {
-  open: boolean;
-  taskId: string | null;
-  onClose: () => void;
-  canEditProject:
-    (projectId: string) => boolean;
-};
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+    };
+  }, []);
 
-export function TaskDetailDialog({
-  open, taskId, onClose,
-  canEditProject,
-}: TaskDetailDialogProps) {
-```
-
-Step 0 で書いた `comment.create` は編集できる役割かどうかをサーバー側で確かめます。
-閲覧者（VIEWER）が投稿ボタンを押すとサーバーに弾かれるので押せる見た目のまま残すと理由の分からない無反応に見えます。
-Day 13 で作った `canEditProject` をそのまま受け取り、投稿できる人にだけフォームを出します。
-
-呼び出し側の `/task` ページでは Day 13 で書いた `<TaskDetailDialog />` に `canEditProject={canEditProject}` の1行を足して次の形にします。
-既存の要素を書き換えます。`<TaskDetailDialog />` をもう1つ足すのではありません。
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 権限判定を詳細ダイアログへ渡す */}
-<TaskDetailDialog
-  open={detailOpen}
-  taskId={selectedTask}
-  onClose={handleDetailClose}
-  canEditProject={canEditProject}
-/>
-```
-
-判定をダイアログの中で組み立て直さず関数のまま渡すのはDay 13 の一覧カードと同じ基準を使うためです。
-基準が2か所に分かれるとカードには編集ボタンが出るのにコメントは投稿できない、というずれが起きます。
-
-`taskDetail` を取得する `useQuery` の直後に、投稿権限の判定を追加します。
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-const canEditComments = !!taskDetail &&
-  canEditProject(taskDetail.projectId);
-```
-
-タスクの取得前は `false` になります。表示と送信の両方でこの値を使い、閲覧者には投稿させないようにします。
-
-コメント一覧の下にテキストエリアと投稿ボタンが
-縦並びで配置されています。
-ボタンは右寄せです。
-
-```typescript
-{/* filepath: src/component/task/task-detail-dialog.tsx */}
-{/* コメント投稿フォーム（useForm管理） */}
-{canEditComments && (
-<form onSubmit={commentForm.handleSubmit(
-  handleCommentSubmit)}
-  className="space-y-2">
-  <Textarea
-    placeholder="コメントを追加..."
-    aria-label="コメント本文"
-    {...commentForm.register('content')}
-    className="resize-none"
-    rows={2} />
-  <div className="flex justify-end">
-    <Button type="submit" size="sm"
-      disabled={
-        !commentForm.watch('content').trim()
-        || createCommentMutation
-          .isPending}>
-      {createCommentMutation.isPending
-        ? '投稿中...' : 'コメント投稿'}
-    </Button>
-  </div>
-</form>
-)}
-```
-
-入力欄に `aria-label` を付けているのは`placeholder` が1文字打つと消えるためです。消えたあとは何の欄か確かめる手段がなくなります。フォーム全体を `canEditComments` で囲ってあるのは閲覧者が押しても必ずサーバーに弾かれる操作を、そもそも画面へ出さないためです。
-
-ここで使っている `handleCommentSubmit` と `createCommentMutation` はStep 5 で定義します。
-どちらも「見つからない」という型エラーが2種類出ますがこの時点では正常です。
-定義するまでこの画面は表示できないので動きの確認はそのあとに行います。
-
-最後にStep 3 の先頭で開いたコメント欄全体の箱を閉じます。
-
-```typescript
-{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-</div>
-```
-
-**確認ポイント**:
-- `<form className="space-y-2">` でレイアウトする
-- `register('content')` でテキストエリアを管理
-- `handleSubmit` でバリデーション後に送信
-- 投稿中の「投稿中...」の表示は`handleCommentSubmit` を書いてから確かめる
-
-スクリーンショット: 下の画像は Step 5 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したテキストエリアと投稿ボタンです。押したときの処理は Step 5 で書きます。未定義の関数があるため画面の確認も Step 5 の後に行います。
-
-![完成後のタスク詳細ダイアログ。赤枠の中に、コメント入力用のテキストエリアと「コメント投稿」ボタンが並んでいる](./screenshots/day18/comment-form.png)
-
-> `useState` ではなく `useForm` で管理する
-> メリットはバリデーションが zod スキーマに
-> 集約されることです。Day 14 と同じパターンなので
-> プロジェクト全体で統一的にフォームを扱えます。
-
-#### useState と useForm の比較
-
-| 項目 | useState パターン | useForm パターン |
-|------|-----------------|-----------------|
-| バリデーション | 手動で条件分岐 | zod スキーマに集約 |
-| 検証結果 | 自前で管理 | `formState.errors` で取得可能。今日は画面には表示しない |
-| リセット | `setState('')` | `form.reset()` |
-| 型安全性 | 手動で型定義 | `z.infer` で自動生成 |
-
----
-
-### Step 5: 投稿処理と mutation を書く（5分）
-
-**ゴール**: コメントをサーバーに保存する
-mutation の仕組みを理解します。
-
-まず `api.useUtils()` を確認します。
-キャッシュ操作用のユーティリティで、投稿成功後に
-コメント一覧を再取得するために使います。
-
-**実装**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// tRPC キャッシュ操作ユーティリティ
-const utils = api.useUtils();
-```
-
-`api.useUtils()` はtRPC が裏で持っているキャッシュの操作盤を取り出すフックです。
-これまでの Day で使ってきた `useQuery` は取得したデータを画面の裏側へ保存します。
-同じ問い合わせが来たら保存済みの中身をすぐ返します。
-そのおかげで、タスクを開き直しても毎回サーバーへ問い合わせずに済みます。
-ただしコメントを1件足した後は保存済みの中身が古くなります。
-古くなったと伝える窓口が `utils` です。
-`utils.task.getById` のようにrouter と手続きの名前をそのままたどれます。
-呼び名が API 側とそろっているためどのキャッシュを触っているかは読むだけで分かります。
-
-**確認ポイント**:
-- `utils` が定義されている
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// コメント投稿の mutation
-const createCommentMutation =
-  api.comment.create.useMutation({
-    onSuccess: () => {
-      if (taskId) {
-        utils.task.getById.invalidate(
-          { id: taskId },
-        );
-      }
-      commentForm.reset();
-    },
-  });
-```
-
-`useMutation` は`useQuery` と対になるフックです。
-`useQuery` は読む担当です。
-`useMutation` は書く担当で、こちらは自動で走りません。
-`mutate()` を呼んだときだけサーバーへ送ります。
-`onSuccess` はサーバーが成功を返したときだけ動きます。
-投稿に失敗したのに入力欄だけ空になる事故を防げます。
-`if (taskId)` で囲んだ理由は`taskId` が `null` のまま呼ばれても壊れないようにするためです。
-`invalidate` へ渡す `id` はいま開いているタスクの ID とぴったり一致させます。
-別の ID を渡すと無関係なタスクのキャッシュが消えるだけです。
-目の前の一覧は古いままになります。
-
-**確認ポイント**:
-- mutation が定義されている
-- `onSuccess` で invalidate とフォームリセットを実行
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// コメント投稿ハンドラー（useForm版）
-const handleCommentSubmit =
-  (values: CommentFormValues) => {
-    if (!taskId || !canEditComments) return;
-    createCommentMutation.mutate({
-      content: values.content,
-      taskId,
+  useEffect(() => {
+    const subscription = commentForm.watch((_values, { name }) => {
+      if (name) createRevisionRef.current += 1;
     });
+    return () => subscription.unsubscribe();
+  }, [commentForm]);
+
+  useEffect(() => {
+    openRef.current = open;
+    taskIdRef.current = taskId;
+    createGenerationRef.current += 1;
+    commentForm.reset();
+    setCommentWriteError(null);
+  }, [commentForm, open, taskId]);
+```
+
+3つの `useEffect` を書いた直後、session query の前へ、次の `handleClose` を新しく追加します。配布ファイルには `handleClose` 関数はありません。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+  const handleClose = () => {
+    createGenerationRef.current += 1;
+    openRef.current = false;
+    commentForm.reset();
+    setCommentWriteError(null);
+    onClose();
   };
 ```
 
-`handleCommentSubmit` が受け取る `values` はzod の検査を通り抜けてきた値です。
-だから `if (!values.content)` のような空チェックをここへ書く必要がありません。
-検査に落ちた入力はそもそもこの関数まで届きません。
-残っている `if (!taskId || !canEditComments) return;` が見ているのは入力値ではなく画面の状態です。
-タスクが未選択なら `taskId` は `null` です。また、権限を失った場合もここで送信を止めます。
-その `null` を送ろうとすればserver 側の `.cuid()` で拒否されます。
-手前で止めれば不要な通信を送らずに済みます。
-`mutate` へ渡しているのは `content` と `taskId` の2つだけです。
-投稿者を決めるのは Step 0 で見たとおり server 側です。
-だからここでは送りません。
+フォームの入力監視と、ダイアログ開閉・対象タスク切り替え時の初期化処理を `useEffect` で設定します。ユーザーがコメント本文を編集するたびに `createRevisionRef` を加算して下書きの変更を追跡し、対象タスクや開閉状態が変わった際には世代番号を進めてフォームとエラー表示を初期状態へ戻します。
 
-**確認ポイント**:
-- `values` は zod でバリデーション済み
-- フォームがリセットされる
-- このファイルの実装が終わったら、`npx tsc --noEmit` で型エラーがないことを確認する
+配布ファイルで直接 `onClose` を呼んでいる次の2か所を置き換えます。`Dialog` の `onOpenChange` は `handleClose()`、フッターのボタンは `handleClose` を使います。
 
-> 投稿成功後に `commentForm.reset()` で
-> フォームをクリアし、`invalidate` で
-> コメント一覧を自動更新します。
-> `handleSubmit` がバリデーションを実行するので
-> ハンドラー内での空チェックは不要です。
+```tsx
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+<Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+```
 
-#### mutation の処理フロー
+ダイアログは Esc キーや背景クリックでも閉じられるため、`onOpenChange` から `handleClose` を呼びます。どの閉じ方でも表示世代を進め、入力とエラーを初期化し、遅れて届く投稿結果を次のフォームへ反映させません。
 
-| 順番 | 処理 | 目的 |
-|------|------|------|
-| 1 | `handleSubmit` でバリデーション | zod スキーマで検証 |
-| 2 | `mutate()` 呼び出し | サーバーへ送信 |
-| 3 | サーバーで `trim().min(1)` 検証 | 二重チェック |
-| 4 | DB に保存 | コメントを永続化 |
-| 5 | `onSuccess` → `invalidate` | 一覧を再取得 |
-| 6 | `commentForm.reset()` | フォームをクリア |
+```tsx
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+<Button onClick={handleClose}>閉じる</Button>
+```
 
----
+`writeLockedRef` は描画を待たずに変わります。投稿ボタンを続けて押しても、最初の送信が lock を取った後の呼び出しはその場で止まります。
 
-### Step 6: キャッシュ更新の仕組みを理解する（3分）
-
-**ゴール**: Step 5 で確認した `invalidate` が
-どう動くかを理解します。
-
-#### キャッシュ更新の仕組み
-
-| 操作 | invalidate 対象 | 効果 |
-|------|----------------|------|
-| コメント投稿 | `task.getById` | コメント一覧更新 |
-| タスク更新 | `task.getAll` + `getById` | 一覧と詳細を更新 |
-| タスク削除 | `task.getAll` | 一覧から削除 |
+既存の task query の直前へ、次の session query を追加します。Step 2 で確認した task query と `readError` は貼り直しません。
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// onSuccess 内のキャッシュ更新（Step 5 で確認済み）
-utils.task.getById.invalidate(
-  { id: taskId },
-);
+  const {
+    data: session,
+    isSuccess: sessionLoaded,
+    error: sessionError,
+    failureReason: sessionFailure,
+    isFetching: sessionFetching,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, {
+    enabled: open && !authExpired,
+    retry: shouldRetryQuery,
+  });
 ```
 
-コメント配列へ自分で1件足す書き方もありますが今日は使いません。
-サーバーが実際に保存した中身をそのまま表示するほうが画面と DB の食い違いが起きないからです。
+session query は、認証済みの user 情報と session が `null` になった場合を受け取ります。`sessionFetching`（セッションを取得中かどうか）と `refetchSession`（セッションだけを再取得する関数）も受け取り、権限情報の取得失敗をタスク取得とは分けて再試行します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+  const queryAuthFailed =
+    [taskError, taskFailure, sessionError, sessionFailure].some(isAuthError) ||
+    (sessionLoaded && session === null);
+  const needsLogin = authExpired || queryAuthFailed;
+  const forbidden = [taskError, taskFailure].some(isForbiddenError);
+  const notFound = [taskError, taskFailure].some((error) => httpStatusOf(error) === 404);
+  const taskDetail = needsLogin || forbidden || notFound ? undefined : cachedTask;
+  const sessionReadFailed = !!sessionError && !isAuthError(sessionError);
+
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    authExpiredRef.current = true;
+    if (!mountedRef.current) return;
+    setAuthExpired(true);
+    onAuthExpired?.();
+  }, [queryAuthFailed, onAuthExpired]);
+
+  const permissionSession = sessionReadFailed ? undefined : session;
+  const memberRole = taskDetail?.project.members.find(
+    (member) => member.userId === permissionSession?.user?.id,
+```
+
+タスクやセッションのエラーから認証失敗（401）または未ログイン状態を検知した場合は、`queryAuthFailed` としてまとめ、キャッシュされたタスク詳細（`taskDetail`）を非表示にします。ログアウトやセッション失効の後にもタスク内容やコメント履歴が画面に残り続ける情報漏洩を防ぎ、親コンポーネントへ認証切れを通知するためです。401 ではないセッション取得失敗は `sessionReadFailed` で分けます。タスク詳細は読めても投稿権限を確認できない状態だからです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+  )?.role;
+  const canEditComments = isProjectMemberRole(memberRole) && hasPermission(memberRole, 'canEdit');
+
+  useEffect(() => {
+    if (!open || !canEditComments) {
+      createGenerationRef.current += 1;
+    }
+  }, [open, canEditComments]);
+```
+
+配布ファイルの `queryAuthFailed` から認証切れを扱う `useEffect` までを上の2ブロックへ置き換え、直後へ `memberRole` と `canEditComments` を追加します。セッション取得が失敗した間は `permissionSession` を未取得として扱い、キャッシュに MEMBER 情報があっても投稿フォームを隠します。ダイアログが閉じたときや編集権限を失ったときは `createGenerationRef` の世代番号を進めます。古い通信結果を現在の画面操作として扱わないためです。
+
+401 は一度受けたら latch（解除するまで保持する印）へ残します。403 では保護された task を隠します。表示可否と投稿可否は別で、VIEWER はコメントを読めても投稿フォームを使えません。
+
+送信イベントでは、検証を始める前に対象を固定します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+  const handleCommentSubmit = (
+    _values: CommentFormValues,
+    submission: CommentSubmission | null,
+  ) => {
+    if (
+      !submission ||
+      submission.content === undefined ||
+      !canEditComments ||
+      writeLockedRef.current
+    )
+      return;
+    writeLockedRef.current = true;
+    setCommentWriteError(null);
+    createSubmissionRef.current = submission;
+    createCommentMutation.mutate({
+      content: submission.content,
+      taskId: submission.taskId,
+    });
+  };
+  const handleCommentSubmitEvent = (event: FormEvent<HTMLFormElement>) => {
+    const submittedTaskId = taskIdRef.current;
+    const submission = submittedTaskId
+      ? {
+```
+
+`handleCommentSubmit` では、入力検証の前に作成した `submission` を受け取り、編集権限と同期ロック（`writeLockedRef`）を検査してからミューテーションを実行します。通信の直前にロックを立て、投稿ボタンを続けて押しても2件目を送りません。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+          taskId: submittedTaskId,
+          scope: 'create' as const,
+          generation: createGenerationRef.current,
+          formRevision: createRevisionRef.current,
+          content: commentForm.getValues('content').trim(),
+        }
+      : null;
+    void commentForm.handleSubmit((values) => handleCommentSubmit(values, submission))(event);
+  };
+```
+
+検証開始前の task ID・本文・投稿世代・入力版を submission に固定し、その同じ値を検証後の handler へ渡します。非同期検証の後に現在値を取り直すと、待機中の入力変更や task 切替が送信内容へ混ざります。
+
+`handleSubmit` が非同期の検証へ変わっても、途中で別の task を開いた場合に送信先が入れ替わりません。`values` は検証済みの値ですが、実際に送るのは先に固定した `submission.content` です。
+
+スクリーンショット: 投稿欄に本文を入力し、「コメント投稿」を押す直前の状態です。入力した本文は「モックの配色を1案だけ差し替えました。確認をお願いします。」です。
+
+![コメント一覧の下の投稿欄が本文入力済みで、コメント投稿ボタンを押す直前の状態](./screenshots/day18/comment-before-post.png)
 
 **確認ポイント**:
-- 投稿後に新しいコメントが一覧に表示される
+- Textarea の Enter では本文が改行され、投稿ボタンでは `handleCommentSubmitEvent` が呼ばれます
+- task ID と本文を検証開始前に `submission` へ保存します
+- `writeLockedRef` を mutation より前に立てます
 
-> `task.getById` を invalidate すると
-> タスク詳細（コメント含む）が再取得されます。
-> コメント専用クエリ `comment.getByTaskId` を
-> 使わなくてもタスク詳細経由で更新されます。
+### Step 5: 成功・失敗・再取得失敗を分ける（読む目安: 10分）
 
----
+**ゴール**: DB 書き込みの結果と、その後の画面再取得の結果を混ぜません。
 
-### Step 7: 動作確認（3分）
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+  const isCurrentSubmission = (submission: CommentSubmission | null | undefined) =>
+    !!submission &&
+    open &&
+    taskId === submission.taskId &&
+    openRef.current &&
+    taskIdRef.current === submission.taskId &&
+    createGenerationRef.current === submission.generation;
+  const handleRefreshFailure = (
+    error: unknown,
+    submission: CommentSubmission,
+    writeCompleted: boolean,
+  ) => {
+    if (!mountedRef.current || authExpiredRef.current) return;
+```
 
-**ゴール**: コメント機能の全体を確認します。
+`handleRefreshFailure` の入口では、画面が閉じた後と認証切れ後の応答を除外します。次の断片では 401 を先に処理し、保存済みかどうかと現在の投稿かどうかから案内文を選びます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+    if (isAuthError(error)) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      onAuthExpired?.();
+      return;
+    }
+    const currentSubmission = isCurrentSubmission(submission);
+    const message = writeCompleted
+      ? currentSubmission
+        ? ('コメントの操作は完了しましたが、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。')
+```
+
+`isCurrentSubmission` 判定を用いて、完了した送信処理が現在開いているダイアログおよび同じタスクの同一世代に属しているかを確認します。ダイアログを閉じて開き直したり別のタスクへ切り替えたりした後に遅れて届いたエラーや通知が、現在表示中の別の画面を誤って上書きしてしまう事故を防ぐためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+        : ('先ほど送信したコメントの操作は' +
+          '完了しましたが、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。')
+      : currentSubmission
+        ? '最新のコメントを取得できませんでした。画面を閉じて開き直してください。'
+        : ('先ほど送信したコメントの対象について、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。');
+    if (writeCompleted && currentSubmission) {
+      setCommentWriteError(message);
+    } else {
+      toast.error(message);
+    }
+  };
+```
+
+ここまでで再取得失敗の表示先を、現在の投稿なら欄内、過去の投稿なら通知へ振り分けます。次の `invalidateSubmittedTask` は、送信時に記録したタスクだけを再取得し、その失敗をこの処理へ戻します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+
+  const invalidateSubmittedTask = (submission: CommentSubmission | null | undefined) => {
+    if (!submission || !mountedRef.current || authExpiredRef.current) return;
+    void Promise.resolve(
+      utils.task.getById.invalidate({ id: submission.taskId }, undefined, { throwOnError: true }),
+    ).catch((error: unknown) => handleRefreshFailure(error, submission, true));
+  };
+
+  const refreshAfterWriteError = (
+    submission: CommentSubmission | null | undefined,
+    withoutRefetch: boolean,
+  ) => {
+    if (!submission || !mountedRef.current || (authExpiredRef.current && !withoutRefetch)) return;
+```
+
+`invalidateSubmittedTask` では、現在開いているタスクではなく、送信開始時に `submission` へ記録しておいた `taskId` を明示的に指定してキャッシュを再取得します。ユーザーが送信直後に別のタスクを開いていた場合でも、実際にコメントが書き込まれた元のタスクデータを正確に最新化するためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+    void Promise.resolve(
+      utils.task.getById.invalidate(
+        { id: submission.taskId },
+        withoutRefetch ? { refetchType: 'none' } : undefined,
+        { throwOnError: true },
+      ),
+    ).catch((error: unknown) => handleRefreshFailure(error, submission, false));
+  };
+
+  const handleWriteError = (error: unknown, submission: CommentSubmission | null | undefined) => {
+    if (!mountedRef.current || authExpiredRef.current) return;
+    const classified = classifyTaskWriteError(error, 'createComment');
+    if (classified.kind === 'auth') {
+      authExpiredRef.current = true;
+      refreshAfterWriteError(submission, true);
+      setAuthExpired(true);
+      onAuthExpired?.();
+      return;
+    }
+    refreshAfterWriteError(submission, false);
+    if (isCurrentSubmission(submission)) {
+      setCommentWriteError(classified.message);
+```
+
+`handleWriteError` では、コメント投稿の失敗原因を分類し、現在の操作ならコメント一覧の上のエラー表示へ、過去の操作ならトーストへエラーを出します。別のタスクへ切り替えた後に、無関係な画面へ失敗を表示しないためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+    } else {
+      toast.error(`先ほど送信したコメントの投稿に失敗しました。${classified.message}`);
+    }
+  };
+
+  const releaseWriteLock = () => {
+    writeLockedRef.current = false;
+  };
+```
+
+`releaseWriteLock` は、成否にかかわらず呼ばれる `onSettled` から実行し、送信中の同期ロック（`writeLockedRef`）を解除します。途中の分岐ごとに解除を書くと漏れが生じるため、終了時の1か所へ集めます。
+
+409 は「送信時に見ていた対象が変わった」という失敗です。入力は残し、最新データを取り直します。401 はログイン案内へ切り替えます。403 は権限が変わった結果なので同じ投稿を自動再試行しません。不明な失敗も成功とは言い切れないため、入力を残して案内します。
+
+**確認ポイント**:
+- 401、403、409、不明な失敗の案内が別れています
+- write 成功後の再取得失敗を write 失敗と表示しません
+
+投稿 mutation は自動再試行を止めます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+  const createCommentMutation = api.comment.create.useMutation({
+    retry: false,
+    onMutate: () => createSubmissionRef.current,
+    onSuccess: (_data, _variables, submission) => {
+      if (!mountedRef.current || authExpiredRef.current) return;
+      const currentSubmission = isCurrentSubmission(submission);
+      toast.success(
+        currentSubmission ? 'コメントを投稿しました。' : '先ほど送信したコメントを投稿しました。',
+      );
+      invalidateSubmittedTask(submission);
+```
+
+成功時は保存完了を先に通知し、送信対象のタスクだけを再取得します。次の断片では、古い送信と同じ本文が入力欄に残っている場合に、重複投稿を避ける注意を出します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+      if (
+        !currentSubmission &&
+        submission &&
+        open &&
+        openRef.current &&
+        taskId === submission.taskId &&
+        taskIdRef.current === submission.taskId &&
+        commentForm.getValues('content').trim() === submission.content
+      ) {
+        toast(
+          ('先ほどの投稿は完了しています。' +
+            '残った入力をこのまま投稿すると' +
+            '重複する可能性があります。'),
+        );
+      }
+```
+
+送信時から表示世代が変わっていて、同じタスクを開き、入力欄の前後の空白を除いた本文が送信した本文と一致する場合は、投稿済みと知らせます。画面を開き直して同じ本文を入力した場合などに、重複投稿を避けるためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+      if (!currentSubmission) return;
+      if (createRevisionRef.current === submission?.formRevision) {
+        commentForm.reset();
+      } else {
+        toast(
+          ('送信後の変更は保存されていません。' +
+            'このまま投稿すると、' +
+            '同じ内容が重複する可能性があります。'),
+        );
+      }
+    },
+    onError: (error, _variables, submission) => handleWriteError(error, submission),
+    onSettled: releaseWriteLock,
+  });
+```
+
+成功した投稿と現在の入力版が同じ時だけフォームを空にし、変わっていれば重複注意とともに下書きを残します。保存成功だけを条件に reset すると、送信後に書かれた次の comment を失います。
+
+書き込みが成功して再取得だけ失敗した場合、投稿を失敗とは表示しません。「投稿は完了したが最新表示を取れない」と分けて案内します。
+
+同じフォームへ送信後の文字が入力されていれば、`formRevision` が変わっています。その場合は reset せず、未保存の下書きとして残します。
+
+スクリーンショット: 本文を入力すると送信できる状態になります。
+
+![コメント本文を入力しコメント投稿ボタンを押せる状態](./screenshots/day18/comment-form.png)
+
+Step 3 で開いたコメント欄全体の内側へ、権限情報の警告と投稿フォームを追加します。VIEWER は取得済みのロールによりフォームが非表示になります。セッション取得失敗ではロール自体を確認できないため、同じ非表示でも警告と再試行ボタンを出します。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx */}
+{sessionReadFailed && (
+  <div role="alert">
+    <p>
+      {'コメントの権限情報を' +
+        '取得できませんでした。' +
+        '権限を確認できるまで' +
+        '投稿や編集は利用できません。'}
+    </p>
+    <Button
+      type="button"
+      aria-label="コメント権限を再試行"
+      disabled={sessionFetching}
+      onClick={() => void refetchSession()}
+    >
+      {sessionFetching ? '再取得中...' : '再試行'}
+    </Button>
+  </div>
+)}
+```
+
+再試行中はボタンを無効にし、同じセッション取得を重ねません。タスク詳細が読めても投稿権限は確認できていないため、警告を残してフォームを隠します。再取得が成功したら、その時点のロールで表示を判定します。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{commentWriteError && <p role="alert">{commentWriteError}</p>}
+{canEditComments && (
+  <form onSubmit={handleCommentSubmitEvent} className="space-y-2">
+    <Textarea
+      aria-label="コメント本文"
+      {...commentForm.register('content')}
+    />
+    <Button type="submit" disabled={
+      !commentForm.watch('content').trim() || createCommentMutation.isPending
+    }>
+      {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+    </Button>
+  </form>
+)}
+</div>
+```
+
+`Textarea` には Enter 用のキー処理を追加していません。そのため Enter は本文内の改行になり、送信は「コメント投稿」ボタンで行います。最後の `</div>` は Step 3 の冒頭で開いたコメント欄全体を閉じます。これで見出し、一覧、投稿フォームが1つのまとまりになり、Step 3 から開いたままのタグが残りません。
+
+### Step 6: 二重送信と古い完了を確認する（読む目安: 4分）
+
+次の4ケースをコード上で追います。
+
+1. A を送信し、完了前に本文を B へ変えると B は残ります
+2. A を送信し、閉じて別 task を開くと A の完了は新しい画面を閉じません
+3. 投稿成功後の再取得が失敗しても、投稿成功と再取得失敗を別々に案内します
+4. 401 の後に遅れて届いた成功は、ログイン案内を成功通知で上書きしません
+
+`onSettled` は成功と失敗の両方で lock を解放します。結果を待つ間だけ次の書き込みを止めるためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+const current = isCurrentSubmission(submission);
+```
+
+この判定は、完了した送信が今も同じ表示期間と同じ task に属するかを確かめます。判定せずに結果を反映すると、閉じて開き直した画面や別 task の新しい入力を古い完了が上書きします。
+
+**確認ポイント**:
+- 4ケースそれぞれで current と stale のどちらになるか説明できます
+- 新しい下書きがある成功では reset しません
+
+### Step 7: 動作確認（読む目安: 5分）
+
+1. MEMBER 以上の役割でコメントを投稿します
+2. VIEWER では投稿フォームが出ないことを確認します
+3. 投稿中に入力を変え、新しい下書きが残ることを確認します
+4. 空白だけでは送信されないことを確認します
+5. ダイアログを閉じて別 task を開き、前の完了が新しい入力を消さないことを確認します
 
 開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
 
@@ -1064,68 +1209,39 @@ utils.task.getById.invalidate(
 npm run dev
 ```
 
-1. タスクカードをクリックして詳細を開く
-2. コメント一覧が表示される（件数 Badge 付き）
-3. テキストエリアにコメントを入力
-4. 「コメント投稿」ボタンをクリック
-5. 投稿中は「投稿中...」と表示される
-6. コメントが一覧に追加される
-7. テキストエリアがクリアされる
+`npx tsc --noEmit` も実行します。画面確認だけでは、送信 context の型や `invalidate` の引数のずれを見つけられません。
 
 **確認ポイント**:
-- コメントが正しく投稿される
-- 投稿者のアバター・名前・日時が表示される
-- 空コメントは送信できない
-- 投稿中はボタンが無効になる
-
-![タスク詳細ダイアログ。入力欄に文章が入り、赤枠の中の「コメント投稿」ボタンが押せる色に変わっている](./screenshots/day18/comment-before-post.png)
-
-画像は「コメント投稿」を押す**直前**の状態です。押したあとは
-いま入力欄にある文章が一覧の先頭に加わり、見出しの件数が1つ増え、
-入力欄は空に戻ります。この3つが同時に起きれば成功です。
-
-おめでとうございます。コメント投稿が動きました。
-いろいろなタスクにコメントを書いてみてください。
-
----
+- 5つの操作結果を記録します
+- TypeScript の型検査が成功します
 
 ### Pro パターンで考えよう（状態が増えたコメント表示を読みやすくする）
 
-今日の完成コードがダイアログ内で分けるのは空状態と通常表示です。未ログインの場合は認証済みページへ到達する前に止まるため、このダイアログにログイン案内は置きません。
-今後、読み込み中や取得失敗の表示を足す場合にJSX の中へ全部詰めると条件分岐が深くなります。
-先に例外状態を返すと最後に通常表示だけを残せます。
+配布済みのコードは、タスク詳細を取得した結果に応じて表示を分けています。ページを開いた後に認証が切れる場合もあるため、ダイアログ内にもログイン画面へのリンクがあります。
+コメント件数を調べる前に取得状況を確認し、内容を表示してよいときだけコメント欄へ進みます。
 
-| 状態 | 先に返す表示 |
+| 状態 | ダイアログの表示 |
 |------|--------------|
-| 読み込み中（今後追加） | コメントを読み込んでいます |
-| 取得失敗（今後追加） | 再試行の案内 |
-| 0件（実装済み） | コメントはまだありません |
-| 通常 | コメント一覧 |
+| 認証切れ（401） | ログイン画面へのリンク |
+| 閲覧権限なし（403）・対象なし（404） | 理由の案内。保存済みの内容も隠す |
+| 初回の読み込み中 | タスク詳細の読み込み中表示 |
+| 初回の取得失敗 | 再試行の案内 |
+| 表示後の一時的な通信失敗 | 前回の内容と再試行の案内 |
+| 取得できたタスクのコメントが0件 | コメントはまだありません |
+| 取得できたタスクにコメントがある | コメント一覧 |
 
-**覚えておきたいこと**: 状態を追加するときは例外状態をearly returnで先に返します。
+**覚えておきたいこと**: 取得失敗とコメント0件は別の状態です。取得できたタスクに対してコメント件数を調べます。
 
 ## 完成コード全体
 
-今日は4つのファイルを触りました。Step 0 でサーバー側の手続きを2つ書いて登録し、Step 2 から Step 5 でタスク詳細ダイアログへコメント欄を足しています。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めば書いた断片が1つのファイルへどう収まったかを確かめられます。
-
-| ファイル | 役割 | 対応する Step |
-|---------|------|--------------|
-| `src/server/api/routers/comment.ts` | コメントの取得と投稿の手続き | Step 0 |
-| `src/server/api/root.ts` | 手続きの一覧表 | Step 0 |
-| `src/component/task/task-detail-dialog.tsx` | タスク詳細とコメント欄 | Step 2 から Step 5 |
-| `src/app/task/page.tsx` | 投稿権限を詳細ダイアログへ渡す | Step 4 |
-
-`src/app/task/page.tsx` は Step 4 の `TaskDetailDialog` 呼び出し部分だけを変更します。完成コードの3ファイルを置き換えた場合も、この呼び出しの `canEditProject` を追加した状態にしてください。
-
-`task-detail-dialog.tsx` は Day 13 から配布されていたファイルです。今日はそこへコメント欄を書き足したのでDay 13 から引き継いだ部分もあわせて全文を載せます。
+Day 18 の終了時点では read/create だけを実装します。Day 19 の update/delete はまだ先取りしません。次のブロックは上から順につなぐと、各ファイルの全文になります。
 
 ### `src/server/api/routers/comment.ts`
 
-**インポートと入力スキーマ**:
-
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// 完成版: インポートと入力スキーマ
+// 完成版: Day 18 comment router 1/7
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { PermissionKey } from '@/lib/constant/roles';
@@ -1138,21 +1254,32 @@ const commentCreateSchema = z.object({
   content: z.string().trim().min(1, 'コメント内容は必須です'),
   taskId: z.string().cuid(),
 });
+
+const lockCommentProject = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  return rows.length > 0;
+};
+
+/**
+ * getByTaskId/createの両方で同一のタスク存在確認+メンバー権限検証が必要なため集約。
 ```
 
-スキーマをファイルの先頭側へ置いてあるのはこの形が `create` の入口を決めているからです。`trim()`を先に、`min(1)`を後ろに書く順番が要点です。逆にすると空白だけの本文が長さの検査を通り抜けます。`PermissionKey` を `import type` で取り込んでいるのはこの名前を型としてしか使わないためです。型だけの取り込みは完成したアプリの中身から消えます。
-
-**タスクと自分のメンバー行の取得**:
+投稿スキーマ `commentCreateSchema` と、プロジェクト行をロックする `lockCommentProject` を定義します。Zod が空白だけの投稿を止め、`FOR UPDATE` がタスク移動やメンバー変更とコメント投稿の順番を決めます。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: タスクと自分のメンバー行の取得
+// 完成版: Day 18 comment router 2/7
+ * findTaskWithPermission（_helpers）はtask routerに特化しているためcomment独自で定義。
+ */
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
   permission?: PermissionKey,
+  db: Pick<Prisma.TransactionClient, 'task'> = prisma,
 ) => {
-  const task = await prisma.task.findUnique({
+  const task = await db.task.findUnique({
     where: { id: taskId },
     include: {
       project: {
@@ -1162,19 +1289,18 @@ const findTaskAndAssertMembership = async (
       },
     },
   });
-```
 
-`permission` に `?` が付いているのでこの引数は省略できます。省略した呼び出しは「メンバーであればよい」、`'canEdit'` を渡した呼び出しは「編集できる役割であること」を求めます。1つの関数で2種類の厳しさを表せるため読む側と書く側の手続きで別々の関数を用意せずに済みます。`members: { where: { userId } }` でログイン中の本人の行だけへ絞っているので判定に使う材料はこの1回の問い合わせで揃います。
-
-**存在確認と権限確認**:
-
-```typescript
-// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: 存在確認と権限確認
   if (!task) {
     throw new TRPCError({
       code: 'NOT_FOUND',
       message: 'タスクが見つかりません',
+```
+
+`findTaskAndAssertMembership` は、タスクの存在とプロジェクト内の権限をまとめて確かめます。`db` 引数には通常の `prisma` とトランザクションの `tx` を渡せるため、事前確認とロック後の再確認で同じ条件を使えます。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: Day 18 comment router 3/7
     });
   }
 
@@ -1182,23 +1308,27 @@ const findTaskAndAssertMembership = async (
 
   return task;
 };
+
 ```
 
-順番が決まっています。先に `task` が `null` かどうかを見るのは次の行で `task.project` を読むためです。`null` のまま進むと実行時エラーになり、読者には英語のエラーだけが残ります。存在確認を通ったあとに権限を確かめ、最後に `task` を返します。呼び出し側はこの1行を書くだけで、存在と権限の両方を通過したタスクを受け取れます。
-
-**getByTaskId によるコメント一覧**:
+`commentRouter` の定義を続けて書きます。`getByTaskId` が読むのは、現在もプロジェクトに所属する利用者へ返せるコメントです。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: getByTaskId によるコメント一覧
+// 完成版: Day 18 comment router 4/7
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
-
-      return await prisma.comment.findMany({
-        where: { taskId: input.taskId },
+      const comments = await prisma.comment.findMany({
+        where: {
+          taskId: input.taskId,
+          task: {
+            project: {
+              members: { some: { userId: ctx.session.userId } },
+            },
+          },
+        },
         include: {
           user: {
             select: USER_SELECT,
@@ -1206,44 +1336,743 @@ export const commentRouter = createTRPCRouter({
         },
         orderBy: { createdAt: 'desc' },
       });
-    }),
 ```
 
-`await` を付けた権限確認がデータを取る行より上に置いてあります。この上下関係が守りの本体です。下に置くと権限の無い人にもコメント本文がいったん読み込まれます。`include` の `user` に `USER_SELECT` を挟むのはパスワードのように返してはいけない列を毎回書かずに外すためです。返す列の決まりを1か所へ集めておくとあとで列が増えたときの直し漏れが起きません。
-
-**create によるコメントの保存**:
+`getByTaskId` クエリでは、コメント取得の `where` に対象タスクと現在のプロジェクト所属を含めます。コメントがある場合は、この読み取りの中で所属も確認します。0件だった場合は `findTaskAndAssertMembership` を呼び、空の一覧・存在しないタスク・権限不足を区別します。閲覧権限（VIEWER）を持つユーザーもコメント一覧を参照できます。
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: create によるコメントの保存
-  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+// 完成版: Day 18 comment router 5/7
+      if (comments.length === 0) {
+        await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+      }
 
-    return await prisma.comment.create({
-      data: {
-        content: input.content,
-        taskId: input.taskId,
-        userId: ctx.session.userId,
-      },
-      include: {
-        user: {
-          select: USER_SELECT,
+      return comments;
+    }),
+
+```
+
+`getByTaskId` を閉じたら、続けて `create` を追加します。プロジェクト行のロック後にタスクと権限を確かめ直します。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: Day 18 comment router 6/7
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    const task = await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.$transaction(async (tx) => {
+      if (!(await lockCommentProject(tx, task.projectId))) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+        });
+      }
+
+      const currentTask = await findTaskAndAssertMembership(
+        input.taskId,
+        ctx.session.userId,
+        'canEdit',
+        tx,
+      );
+      if (currentTask.projectId !== task.projectId) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'タスクの内容が更新されています。最新の内容を再読み込みしてください',
+```
+
+`create` のトランザクションでは、プロジェクト行をロックした直後にタスク情報を再取得し、プロジェクト ID と編集権限をもう一度確かめます。ロック待ちの間にタスク移動や権限変更が完了していれば、古い確認結果では書き込みません。
+
+```typescript
+// filepath: src/server/api/routers/comment.ts（同じファイルの続き）
+// 完成版: Day 18 comment router 7/7
+        });
+      }
+
+      return await tx.comment.create({
+        data: {
+          content: input.content,
+          taskId: currentTask.id,
+          userId: ctx.session.userId,
         },
-      },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+      });
     });
   }),
 });
 ```
 
-`userId` に入れているのは `ctx.session.userId` で、`input` からは取りません。入力スキーマに `userId` が無いためブラウザ側から投稿者を指定する手段そのものがありません。なりすまし投稿を防ぐいちばん確実な方法はclient に選ばせないことです。第3引数の `'canEdit'` が `getByTaskId` との違いで、読むだけなら参加者全員、書き込みは編集権限を持つ役割だけに絞れます。
+確認済みの task ID・session user ID・本文で comment を作成し、投稿者情報を含む結果を返します。入力から user ID を受け取らないため、他人名義では投稿できません。現在の画面は戻り値を直接描画せず、成功後に task query を取り直して一覧を更新します。
+
+### `src/component/task/task-detail-dialog.tsx`
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 完成版: Day 18 task detail dialog 1/23
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import Link from 'next/link';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+import { StatusBadge } from '@/component/task/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import { Separator } from '@/component/ui/separator';
+```
+
+タスク詳細ダイアログの実装に必要な React フック、UI コンポーネント、日付フォーマット関数、バリデーションライブラリを一括でインポートします。ダイアログの表示制御だけでなく、フォーム管理やユーザーへのトースト通知を組み合わせる土台を整えます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 2/23
+import { Textarea } from '@/component/ui/textarea';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole } from '@/lib/constant/roles';
+import { formatDateOnly } from '@/lib/date';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
+import { api } from '@/trpc/react';
+
+type TaskDetailDialogProps = {
+  open: boolean;
+  taskId: string | null;
+  onClose: () => void;
+  onAuthExpired?: () => void;
+};
+
+const commentSchema = z.object({
+  content: z.string().trim().min(1, 'コメントを入力してください'),
+});
+type CommentFormValues = z.infer<typeof commentSchema>;
+
+type CommentSubmission = {
+  taskId: string;
+```
+
+親コンポーネントから受け取る値を表す `TaskDetailDialogProps` と、コメント投稿フォームの検証規則 `commentSchema` を定義します。ダイアログの表示状態、対象タスク ID、セッション失効時のコールバックを型で定め、親画面との連携ミスをコンパイル時に検知します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 3/23
+  generation: number;
+  formRevision: number;
+  content: string;
+};
+
+export function TaskDetailDialog({ open, taskId, onClose, onAuthExpired }: TaskDetailDialogProps) {
+  const [authExpired, setAuthExpired] = useState(false);
+  const [commentWriteError, setCommentWriteError] = useState<string | null>(null);
+  const createGenerationRef = useRef(0);
+  const createRevisionRef = useRef(0);
+  const openRef = useRef(open);
+  const taskIdRef = useRef(taskId);
+  const writeLockedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const authExpiredRef = useRef(false);
+  const createSubmissionRef = useRef<CommentSubmission | null>(null);
+
+  const commentForm = useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+```
+
+コンポーネント内で使う状態と参照を初期化し、React Hook Form でコメント入力を管理します。画面に出すエラー（`commentWriteError`）は `useState` で持ちます。一方、通信中の多重送信を防ぐ `writeLockedRef` と表示世代を表す `createGenerationRef` は、再描画を待たず更新できる `useRef` で保持します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 4/23
+  });
+
+  const utils = api.useUtils();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const subscription = commentForm.watch((_values, { name }) => {
+      if (name) createRevisionRef.current += 1;
+    });
+    return () => subscription.unsubscribe();
+  }, [commentForm]);
+
+  useEffect(() => {
+    openRef.current = open;
+    taskIdRef.current = taskId;
+    createGenerationRef.current += 1;
+    commentForm.reset();
+```
+
+コンポーネントのマウント状態と入力変更を監視し、ダイアログ開閉・タスク変更時の初期化処理を登録します。別のタスクを開いたときに、前の本文やエラー、表示世代を引き継がないためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 5/23
+    setCommentWriteError(null);
+  }, [commentForm, open, taskId]);
+  const {
+    data: session,
+    isSuccess: sessionLoaded,
+    error: sessionError,
+    failureReason: sessionFailure,
+    isFetching: sessionFetching,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, {
+    enabled: open && !authExpired,
+    retry: shouldRetryQuery,
+  });
+```
+
+セッション取得とタスク取得は別のクエリです。タスク詳細は取得済みでも、コメントの投稿権限を確認できない場合があります。セッションだけを再試行できるようにし、成功済みのタスク取得は繰り返しません。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 6/23
+  const {
+    data: cachedTask,
+    error: taskError,
+    failureReason: taskFailure,
+    isFetching,
+    refetch,
+  } = api.task.getById.useQuery(
+    { id: taskId ?? '' },
+    {
+      enabled: open && !!taskId && !authExpired,
+      retry: (count, error) => httpStatusOf(error) !== 404 && shouldRetryQuery(count, error),
+    },
+```
+
+セッション情報（`auth.getSession`）とタスク詳細（`task.getById`）を個別の tRPC クエリで取得します。ダイアログが開き、認証が有効な間だけ問い合わせます。セッションだけを再取得できる値も受け取ります。タスク取得で 404（存在しない）が返された場合は、同じ要求を再試行しません。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 7/23
+  );
+  const readError = taskError ?? taskFailure;
+  const queryAuthFailed =
+    [taskError, taskFailure, sessionError, sessionFailure].some(isAuthError) ||
+    (sessionLoaded && session === null);
+  const needsLogin = authExpired || queryAuthFailed;
+  const forbidden = [taskError, taskFailure].some(isForbiddenError);
+  const notFound = [taskError, taskFailure].some((error) => httpStatusOf(error) === 404);
+  const taskDetail = needsLogin || forbidden || notFound ? undefined : cachedTask;
+  const sessionReadFailed = !!sessionError && !isAuthError(sessionError);
+
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    authExpiredRef.current = true;
+    if (!mountedRef.current) return;
+    setAuthExpired(true);
+    onAuthExpired?.();
+  }, [queryAuthFailed, onAuthExpired]);
+
+  const permissionSession = sessionReadFailed ? undefined : session;
+  const memberRole = taskDetail?.project.members.find(
+    (member) => member.userId === permissionSession?.user?.id,
+  )?.role;
+```
+
+クエリのエラー情報から認証切れ（401）、権限不足（403）、存在しないタスク（404）を判定します。該当する場合は、キャッシュに残る `cachedTask` を `taskDetail` として表示しません。401 ではないセッション取得失敗ではタスク詳細を残し、`permissionSession` を未取得として投稿操作を止めます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 8/23
+  const canEditComments = isProjectMemberRole(memberRole) && hasPermission(memberRole, 'canEdit');
+
+  useEffect(() => {
+    if (!open || !canEditComments) {
+      createGenerationRef.current += 1;
+    }
+  }, [open, canEditComments]);
+
+  const isCurrentSubmission = (submission: CommentSubmission | null | undefined) =>
+    !!submission &&
+    open &&
+    taskId === submission.taskId &&
+    openRef.current &&
+    taskIdRef.current === submission.taskId &&
+    createGenerationRef.current === submission.generation;
+  const handleRefreshFailure = (
+    error: unknown,
+    submission: CommentSubmission,
+    writeCompleted: boolean,
+  ) => {
+    if (!mountedRef.current || authExpiredRef.current) return;
+    if (isAuthError(error)) {
+      authExpiredRef.current = true;
+```
+
+メンバー権限からコメント編集可否（`canEditComments`）を判定し、ダイアログを閉じた際や権限を喪失した際に投稿世代番号を進めます。あわせて、現在のアクティブな表示と送信コンテキストが一致しているかを判定するヘルパー関数 `isCurrentSubmission` を定義します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 9/23
+      setAuthExpired(true);
+      onAuthExpired?.();
+      return;
+    }
+    const currentSubmission = isCurrentSubmission(submission);
+    const message = writeCompleted
+      ? currentSubmission
+        ? ('コメントの操作は完了しましたが、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。')
+        : ('先ほど送信したコメントの操作は' +
+          '完了しましたが、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。')
+      : currentSubmission
+        ? '最新のコメントを取得できませんでした。画面を閉じて開き直してください。'
+        : ('先ほど送信したコメントの対象について、' +
+          '最新のコメントを取得できませんでした。' +
+          '画面を閉じて開き直してください。');
+```
+
+ここまでで認証以外の再取得失敗について、保存済みかどうかと現在の投稿かどうかを反映した文面を作ります。次は現在の投稿だけを欄内へ残し、過去の投稿は通知へ送ります。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+    if (writeCompleted && currentSubmission) {
+      setCommentWriteError(message);
+    } else {
+      toast.error(message);
+    }
+  };
+
+  const invalidateSubmittedTask = (submission: CommentSubmission | null | undefined) => {
+    if (!submission || !mountedRef.current || authExpiredRef.current) return;
+    void Promise.resolve(
+      utils.task.getById.invalidate({ id: submission.taskId }, undefined, { throwOnError: true }),
+```
+
+`invalidateSubmittedTask` 関数を定義し、投稿完了後に送信先タスクのキャッシュをピンポイントで無効化して最新データを再取得します。再取得中に通信障害が発生した場合は `handleRefreshFailure` へ渡し、保存自体は完了している旨をユーザーへ正確に通知します。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 10/23
+    ).catch((error: unknown) => handleRefreshFailure(error, submission, true));
+  };
+
+  const refreshAfterWriteError = (
+    submission: CommentSubmission | null | undefined,
+    withoutRefetch: boolean,
+  ) => {
+    if (!submission || !mountedRef.current || (authExpiredRef.current && !withoutRefetch)) return;
+    void Promise.resolve(
+      utils.task.getById.invalidate(
+        { id: submission.taskId },
+        withoutRefetch ? { refetchType: 'none' } : undefined,
+        { throwOnError: true },
+      ),
+    ).catch((error: unknown) => handleRefreshFailure(error, submission, false));
+  };
+
+  const handleWriteError = (error: unknown, submission: CommentSubmission | null | undefined) => {
+    if (!mountedRef.current || authExpiredRef.current) return;
+    const classified = classifyTaskWriteError(error, 'createComment');
+    if (classified.kind === 'auth') {
+      authExpiredRef.current = true;
+      refreshAfterWriteError(submission, true);
+```
+
+書き込み失敗時の再取得関数 `refreshAfterWriteError` とエラー処理 `handleWriteError` を定義します。競合エラー（409）やネットワーク障害が起きた際にも送信先タスクの最新状態を確認し、認証エラーなら直ちに画面を失効表示へ移行させます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 11/23
+      setAuthExpired(true);
+      onAuthExpired?.();
+      return;
+    }
+    refreshAfterWriteError(submission, false);
+    if (isCurrentSubmission(submission)) {
+      setCommentWriteError(classified.message);
+    } else {
+      toast.error(`先ほど送信したコメントの投稿に失敗しました。${classified.message}`);
+    }
+  };
+
+  const releaseWriteLock = () => {
+    writeLockedRef.current = false;
+  };
+  const createCommentMutation = api.comment.create.useMutation({
+    retry: false,
+    onMutate: () => createSubmissionRef.current,
+    onSuccess: (_data, _variables, submission) => {
+      if (!mountedRef.current || authExpiredRef.current) return;
+      const currentSubmission = isCurrentSubmission(submission);
+      toast.success(
+        currentSubmission ? 'コメントを投稿しました。' : '先ほど送信したコメントを投稿しました。',
+```
+
+コメント投稿ミューテーション `createCommentMutation` を登録し、送信成功時のトースト通知とタスク再取得を進めます。現在のダイアログから送った投稿か、閉じる前に送信を始めた操作かに応じて、通知文を切り替えます。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 12/23
+      );
+      invalidateSubmittedTask(submission);
+      if (
+        !currentSubmission &&
+        submission &&
+        open &&
+        openRef.current &&
+        taskId === submission.taskId &&
+        taskIdRef.current === submission.taskId &&
+        commentForm.getValues('content').trim() === submission.content
+      ) {
+        toast(
+          ('先ほどの投稿は完了しています。' +
+            '残った入力をこのまま投稿すると' +
+            '重複する可能性があります。'),
+        );
+      }
+```
+
+古い送信と同じ本文が今の入力欄に残っている場合は、もう一度投稿すると重複する可能性を知らせます。次は現在の送信だけを対象に、送信後の編集が無ければフォームを空にします。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+      if (!currentSubmission) return;
+      if (createRevisionRef.current === submission?.formRevision) {
+        commentForm.reset();
+      } else {
+        toast(
+          ('送信後の変更は保存されていません。' +
+            'このまま投稿すると、' +
+            '同じ内容が重複する可能性があります。'),
+        );
+      }
+```
+
+成功した投稿と現在の入力版が同じ時だけフォームを空にし、変わっていれば重複注意とともに下書きを残します。保存成功だけを条件に reset すると、送信後に書かれた次の comment を失います。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 13/23
+    },
+    onError: (error, _variables, submission) => handleWriteError(error, submission),
+    onSettled: releaseWriteLock,
+  });
+
+  const handleClose = () => {
+    createGenerationRef.current += 1;
+    openRef.current = false;
+    commentForm.reset();
+    setCommentWriteError(null);
+    onClose();
+  };
+  const handleCommentSubmit = (
+    _values: CommentFormValues,
+    submission: CommentSubmission | null,
+  ) => {
+    if (
+      !submission ||
+      submission.content === undefined ||
+      !canEditComments ||
+      writeLockedRef.current
+    )
+      return;
+```
+
+ダイアログを閉じる `handleClose` では、表示世代番号（`createGenerationRef`）を進め、未完了の通信を古い操作として切り離します。その後、入力フォームとエラー表示を初期化して親の `onClose` を呼びます。閉じた後に届くレスポンスが、次に開いたフォームへ干渉しないようにするためです。
+
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
+// 完成版: Day 18 task detail dialog 14/23
+    writeLockedRef.current = true;
+    setCommentWriteError(null);
+    createSubmissionRef.current = submission;
+    createCommentMutation.mutate({
+      content: submission.content,
+      taskId: submission.taskId,
+    });
+  };
+  const handleCommentSubmitEvent = (event: FormEvent<HTMLFormElement>) => {
+    const submittedTaskId = taskIdRef.current;
+    const submission = submittedTaskId
+      ? {
+          taskId: submittedTaskId,
+          scope: 'create' as const,
+          generation: createGenerationRef.current,
+          formRevision: createRevisionRef.current,
+          content: commentForm.getValues('content').trim(),
+        }
+      : null;
+    void commentForm.handleSubmit((values) => handleCommentSubmit(values, submission))(event);
+  };
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+```
+
+`handleCommentSubmitEvent` では、送信直前のタスク ID、入力本文、世代番号、リビジョン番号を `submission` に保存し、検証ハンドラーへ渡します。フォーム検証中にタスクや入力が変わっても、ボタンを押した時点の宛先と本文を送るためです。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 15/23 */}
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl break-words">
+            {taskDetail?.title || 'タスク詳細'}
+          </DialogTitle>
+          <DialogDescription>
+            プロジェクト:{' '}
+            <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
+          </DialogDescription>
+        </DialogHeader>
+
+```
+
+ダイアログの見出しには、取得できたタスク名とプロジェクト名を表示します。続く取得状態の分岐も `DialogContent` の子要素です。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 16/23 */}
+        {needsLogin ? (
+          <div role="alert" className="space-y-3">
+            <p>ログインの有効期限が切れました。もう一度ログインしてください。</p>
+            <Button asChild>
+              <Link href="/login">ログイン画面へ</Link>
+            </Button>
+          </div>
+        ) : forbidden ? (
+          <p role="alert">このタスクを表示する権限がありません。</p>
+        ) : notFound ? (
+          <p role="alert">タスクが見つかりません。削除された可能性があります。</p>
+        ) : readError ? (
+          <div role="alert" className="space-y-3">
+```
+
+ダイアログの本文領域（`DialogContent`）では、タスクの取得状況に応じて表示を分岐します。未ログイン、権限不足、タスク削除、通信エラーにそれぞれ別の案内を出し、利用者が次に取る操作を示します。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 17/23 */}
+            <p>
+              {taskDetail
+                ? '最新のタスク情報を取得できませんでした。前回の内容を表示しています。'
+                : 'タスク情報を取得できませんでした。'}
+            </p>
+            <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
+              {isFetching ? '再取得中...' : '再試行'}
+            </Button>
+          </div>
+        ) : !taskDetail ? (
+          <p role="status">タスク情報を読み込んでいます...</p>
+        ) : null}
+
+        {taskDetail && (
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {taskDetail.description || '説明はありません。'}
+              </p>
+```
+
+通信失敗時の再試行ボタンと、読み込めた場合のタスク説明文（`description`）を記述します。前回の取得データが残っていれば表示したまま再試行を促します。まだ一度も取得できていない場合は、空のタスクとして表示しません。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 18/23 */}
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground block mb-1">ステータス</span>
+                <StatusBadge status={taskDetail.status} />
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">優先度</span>
+                <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
+                  {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">担当者</span>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {taskDetail.assignee?.avatar && (
+                      <AvatarImage src={taskDetail.assignee.avatar} alt="" />
+                    )}
+                    <AvatarFallback className="text-[10px]">
+```
+
+担当者（`assignee`）のアバター表示では、画像 URL が設定されていない場合でも名前やメールアドレスの頭文字をフォールバックとして描画します。ユーザーアイコンが未登録のアカウントであっても誰が担当しているかを視覚的に識別できるようにするためです。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 19/23 */}
+                      {(taskDetail.assignee?.name ||
+                        taskDetail.assignee?.email ||
+                        '?')[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">期限</span>
+                <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold">コメント</h3>
+                <Badge variant="secondary" className="rounded-full px-2">
+                  {taskDetail.comments?.length ?? 0}
+                </Badge>
+```
+
+「コメント」見出しの横に、取得済みの件数をバッジで表示します。0件か、すでに会話が続いているかを、一覧を読む前に把握できます。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 20/23 */}
+              </div>
+
+              {sessionReadFailed && (
+                <div role="alert" className="mb-4 rounded-md border border-destructive p-3">
+                  <p className="text-sm">
+                    {'コメントの権限情報を' +
+                      '取得できませんでした。' +
+                      '権限を確認できるまで' +
+                      '投稿や編集は利用できません。'}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    aria-label="コメント権限を再試行"
+                    disabled={sessionFetching}
+                    onClick={() => void refetchSession()}
+                  >
+                    {sessionFetching ? '再取得中...' : '再試行'}
+                  </Button>
+                </div>
+              )}
+```
+
+セッション取得が失敗した場合は、タスク詳細とコメント一覧を残したまま警告を表示します。VIEWER と判定できた状態ではなく権限情報を確認できない状態なので、投稿・編集・削除を止め、セッションだけを再取得します。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 21/23 */}
+              {commentWriteError && <p role="alert">{commentWriteError}</p>}
+
+              <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                {taskDetail.comments?.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    コメントはまだありません。
+                  </p>
+                )}
+                {taskDetail.comments?.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 text-sm">
+                    <Avatar className="h-8 w-8 mt-1">
+                      {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
+                      <AvatarFallback>
+                        {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {comment.user.name || comment.user.email}
+                        </span>
+```
+
+コメント一覧のスクロール領域では、コメントが1件もない場合に「コメントはまだありません。」という専用メッセージを表示し、データが存在する場合は投稿者のアバターや表示名、作成日時、本文を整形して並べます。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 22/23 */}
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
+                            locale: ja,
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {canEditComments && (
+                <form onSubmit={handleCommentSubmitEvent} className="space-y-2">
+                  <Textarea
+                    placeholder="コメントを追加..."
+                    aria-label="コメント本文"
+                    {...commentForm.register('content')}
+                    className="resize-none"
+                    rows={2}
+                  />
+                  <div className="flex justify-end">
+```
+
+コメントの投稿フォームは、現在のプロジェクトで編集権限を持つメンバー（`canEditComments` が真）の場合だけ表示します。画面側でフォームを隠すのは誤操作を減らすためです。投稿時の最終的な認可はサーバー側で行います。
+
+```typescript
+{/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
+{/* 完成版: Day 18 task detail dialog 23/23 */}
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={
+                        !commentForm.watch('content').trim() || createCommentMutation.isPending
+                      }
+                    >
+                      {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button onClick={handleClose}>閉じる</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+本文が空白だけの場合と投稿中は、送信ボタンを無効にします。「閉じる」は `handleClose` を呼び、入力と表示世代を片付けてからダイアログを閉じます。
 
 ### `src/server/api/root.ts`
 
-**登録済みの router 一覧**:
-
 ```typescript
 // filepath: src/server/api/root.ts
-// 完成版: 登録済みの router 一覧
+// 完成版: Day 18 root router 1/1
 import { authRouter } from './routers/auth';
 import { commentRouter } from './routers/comment';
 import { projectRouter } from './routers/project';
@@ -1264,416 +2093,42 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-`comment: commentRouter` の左側が画面側で書く `api.comment` の綴りを決めています。import だけ書いて登録を忘れるとファイルは存在するのに `api.comment` が型エラーになります。エラーはコメント画面側に出ますが原因はこのファイルです。赤い波線を見たらまず `appRouter` の中に名前が並んでいるかを確かめてください。
+`src/server/api/root.ts` の `appRouter` に `commentRouter` を登録します。この登録により、画面から `api.comment.getByTaskId` と `api.comment.create` を呼べるようになります。
 
-### `src/component/task/task-detail-dialog.tsx`
+Day 18 では `/task` page へ権限関数を追加しません。ダイアログ内で現在の session と project member role を使います。
 
-**ブラウザ側で動かす宣言と外部ライブラリ**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx
-// 完成版: ブラウザ側で動かす宣言と外部ライブラリ
-'use client';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-```
-
-`'use client'` が無いとこの部品はサーバー側だけで動く扱いになります。`useForm` を書いた時点でエラーになるため1行目は消せません。`date-fns` から `format` と `ja` を分けて取り込んでいるのは日本語の表記ルールだけを持ってくるためです。他の言語のデータまで配信せずに済みます。
-
-**プロジェクト内の部品の取り込み**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の取り込み
-import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
-import { Badge } from '@/component/ui/badge';
-import { Button } from '@/component/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/component/ui/dialog';
-import { Separator } from '@/component/ui/separator';
-import { Textarea } from '@/component/ui/textarea';
-import { getPriorityBadgeVariant } from '@/lib/badge-variant';
-import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
-import { formatDateOnly } from '@/lib/date';
-import { api } from '@/trpc/react';
-import { StatusBadge } from './status-badge';
-```
-
-`Dialog` から始まる6つはDay 13 で配布された時点から使われていた部品です。`Avatar` と `Badge` は配布済みです。今日追加した `Textarea` はコメントの入力に使います。並び順が手元と違っていても `npm run fix` が並べ替えます。
-
-**props の型とコメント用スキーマ**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: props の型とコメント用スキーマ
-type TaskDetailDialogProps = {
-  open: boolean;
-  taskId: string | null;
-  onClose: () => void;
-  canEditProject: (projectId: string) => boolean;
-};
-
-const commentSchema = z.object({
-  content: z.string().trim().min(1, 'コメントを入力してください'),
-});
-type CommentFormValues = z.infer<typeof commentSchema>;
-```
-
-`canEditProject` を props で受け取るのはコメントを投稿できる役割かどうかの基準を、Day 13 の一覧カードと1つに保つためです。`taskId` の型が `string | null` なのはどのタスクも開いていない状態を表すためです。この `null` があるおかげで、問い合わせを止める判断と送信を止める判断の両方を同じ値でできます。`commentSchema` にはサーバー側と違って `taskId` が入っていません。入力欄に打ち込む値ではなく、開いているダイアログが持っている値だからです。
-
-**フォームとタスク詳細の取得**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: フォームとタスク詳細の取得
-export function TaskDetailDialog({
-  open,
-  taskId,
-  onClose,
-  canEditProject,
-}: TaskDetailDialogProps) {
-  const commentForm = useForm<CommentFormValues>({
-    resolver: zodResolver(commentSchema),
-    defaultValues: { content: '' },
-  });
-
-  const utils = api.useUtils();
-
-  const { data: taskDetail } = api.task.getById.useQuery(
-    { id: taskId ?? '' },
-    { enabled: !!taskId },
-  );
-```
-
-`defaultValues` を書いておくと `content` は最初から空文字になります。省くと `undefined` から始まり、投稿ボタンの有効と無効を切り替える `watch('content').trim()` がその場でエラーになります。`enabled: !!taskId` はダイアログを開く前に問い合わせが走らないよう止めるスイッチです。`{ id: taskId ?? '' }` の空文字は型をそろえるための保険で、この `enabled` があるためサーバーへは届きません。
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-const canEditComments = !!taskDetail &&
-  canEditProject(taskDetail.projectId);
-```
-
-タスクの取得前は `false` になります。表示と送信の両方でこの値を使い、閲覧者には投稿させないようにします。
-
-**投稿の mutation と送信ハンドラー**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 投稿の mutation と送信ハンドラー
-  const createCommentMutation = api.comment.create.useMutation({
-    onSuccess: () => {
-      if (taskId) {
-        utils.task.getById.invalidate({ id: taskId });
-      }
-      commentForm.reset();
-    },
-  });
-
-  const handleCommentSubmit = (values: CommentFormValues) => {
-    if (!taskId || !canEditComments) return;
-    createCommentMutation.mutate({
-      content: values.content,
-      taskId,
-    });
-  };
-```
-
-`onSuccess` はサーバーが成功を返したときだけ動きます。投稿に失敗したのに入力欄だけ空になる事故を、この置き場所が防いでいます。`handleCommentSubmit` に空文字の判定が無いのは`handleSubmit` が zod の検査に落ちた入力をここまで通さないからです。残っている `if (!taskId || !canEditComments) return;` が見ているのは入力値ではなく画面の状態で、タスクが未選択の場合や、編集権限を失った場合の送信を止めます。
-
-**ダイアログの外枠と見出し**:
-
-```typescript
-// filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: ダイアログの外枠と見出し
-  return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl break-words">
-            {taskDetail?.title || 'タスク詳細'}
-          </DialogTitle>
-          <DialogDescription>
-            プロジェクト:{' '}
-            <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
-          </DialogDescription>
-        </DialogHeader>
-```
-
-`taskDetail?.title` に `?.` が付いているのはデータが届く前の一瞬もこの見出しが描かれるためです。届く前は `undefined` になり、`||` の右側にある「タスク詳細」が表示されます。`onOpenChange` に `!isOpen &&` を挟んでいるのは閉じる向きの変化だけを拾うためです。開く向きは親が `open` で決めるのでここで反応させると二重に切り替わります。
-
-**説明とタスク情報の前半**:
-
-```typescript
-        {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-        {/* 完成版: 説明とタスク情報の前半 */}
-        {taskDetail && (
-          <div className="space-y-6">
-            <div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {taskDetail.description || '説明はありません。'}
-              </p>
-            </div>
-
-            <Separator />
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground block mb-1">ステータス</span>
-                <StatusBadge status={taskDetail.status} />
-              </div>
-              <div>
-                <span className="text-muted-foreground block mb-1">優先度</span>
-                <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
-                  {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
-                </Badge>
-              </div>
-```
-
-`{taskDetail && (` で全体を包んでいるおかげで、この中では `?.` を使わずに `taskDetail.status` と書けます。データが届くまでこの中身は1行も描かれないためです。`whitespace-pre-wrap` は説明文に入れた改行をそのまま表示させる指定です。これが無いと複数行で書いた説明が1行につながって読めなくなります。
-
-**担当者の表示**:
-
-```typescript
-              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: 担当者の表示 */}
-              <div>
-                <span className="text-muted-foreground block mb-1">担当者</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    {taskDetail.assignee?.avatar && (
-                      <AvatarImage src={taskDetail.assignee.avatar} alt="" />
-                    )}
-                    <AvatarFallback className="text-[10px]">
-                      {(taskDetail.assignee?.name ||
-                        taskDetail.assignee?.email ||
-                        '?')[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>
-                    {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
-                  </span>
-                </div>
-              </div>
-```
-
-担当者は未割当のこともあるため`assignee` そのものに `?.` が付いています。頭文字と表示名で `||` のたどる順番をそろえてあるのでアイコンの文字と名前が別人になることはありません。`alt=""` は読み上げ不要の指定で、隣に名前が文字で出ているため画像まで読み上げると同じ名前を二度聞くことになります。
-
-**期限とコメント欄の見出し**:
-
-```typescript
-              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: 期限とコメント欄の見出し */}
-              <div>
-                <span className="text-muted-foreground block mb-1">期限</span>
-                <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="font-semibold">コメント</h3>
-                <Badge variant="secondary" className="rounded-full px-2">
-                  {taskDetail.comments?.length ?? 0}
-                </Badge>
-              </div>
-```
-
-件数を見出しへ出しておくとコメント欄を下までたどらなくてもやりとりの有無が分かります。1件も無いタスクと20件たまったタスクを一目で見分けられます。`Separator` は情報の区切り線で、タスクの属性とコメントという性質の違う塊を視覚的に分けます。
-
-**コメント一覧の枠と0件の案内**:
-
-```typescript
-              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: コメント一覧の枠と0件の案内 */}
-              <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
-                {taskDetail.comments?.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    コメントはまだありません。
-                  </p>
-                )}
-```
-
-`max-h-[200px]` と `overflow-y-auto` を組にしてあるのはコメントが増えてもダイアログの高さが伸び続けないようにするためです。これが無いと20件たまったタスクでは投稿フォームが画面の外へ押し出されます。空の状態に言葉を置く理由は何も無い画面が読者にとって壊れた画面と見分けられないからです。
-
-**1件ごとのアバター**:
-
-```typescript
-                {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-                {/* 完成版: 1件ごとのアバター */}
-                {taskDetail.comments?.map((comment) => (
-                  <div key={comment.id} className="flex gap-3 text-sm">
-                    <Avatar className="h-8 w-8 mt-1">
-                      {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
-                      <AvatarFallback>
-                        {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-```
-
-`key={comment.id}` は「この項目は前回のどれか」をReactに伝える目印です。配列の番号をkeyにすると、先頭に新しいコメントが入ったときに同じ番号が別のコメントを指すようになります。Reactは同じkeyなら前の状態を引き継ぐので、入力途中の内容が別のコメントの行へ移ることがあります。追加や並べ替えがあっても変わらないコメントIDをkeyに使うと、この取り違えが起きません。
-
-```mermaid
-flowchart TB
-    subgraph BEFORE["追加前（key=位置の番号）"]
-        B1["key=0 → コメント c1（下書き入力中）"]
-        B2["key=1 → コメント c2"]
-    end
-    subgraph IDX["先頭に c9 を追加したとき index を key にした場合"]
-        I1["key=0 → コメント c9 ＝ c1 の下書きが c9 の行へ付く"]
-        I2["key=1 → コメント c1 ＝ c1 の下書きは失われる"]
-        I3["key=2 → コメント c2"]
-    end
-    subgraph IDK["同じ追加を comment.id を key にした場合"]
-        K1["key=c9 → コメント c9（新規・下書きなし）"]
-        K2["key=c1 → コメント c1（下書きが c1 に残る）"]
-        K3["key=c2 → コメント c2"]
-    end
-    BEFORE --> IDX
-    BEFORE --> IDK
-```
-
-`AvatarFallback` を必ず置いてあるのは投稿者が全員アバター画像を登録しているとは限らないからです。
-
-**名前と日時と本文**:
-
-```typescript
-                    {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-                    {/* 完成版: 名前と日時と本文 */}
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">
-                          {comment.user.name || comment.user.email || '?'}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
-                            locale: ja,
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground">{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-```
-
-`flex-1` はアイコンの右側の残り幅をすべて使う指定、`justify-between` は名前を左端へ日時を右端へ寄せる指定です。日時を `text-xs` で小さく薄くしてあるのは読者に追ってほしい主役が本文だからです。`))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じています。
-
-**コメント投稿フォーム**:
-
-```typescript
-              {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: コメント投稿フォーム */}
-              {canEditComments && (
-              <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
-                <Textarea
-                  placeholder="コメントを追加..."
-                  aria-label="コメント本文"
-                  {...commentForm.register('content')}
-                  className="resize-none"
-                  rows={2}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!commentForm.watch('content').trim() || createCommentMutation.isPending}
-                  >
-                    {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
-                  </Button>
-                </div>
-              </form>
-              )}
-```
-
-`aria-label` を付けている理由は`placeholder` が1文字打つと消えるためです。消えたあとは何を書く欄なのか確かめる手段がなくなります。`disabled` の条件を2つ並べているのは空欄での送信と、送信中の二重投稿を同じ1か所で止めるためです。フォーム全体を `canEditComments` で囲ってあるのにも理由があります。閲覧者が押してもその操作は必ずサーバーに弾かれます。弾かれると分かっている操作ははじめから画面へ出しません。
-
-**末尾の閉じるボタン**:
-
-```typescript
-            {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-            {/* 完成版: 末尾の閉じるボタン */}
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button onClick={onClose}>閉じる</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-```
-
-`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。中へ入れるとデータが届くまで閉じるボタンが描かれません。通信が遅い環境や失敗したときに読者はダイアログから抜け出せなくなります。
 
 ## 今日のまとめ
 
-- [ ] タスク詳細にコメント一覧を表示できた
-- [ ] `api.comment.create` でコメント投稿できた
-- [ ] 投稿後にキャッシュを更新できた
-- [ ] 空コメントのバリデーションを確認できた
+- [ ] project 行のロック後に現在の権限を読み直して投稿できました
+- [ ] Textarea の Enter で改行し、投稿ボタンで送信することを確認しました
+- [ ] 古い完了が別 task や新しい下書きを消しませんでした
+- [ ] 書き込み成功と再取得失敗を分けて案内できました
+- [ ] 401・403・409・不明な失敗で自動再試行しませんでした
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| コメントが表示されない | comments が include されてない | getById の include 確認 |
-| 投稿後に更新されない | invalidate 忘れ | onSuccess に追加 |
-| 投稿できない | taskId が未設定 | タスクを開いてから投稿 |
-| 空白で投稿される | trim() チェック漏れ | disabled 条件を追加 |
-
-## 今日学んだ用語
-
-| 用語 | 意味 |
-|------|------|
-| comment.create | コメントを投稿する API |
-| AvatarFallback | アバター画像がない時の代替表示 |
-| invalidate | キャッシュを無効化して再取得させる |
-| isPending | mutation が実行中かどうかのフラグ |
+| 症状 | 確認する場所 |
+|------|--------------|
+| VIEWER が投稿できる | server の `canEdit` と画面の `memberRole` |
+| 二重投稿になる | `writeLockedRef` を mutation より前に立てているか |
+| 別 task に投稿される | event 開始時の `taskIdRef.current` を context に保存したか |
+| 失敗時に本文が消える | reset が current success の同じ revision に限られているか |
+| 成功したのに失敗表示になる | write 成功と invalidate 失敗を分けたか |
 
 ## 理解チェック
 
-今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+**Q1. project 行をロックした後でメンバーを読み直すのはなぜですか。**
 
-**Q1. `comment.create` の入力スキーマに `userId` が入っていないのはなぜですか。**
+A. 最初の確認後、除名や降格が完了する可能性もあるためです。ロック後の現在値を使い、`canEdit` を確かめてから保存します。
 
-A. 投稿者を画面側から指定させないためです。`userId` はサーバーが `ctx.session.userId` から入れます。入力に受け口が無ければ他人になりすまして投稿する手段そのものが存在しません。誰が書いたかのように本人しか決められない値はサーバーで決めます。
+**Q2. `taskId` だけでなく `generation` を送信 context に保存するのはなぜですか。**
 
-**Q2. `z.string().trim().min(1)` を `z.string().min(1).trim()` の順に書き替えると何が通ってしまいますか。**
+A. 同じ task を閉じて開き直した場合も別の表示期間として区別するためです。古い完了で新しいフォームを reset しません。
 
-A. 半角スペースだけの本文が通ります。`min(1)` が先だと「長さ3」として合格し、そのあとの `trim()` で空文字になってから保存されるためです。画面にはアバターと日時だけが並んだ、中身の無い吹き出しが増えます。`trim()` を先に置けば空白を落としたあとの長さで判定できます。
+**Q3. 成功後に必ず reset しないのはなぜですか。**
 
-**Q3. 投稿の成功後に呼ぶ `commentForm.reset()` を、`mutate()` の直後ではなく `onSuccess` の中に置くのはなぜですか。**
-
-A. `onSuccess` はサーバーが成功を返したときだけ動くためです。`mutate()` の直後に置くと通信が失敗しても入力欄だけが空になり、書いた文章が消えます。長いコメントを書いたあとで消えると読者は最初から書き直すことになります。
-
-## 追加課題：コメントを5文字以上にする
-
-理解チェック Q2 の検証順序を保ち、短すぎるコメントを止めてみましょう。前後の空白は文字数に含めません。
-
-前提は今日のコメント投稿が使えることです。自分が管理するプロジェクトに「課題18」というタスクを作ります。
-
-`src/server/api/routers/comment.ts` で `commentCreateSchema` を探します。画面側の `src/component/task/task-detail-dialog.tsx` では `commentSchema` が対象です。`trim()` の後の最小文字数を5にし、両方のエラー文も合わせてください。今日の画面は`formState.errors`の文言を表示しないため、結果はコメントが保存されるかどうかで確かめます。
-
-課題用タスクを開き、「確認」の前後に半角スペースを3つずつ付けて投稿を試します。空白を除くと2文字なので保存されないことを確認します。
-
-「確認しました」に直して投稿します。コメントが1件増え、投稿欄が空になれば成功です。
-
-空白付きの2文字が通る場合は`trim()` と `min()` の順序を確認してください。確認後は2つのスキーマとエラー文を元へ戻します。課題用タスクを削除すればそのコメントも消えます。
+A. 送信後に入力された新しい下書きまで消すためです。送信時と現在の `formRevision` が同じ場合だけ空へ戻します。
 
 ## 次回予告
 

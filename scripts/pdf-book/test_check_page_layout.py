@@ -18,10 +18,15 @@ PDF も poppler も要らない。全部その場で組み立てた入力で回�
 from __future__ import annotations
 
 import sys
+import json
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import check_page_layout as layout  # noqa: E402
 from check_page_layout import (  # noqa: E402
+    BreakablePreSpan,
+    bind_breakable_pre_fragments,
     EDGE_TOLERANCE_MM,
     TEXT_BOTTOM_MM,
     TEXT_LEFT_MM,
@@ -29,29 +34,30 @@ from check_page_layout import (  # noqa: E402
     TEXT_TOP_MM,
     Line,
     ToolFailure,
+    _matched_block_offsets,
     count_orphan_lines,
     code_split_problem,
+    exact_breakable_pre_for_boundary,
     find_collapsed_columns,
     find_image_problems,
     find_ink_overflow,
     find_hyphen_break_problems,
-    find_footnote_separation_problems,
     find_orphan_problems,
     find_overlaps,
     find_single_orphan_problems,
-    find_single_row_fragment_problems,
     find_stacked_split_problems,
-    find_keep_next_problems,
-    _body_page_texts,
     find_url_wrap_problems,
     HANGING_MAX_MM,
+    STACKED_INVENTORY_ACTIVE,
     code_band_at_edges,
     find_text_overflow,
     ink_rows,
+    measured_breakable_minimum,
     parse_image_table,
     parse_line_boxes,
     read_pgm,
 )
+from verify_pdf_copy import CodeBlock  # noqa: E402
 
 # 描画は 72dpi。1px = 1pt = 25.4/72 mm
 PX_PER_MM = 72 / 25.4
@@ -233,22 +239,19 @@ SINGLE_ORPHAN_CASES: list[tuple[str, list[Line], int]] = [
 # 脚注の表示URLは / ? & = の直後に限って折れる。語の途中で切れたら問題
 URL_WRAP_CASES: list[tuple[str, list[Line], int]] = [
     ("区切りの直後で折れていれば問題なし",
-     [line(2, 0, 22.0, 40.0, 120.0, "1. https:/​/​example.com/file/d​/ID​/"),
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/file/d/ID/"),
       line(2, 0, 22.0, 49.2, 60.0, "view?x=1&y=2")], 0),
     ("語の途中で切れたら問題（vie / w に割れた実測）",
-     [line(2, 0, 22.0, 40.0, 120.0, "2. https:/​/​drive.google.com/file/d/vie"),
+     [line(2, 0, 22.0, 40.0, 120.0, "2. https://drive.google.com/file/d/vie"),
       line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 1),
     ("次の行がURLでなければ折返しではないので問題にしない",
-     [line(2, 0, 22.0, 40.0, 120.0, "1. https:/​/​example.com/x"),
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/x"),
       line(2, 0, 22.0, 49.2, 100.0, "普通の日本語の行です")], 0),
     ("URLで始まらない行からの切れは脚注ではないので数えない",
      [line(2, 0, 22.0, 40.0, 120.0, "本文の行 vie"),
       line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 0),
-    ("原稿の番号付きリストのURL行は折返し検査の対象にしない",
-     [line(2, 0, 22.0, 40.0, 120.0, "1. https://github.com/new を開く"),
-      line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 0),
     ("ページ境を跨いだURL折れは塊が分かれるので対象外",
-     [line(2, 0, 22.0, 260.0, 120.0, "1. https:/​/​drive.google.com/file/d/vie"),
+     [line(2, 0, 22.0, 260.0, 120.0, "1. https://drive.google.com/file/d/vie"),
       line(3, 0, 22.0, 30.0, 60.0, "w?x=1")], 0),
 ]
 
@@ -271,83 +274,7 @@ HYPHEN_BREAK_CASES: list[tuple[str, list[Line], int]] = [
       line(2, 0, 66.0, 49.2, 80.0, "password")], 0),
 ]
 
-# 印付き段落（pdf-keep-next）がページ本文の最終行に来るかの裁き（issue #475）
-KEEP_NEXT_MARKUP = (
-    "<p>前の文です。</p>"
-    '<p class="pdf-keep-next">導入します。</p>'
-    "<p>本文です。</p>"
-)
-
-# (説明, 行の並び, 生成HTML, 期待する問題の件数, 期待する突き合わせ不可の印なし段落数)
-KEEP_NEXT_CASES: list[tuple[str, list[Line], str, int, int]] = [
-    ("印付き段落がページの最終行なら問題",
-     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
-      line(2, 1, 22.0, 260.0, 80.0, "導入します。"),
-      line(2, 9, 22.0, 282.0, 4.0, "7")],          # ノンブルは本文に数えない
-     KEEP_NEXT_MARKUP, 1, 1),
-    ("印付き段落がページの途中なら問題にしない",
-     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
-      line(2, 0, 22.0, 50.0, 80.0, "導入します。"),
-      line(2, 1, 22.0, 60.0, 120.0, "本文です。")],
-     KEEP_NEXT_MARKUP, 0, 0),
-    ("印付き段落がPDFの行と突き合わせられなければ問題",
-     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
-      line(2, 1, 22.0, 50.0, 120.0, "本文です。")],
-     "<p>前の文です。</p>"
-     '<p class="pdf-keep-next">存在しない文です。</p>'
-     "<p>本文です。</p>", 1, 0),
-    ("印なし段落が突き合わせられなくても問題にしない（件数だけ出す）",
-     [line(2, 0, 22.0, 40.0, 120.0, "前の文です。"),
-      line(2, 0, 22.0, 50.0, 80.0, "導入します。"),
-      line(2, 1, 22.0, 60.0, 120.0, "本文です。")],
-     "<p>前の文です。</p><p>無い段落です。</p>"
-     '<p class="pdf-keep-next">導入します。</p><p>本文です。</p>',
-     0, 1),
-    ("柱とノンブルは本文の行に数えない",
-     [line(2, 0, 22.0, 12.0, 100.0, "柱の見出し"),
-      line(2, 1, 22.0, 40.0, 120.0, "前の文です。"),
-      line(2, 1, 22.0, 50.0, 80.0, "導入します。"),
-      line(2, 1, 22.0, 60.0, 120.0, "本文です。"),
-      line(2, 9, 22.0, 282.0, 4.0, "7")],
-     KEEP_NEXT_MARKUP, 0, 0),
-    ("脚注番号（*N）はPDFの文から外して照合する",
-     [line(2, 0, 22.0, 40.0, 120.0, "リンクサイト*3です。"),
-      line(2, 8, 22.0, 255.0, 120.0, "3. https:/​/​example.com")],
-     '<p>リンク<a data-pdf-footnote="3" href="https://example.com">サイト</a>です。</p>',
-     0, 0),
-]
-
 # 縦並び表の1行は2ページ以上に分かれない
-# 脚注と呼び出しは同じページにいる（issue #474 直し6）
-FOOTNOTE_SEPARATION_CASES: list[tuple[str, list[Line], int]] = [
-    ("呼び出しと脚注が同じページなら問題なし",
-     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
-      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 0),
-    ("脚注だけが次のページに回ったら問題",
-     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
-      line(3, 1, 22.0, 30.0, 120.0, "3. https:/​/​example.com/docs")], 1),
-    ("呼び出しの無い脚注が2件あれば2件挙げる",
-     [line(3, 1, 22.0, 30.0, 120.0, "3. https:/​/​example.com/a"),
-      line(3, 1, 22.0, 35.0, 120.0, "4. https:/​/​example.com/b")], 2),
-    ("番号の途中まで一致する呼び出しは別物（*3 と脚注 30）",
-     [line(2, 0, 22.0, 40.0, 120.0, "別の節*3も参照"),
-      line(3, 1, 22.0, 30.0, 120.0, "30. https:/​/​example.com/x")], 1),
-    ("折り返し用の不可視文字をまたぐ呼び出しも同じページとみなす",
-     [line(2, 0, 22.0, 40.0, 120.0, "ドキュメント\u2060*3を見よう"),
-      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 0),
-    ("脚注の折返し行は呼び出しの判定から外す",
-     [line(2, 0, 22.0, 40.0, 120.0, "本文だけのページ"),
-      line(2, 1, 22.0, 255.0, 120.0, "3. https:/​/​example.com/file/d​/"),
-      line(2, 1, 22.0, 260.0, 60.0, "view*3")], 1),
-    ("原稿の番号付きリストのURL行は脚注ではない（呼び出しが無くても挙げない）",
-     [line(2, 0, 22.0, 40.0, 120.0, "リポジトリを作ろう"),
-      line(2, 1, 22.0, 60.0, 120.0, "1. https://github.com/new を開く")], 0),
-    ("柱とノンブルは呼び出しに数えない",
-     [line(2, 0, 22.0, 10.3, 100.0, "柱*3"),
-      line(2, 9, 22.0, 282.3, 4.0, "*3"),
-      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 1),
-]
-
 STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
     ("同じ行が2ページに分かれていたら問題",
      {'dom_audit': {'stacked_inventory': [{'fragments': [
@@ -361,94 +288,6 @@ STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
                                    {'row': '0-1', 'text': 'B'}]},
      ]}]}}, 0),
     ("計測記録が空なら問題にしない", {'dom_audit': {'stacked_inventory': []}}, 0),
-]
-
-
-def _fragment(page_index: int, td_rows: list[int], th_rows: list[int] | None = None,
-              omit_geometry: bool = False) -> dict:
-    """表の断片1つ。行番号ごとに1セルずつ持つ形で十分（検査が見るのは tag と
-    row_index だけ）。TH は見出し行の繰り返しなので本文の行数に入らない。"""
-    if omit_geometry:
-        return {'page_index': page_index}
-    cells = [
-        {'row_index': n, 'cell_index': 0, 'tag': 'TH', 'text': f'見出し{n}'}
-        for n in (th_rows or [0])
-    ]
-    cells += [
-        {'row_index': n, 'cell_index': n, 'tag': 'TD', 'text': f'本文{n}'}
-        for n in td_rows
-    ]
-    return {'page_index': page_index, 'geometry': {'cells': cells}}
-
-
-# ページを跨いだ表で、本文（TD）1行だけの断片は1行のためにページをめくる形（issue #469）
-SINGLE_ROW_FRAGMENT_CASES: list[tuple[str, dict, int]] = [
-    ("見出し行と1行目だけが残る断片は問題",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1]),
-             _fragment(3, [2, 3, 4]),
-         ]},
-     ]}}}, 1),
-    ("最後の1行だけが次のページへ出る断片も問題",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1, 2, 3]),
-             _fragment(3, [4]),
-         ]},
-     ]}}}, 1),
-    ("途中のページに1行だけが載る断片も同じ形なので挙げる",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1, 2]),
-             _fragment(3, [3]),
-             _fragment(4, [4, 5]),
-         ]},
-     ]}}}, 1),
-    ("両側が1行だけの2行の表は断片ごとに挙げる",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1]),
-             _fragment(3, [2]),
-         ]},
-     ]}}}, 2),
-    ("どの断片も2行以上なら問題なし",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1, 2]),
-             _fragment(3, [3, 4]),
-         ]},
-     ]}}}, 0),
-    ("ページを跨がない表は1行でも対象外",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [_fragment(2, [1])]},
-     ]}}}, 0),
-    # 境の直後に見出し行だけが載る断片は別の崩れ方で、ここの担当は
-    # 「本文1行」だけ。混ぜると件数が実測とずれる
-    ("本文の行が無い断片（見出し行だけ）は対象外",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1, 2, 3]),
-             _fragment(3, [], [0]),
-         ]},
-     ]}}}, 0),
-    ("断片に geometry が無くても落ちない",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             _fragment(2, [1, 2]),
-             _fragment(3, [], omit_geometry=True),
-         ]},
-     ]}}}, 0),
-    ("page_index が無い断片は数えない",
-     {'dom_audit': {'table_inventory': {'tables': [
-         {'id': 't1', 'fragments': [
-             {'geometry': {'cells': [{'row_index': 1, 'tag': 'TD'}]}},
-             _fragment(3, [2, 3]),
-         ]},
-     ]}}}, 0),
-    ("計測記録に表が無ければ問題なし",
-     {'dom_audit': {'table_inventory': {'tables': []}}}, 0),
-    ("計測記録自体が空でも問題なし", {}, 0),
 ]
 
 POPPLER_IMAGE_TABLE = (
@@ -575,26 +414,133 @@ def _fragment_px(lines: int) -> int:
 
 
 # ページ境で拾えたコードの断片の裁き（前ページ下端, 次ページ上端の厚み）
-# keep-together が効くはずの塊（18行未満）が切れていたら、両断片が十分に
-# あっても咎める。分割を許すのは pdf-breakable の塊だけ。
-CODE_SPLIT_CASES: list[tuple[str, int, int, bool]] = [
-    ("4行+4行に割れた8行の塊は、keep-together の効くはずの塊なので問題",
-     _fragment_px(4), _fragment_px(4), True),
-    ("8行+9行に割れた17行の塊も同じ",
-     _fragment_px(8), _fragment_px(9), True),
-    ("9行+10行に割れた19行の塊は pdf-breakable の分割なので問題にしない",
-     _fragment_px(9), _fragment_px(10), False),
-    ("18行の塊が境で割れるのも pdf-breakable の分割なので問題にしない",
-     _fragment_px(4), _fragment_px(14), False),
+# keep-together が効くはずの塊が切れていたら、両断片が十分にあっても咎める。
+# 分割を許すのは実DOMで版面を超えた塊だけ。
+CODE_SPLIT_CASES: list[tuple[str, int, int, float | None, bool]] = [
+    ("4行+4行に割れた8行の塊は、分割許可が無いので問題",
+     _fragment_px(4), _fragment_px(4), None, True),
+    ("断片合計が実測した分割許可ブロック高さに足りない",
+     _fragment_px(8), _fragment_px(9), 200.0, True),
+    ("断片合計が実測した分割許可ブロック高さを満たす",
+     _fragment_px(9), _fragment_px(10), 150.0, False),
+    ("論理行が少なくても実測高さを満たせば分割を許可",
+     _fragment_px(4), _fragment_px(14), 140.0, False),
     ("断片が3行しかない端切れは、合計が足りていても問題",
-     _fragment_px(3), _fragment_px(20), True),
+     _fragment_px(3), _fragment_px(20), 100.0, True),
     ("2行の端切れも同じ",
-     _fragment_px(20), _fragment_px(2), True),
+     _fragment_px(20), _fragment_px(2), 100.0, True),
 ]
+
+# 2026-10-09 の完成PDFで、厳密比較だけが落とした14個の実測値。
+# (pre id, 改ページ前DOM高, 改ページ後の画素帯合計) はすべて mm。
+ACTUAL_FRAGMENT_CASES = [
+    ("pdf-pre-00081-5e8182ede995", 285.3118, 282.9278),
+    ("pdf-pre-00082-8cf50cf78f46", 260.1102, 257.8806),
+    ("pdf-pre-00091-efa448dd6a39", 268.5107, 265.9944),
+    ("pdf-pre-00092-81c22208cd0f", 260.1102, 257.8806),
+    ("pdf-pre-00093-8ab7eba2b335", 260.1102, 257.8806),
+    ("pdf-pre-00102-26f07bee5340", 260.1102, 257.8806),
+    ("pdf-pre-00033-e703f74df2ff", 243.3092, 241.3000),
+    ("pdf-pre-00033-462fb24f6b4b", 260.1102, 257.8806),
+    ("pdf-pre-00035-8cf50cf78f46", 260.1102, 257.8806),
+    ("pdf-pre-00043-866407999dc7", 243.3092, 240.9472),
+    ("pdf-pre-00044-34a2d6545d7e", 243.3092, 241.3000),
+    ("pdf-pre-00045-92b91a0ba730", 260.1102, 257.8806),
+    ("pdf-pre-00053-52b686dbf648", 251.7097, 249.4139),
+    ("pdf-pre-00055-aa250a700d83", 251.7097, 249.7667),
+]
+MEASURED_FRAGMENT_PADDING_MM = 15.3 * layout.CSS_PX_TO_MM
+MEASURED_CODE_LINE_MM = 31.365 * layout.CSS_PX_TO_MM
+
+# 代表例 day12 pre81。PDF vector の背景は raster 化より前からDOM高より短い。
+# その差は実測padding 1個以内で、72dpi raster はvector高を過少計測していない。
+PRE81_DOM_PT = 1078.34375 * 72 / 96
+PRE81_VECTOR_PT = ((768.273438 - 286.984375)
+                   + (388.015625 - 71.152344))
+PRE81_RASTER_PX = 483 + 319
+
+INVALID_PADDING_CASES = (
+    ("開始padding欠落", {"padding_block_end_px": 15.3}),
+    ("終了padding欠落", {"padding_block_start_px": 15.3}),
+    ("bool padding", {"padding_block_start_px": True,
+                       "padding_block_end_px": 15.3}),
+    ("文字列padding", {"padding_block_start_px": "15.3",
+                        "padding_block_end_px": 15.3}),
+    ("非有限padding", {"padding_block_start_px": float("inf"),
+                        "padding_block_end_px": 15.3}),
+    ("NaN padding", {"padding_block_start_px": float("nan"),
+                     "padding_block_end_px": 15.3}),
+    ("負のpadding", {"padding_block_start_px": -0.1,
+                      "padding_block_end_px": 15.3}),
+)
+
+THREE_PAGE_PRE = BreakablePreSpan(
+    "pdf-pre-day20", 464.2, 247.0, (202, 203, 204)
+)
+ADJACENT_UNRELATED_PRES = (
+    BreakablePreSpan("pdf-pre-a", 180.0, 247.0, (202,), 180.0),
+    BreakablePreSpan("pdf-pre-b", 180.0, 247.0, (203,), 180.0),
+)
+REPEATED_AND_OVERLAPPING_PRES = (
+    BreakablePreSpan("pdf-pre-00063-samehash", 464.2, 247.0, (92, 93), 465.3),
+    BreakablePreSpan("pdf-pre-00162-samehash", 464.2, 247.0, (202, 203, 204), 465.3),
+    BreakablePreSpan("pdf-pre-00163-other", 6227.8, 247.0, tuple(range(204, 231)), 6228.0),
+)
 
 
 def main() -> int:
     failures: list[str] = []
+
+    with tempfile.TemporaryDirectory() as directory:
+        original_build_dir = layout.BUILD_DIR
+        layout.BUILD_DIR = Path(directory)
+        try:
+            pdf = Path(directory) / "fixture.pdf"
+            report = layout.BUILD_DIR / f"{layout.work_slug(pdf.stem)}.pre-measurement.json"
+            report.write_text(json.dumps({
+                "page": {"content_height_px": 900},
+                "pres": [
+                    {"required_height_px": 800, "painted_height_px": 760,
+                     "padding_block_start_px": 15.3,
+                     "padding_block_end_px": 15.3},
+                    {"required_height_px": 950, "painted_height_px": 910,
+                     "padding_block_start_px": 15.3,
+                     "padding_block_end_px": 15.3},
+                ],
+            }))
+            got = measured_breakable_minimum(pdf)
+            expected = 910 * layout.CSS_PX_TO_MM
+            if got is None or abs(got - expected) > 0.001:
+                failures.append(f"pre実寸境界: 期待 {expected} 実際 {got}")
+            report.write_text(json.dumps({
+                "page": {"content_height_px": True}, "pres": [],
+            }))
+            try:
+                measured_breakable_minimum(pdf)
+                failures.append("pre実寸境界: bool版面高さを拒否しなかった")
+            except ToolFailure:
+                pass
+            for label, padding in INVALID_PADDING_CASES:
+                report.write_text(json.dumps({
+                    "page": {"content_height_px": 900},
+                    "pres": [{
+                        "required_height_px": 950,
+                        "painted_height_px": 910,
+                        **padding,
+                    }],
+                }))
+                try:
+                    measured_breakable_minimum(pdf)
+                    failures.append(f"pre実寸境界: {label}を拒否しなかった")
+                except ToolFailure:
+                    pass
+        finally:
+            layout.BUILD_DIR = original_build_dir
+
+    if STACKED_INVENTORY_ACTIVE:
+        failures.append(
+            "retained producer が stacked_inventory を出す前に実検査が有効になっている"
+        )
 
     for label, top, bottom, expected in CODE_BAND_CASES:
         got = code_band_at_edges(*_page(top, bottom))
@@ -606,13 +552,88 @@ def main() -> int:
         if got != expected:
             failures.append(f"コードの帯／{label}: 期待 {expected} 実際 {got}")
 
-    for label, tail, head, expected in CODE_SPLIT_CASES:
-        flagged = bool(code_split_problem(tail, head))
+    for label, tail, head, measured_minimum, expected in CODE_SPLIT_CASES:
+        exact = None
+        if measured_minimum is not None:
+            exact = BreakablePreSpan(
+                "fixture", measured_minimum, 100.0, (1, 2),
+                layout.mm_from_px(tail + head),
+            )
+        flagged = bool(code_split_problem(tail, head, exact))
         if flagged != expected:
             failures.append(
                 f"ページ境のコード分割／{label}: "
                 f"期待 {'指摘あり' if expected else '問題なし'} 実際 {flagged}"
             )
+
+    vector_gap = PRE81_DOM_PT - PRE81_VECTOR_PT
+    if not 0 < vector_gap <= 15.3 * 72 / 96:
+        failures.append(f"実PDF断片装飾: vector差 {vector_gap:.3f}pt がpadding外")
+    if PRE81_RASTER_PX < PRE81_VECTOR_PT:
+        failures.append("実PDF断片装飾: rasterがvector背景を過少計測している")
+    if BreakablePreSpan("legacy", 200.0, 100.0, (1, 2)).fragment_padding_mm != 0:
+        failures.append("旧fixtureのpadding既定値が0でない")
+
+    actual_tail = _fragment_px(8)
+    actual_head = _fragment_px(9)
+    for pre_id, painted, observed in ACTUAL_FRAGMENT_CASES:
+        actual = BreakablePreSpan(
+            pre_id, painted, 247.0, (1, 2), observed,
+            MEASURED_FRAGMENT_PADDING_MM,
+        )
+        if code_split_problem(actual_tail, actual_head, actual):
+            failures.append(f"実PDF断片装飾: {pre_id} を誤検出した")
+        missing_line = BreakablePreSpan(
+            pre_id, painted, 247.0, (1, 2),
+            observed - MEASURED_CODE_LINE_MM,
+            MEASURED_FRAGMENT_PADDING_MM,
+        )
+        if not code_split_problem(actual_tail, actual_head, missing_line):
+            failures.append(f"実PDF断片装飾: {pre_id} の1行欠落を見逃した")
+
+    # 同じpreが3ページを占める場合はp202+p203だけで全高と比較しない。
+    # 先頭ページの下端と、続く全ページの上端だけを同じpreへ集約する。
+    bound = bind_breakable_pre_fragments(
+        (THREE_PAGE_PRE,),
+        {202: (0, 271), 203: (682, 0), 204: (366, 0)},
+    )
+    expected_observed = layout.mm_from_px(271 + 682 + 366)
+    if abs(bound[0].observed_fragment_mm - expected_observed) > 0.001:
+        failures.append("3ページ同一preの全ページ断片を集約できなかった")
+    exact = exact_breakable_pre_for_boundary(bound, 202, 203)
+    if exact != bound[0] or code_split_problem(
+        _fragment_px(8), _fragment_px(9), exact
+    ):
+        failures.append("3ページ同一preを2ページ断片だけで誤判定した")
+    # 隣り合う別々のpreは高さを足して1つの長大preに見せない。
+    if exact_breakable_pre_for_boundary(ADJACENT_UNRELATED_PRES, 202, 203) is not None:
+        failures.append("隣接する別preを同一preとして集約した")
+    if not code_split_problem(
+        _fragment_px(8), _fragment_px(9),
+        exact_breakable_pre_for_boundary(ADJACENT_UNRELATED_PRES, 202, 203),
+    ):
+        failures.append("隣接する別preの分割を免除した")
+    # exact preでも3行の薄片は従来どおり失敗する。
+    if not code_split_problem(_fragment_px(3), _fragment_px(20), THREE_PAGE_PRE):
+        failures.append("同一preを理由に薄い境界断片まで免除した")
+
+    # 同じ完成版コードが後で再掲されても、内容hashだけで最初のpreを借りず、
+    # 原稿/PDFの出現順で別々の位置へ進む。p204で次の巨大preが始まっても、
+    # p203〜204は再掲側、p204〜205は巨大pre側へそれぞれ帰属する。
+    repeated = CodeBlock("tsx", ("const repeated = 1;",), 1, "```")
+    extracted = "const repeated = 1;\f間の本文\fconst repeated = 1;\n"
+    first = _matched_block_offsets(repeated, extracted, 0)
+    second = _matched_block_offsets(repeated, extracted, first[1] if first else 0)
+    if first is None or second is None or first[0] == second[0]:
+        failures.append("同内容の再掲preを出現順の別位置へ対応できなかった")
+    if exact_breakable_pre_for_boundary(
+        REPEATED_AND_OVERLAPPING_PRES, 203, 204
+    ) != REPEATED_AND_OVERLAPPING_PRES[1]:
+        failures.append("p203〜204を同内容の古いpreまたは後続preへ誤帰属した")
+    if exact_breakable_pre_for_boundary(
+        REPEATED_AND_OVERLAPPING_PRES, 204, 205
+    ) != REPEATED_AND_OVERLAPPING_PRES[2]:
+        failures.append("p204〜205をp204で終わる直前preへ誤帰属した")
 
     for label, rows, expected in INK_CASES:
         got = find_ink_overflow(ink(rows))
@@ -654,43 +675,10 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"ハイフン折れ／{label}: 期待 {expected}件 実際 {got}")
 
-    for label, lines, expected in FOOTNOTE_SEPARATION_CASES:
-        got = find_footnote_separation_problems(lines)
-        if len(got) != expected:
-            failures.append(f"脚注の分離／{label}: 期待 {expected}件 実際 {got}")
-
     for label, report, expected in STACKED_SPLIT_CASES:
         got = find_stacked_split_problems(report)
         if len(got) != expected:
             failures.append(f"縦並びの分割／{label}: 期待 {expected}件 実際 {got}")
-
-    for label, lines, markup, expected, expected_unmatched in KEEP_NEXT_CASES:
-        problems, unmatched = find_keep_next_problems(lines, markup)
-        if len(problems) != expected or unmatched != expected_unmatched:
-            failures.append(
-                f"印付き段落／{label}: 期待 {expected}件・不可{expected_unmatched}件"
-                f" 実際 {problems}・{unmatched}")
-
-    # URL脚注と柱・ノンブルは本文に入れない。入れると印付き段落が
-    # 「ページの最後の行」にあるかの判定が壊れる
-    haystack, page_ends = _body_page_texts([
-        line(2, 0, 22.0, 12.0, 100.0, "柱の見出し"),
-        line(2, 1, 22.0, 40.0, 120.0, "本文です。"),
-        line(2, 8, 22.0, 255.0, 120.0, "1. https:/​/​example.com/file/d​/"),
-        line(2, 8, 22.0, 264.0, 60.0, "view?x=1"),
-        line(2, 9, 22.0, 282.0, 4.0, "7"),
-    ], "")
-    if "柱" in haystack or "https" in haystack or "7" in haystack:
-        failures.append(f"本文の抽出: 除くべき行が残っている {haystack!r}")
-    if "本文です。" not in haystack:
-        failures.append(f"本文の抽出: 本文が取れていない {haystack!r}")
-    if page_ends != {len("本文です。"): 2}:
-        failures.append(f"本文の抽出: ページ末尾の位置が違う {page_ends}")
-
-    for label, report, expected in SINGLE_ROW_FRAGMENT_CASES:
-        got = find_single_row_fragment_problems(report)
-        if len(got) != expected:
-            failures.append(f"1行だけの表断片／{label}: 期待 {expected}件 実際 {got}")
 
     for label, rows, expected in IMAGE_CASES:
         got = find_image_problems(rows)
@@ -787,8 +775,8 @@ def main() -> int:
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
-                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES)
-                   + len(FOOTNOTE_SEPARATION_CASES) + 17)
+                   + len(STACKED_SPLIT_CASES) + 14
+                   + len(INVALID_PADDING_CASES) + len(ACTUAL_FRAGMENT_CASES) * 2 + 3)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 

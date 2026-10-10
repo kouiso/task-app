@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import MyTasksPage from './page';
+import MyTasksPage from '@/app/my-task/page';
 
 const mocks = vi.hoisted(() => ({
   currentUser: vi.fn(),
   projects: vi.fn(),
   tasks: vi.fn(),
   push: vi.fn(),
-  updateOptions: null as null | { onError?: (error: ErrorShape) => void },
+  updateOptions: null as null | {
+    onError?: (error: ErrorShape, variables: { id: string }) => void;
+  },
 }));
 
 interface ErrorShape {
@@ -42,8 +45,26 @@ vi.mock('@/component/task/task-card', () => ({
   ),
 }));
 vi.mock('@/component/task/task-dialog', () => ({
-  TaskDialog: ({ open, initialData }: { open: boolean; initialData?: { title?: string } }) =>
-    open ? <div>編集中: {initialData?.title}</div> : null,
+  TaskDialog: ({
+    open,
+    initialData,
+    projects,
+  }: {
+    open: boolean;
+    initialData?: { title?: string; projectId?: string };
+    projects: Array<{ id: string; name: string }>;
+  }) =>
+    open ? (
+      <div>
+        <p>編集中: {initialData?.title}</p>
+        <p>現在のプロジェクト: {initialData?.projectId}</p>
+        <div data-testid="task-dialog-projects">
+          {projects.map((project) => (
+            <span key={project.id}>{project.name}</span>
+          ))}
+        </div>
+      </div>
+    ) : null,
 }));
 vi.mock('@/component/ui/delete-confirm-dialog', () => ({ DeleteConfirmDialog: () => null }));
 vi.mock('@/component/ui/loading-spinner', () => ({ PageLoadingSpinner: () => <div>loading</div> }));
@@ -66,14 +87,22 @@ vi.mock('@/trpc/react', () => ({
     task: {
       getAll: { useQuery: mocks.tasks },
       update: {
-        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+        useMutation: (options: {
+          onError?: (error: ErrorShape, variables: { id: string }) => void;
+        }) => {
           mocks.updateOptions = options;
           return { mutate: vi.fn() };
         },
       },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
-    useUtils: () => ({ task: { getAll: { invalidate: vi.fn() } } }),
+    useUtils: () => ({
+      task: {
+        getAll: { invalidate: vi.fn() },
+        getById: { invalidate: vi.fn() },
+      },
+      project: { getAll: { invalidate: vi.fn() } },
+    }),
   },
 }));
 
@@ -146,6 +175,26 @@ describe('マイタスクの取得エラー', () => {
     ).toBeInTheDocument();
   });
 
+  it('取得401を固定して全ページクエリを停止する', async () => {
+    mocks.currentUser.mockReturnValue(queryResult(401, user));
+    render(<MyTasksPage />);
+
+    await waitFor(() => {
+      expect(mocks.currentUser).toHaveBeenLastCalledWith(
+        undefined,
+        expect.objectContaining({ enabled: false }),
+      );
+      expect(mocks.projects).toHaveBeenLastCalledWith(
+        undefined,
+        expect.objectContaining({ enabled: false }),
+      );
+      expect(mocks.tasks).toHaveBeenLastCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ enabled: false }),
+      );
+    });
+  });
+
   it.each([401, 403])('別クエリが500でも%sを優先して保護データを隠す', (status) => {
     mocks.currentUser.mockReturnValue(queryResult(500, user));
     mocks.tasks.mockReturnValue(queryResult(status, [task]));
@@ -177,8 +226,78 @@ describe('マイタスクの取得エラー', () => {
     expect(screen.getByText('編集中: 前回取得したタスク')).toBeInTheDocument();
 
     act(() => {
-      mocks.updateOptions?.onError?.({ data: { httpStatus: 500 }, message: '更新失敗' });
+      mocks.updateOptions?.onError?.(
+        { data: { httpStatus: 500 }, message: '更新失敗' },
+        { id: task.id },
+      );
     });
     expect(screen.getByText('編集中: 前回取得したタスク')).toBeInTheDocument();
+  });
+});
+
+describe('マイタスクの編集先プロジェクト', () => {
+  it('編集権限のあるプロジェクトだけを候補にし、VIEWERを表示しない', () => {
+    mocks.projects.mockReturnValue(
+      queryResult(undefined, [
+        { id: 'project-1', name: 'Owner Project', members: [{ userId: user.id, role: 'OWNER' }] },
+        { id: 'project-2', name: 'Admin Project', members: [{ userId: user.id, role: 'ADMIN' }] },
+        { id: 'project-3', name: 'Member Project', members: [{ userId: user.id, role: 'MEMBER' }] },
+        { id: 'project-4', name: 'Viewer Project', members: [{ userId: user.id, role: 'VIEWER' }] },
+      ]),
+    );
+
+    render(<MyTasksPage />);
+    fireEvent.click(screen.getByRole('button', { name: '編集' }));
+
+    const choices = within(screen.getByTestId('task-dialog-projects'));
+    expect(choices.getByText('Owner Project')).toBeInTheDocument();
+    expect(choices.getByText('Admin Project')).toBeInTheDocument();
+    expect(choices.getByText('Member Project')).toBeInTheDocument();
+    expect(choices.queryByText('Viewer Project')).not.toBeInTheDocument();
+    expect(screen.getByText('現在のプロジェクト: project-1')).toBeInTheDocument();
+  });
+});
+
+describe('マイタスクの日付グループ', () => {
+  it('完了・キャンセル済みを期限グループから分け、未完了タスクの日付順を保つ', () => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    mocks.tasks.mockReturnValue(
+      queryResult(undefined, [
+        { ...task, id: 'active-past', title: '期限切れの作業', dueDate: yesterday },
+        { ...task, id: 'active-today', title: '今日の作業', dueDate: today },
+        { ...task, id: 'active-future', title: '今後の作業', dueDate: tomorrow },
+        { ...task, id: 'active-undated', title: '期限なしの作業' },
+        { ...task, id: 'done-past', title: '完了した作業', status: 'DONE', dueDate: yesterday },
+        {
+          ...task,
+          id: 'cancelled-future',
+          title: 'キャンセルした作業',
+          status: 'CANCELLED',
+          dueDate: tomorrow,
+        },
+      ]),
+    );
+
+    render(<MyTasksPage />);
+
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual([
+      '期限切れ (1)',
+      '今日が期限 (1)',
+      '今後の予定 (1)',
+      '期限なし (1)',
+      '完了済み (1)',
+      'キャンセル済み (1)',
+    ]);
+    expect(screen.getByText('完了した作業')).toBeInTheDocument();
+    expect(screen.getByText('キャンセルした作業')).toBeInTheDocument();
   });
 });

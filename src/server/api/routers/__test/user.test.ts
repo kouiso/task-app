@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import bcrypt from 'bcryptjs';
+import { describe, expect, it, vi } from 'vitest';
+import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
+  createTestProject,
+  createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
@@ -77,6 +81,43 @@ describe('userRouter', () => {
         'ユーザーが見つかりません',
       );
     });
+
+    it('プロジェクトから外れた本人には、そのプロジェクトの担当タスクを返さない', async () => {
+      const owner = await createTestUser({ email: uniqueEmail('u-visible-owner') });
+      const assignee = await createTestUser({ email: uniqueEmail('u-visible-assignee') });
+      const project = await createTestProject(owner.id);
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: assignee.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, owner.id, { assigneeId: assignee.id });
+      const caller = await createAuthenticatedCaller(assignee.id, assignee.email, assignee.role);
+
+      expect((await caller.user.getById({ id: assignee.id })).assignedTasks).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: task.id })]),
+      );
+      await prisma.projectMember.delete({
+        where: { userId_projectId: { userId: assignee.id, projectId: project.id } },
+      });
+
+      expect((await caller.user.getById({ id: assignee.id })).assignedTasks).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: task.id })]),
+      );
+    });
+
+    it('グローバルADMINでも、自分が所属しないプロジェクトの担当タスクを返さない', async () => {
+      const { caller } = await adminCaller();
+      const owner = await createTestUser({ email: uniqueEmail('u-admin-boundary-owner') });
+      const target = await createTestUser({ email: uniqueEmail('u-admin-boundary-target') });
+      const project = await createTestProject(owner.id);
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: target.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, owner.id, { assigneeId: target.id });
+
+      expect((await caller.user.getById({ id: target.id })).assignedTasks).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: task.id })]),
+      );
+    });
   });
 
   describe('update（更新・本人またはADMIN）', () => {
@@ -99,7 +140,7 @@ describe('userRouter', () => {
       const user = await createTestUser({ email: uniqueEmail('u-upd-role') });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
       await expect(caller.user.update({ id: user.id, role: 'ADMIN' })).rejects.toThrow(
-        'roleとisActiveは変更できません',
+        'ロールとアクティブ状態は変更できません',
       );
     });
 
@@ -117,6 +158,21 @@ describe('userRouter', () => {
       const target = await createTestUser({ email: uniqueEmail('u-promote'), role: 'USER' });
       const result = await caller.user.update({ id: target.id, role: 'ADMIN' });
       expect(result.role).toBe('ADMIN');
+    });
+
+    it('無効化と再有効化のたびにversionを進め、古いセッションを復活させない', async () => {
+      const { caller: admin } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-reactivate') });
+      const oldCaller = await createAuthenticatedCaller(target.id, target.email, target.role);
+
+      await admin.user.update({ id: target.id, isActive: false });
+      await admin.user.update({ id: target.id, isActive: true });
+
+      const current = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+      expect(current).toMatchObject({ isActive: true, sessionVersion: 2 });
+      await expect(oldCaller.user.getById({ id: target.id })).rejects.toThrow(
+        'セッションが無効になりました',
+      );
     });
   });
 
@@ -139,6 +195,21 @@ describe('userRouter', () => {
       await expect(
         caller.user.updateProfile({ name: 'X', email: 'taken@example.com' }),
       ).rejects.toThrow('このメールアドレスは既に使用されています');
+    });
+
+    it('通常のプロフィール更新ではversionを進めず、同じセッションを継続できる', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-prof-version') });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await caller.user.updateProfile({ name: '更新後', email: user.email });
+
+      expect(
+        await prisma.user.findUniqueOrThrow({
+          where: { id: user.id },
+          select: { sessionVersion: true },
+        }),
+      ).toEqual({ sessionVersion: 0 });
+      await expect(caller.user.getById({ id: user.id })).resolves.toMatchObject({ id: user.id });
     });
   });
 
@@ -173,6 +244,113 @@ describe('userRouter', () => {
       await expect(
         caller.user.changePassword({ currentPassword: VALID_PASSWORD, newPassword: 'weak' }),
       ).rejects.toThrow('新しいパスワードは8文字以上で入力してください');
+    });
+
+    it.each([
+      ['ASCII', `Aa1!${'x'.repeat(69)}`],
+      ['日本語', `Aa1!${'あ'.repeat(22)}xxx`],
+      ['絵文字', `Aa1!${'😀'.repeat(17)}x`],
+    ])('%sでUTF-8の73バイトになる新しいパスワードを拒否する', async (_kind, newPassword) => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-bytes'),
+        password: VALID_PASSWORD,
+      });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await expect(
+        caller.user.changePassword({ currentPassword: VALID_PASSWORD, newPassword }),
+      ).rejects.toThrow('パスワードはUTF-8で72バイト以内にしてください');
+    });
+
+    it('同じversionから競合した変更は一方だけ成功し、古いセッションを失効させる', async () => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-cas'),
+        password: VALID_PASSWORD,
+      });
+      const firstCaller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const secondCaller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const passwords = ['FirstPass456!', 'SecondPass456!'] as const;
+
+      const results = await Promise.allSettled([
+        firstCaller.user.changePassword({
+          currentPassword: VALID_PASSWORD,
+          newPassword: passwords[0],
+        }),
+        secondCaller.user.changePassword({
+          currentPassword: VALID_PASSWORD,
+          newPassword: passwords[1],
+        }),
+      ]);
+
+      expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+      const rejected = results.find(({ status }) => status === 'rejected');
+      expect(rejected).toMatchObject({ reason: { code: 'UNAUTHORIZED' } });
+
+      const updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+      expect(updated.sessionVersion).toBe(1);
+      const matchingPasswords = await Promise.all(
+        passwords.map((password) => bcrypt.compare(password, updated.password ?? '')),
+      );
+      expect(matchingPasswords.filter(Boolean)).toHaveLength(1);
+      await expect(firstCaller.user.getById({ id: user.id })).rejects.toThrow(
+        'セッションが無効になりました',
+      );
+
+      const currentCaller = await createAuthenticatedCaller(
+        user.id,
+        user.email,
+        user.role,
+        updated.sessionVersion,
+      );
+      await expect(currentCaller.user.getById({ id: user.id })).resolves.toMatchObject({
+        id: user.id,
+      });
+    });
+
+    it('照合待機中に別の変更が確定した場合は古い読取値で上書きしない', async () => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-wait'),
+        password: VALID_PASSWORD,
+      });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      let releaseCompare!: () => void;
+      let markCompareStarted!: () => void;
+      const compareStarted = new Promise<void>((resolve) => {
+        markCompareStarted = resolve;
+      });
+      const compareRelease = new Promise<void>((resolve) => {
+        releaseCompare = resolve;
+      });
+      const compareSpy = vi.spyOn(bcrypt, 'compare').mockImplementationOnce(async () => {
+        markCompareStarted();
+        await compareRelease;
+        return true;
+      });
+
+      try {
+        const pending = caller.user.changePassword({
+          currentPassword: VALID_PASSWORD,
+          newPassword: 'WaitingPass456!',
+        });
+        await compareStarted;
+        const concurrentPassword = await bcrypt.hash('ConcurrentPass456!', 10);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: concurrentPassword, sessionVersion: { increment: 1 } },
+        });
+        releaseCompare();
+
+        await expect(pending).rejects.toThrow('セッションが無効になりました');
+        const current = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+        expect(current.sessionVersion).toBe(1);
+        await expect(bcrypt.compare('ConcurrentPass456!', current.password ?? '')).resolves.toBe(
+          true,
+        );
+      } finally {
+        releaseCompare();
+        compareSpy.mockRestore();
+      }
     });
   });
 

@@ -14,7 +14,7 @@ Google Docs に手で貼り付けて体裁を整えてから書き出してい�
 組版は Vivliostyle（CSS組版）に任せる。このスクリプトの仕事は、素の Markdown を
 「本」にするために足りない部分だけを補うこと:
   1. H1 から表紙を起こす
-  2. H2（とその下の `### Step N:`）を拾って、ページ番号付きの目次を作る
+  2. H2 を拾って、ページ番号付きの目次を作る
   3. mermaid を SVG へ焼く（Vivliostyle は mermaid を解釈しない）
   4. 柱の文字列と、埋め込みフォントの @font-face を1冊ぶんのCSSとして書き出す
 
@@ -35,6 +35,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import cache
 from html.parser import HTMLParser
@@ -49,17 +51,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
-from breakable_code import mark_breakable_pres  # noqa: E402
-from keep_next import mark_keep_next  # noqa: E402
-from code_wrap import (  # noqa: E402
-    hoist_code_filepath,
-    unsafe_runs,
-    wrap_code_in_html,
+from breakable_code import (  # noqa: E402
+    annotate_pres,
+    apply_breakable_measurements,
 )
+from keep_next import mark_keep_next  # noqa: E402
+from code_wrap import unsafe_runs, wrap_code_in_html  # noqa: E402
 from inline_layout import annotate_inline_code, validate_annotated_html  # noqa: E402
-from inline_break import insert_wbr_before_code, split_long_inline_code  # noqa: E402
-from table_latin import keep_block_tails, protect_prose_latin, protect_table_latin
-from table_structure import restructure_tables, measured_tables_to_stack  # noqa: E402
 from inline_layout_css import (  # noqa: E402
     HEADING_INLINE_CSS,
     NOWRAP_CSS,
@@ -75,15 +73,23 @@ from table_layout_override import (  # noqa: E402
 SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 BOOK_CSS = REPO_ROOT / "material" / "style" / "book.css"
 TABLE_LAYOUT_OVERRIDES = Path(__file__).with_name("table-layout.json")
+BREAKABLE_CODE = Path(__file__).with_name("breakable_code.py")
+MEASURE_BREAKABLE_CODE = Path(__file__).with_name("measure-breakable-code.mjs")
+KEEP_NEXT_HELPER = Path(__file__).with_name("keep_next.py")
+DECORATIVE_MARGIN_OUTLINE = Path(__file__).with_name("decorative-margin-outline.mjs")
+DECORATIVE_MARGIN_GLYPHS = Path(__file__).with_name("decorative-margin-glyph-map.json")
 OUT_DIR = REPO_ROOT / "dist" / "pdf"
 WORK_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
 RELEASE_RECEIPT = REPO_ROOT / "dist" / "release-build-receipt.json"
 TOOLCHAIN_DIR = REPO_ROOT / "dist" / ".pdf-book-toolchain"
-# package-lock.json まで置いた正本。npm install で都度解決すると推移的依存が
-# 実行ごとに浮動し、runner 上だけ再現する組版ハングを追えなくなる（#501）。
-# npm ci は lockfile 厳守なので、解決結果は全実行で同一になる。
-TOOLCHAIN_SRC_DIR = Path(__file__).resolve().parent / "toolchain"
+TOOLCHAIN_RUNTIME = ".runtime-provenance.json"
 EXPECTED_RELEASE_BOOKS = 36
+LOCAL_THEME_CSS = "./local-theme/theme-techbook/theme.css"
+LOCAL_THEME_BASE_IMPORTS = (
+    "theme-all.css",
+    "css/lib/prism/base.css",
+    "css/lib/prism/theme-okaidia.css",
+)
 
 # 組版と作図の道具は devDependencies に入れず、バージョンを固定して npx で都度呼ぶ。
 #
@@ -127,32 +133,109 @@ FONT_SOURCES = (
      "DejaVu Sans", 400, "woff2"),
 )
 
-IMAGE_RE = re.compile(r"!\[[^\]]*\]\(\s*<?([^\s)>]+)>?")
+class VfmImageSources(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.images: list[str] = []
 
-# issue #469: レビューで指摘された「まとまりの最後の1件だけが別のページに出る」3か所。
-# book.css の tbody tr の規則は通常の表にしか効かず、縦並びの表（.pdf-stacked-row）
-# 全体やすべての箇条書きへ同じ考えの規則を掛けると、#425 で直した割れ方が戻り
-# ページ数も増える（Day 09 で実測）ため、指摘のあった要素へ冊ごとに絞って当てる。
-# data-pdf-source-table は原稿中の表の順番（0始まり）で、restructure_tables が付ける。
-PAGE_BREAK_HINTS: dict[str, str] = {
-    # day19_コメント編集・削除.md
-    #   表3「comment.update の入力パラメータ」（縦並び2件。最後の content だけ次のページ）
-    #   表6「state の役割」（縦並び4件。最後の deleteCommentTargetId だけ次のページ）
-    "day19-3b9165": (
-        "section[data-pdf-source-table='3'] .pdf-stacked-row:last-child,\n"
-        "section[data-pdf-source-table='6'] .pdf-stacked-row:last-child {\n"
-        "  break-before: avoid;\n"
-        "}\n"
-    ),
-    # day29_ユーザー詳細・編集ページを作ろう.md
-    #   「今日のまとめ」のチェックリスト（この冊唯一の task list 5項目。
-    #   最後の1項目だけ次のページ）
-    "day29-a78910": (
-        "ul.contains-task-list li.task-list-item:last-child {\n"
-        "  break-before: avoid;\n"
-        "}\n"
-    ),
-}
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag.lower() == "img":
+            target = attributes.get("src")
+            if target is not None:
+                self.images.append(target)
+
+
+class VfmCodeBlocks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.blocks: list[str] = []
+        self.depth = 0
+        self.current: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "pre":
+            if self.depth:
+                raise ValueError("VFMのコードブロックが入れ子です")
+            self.depth = 1
+            self.current = []
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "pre":
+            if not self.depth:
+                raise ValueError("VFMのコードブロックの閉じタグが余分です")
+            self.blocks.append("".join(self.current))
+            self.depth = 0
+
+    def handle_data(self, data):
+        if self.depth:
+            self.current.append(data)
+
+
+def validate_vfm_code_fences(markdown: str, markup: str) -> None:
+    expected: list[str] = []
+    body: list[str] = []
+    opened = False
+    for _, line, state, _ in fence_states(markdown):
+        if state == "open":
+            opened = True
+            body = []
+        elif state == "inside":
+            body.append(line)
+        elif state == "close":
+            expected.append("\n".join(body))
+            opened = False
+    if opened:
+        raise ValueError("Markdownのコードフェンスが閉じていません")
+    parser = VfmCodeBlocks()
+    parser.feed(markup)
+    if parser.depth or expected != parser.blocks:
+        raise ValueError(
+            f"VFMのコードブロックが原稿の順序・内容と一致しません: "
+            f"source={len(expected)}, rendered={len(parser.blocks)}"
+        )
+
+
+def _run_vfm_for_image_scan(
+    command: list[str], *, env: dict[str, str] | None = None,
+) -> str:
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=VFM_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise OSError(f"画像参照のVFM変換が{VFM_TIMEOUT}秒を超えました") from error
+    except OSError as error:
+        raise OSError(f"画像参照のVFM変換を起動できません: {error}") from error
+    if result.returncode != 0 or not result.stdout.strip():
+        detail = (result.stderr or result.stdout).strip()[-300:]
+        raise OSError(f"画像参照のVFM変換に失敗: {detail}")
+    return result.stdout
+
+
+def _rendered_image_sources(
+    sources: list[Path], vfm_bin: str, env: dict[str, str] | None = None,
+) -> dict[Path, list[str]]:
+    """固定したVFMが描画するimg srcを、原稿ごとに返す。"""
+    if not Path(vfm_bin).exists():
+        raise FileNotFoundError(f"固定したVFMが無い: {vfm_bin}")
+    command = [vfm_bin, "--language", "ja", "--title", "画像参照確認"]
+    def render(source: Path) -> tuple[Path, list[str]]:
+        markup = _run_vfm_for_image_scan([*command, str(source)], env=env)
+        if "<html" not in markup.lower():
+            raise OSError(f"画像参照のVFM変換結果がHTMLではありません: {source.name}")
+        parser = VfmImageSources()
+        parser.feed(markup)
+        return source, parser.images
+
+    # VFMは原稿ごとにプロセスを分けて構文状態を隔離する。4並列なら、36冊でも
+    # 1冊ずつ直列起動する待ち時間を抑えながらCPUとメモリの急増を避けられる。
+    with ThreadPoolExecutor(max_workers=min(4, len(sources) or 1)) as executor:
+        return dict(executor.map(render, sources))
 
 
 def _hash_file_stably(path: Path) -> tuple[str, int]:
@@ -195,81 +278,9 @@ def _record_file(path: Path, label: str, digest) -> dict:
     return {"file": label, "size": size, "sha256": file_sha}
 
 
-_BINARY_MAGIC = (b"\x7fELF", b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe")
-# /opt/google/chrome/google-chrome の最終行 `exec -a "$0" "$HERE/chrome" "$@"` を読む。
-# $HERE はスクリプト自身の置き場所なので、相対で本体へたどり着ける。
-_LAUNCHER_EXEC_RE = re.compile(
-    r'^\s*exec\s+(?:-a\s+(?:"[^"]*"|\S+)\s+)?"?\$(?:HERE|\{HERE\})/(?P<name>[\w.+-]+)"?',
-    re.MULTILINE,
-)
-
-
-def resolve_browser_executable(path: Path) -> tuple[Path, Path | None]:
-    """起動スクリプトを渡されたら、実際に exec される本体を返す。
-
-    `/usr/bin/google-chrome` は 1585 バイトのシェルスクリプトで、組版した本体は
-    同じ場所にある 250MB の `chrome` のほう。証跡にスクリプトのハッシュを載せても
-    「どの Chrome が組んだか」を何も示さないので、本体まで降りてから記録する。
-
-    戻り値は (記録すべき実体, 経由した起動スクリプト or None)。本体をたどれない
-    ときはスクリプトのまま返し、呼び出し側が未解決と分かる形にする。
-    """
-    try:
-        with path.open("rb") as handle:
-            head = handle.read(4)
-    except OSError:
-        return path, None
-    if head in _BINARY_MAGIC:
-        return path, None
-    try:
-        script = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return path, None
-    matched = _LAUNCHER_EXEC_RE.search(script)
-    if not matched:
-        return path, None
-    target = (path.parent / matched.group("name")).resolve()
-    if not target.is_file() or target == path:
-        return path, None
-    with target.open("rb") as handle:
-        if handle.read(4) not in _BINARY_MAGIC:
-            return path, None
-    return target, path
-
-
-def _append_build_log(slug: str, heading: str, body: str) -> None:
-    """冊ごとの組版ログを WORK_DIR/logs に残す。
-
-    runner 上だけで止まる組版は job のログしか証跡が無いので、子プロセスが
-    出した出力を artifact 経由で取り出せる形にする（#501）。
-    """
-    try:
-        # CI は WORK_DIR 外（RUNNER_TEMP 配下）を env で差してくる。WORK_DIR は
-        # prepare_work_dir の rmtree で再試行ごとに消えるので、外に出さんと
-        # 一番要る初回分のログが残らん（#501）。
-        log_dir = Path(os.environ["PDF_BOOK_BUILD_LOG_DIR"]) \
-            if os.environ.get("PDF_BOOK_BUILD_LOG_DIR") else WORK_DIR / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        with (log_dir / f"{slug}.log").open("a", encoding="utf-8") as handle:
-            handle.write(f"=== {heading} ===\n{body[-8000:]}\n")
-    except OSError as error:
-        # ログが書けなくても組版自体は進める。本筋の問題報告を上書きせんが、
-        # 失敗した事実だけは stderr に残す
-        print(f"組版ログを書けない: {error}", file=sys.stderr)
-
-
-def _expired_output(error: subprocess.TimeoutExpired) -> str:
-    """TimeoutExpired が持つ途中出力を取り出す（capture 中の部分出力）。"""
-    parts = []
-    for chunk in (error.output, error.stderr):
-        if isinstance(chunk, bytes):
-            parts.append(chunk.decode("utf-8", errors="replace"))
-        elif chunk:
-            parts.append(chunk)
-    return "\n".join(parts)
-
-
-def _hash_tree_stably(root: Path) -> dict:
+def _hash_tree_stably(
+    root: Path, *, excluded_relative_paths: frozenset[str] = frozenset(),
+) -> dict:
     """実行時に解決した npm パッケージ群の名前・リンク先・実バイトを固定する。"""
     if not root.is_dir():
         raise FileNotFoundError(f"パッケージ実体が無い: {root}")
@@ -277,7 +288,11 @@ def _hash_tree_stably(root: Path) -> dict:
     count = 0
     size = 0
     for path in sorted(root.rglob("*")):
-        relative = path.relative_to(root).as_posix().encode("utf-8")
+        relative_text = path.relative_to(root).as_posix()
+        if relative_text in excluded_relative_paths:
+            continue
+        relative = relative_text.encode("utf-8")
+        mode = path.lstat().st_mode.to_bytes(4, "big")
         if path.is_symlink():
             try:
                 resolved = path.resolve(strict=True)
@@ -286,85 +301,480 @@ def _hash_tree_stably(root: Path) -> dict:
                 raise OSError(f"toolchain外または壊れたsymlinkを拒否: {path}") from error
             _framed(digest, b"symlink")
             _framed(digest, relative)
+            _framed(digest, mode)
             _framed(digest, os.readlink(path).encode("utf-8"))
             count += 1
         elif path.is_file():
             file_sha, file_size = _hash_file_stably(path)
             _framed(digest, b"file")
             _framed(digest, relative)
+            _framed(digest, mode)
             _framed(digest, bytes.fromhex(file_sha))
             count += 1
             size += file_size
+        elif path.is_dir():
+            _framed(digest, b"directory")
+            _framed(digest, relative)
+            _framed(digest, mode)
+        else:
+            raise OSError(f"toolchain内の特殊ファイルを拒否: {path}")
     return {"file_count": count, "size": size, "sha256": digest.hexdigest()}
+
+
+def _toolchain_payload_fingerprint(root: Path) -> dict:
+    """自己参照するprovenanceだけを除き、再利用する全実体を固定する。"""
+    return _hash_tree_stably(
+        root, excluded_relative_paths=frozenset({TOOLCHAIN_RUNTIME})
+    )
 
 
 def _toolchain_paths(root: Path) -> dict[str, str]:
     modules = root / "node_modules"
-    return {
+    paths = {
         "root": str(root),
         "vivliostyle_bin": str(modules / ".bin" / "vivliostyle"),
         "vfm_bin": str(modules / ".bin" / "vfm"),
         "mermaid_bin": str(modules / ".bin" / "mmdc"),
         "theme_path": str(modules / "@vivliostyle" / "theme-techbook"),
     }
+    runtime_path = root / TOOLCHAIN_RUNTIME
+    if runtime_path.is_file():
+        runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
+        paths.update(runtime)
+    return paths
 
 
-def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
-    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
-    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
-    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
-    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
-    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+def _write_runtime_provenance_exclusively(
+    root: Path, provenance: dict,
+) -> tuple[int, int]:
+    """既存値を上書きせず、検証済みprovenanceを同一filesystem内で原子的に公開する。"""
+    runtime_path = root / TOOLCHAIN_RUNTIME
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".runtime-provenance-", dir=root
+    )
+    temporary_path = Path(temporary_name)
+    published_signature = None
     try:
-        # コピーも try の内側に入れる。ここで raise すると except の rmtree が
-        # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
-        for name in ("package.json", "package-lock.json"):
-            source = TOOLCHAIN_SRC_DIR / name
-            if not source.exists():
-                raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
-            shutil.copyfile(source, staging / name)
-        result = subprocess.run(
-            ["npm", "ci", "--ignore-scripts"],
-            cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
-        )
-        if result.returncode != 0:
-            raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
-        if TOOLCHAIN_DIR.exists():
-            shutil.rmtree(TOOLCHAIN_DIR)
-        staging.replace(TOOLCHAIN_DIR)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(
+                json.dumps(provenance, ensure_ascii=False, sort_keys=True) + "\n"
+            )
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary = temporary_path.stat()
+        expected_signature = temporary.st_dev, temporary.st_ino
+        try:
+            os.link(temporary_path, runtime_path)
+        except FileExistsError as error:
+            raise FileExistsError(
+                f"PDF toolchain runtime provenanceが既に存在します: {runtime_path}"
+            ) from error
+        published_signature = expected_signature
+        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        published = runtime_path.stat()
+        if (published.st_dev, published.st_ino) != expected_signature:
+            raise OSError("PDF toolchain runtime provenanceが公開中に置換されました")
+        return expected_signature
     except Exception:
-        shutil.rmtree(staging, ignore_errors=True)
+        if published_signature is not None:
+            _remove_runtime_provenance_if_same(root, published_signature)
         raise
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
-    modules = TOOLCHAIN_DIR / "node_modules"
+
+def _remove_runtime_provenance_if_same(
+    root: Path, published_signature: tuple[int, int],
+) -> None:
+    """attestation後段が失敗したとき、自分が公開したmetadataだけを取り消す。"""
+    runtime_path = root / TOOLCHAIN_RUNTIME
+    try:
+        current = runtime_path.stat()
+    except OSError:
+        return
+    if (current.st_dev, current.st_ino) == published_signature:
+        runtime_path.unlink()
+        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+
+
+def _pdf_node_runtime(env: dict[str, str]) -> dict[str, str]:
+    """実際に起動するNode/npmを記録し、PDF依存が対応する22系だけを許可する。"""
+    result = subprocess.run(
+        [
+            "node", "-p",
+            "JSON.stringify({version:process.versions.node,execPath:process.execPath})",
+        ],
+        env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+    )
+    if result.returncode != 0:
+        raise OSError(f"Node runtimeを確認できません: {(result.stderr or result.stdout)[-300:]}")
+    try:
+        runtime = json.loads(result.stdout)
+        version = runtime["version"]
+        parts = tuple(int(part) for part in version.split("."))
+        exec_path = runtime["execPath"]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(f"Node runtimeの応答が不正です: {result.stdout[-200:]}") from error
+    if len(parts) != 3 or parts < (22, 12, 0) or parts >= (23, 0, 0):
+        raise ValueError(
+            f"PDF生成にはNode 22.12.0以上23未満が必要です: {version} ({exec_path})"
+        )
+    if not isinstance(exec_path, str) or not Path(exec_path).is_absolute():
+        raise ValueError(f"Node executable pathが絶対パスではありません: {exec_path}")
+    node_path = Path(exec_path)
+    npm_path = node_path.parent / "npm"
+    if not npm_path.is_file():
+        raise ValueError(f"PDF生成用npmがNodeと同じbinにありません: {npm_path}")
+    child_env = dict(env)
+    child_env["PATH"] = f"{node_path.parent}{os.pathsep}{env.get('PATH', '')}"
+    npm = subprocess.run(
+        [str(npm_path), "--version"], env=child_env, capture_output=True, text=True,
+        timeout=BUILD_TIMEOUT,
+    )
+    npm_node = subprocess.run(
+        [
+            str(npm_path), "exec", "--offline", "--yes=false", "--", "node", "-p",
+            "JSON.stringify({version:process.versions.node,execPath:process.execPath})",
+        ],
+        env=child_env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+    )
+    if npm.returncode != 0 or npm_node.returncode != 0:
+        output = npm.stderr or npm.stdout or npm_node.stderr or npm_node.stdout
+        raise OSError(f"npm runtimeを確認できません: {output[-300:]}")
+    try:
+        npm_version = npm.stdout.strip()
+        npm_parts = tuple(int(part) for part in npm_version.split("."))
+        npm_node_data = json.loads(npm_node.stdout)
+        npm_node_version = npm_node_data["version"]
+        npm_node_path = Path(npm_node_data["execPath"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(f"npm runtimeの応答が不正です: {npm_node.stdout[-200:]}") from error
+    if len(npm_parts) != 3 or npm_parts[0] != 10:
+        raise ValueError(f"PDF生成にはnpm 10が必要です: {npm_version}")
+    node_sha = hashlib.sha256(node_path.read_bytes()).hexdigest()
+    if (
+        npm_node_version != version
+        or npm_node_path.resolve() != node_path.resolve()
+        or hashlib.sha256(npm_node_path.read_bytes()).hexdigest() != node_sha
+    ):
+        raise ValueError("PDF生成用npmが固定したNode以外で動作しています")
+    return {
+        "node_version": version,
+        "node_exec_path": exec_path,
+        "node_exec_sha256": node_sha,
+        "npm_version": npm_version,
+        "npm_exec_path": str(npm_path),
+        "npm_exec_sha256": hashlib.sha256(npm_path.read_bytes()).hexdigest(),
+    }
+
+
+def _validate_release_toolchain(
+    root: Path, identifiers: list[str], runtime: dict[str, str], env: dict[str, str],
+    *, record_provenance: bool = True, exclusive_provenance: bool = False,
+) -> dict[str, str]:
+    """版・実行物・リンク境界・runtimeとCLI importを確かめる。"""
+    requested_root = root
+    try:
+        root = root.resolve(strict=True)
+    except OSError as error:
+        raise FileNotFoundError(f"PDF toolchainの実体を解決できません: {root}") from error
+    if not root.is_dir():
+        raise NotADirectoryError(f"PDF toolchainの実体がdirectoryではありません: {root}")
+    runtime_path = root / TOOLCHAIN_RUNTIME
+    if exclusive_provenance and os.path.lexists(runtime_path):
+        raise FileExistsError(
+            f"PDF toolchain runtime provenanceが既に存在します: {runtime_path}"
+        )
+    # semantic checkより前に全実体を固定する。検査を通過した直後の改変を
+    # attestationの正当なbaselineとして取り込ませない。
+    payload_before_probe = _toolchain_payload_fingerprint(root)
+    modules = root / "node_modules"
+    expected_dependencies = {
+        identifier.rsplit("@", 1)[0]: identifier.rsplit("@", 1)[1]
+        for identifier in identifiers
+    }
+    try:
+        package = json.loads((root / "package.json").read_text(encoding="utf-8"))
+        package_lock = json.loads(
+            (root / "package-lock.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise OSError("PDF toolchainのpackage.json/package-lock.jsonを読めません") from error
+    if not isinstance(package, dict) or not isinstance(package_lock, dict):
+        raise OSError("PDF toolchainのpackage.json/package-lock.jsonがobjectではありません")
+    if package.get("dependencies") != expected_dependencies:
+        raise OSError("PDF toolchainの固定依存が指定と違います")
+    lock_packages = package_lock.get("packages")
+    lock_root = lock_packages.get("") if isinstance(lock_packages, dict) else None
+    lock_dependencies = lock_root.get("dependencies") if isinstance(lock_root, dict) else None
+    if lock_dependencies != expected_dependencies:
+        raise OSError("PDF toolchainのpackage-lock固定依存が指定と違います")
+    recorded = None
+    if not record_provenance:
+        try:
+            recorded = json.loads(runtime_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise OSError("再利用するPDF toolchainのruntime provenanceを読めません") from error
+        if not isinstance(recorded, dict):
+            raise OSError("再利用するPDF toolchainのruntime provenanceがobjectではありません")
+        runtime_keys = (
+            "node_version", "node_exec_path", "node_exec_sha256",
+            "npm_version", "npm_exec_path", "npm_exec_sha256",
+        )
+        if {key: recorded.get(key) for key in runtime_keys} != runtime:
+            raise ValueError("再利用するPDF toolchainのruntime provenanceが現在値と違います")
     for identifier in identifiers:
         expected_name, expected_version = identifier.rsplit("@", 1)
         package_json = modules / expected_name / "package.json"
         try:
             package = json.loads(package_json.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as error:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
             raise OSError(f"PDFツールのpackage.jsonを読めません: {identifier}") from error
+        if not isinstance(package, dict):
+            raise OSError(f"PDFツールのpackage.jsonがobjectではありません: {identifier}")
         if package.get("name") != expected_name or package.get("version") != expected_version:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
             raise OSError(
                 f"PDFツールの解決版が指定と違います: {identifier} -> "
                 f"{package.get('name')}@{package.get('version')}"
             )
-    toolchain = _toolchain_paths(TOOLCHAIN_DIR)
+    toolchain = _toolchain_paths(root)
     for key in ("vivliostyle_bin", "vfm_bin", "mermaid_bin"):
-        if not Path(toolchain[key]).exists():
-            raise FileNotFoundError(f"PDFツールの実行ファイルが無い: {toolchain[key]}")
+        executable = Path(toolchain[key])
+        if not executable.is_file() or not os.access(executable, os.X_OK):
+            raise FileNotFoundError(f"PDFツールの実行ファイルが無いか実行できない: {executable}")
     if not Path(toolchain["theme_path"]).is_dir():
         raise FileNotFoundError(f"PDFテーマの実体が無い: {toolchain['theme_path']}")
-    # .bin やパッケージ内のリンクが隔離環境の外へ抜けると、receipt がリンク文字列しか
-    # 固定せず実行バイトを拘束できない。全リンクの解決先が内部にあることを先に確かめる。
-    _hash_tree_stably(TOOLCHAIN_DIR)
-    return toolchain
+    recorded_payload = None
+    if not record_provenance:
+        recorded_payload = {
+            key: recorded.get(f"toolchain_payload_{key}")
+            for key in ("file_count", "size", "sha256")
+        }
+        if recorded_payload != payload_before_probe:
+            raise ValueError("再利用するPDF toolchainの全実体が保存済み指紋と違います")
+    probe_relative = "node_modules/@vivliostyle/cli/dist/cli.js"
+    probe_path = (root / probe_relative).resolve()
+    cli_uri = probe_path.as_uri()
+    probe = subprocess.run(
+        [
+            runtime["node_exec_path"], "--input-type=module", "-e",
+            "const m=await import(process.argv[1]);"
+            "if(typeof m.dispatchCli!=='function')throw new Error('dispatchCli missing')",
+            cli_uri,
+        ],
+        cwd=root, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+    )
+    if probe.returncode != 0:
+        raise OSError(
+            f"Vivliostyle CLI import probeに失敗: {(probe.stderr or probe.stdout)[-300:]}"
+        )
+    provenance = {
+        **runtime,
+        "probe_module": probe_relative,
+        "probe_module_sha256": hashlib.sha256(probe_path.read_bytes()).hexdigest(),
+        "probe_export": "dispatchCli",
+        "probe_node_exec_path": runtime["node_exec_path"],
+        **{
+            f"toolchain_payload_{key}": value
+            for key, value in payload_before_probe.items()
+        },
+    }
+    if record_provenance and not exclusive_provenance:
+        runtime_path.write_text(
+            json.dumps(provenance, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    else:
+        if not record_provenance and recorded != provenance:
+            raise ValueError("再利用するPDF toolchainのruntime provenanceが現在値と違います")
+    payload_after_probe = _toolchain_payload_fingerprint(root)
+    if payload_after_probe != payload_before_probe:
+        raise OSError("PDF toolchainが検証中に変更されました")
+    if not record_provenance and payload_after_probe != recorded_payload:
+        raise ValueError("再利用するPDF toolchainの全実体が保存済み指紋と違います")
+    try:
+        if requested_root.resolve(strict=True) != root:
+            raise OSError("PDF toolchainのaliasが検証中に別の実体へ変更されました")
+    except FileNotFoundError as error:
+        raise OSError("PDF toolchainのaliasが検証中に消失しました") from error
+
+    published_signature = None
+    if exclusive_provenance:
+        published_signature = _write_runtime_provenance_exclusively(root, provenance)
+    try:
+        if exclusive_provenance:
+            if _toolchain_payload_fingerprint(root) != payload_before_probe:
+                raise OSError("PDF toolchainがattestation公開中に変更されました")
+            try:
+                if requested_root.resolve(strict=True) != root:
+                    raise OSError(
+                        "PDF toolchainのaliasがattestation公開中に変更されました"
+                    )
+            except FileNotFoundError as error:
+                raise OSError(
+                    "PDF toolchainのaliasがattestation公開中に消失しました"
+                ) from error
+        _hash_tree_stably(root)
+    except Exception:
+        if published_signature is not None:
+            _remove_runtime_provenance_if_same(root, published_signature)
+        raise
+    return {**toolchain, **provenance}
 
 
-def referenced_images(sources: list[Path]) -> list[Path]:
+def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
+    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
+    global TOOLCHAIN_DIR
+    reuse = env.get("PDF_BOOK_REUSE_TOOLCHAIN")
+    attest = env.get("PDF_BOOK_ATTEST_EXISTING_TOOLCHAIN")
+    if reuse is not None and reuse != "1":
+        raise ValueError("PDF_BOOK_REUSE_TOOLCHAINは再利用時だけ1を指定してください")
+    if attest is not None and attest != "1":
+        raise ValueError(
+            "PDF_BOOK_ATTEST_EXISTING_TOOLCHAINは初回検証時だけ1を指定してください"
+        )
+    if reuse == "1" and attest == "1":
+        raise ValueError("PDF toolchainの再利用と初回attestationは同時指定できません")
+    if attest == "1":
+        if not TOOLCHAIN_DIR.is_dir():
+            raise FileNotFoundError(
+                f"初回attestation対象のPDF toolchainがありません: {TOOLCHAIN_DIR}"
+            )
+        try:
+            attestation_root = TOOLCHAIN_DIR.resolve(strict=True)
+        except OSError as error:
+            raise FileNotFoundError(
+                f"初回attestation対象のPDF toolchainを解決できません: {TOOLCHAIN_DIR}"
+            ) from error
+        if os.path.lexists(attestation_root / TOOLCHAIN_RUNTIME):
+            raise FileExistsError(
+                "初回attestation対象にruntime provenanceが既に存在します: "
+                f"{attestation_root / TOOLCHAIN_RUNTIME}"
+            )
+    runtime = _pdf_node_runtime(env)
+    child_env = dict(env)
+    child_env["PATH"] = (
+        f"{Path(runtime['node_exec_path']).parent}{os.pathsep}{env.get('PATH', '')}"
+    )
+    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
+    if attest == "1":
+        resolved = _validate_release_toolchain(
+            TOOLCHAIN_DIR, identifiers, runtime, child_env,
+            exclusive_provenance=True,
+        )
+        TOOLCHAIN_DIR = Path(resolved["root"])
+        return resolved
+    if reuse == "1":
+        if not TOOLCHAIN_DIR.is_dir():
+            raise FileNotFoundError(
+                f"再利用するPDF toolchainがありません: {TOOLCHAIN_DIR}"
+            )
+        resolved = _validate_release_toolchain(
+            TOOLCHAIN_DIR, identifiers, runtime, child_env,
+            record_provenance=False,
+        )
+        # 以降のtheme staging・計測・PDF監査も、検証済みaliasの正規実体だけを使う。
+        TOOLCHAIN_DIR = Path(resolved["root"])
+        return resolved
+
+    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
+    dependencies = {identifier.rsplit("@", 1)[0]: identifier.rsplit("@", 1)[1]
+                    for identifier in identifiers}
+    (staging / "package.json").write_text(
+        json.dumps({"private": True, "dependencies": dependencies}) + "\n",
+        encoding="utf-8",
+    )
+    backup_parent = None
+    try:
+        result = subprocess.run(
+            [
+                runtime["npm_exec_path"], "install", "--ignore-scripts", "--package-lock=true",
+                "--include=optional",
+            ],
+            cwd=staging, env=child_env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+        )
+        if result.returncode != 0:
+            raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
+        _validate_release_toolchain(staging, identifiers, runtime, child_env)
+        if TOOLCHAIN_DIR.exists():
+            backup_parent = Path(tempfile.mkdtemp(
+                prefix=".pdf-book-toolchain-backup-", dir=TOOLCHAIN_DIR.parent
+            ))
+            TOOLCHAIN_DIR.replace(backup_parent / "toolchain")
+        try:
+            staging.replace(TOOLCHAIN_DIR)
+        except Exception:
+            if backup_parent is not None and (backup_parent / "toolchain").exists():
+                (backup_parent / "toolchain").replace(TOOLCHAIN_DIR)
+            raise
+        if backup_parent is not None:
+            shutil.rmtree(backup_parent)
+    except Exception as error:
+        shutil.rmtree(staging, ignore_errors=True)
+        if backup_parent is not None and backup_parent.is_dir():
+            try:
+                if not any(backup_parent.iterdir()):
+                    backup_parent.rmdir()
+            except OSError as cleanup_error:
+                error.add_note(f"空のtoolchain backupを削除できません: {cleanup_error}")
+        raise
+
+    return {**_toolchain_paths(TOOLCHAIN_DIR), **runtime}
+
+
+def _resolve_local_image_references(
+    source: Path, targets: list[str],
+) -> list[tuple[str, Path]]:
+    """VFMが描画した画像URLから、ローカル入力だけを解決する。"""
+    references: list[tuple[str, Path]] = []
+    for target in targets:
+        parsed = urlsplit(target)
+        if parsed.scheme or parsed.netloc or target.startswith("#"):
+            continue
+        path = (source.parent / unquote(parsed.path)).resolve()
+        try:
+            path.relative_to(SRC_DIR.resolve())
+        except ValueError as error:
+            raise ValueError(
+                f"{source.name}: 教材外の画像参照: {target}"
+            ) from error
+        references.append((target, path))
+    return references
+
+
+def local_image_references(
+    source: Path, vfm_bin: str, env: dict[str, str] | None = None,
+) -> list[tuple[str, Path]]:
+    """固定したVFMが描画するローカル画像を解決する。"""
+    rendered = _rendered_image_sources([source], vfm_bin, env)
+    return _resolve_local_image_references(source, rendered[source])
+
+
+def validate_referenced_images(
+    sources: list[Path], vfm_bin: str, env: dict[str, str] | None = None,
+) -> None:
+    """選択した原稿のローカル画像が、PDF出力を触る前に存在するか確かめる。"""
+    rendered = _rendered_image_sources(sources, vfm_bin, env)
+    for source in sources:
+        for target, path in _resolve_local_image_references(source, rendered[source]):
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"{source.name}: 画像が見つからない: {target}"
+                )
+
+
+def referenced_images(
+    sources: list[Path], vfm_bin: str, env: dict[str, str] | None = None,
+) -> list[Path]:
     # 組版時は screenshots ディレクトリ全体を作業領域へ見せる。参照記法の種類に
     # 左右されず、その実入力をすべて証跡へ含める。
     screenshots = SRC_DIR / "screenshots"
@@ -373,18 +783,9 @@ def referenced_images(sources: list[Path]) -> list[Path]:
         if screenshots.is_dir()
         else set()
     )
+    rendered = _rendered_image_sources(sources, vfm_bin, env)
     for source in sources:
-        text = source.read_text(encoding="utf-8")
-        for match in IMAGE_RE.finditer(text):
-            target = match.group(1)
-            parsed = urlsplit(target)
-            if parsed.scheme or parsed.netloc or target.startswith("#"):
-                continue
-            path = (source.parent / unquote(parsed.path)).resolve()
-            try:
-                path.relative_to(SRC_DIR.resolve())
-            except ValueError as error:
-                raise ValueError(f"教材外の画像参照: {source.name}: {target}") from error
+        for _, path in _resolve_local_image_references(source, rendered[source]):
             images.add(path)
     return sorted(images)
 
@@ -398,24 +799,65 @@ def release_input_snapshot(
         # release_manifest から現在値を再計算するときも、実ビルドが残した同じ
         # 解決済み環境を含める。消失していれば aggregate が一致せず出荷を止める。
         toolchain = _toolchain_paths(TOOLCHAIN_DIR)
+    if toolchain and "node_version" in toolchain:
+        current_runtime = _pdf_node_runtime(dict(os.environ))
+        expected_runtime = {
+            key: toolchain[key] for key in (
+                "node_version", "node_exec_path", "node_exec_sha256",
+                "npm_version", "npm_exec_path", "npm_exec_sha256",
+            )
+        }
+        if current_runtime != expected_runtime:
+            raise ValueError("PDF toolchain runtimeが解決時から変更されました")
+        root = Path(toolchain["root"]).resolve()
+        payload = _toolchain_payload_fingerprint(root)
+        expected_payload = {
+            key: toolchain.get(f"toolchain_payload_{key}")
+            for key in ("file_count", "size", "sha256")
+        }
+        if payload != expected_payload:
+            raise ValueError("PDF toolchainの全実体が解決時から変更されました")
+        probe_relative = toolchain.get("probe_module")
+        if not isinstance(probe_relative, str) or Path(probe_relative).is_absolute():
+            raise ValueError("PDF toolchain probe moduleが相対pathではありません")
+        probe_path = (root / probe_relative).resolve()
+        try:
+            probe_path.relative_to(root)
+        except ValueError as error:
+            raise ValueError("PDF toolchain probe moduleがtoolchain外です") from error
+        if (
+            not probe_path.is_file()
+            or hashlib.sha256(probe_path.read_bytes()).hexdigest()
+            != toolchain.get("probe_module_sha256")
+        ):
+            raise ValueError("PDF toolchain probe moduleの実体が解決時から変更されました")
     digest = hashlib.sha256()
     files: list[dict] = []
     fixed = [
         Path(__file__).resolve(),
+        BREAKABLE_CODE.resolve(),
+        MEASURE_BREAKABLE_CODE.resolve(),
+        KEEP_NEXT_HELPER.resolve(),
         Path(__file__).with_name("code_wrap.py").resolve(),
         Path(__file__).with_name("inline_layout.py").resolve(),
-        Path(__file__).with_name("table_structure.py").resolve(),
-        Path(__file__).with_name("table_latin.py").resolve(),
         Path(__file__).with_name("inline_layout_css.py").resolve(),
         Path(__file__).with_name("table_layout_override.py").resolve(),
         TABLE_LAYOUT_OVERRIDES.resolve(),
         Path(__file__).with_name("verify-inline-layout.mjs").resolve(),
         Path(__file__).with_name("verify-inline-pdf.mjs").resolve(),
+        DECORATIVE_MARGIN_OUTLINE.resolve(),
+        DECORATIVE_MARGIN_GLYPHS.resolve(),
         (REPO_ROOT / "scripts" / "curriculum-qa" / "markdown_scan.py").resolve(),
         BOOK_CSS.resolve(),
         (REPO_ROOT / "package-lock.json").resolve(),
     ]
-    file_inputs = [*sorted(sources), *referenced_images(sources), *fixed]
+    if toolchain is None:
+        raise FileNotFoundError("画像参照を解釈する固定済みVFMが無い")
+    file_inputs = [
+        *sorted(sources),
+        *referenced_images(sources, toolchain["vfm_bin"]),
+        *fixed,
+    ]
     for package, path, _, _, _ in FONT_SOURCES:
         file_inputs.append((REPO_ROOT / "node_modules" / package / path).resolve())
     link_map_path = Path(link_map_filename).resolve() if link_map_filename else None
@@ -450,6 +892,19 @@ def release_input_snapshot(
         root = Path(toolchain["root"]).resolve()
         resolved_toolchain = _hash_tree_stably(root)
         resolved_toolchain["root"] = str(root)
+        if "node_exec_path" in toolchain and "node_version" in toolchain:
+            resolved_toolchain["runtime"] = {
+                key: toolchain[key] for key in (
+                    "node_exec_path", "node_version", "node_exec_sha256",
+                    "npm_exec_path", "npm_version", "npm_exec_sha256",
+                    "probe_module", "probe_module_sha256", "probe_export",
+                    "probe_node_exec_path", "toolchain_payload_file_count",
+                    "toolchain_payload_size", "toolchain_payload_sha256",
+                )
+            }
+            _framed(digest, b"toolchain-node-runtime")
+            _framed(digest, toolchain["node_exec_path"].encode())
+            _framed(digest, toolchain["node_version"].encode())
         _framed(digest, b"resolved-toolchain")
         _framed(digest, bytes.fromhex(resolved_toolchain["sha256"]))
         for item in tools:
@@ -469,13 +924,8 @@ def release_input_snapshot(
     browser_record = None
     if browser:
         browser_path = Path(browser).resolve()
-        executable_path, launcher_path = resolve_browser_executable(browser_path)
-        browser_record = _record_file(executable_path, "tool:browser", digest)
-        browser_record["path"] = str(executable_path)
-        if launcher_path is not None:
-            launcher_record = _record_file(launcher_path, "tool:browser-launcher", digest)
-            launcher_record["path"] = str(launcher_path)
-            browser_record["launcher"] = launcher_record
+        browser_record = _record_file(browser_path, "tool:browser", digest)
+        browser_record["path"] = str(browser_path)
 
     return {
         "source_count": len(sources),
@@ -527,10 +977,7 @@ COLOPHON = "Next.js 15 / TypeScript / Prisma / tRPC"
 
 H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 H2_RE = re.compile(r"^##\s+(?!#)(.+?)\s*$")
-# 目次の2段目に出す h3 は `### Step N:` だけ。`### \`file.ts\`` や
-# `### Before` のような節の中の小見出しまで拾うと目次が探しにくくなる。
-# 形は curriculum-qa の Step 見出しの定義（check_step_ref.py 等の
-# `Step\s*[\d.]+\s*[:：]`）に揃える。
+# 目次の2段目に出す h3 は、教材の手順を表す `### Step N:` だけに絞る。
 H3_STEP_RE = re.compile(r"^###\s+(Step\s+[\d.]+\s*[:：].+?)\s*$")
 HEADING_RE = re.compile(r"^#{2,6}\s+(.+?)\s*$")
 ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
@@ -645,55 +1092,14 @@ class HtmlLinks(HTMLParser):
 
 
 PDF_FOOTNOTE_ATTRIBUTE = 'data-pdf-footnote'
-PDF_FOOTNOTE_DISPLAY_ATTRIBUTE = 'data-pdf-footnote-display'
-PDF_HEADING_URL_ATTRIBUTE = 'data-pdf-heading-url'
-PDF_BARE_URL_ATTRIBUTE = 'data-pdf-bare-url'
-PDF_RESERVED_ATTRIBUTES = {
-    PDF_FOOTNOTE_ATTRIBUTE, PDF_FOOTNOTE_DISPLAY_ATTRIBUTE,
-    PDF_HEADING_URL_ATTRIBUTE, PDF_BARE_URL_ATTRIBUTE,
-}
-HEADING_TAGS = frozenset({'h1', 'h2', 'h3', 'h4', 'h5', 'h6'})
 HTML_VOID_ELEMENTS = {
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr',
 }
 
 
-def footnote_display_url(href: str) -> str:
-    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
-
-    共有パラメータ `usp` は紙面で読む価値が無いので表示から外す。
-    折り返しは `/` `?` `&` `=` の直後だけに許し、それ以外の区切り記号
-    （`.` `-` `:` など）は行継ぎ禁止文字で接着する。テーマ側の
-    `word-break: break-all` がどこでも切るため、単語の途中で折れていた。
-    """
-    head, _, fragment = href.partition('#')
-    base, _, query = head.partition('?')
-    params = [param for param in query.split('&')
-              if param and param.split('=', 1)[0] != 'usp']
-    display = base + (('?' + '&'.join(params)) if params else '')
-    display += '#' + fragment if fragment else ''
-    pieces = []
-    for character in display:
-        if character in '/?&=':
-            pieces.append(character + '\u200b')
-        elif character.isascii() and character.isalnum():
-            pieces.append(character)
-        else:
-            # CJK やパーセント記号は isalnum では素通りできない。CJK はどこでも
-            # 折れてしまうので、ハイフン等の区切りと同じくこちらで接着する
-            pieces.append('\u2060' + character + '\u2060')
-    return html.escape(''.join(pieces))
-
-
 class ExternalLinkFootnotes(HTMLParser):
-    """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。
-
-    issue #474 の直し4・直し5で2種類の例外を付けた。
-    見出しの中のリンクは番号を振らず、表示用のURLを data-pdf-heading-url に
-    入れて book.css が見出しの下の1行に出す。リンクの文字列がURLそのものの
-    リンクも番号を振らず、data-pdf-bare-url を付けて脚注を出さない。
-    """
+    """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。"""
 
     def __init__(self, markup: str):
         super().__init__(convert_charrefs=False)
@@ -701,92 +1107,39 @@ class ExternalLinkFootnotes(HTMLParser):
         for index, character in enumerate(markup):
             if character == '\n':
                 self.line_starts.append(index + 1)
-        self.parents: list[tuple[str, set[str]]] = []
+        self.parent_classes: list[set[str]] = []
         self.edits: list[tuple[int, str]] = []
         self.number = 0
-        # 文字列比較のために開いた <a> の本文を </a> まで集める
-        self.capture: dict | None = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
-        parent_classes = self.parents[-1][1] if self.parents else set()
+        parent_classes = self.parent_classes[-1] if self.parent_classes else set()
         href = attributes.get('href')
         if tag == 'a' and href and href.startswith(('http://', 'https://')):
-            reserved = PDF_RESERVED_ATTRIBUTES.intersection(attributes)
-            if reserved:
+            if PDF_FOOTNOTE_ATTRIBUTE in attributes:
                 raise ValueError(
-                    f'予約属性 {" / ".join(sorted(reserved))}'
-                    ' は原稿で使用できません'
+                    f'予約属性 {PDF_FOOTNOTE_ATTRIBUTE} は原稿で使用できません'
                 )
             # theme-base の `:not(.footnote) > a[href^="http"]` と対象をそろえる。
             # 明示脚注の中のリンクまで数えると、紙面に出ない欠番が生じる。
             if 'footnote' not in parent_classes:
+                self.number += 1
                 line, column = self.getpos()
                 insertion = self.line_starts[line - 1] + column + 2
-                if any(parent_tag in HEADING_TAGS for parent_tag, _ in self.parents):
-                    # 見出しの中のリンクは脚注にしない。表示用のURLは
-                    # book.css の ::after が見出しの下の1行に出す（直し4）
-                    self.edits.append(
-                        (insertion,
-                         f' {PDF_HEADING_URL_ATTRIBUTE}="{footnote_display_url(href)}"')
-                    )
-                else:
-                    self.capture = {
-                        'insertion': insertion,
-                        'href': href,
-                        'chunks': [],
-                    }
+                self.edits.append(
+                    (insertion, f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+                )
         if tag not in HTML_VOID_ELEMENTS:
-            self.parents.append((tag, set((attributes.get('class') or '').split())))
+            self.parent_classes.append(set((attributes.get('class') or '').split()))
 
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
-        if tag == 'a':
-            self.finish_anchor()
         if tag not in HTML_VOID_ELEMENTS:
-            self.parents.pop()
-
-    def handle_data(self, data):
-        if self.capture is not None:
-            self.capture['chunks'].append(data)
-
-    def handle_entityref(self, name):
-        if self.capture is not None:
-            self.capture['chunks'].append(html.unescape(f'&{name};'))
-
-    def handle_charref(self, name):
-        if self.capture is not None:
-            self.capture['chunks'].append(html.unescape(f'&#{name};'))
-
-    @staticmethod
-    def _bare_url_key(text: str) -> str:
-        # 折り返し用の不可視文字と前後の空白を外し、末尾の / の有無は同一視する
-        return text.replace('\u200b', '').replace('\u2060', '').strip().rstrip('/')
-
-    def finish_anchor(self):
-        capture, self.capture = self.capture, None
-        if capture is None:
-            return
-        text = ''.join(capture['chunks'])
-        href = capture['href']
-        if text and self._bare_url_key(text) == self._bare_url_key(href):
-            # 文字列がURLそのものなら脚注にしない（直し5）
-            self.edits.append(
-                (capture['insertion'], f' {PDF_BARE_URL_ATTRIBUTE}="1"')
-            )
-            return
-        self.number += 1
-        self.edits.append(
-            (capture['insertion'],
-             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
-             f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
-        )
+            self.parent_classes.pop()
 
     def handle_endtag(self, tag):
-        if tag == 'a':
-            self.finish_anchor()
-        if tag not in HTML_VOID_ELEMENTS and self.parents:
-            self.parents.pop()
+        if tag not in HTML_VOID_ELEMENTS and self.parent_classes:
+            self.parent_classes.pop()
 
 
 def number_external_link_footnotes(markup: str) -> str:
@@ -797,6 +1150,50 @@ def number_external_link_footnotes(markup: str) -> str:
     for offset, attribute in reversed(parser.edits):
         markup = markup[:offset] + attribute + markup[offset:]
     return markup
+
+
+def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
+    """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
+    result = subprocess.run(
+        ['node', '-e', LINK_SCAN_JS], input=text, text=True, capture_output=True,
+        cwd=REPO_ROOT, timeout=60,
+    )
+    if result.returncode:
+        raise ValueError(f'リンクを解析できません。npm installを確認してください: {result.stderr[-300:]}')
+    edits = []
+    for link in json.loads(result.stdout):
+        if 'html' in link:
+            parser = HtmlLinks()
+            parser.feed(link['html'])
+            for url in parser.links:
+                if not url.startswith('#') and urlsplit(url).scheme not in {'http', 'https', 'mailto', 'tel'}:
+                    raise ValueError(f'HTMLのローカルリンクはMarkdownリンクへ変更してください: {url}')
+            continue
+        url = link['url']
+        parsed = urlsplit(url)
+        if url.startswith('#') or parsed.scheme in {'https', 'http', 'mailto', 'tel'}:
+            continue
+        if parsed.scheme or parsed.netloc or not parsed.path or parsed.query:
+            raise ValueError(f'未対応のローカルリンクです: {url}')
+        target = (source.parent / unquote(parsed.path)).resolve()
+        if target.parent != source.parent.resolve() or target.suffix != '.md' or not target.is_file():
+            raise ValueError(f'配布対象の原稿に解決できません: {url}')
+        if target == source.resolve() and parsed.fragment:
+            destination = '#' + parsed.fragment
+        else:
+            if parsed.fragment:
+                raise ValueError(f'別冊の見出し位置はPDF配布先で保証できません: {url}')
+            filename = target.with_suffix('.pdf').name
+            if filename not in mapping:
+                raise ValueError(f'配布先が未登録です: {filename}。{LINK_MAP_HELP}')
+            destination = mapping[filename]
+        title = ''
+        if link.get('title') is not None:
+            title = ' "' + link['title'].replace('\\', '\\\\').replace('"', '\\"') + '"'
+        edits.append((link['start'], link['end'], f'[{link["label"]}](<{destination}>{title})'))
+    for start, end, replacement in sorted(edits, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
 
 
 def _is_cjk(char: str) -> bool:
@@ -826,13 +1223,15 @@ class CjkSoftBreaks(HTMLParser):
 
     # 区間を分断しない行内要素。これらはタグとしてしか出てこない。
     PHRASING_TAGS = {
-        "a", "abbr", "b", "bdi", "bdo", "br", "button", "cite", "code",
-        "data", "dfn", "em", "i", "img", "ins", "kbd", "mark", "q", "rp",
-        "rt", "ruby", "s", "samp", "small", "span", "strong", "sub", "sup",
-        "time", "u", "var", "wbr",
+        "a", "abbr", "b", "bdi", "bdo", "br", "button", "cite", "data",
+        "dfn", "em", "i", "img", "ins", "mark", "q", "rp", "rt", "ruby",
+        "s", "small", "span", "strong", "sub", "sup", "time", "u", "wbr",
     }
-    # 中身の改行が印字結果そのものになる要素。中の改行は消さない。
-    RAW_TEXT_TAGS = {"pre", "script", "style", "textarea"}
+    # コード・入力・出力例では改行もコピー対象になる。前後の地の文とも区切り、
+    # CJK の組版用空白除去を要素の内外へまたがせない。
+    RAW_TEXT_TAGS = {
+        "pre", "code", "kbd", "samp", "var", "script", "style", "textarea",
+    }
 
     def __init__(self, markup: str):
         super().__init__(convert_charrefs=False)
@@ -887,37 +1286,13 @@ class CjkSoftBreaks(HTMLParser):
         self._record(len(name) + 3)
 
 
-def _joins_soft_break(markup: str, visible: list[tuple[str, int]],
-                      run_start: int, index: int) -> bool:
-    """改行を詰めるか。詰めないと Chromium が半角空白として印字する。"""
-    left, right = visible[run_start - 1][0], visible[index][0]
-    if _is_cjk(left) and _is_cjk(right):
-        return True
-    # 本文は「。」「、」の後を詰めて書く。右が英字・行内コード・数字でも詰める
-    if left in "。、":
-        return True
-    # 和文の後の半角数字も詰める（「3つ」）
-    # 行内コードの数字と「1 つ」のように後ろへ空白を打った数字は残す
-    if _is_cjk(left) and right.isascii() and right.isdigit():
-        if "<code" in markup[visible[run_start - 1][1] + 1:visible[index][1]]:
-            return False
-        end = index
-        while end < len(visible) and visible[end][0].isascii() \
-                and visible[end][0].isdigit():
-            end += 1
-        return end >= len(visible) or visible[end][0] not in " \t\n\r"
-    return False
-
-
 def join_cjk_soft_breaks(markup: str) -> str:
     """テキストが流れる領域で CJK 同士に挟まれた改行を取り除く。
 
     vfm は段落中のソフト改行をそのまま改行文字として残し、組版の Chromium が
     それを U+0020（半角スペース）へ置き換える。「仕上げたら\nブラウザで」が
     「仕上げたら ブラウザで」と文が分断されるので、組版へ渡す前に詰める。
-    和文どうし・「。」「、」の後・和文の後の数字の前の改行を消す。
-    行内コードの数字と後ろに空白を打った数字の前は残す
-    （英語側は単語の区切りとして空白が要る）。
+    CJK でない文字が片側にある改行は残す（英語側は空白が要る）。
     """
     parser = CjkSoftBreaks(markup)
     parser.feed(markup)
@@ -942,7 +1317,7 @@ def join_cjk_soft_breaks(markup: str) -> str:
             # 段落の先頭・末尾にある整形用の空白も対象外
             if run_start == 0 or index >= len(visible):
                 continue
-            if _joins_soft_break(markup, visible, run_start, index):
+            if _is_cjk(visible[run_start - 1][0]) and _is_cjk(visible[index][0]):
                 # タグを挟む空白かたまりはバイト列では連続していない。
                 # タグを消さないよう、空白の文字位置だけを1つずつ消す
                 edits.extend((pos, pos + 1) for _, pos in run)
@@ -960,50 +1335,6 @@ def join_cjk_soft_breaks(markup: str) -> str:
             continue
         markup = markup[:start] + markup[end:]
     return markup
-
-
-def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
-    """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
-    result = subprocess.run(
-        ['node', '-e', LINK_SCAN_JS], input=text, text=True, capture_output=True,
-        cwd=REPO_ROOT, timeout=60,
-    )
-    if result.returncode:
-        raise ValueError(f'リンクを解析できません。npm installを確認してください: {result.stderr[-300:]}')
-    edits = []
-    for link in json.loads(result.stdout):
-        if 'html' in link:
-            parser = HtmlLinks()
-            parser.feed(link['html'])
-            for url in parser.links:
-                if not url.startswith('#') and urlsplit(url).scheme not in {'http', 'https', 'mailto', 'tel'}:
-                    raise ValueError(f'HTMLのローカルリンクはMarkdownリンクへ変更してください: {url}')
-            continue
-        url = link['url']
-        parsed = urlsplit(url)
-        if url.startswith('#') or parsed.scheme in {'https', 'http', 'mailto', 'tel'}:
-            continue
-        if parsed.scheme or parsed.netloc or not parsed.path or parsed.query:
-            raise ValueError(f'未対応のローカルリンクです: {url}')
-        target = (source.parent / unquote(parsed.path)).resolve()
-        if target.parent != source.parent.resolve() or target.suffix != '.md' or not target.is_file():
-            raise ValueError(f'配布対象の原稿に解決できません: {url}')
-        if target == source.resolve() and parsed.fragment:
-            destination = '#' + parsed.fragment
-        else:
-            if parsed.fragment:
-                raise ValueError(f'別冊の見出し位置はPDF配布先で保証できません: {url}')
-            filename = target.with_suffix('.pdf').name
-            if filename not in mapping:
-                raise ValueError(f'配布先が未登録です: {filename}。{LINK_MAP_HELP}')
-            destination = mapping[filename]
-        title = ''
-        if link.get('title') is not None:
-            title = ' "' + link['title'].replace('\\', '\\\\').replace('"', '\\"') + '"'
-        edits.append((link['start'], link['end'], f'[{link["label"]}](<{destination}>{title})'))
-    for start, end, replacement in sorted(edits, reverse=True):
-        text = text[:start] + replacement + text[end:]
-    return text
 
 
 # 並びは同じリビジョンが複数レイアウトに残っている時の優先順で、
@@ -1113,19 +1444,6 @@ def find_browser() -> str | None:
     return None
 
 
-def browser_version(executable: str) -> str:
-    """ブラウザの --version 出力を1行で返す。取れなければ「版不明」。"""
-    try:
-        result = subprocess.run(
-            [executable, "--version"], capture_output=True, text=True, timeout=30
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return "版不明"
-    if result.returncode != 0:
-        return "版不明"
-    return result.stdout.strip() or "版不明"
-
-
 def strip_inline_markdown(text: str) -> str:
     """見出しから行内マークダウンの記号を落とす。目次に記号を出さないため。"""
     return INLINE_MD_RE.sub(lambda m: next(g for g in m.groups() if g is not None), text)
@@ -1148,9 +1466,6 @@ def parse_source(
 ) -> tuple[str, list[str], list[tuple[str, str, list[tuple[str, str]]]]]:
     """本文を1度なめて、H1・本文行・目次項目を取り出す。
 
-    目次項目は (アンカー, 見出し文, Step子項目) の組。h2 のあとに来た
-    `### Step N:` はその h2 の子として入れる。
-
     フェンスの開閉は markdown_scan に任せる。教材には `## ` で始まる行を含む
     コードブロックがあり、素の正規表現では拾ってしまう。チルダのフェンスや
     入れ子の4連フェンスまで正しく数えるのは、あのモジュールの担当。
@@ -1158,7 +1473,7 @@ def parse_source(
     title = ""
     body: list[str] = []
     toc: list[tuple[str, str, list[tuple[str, str]]]] = []
-    seq = 0
+    sequence = 0
 
     for _, line, state, _ in fence_states(text):
         if state != "outside":
@@ -1173,50 +1488,27 @@ def parse_source(
 
         h2 = H2_RE.match(line)
         if h2:
-            seq += 1
-            anchor = f"s{seq}"
+            sequence += 1
+            anchor = f"s{sequence}"
             toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
             body.append(f"## {h2.group(1)} {{#{anchor}}}")
             continue
 
         h3_step = H3_STEP_RE.match(line)
         if h3_step:
-            seq += 1
-            anchor = f"s{seq}"
-            text = strip_inline_markdown(h3_step.group(1))
+            sequence += 1
+            anchor = f"s{sequence}"
+            step_text = strip_inline_markdown(h3_step.group(1))
             if toc:
-                toc[-1][2].append((anchor, text))
+                toc[-1][2].append((anchor, step_text))
             else:
-                toc.append((anchor, text, []))
+                toc.append((anchor, step_text, []))
             body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
             continue
 
         body.append(line)
 
     return title, body, toc
-
-
-_TS_FENCE = re.compile(r"^(\s*)```(?:typescript|ts)\s*$")
-_ANY_FENCE = re.compile(r"^\s*```")
-_TSX_FILEPATH = re.compile(r"filepath:\s*\S+?\.tsx\b")
-
-
-def relabel_tsx_fences(lines: list[str]) -> list[str]:
-    """filepath が .tsx の typescript / ts ブロックを tsx として色付けさせる。"""
-    out = list(lines)
-    index = 0
-    while index < len(out):
-        if not _ANY_FENCE.match(out[index]):
-            index += 1
-            continue
-        end = index + 1
-        while end < len(out) and not re.match(r"^\s*```\s*$", out[end]):
-            end += 1
-        opener = _TS_FENCE.match(out[index])
-        if opener and any(_TSX_FILEPATH.search(line) for line in out[index + 1:end]):
-            out[index] = f"{opener.group(1)}```tsx"
-        index = end + 1
-    return out
 
 
 def convert_mermaid(body: list[str], stem: str, work: Path,
@@ -1231,6 +1523,7 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
     errors: list[str] = []
     buffer: list[str] = []
     in_mermaid = False
+    opening_line = ""
     count = 0
     # 図のキャプションには直前の見出しを使う。テーマが付ける「図N: 」の後ろに
     # 何を置くかであり、ここに「図1」と書くと「図 1: 図1」と二重になる。
@@ -1251,7 +1544,9 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
         if state == "open":
             in_mermaid = fence.lang == "mermaid"
             buffer = []
-            if not in_mermaid:
+            if in_mermaid:
+                opening_line = line
+            else:
                 out.append(line)
             continue
 
@@ -1266,47 +1561,126 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
         count += 1
         svg = work / f"{stem}-{count}.svg"
         source = work / f"{stem}-{count}.mmd"
+        diagnostic = work / f"{stem}-{count}.mermaid-diagnostic.json"
+        # 前回の失敗診断を今回の結果に見せない。成功時はsidecarを残さない。
+        diagnostic.unlink(missing_ok=True)
         source.write_text("\n".join(buffer) + "\n", encoding="utf-8")
+        svg.unlink(missing_ok=True)
+        mermaid_command = (
+            [env["PDF_BOOK_MERMAID_BIN"]]
+            if "PDF_BOOK_MERMAID_BIN" in env
+            else ["npx", "--yes", MERMAID_CLI]
+        )
+        command = [
+            *mermaid_command,
+            "-i", str(source), "-o", str(svg), "-b", "transparent",
+            "-c", str(work / "mermaid.json"),
+            "-p", str(work / "puppeteer.json"),
+        ]
+        timed_out = False
         try:
-            mermaid_command = (
-                [env["PDF_BOOK_MERMAID_BIN"]]
-                if "PDF_BOOK_MERMAID_BIN" in env
-                else ["npx", "--yes", MERMAID_CLI]
-            )
             result = subprocess.run(
-                [*mermaid_command,
-                 "-i", str(source), "-o", str(svg), "-b", "transparent",
-                 "-c", str(work / "mermaid.json"),
-                 "-p", str(work / "puppeteer.json")],
+                command,
                 capture_output=True, text=True, cwd=work, env=env,
                 timeout=MERMAID_TIMEOUT,
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as error:
             # 図が出ないだけで本文は組める。既存の失敗経路に合流させ、原文を残す
+            timed_out = True
             result = subprocess.CompletedProcess(
-                args=[], returncode=1, stdout="",
-                stderr=f"{MERMAID_TIMEOUT}秒を超えても描画が返りませんでした",
+                args=command, returncode=None,
+                stdout=_subprocess_output_text(error.stdout),
+                stderr=_subprocess_output_text(error.stderr),
             )
         except OSError as error:
             # npx が無い環境でも、図を諦めれば本文は組める
             result = subprocess.CompletedProcess(
-                args=[], returncode=1, stdout="",
+                args=command, returncode=1, stdout="",
                 stderr=f"mermaid-cli を起動できません: {error}",
             )
-        if svg.exists():
+        render_error = ""
+        if timed_out:
+            render_error = f"{MERMAID_TIMEOUT}秒を超えても描画が返りませんでした"
+        elif result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()[-200:]
+            render_error = detail or f"mermaid-cli がexit {result.returncode} で終了しました"
+        elif not svg.is_file():
+            render_error = "mermaid-cli がSVGを出力しませんでした"
+        else:
+            try:
+                root = ET.parse(svg).getroot()
+                if root.tag.rsplit("}", 1)[-1] != "svg":
+                    render_error = "出力がSVG文書ではありません"
+            except (ET.ParseError, OSError) as error:
+                render_error = f"SVGを解析できません: {error}"
+        if not render_error:
             embed_font(svg)
             figure_caption = caption or PRE_HEADING_CAPTION_OVERRIDES.get(
                 (source_stem, count), "図解")
             out += ["", f"![{figure_caption}]({svg.name})", ""]
         else:
-            errors.append(
-                f"図{count} の描画に失敗: "
-                f"{(result.stderr or result.stdout).strip()[-200:]}"
+            payload = {
+                "source_stem": source_stem,
+                "work_stem": stem,
+                "figure": count,
+                "input_path": str(source),
+                "input_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                "argv": command,
+                "returncode": result.returncode,
+                "timed_out": timed_out,
+                "stdout": _subprocess_output_text(result.stdout),
+                "stderr": _subprocess_output_text(result.stderr),
+                "failure_reason": render_error,
+            }
+            svg.unlink(missing_ok=True)
+            first_subprocess_diagnostic = next(
+                (
+                    item.strip()
+                    for stream in (payload["stderr"], payload["stdout"])
+                    for item in stream.splitlines()
+                    if item.strip()
+                ),
+                "",
             )
-            out.extend(["```mermaid", *buffer, "```"])
+            _write_json_atomic(diagnostic, payload)
+            if timed_out:
+                summary = render_error
+                if first_subprocess_diagnostic:
+                    summary += f"; 子プロセス診断: {first_subprocess_diagnostic}"
+            else:
+                summary = first_subprocess_diagnostic or render_error
+            errors.append(
+                f"{source_stem or stem}: 図{count} の描画に失敗: "
+                f"{summary}（診断: {diagnostic.resolve()}）"
+            )
+            out.extend([opening_line, *buffer, line])
         in_mermaid = False
 
+    if in_mermaid:
+        count += 1
+        errors.append(f"図{count} のmermaidフェンスが閉じていません")
+        out.extend([opening_line, *buffer])
+
     return out, count, errors
+
+
+def _subprocess_output_text(value: str | bytes | None) -> str:
+    """subprocessの部分出力を、欠落させずJSONへ入れられる文字列にする。"""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:
+    """失敗診断を同じディレクトリで完成させてから公開する。"""
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, path)
 
 
 @cache
@@ -1427,6 +1801,7 @@ def prepare_work_dir() -> None:
         shutil.copy2(source, WORK_DIR / "fonts" / source.name)
     # 原稿は ./screenshots/... の相対参照なので、同じ位置関係を作る
     (WORK_DIR / "screenshots").symlink_to(SRC_DIR / "screenshots")
+    _stage_local_theme()
     # -T に作業ディレクトリの外を指す絶対パスを渡すと、Vivliostyle は
     # そのCSSを黙って無視する（ビルドは成功し、テーマ既定の見た目で出てしまう）。
     # 原稿と同じ場所に置いて相対パスで渡す。
@@ -1453,6 +1828,39 @@ def prepare_work_dir() -> None:
     for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
                  if fmt == "truetype"}:
         shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
+
+
+def _stage_local_theme() -> None:
+    """相対 import を保ったテーマ実体を組版入力と同じ場所へ複製する。"""
+    package_root = TOOLCHAIN_DIR / "node_modules" / "@vivliostyle"
+    techbook = package_root / "theme-techbook"
+    theme_base = package_root / "theme-base"
+    theme_css = techbook / "theme.css"
+    if not theme_css.is_file():
+        raise FileNotFoundError(f"PDFテーマのCSSが無い: {theme_css}")
+    try:
+        theme_source = theme_css.read_text(encoding="utf-8")
+    except UnicodeDecodeError as error:
+        raise OSError(f"PDFテーマのCSSをUTF-8で読めない: {theme_css}") from error
+    for relative in LOCAL_THEME_BASE_IMPORTS:
+        import_target = f"../theme-base/{relative}"
+        if not re.search(
+            rf"@import\s+url\(\s*['\"]?{re.escape(import_target)}['\"]?\s*\)\s*;",
+            theme_source,
+        ):
+            raise OSError(f"PDFテーマの相対importが無い: {import_target}")
+        imported = theme_base / relative
+        if not imported.is_file():
+            raise FileNotFoundError(f"PDFテーマのimport先が無い: {imported}")
+
+    destination_root = WORK_DIR / "local-theme"
+    destination_root.mkdir()
+    for source in (techbook, theme_base):
+        source_tree = _hash_tree_stably(source)
+        destination = destination_root / source.name
+        shutil.copytree(source, destination, symlinks=True, copy_function=shutil.copy2)
+        if _hash_tree_stably(destination) != source_tree:
+            raise OSError(f"PDFテーマをbyte-exactに複製できません: {source.name}")
 
 
 def work_slug(stem: str) -> str:
@@ -1485,9 +1893,6 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     # 前段の変換失敗でも、前回のPDFを今回の生成物に見せない。
     output.unlink(missing_ok=True)
     slug = work_slug(stem)
-    binding_file = WORK_DIR / f"{slug}.evidence-binding.json"
-    binding_file.unlink(missing_ok=True)
-    source_sha256 = sha256_file(path)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
     # 生成機械に依存する上に Type 3 で埋め込まれる。紙面では単色でよいので外す。
@@ -1500,8 +1905,6 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         return [f"{path.name}: H1 が無い"]
 
     body, figures, problems = convert_mermaid(body, slug, WORK_DIR, env, stem)
-    # filepath が .tsx のブロックは tsx と宣言し直して構文色を正す（issue #474 直し3）
-    body = relabel_tsx_fences(body)
 
     document = WORK_DIR / f"{slug}.md"
     document.write_text(
@@ -1509,8 +1912,6 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     )
     per_book_css = WORK_DIR / f"{slug}.css"
     base_css = build_book_css(title) + "\n" + HEADING_INLINE_CSS
-    # 幅の計測も本番と同じ改ページ条件で行うため、冊ごとの指定は base_css 側に入れる
-    base_css += PAGE_BREAK_HINTS.get(slug, "")
     per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
 
     # Vivliostyle は行長だけで pre を割るため、空白があっても語の途中で折れる。
@@ -1540,56 +1941,124 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         )
         return problems
 
-    html_doc = WORK_DIR / f"{slug}.html"
-    structure_file = WORK_DIR / f"{slug}.table-structure.json"
-    forced_tables: dict[int, str] = {}
-
-    def prepare_html():
-        protected = protect_prose_latin(
-            protect_table_latin(join_cjk_soft_breaks(converted.stdout))
-        )
-        # 空白を含む長い行内コードを空白の位置で分けてから、前で改行できない字で
-        # 始まるコード（分けた後の先頭の片を含む）の直前へ <wbr> を置く。
-        # restructure_tables は一部の表のセルを dt/dd へ変えるため、
-        # 「表のセルか」で対象を分けるこの2つはその前に掛ける
-        protected = split_long_inline_code(protected)
-        protected = insert_wbr_before_code(protected)
-        structured, table_structure = restructure_tables(protected, forced_tables)
-        # 縦展開で生まれた dd/dt も含めて、全ブロックの末尾を接着してから監査へ渡す
-        structured = keep_block_tails(structured)
-        annotated, manifest = annotate_inline_code(structured, slug)
-        # filepath 見出しは行コメントのため途中で改行できず、枠内に置くと
-        # 行ごと縮小される。コードではなく「この枠の書き込み先」を示す行なので、
-        # 折返し・縮小の処理へ渡す前に枠の外へ出す
-        annotated = hoist_code_filepath(annotated)
-        residuals: list[str] = []
-        markup = wrap_code_in_html(annotated, residuals)
-        if residuals:
-            raise ValueError(f"コピー安全に組版できないコード行: {residuals[0][:80]}")
-        unsafe = unsafe_runs(markup)
-        if unsafe:
-            raise ValueError(f"コード行に折返し候補を作れません: {unsafe[0][:80]}")
-        # 折返しが確定してから高さを数える。大きい塊だけ分割を許す
-        markup = mark_breakable_pres(markup)
-        # 丸ごと送られる塊の直前にあるラベルや導入文に、次と同じページへ
-        # 置く印を付ける（issue #475）。脚注の番号付けより先に付ける
-        markup = mark_keep_next(markup)
-        markup = number_external_link_footnotes(markup)
-        validate_annotated_html(markup, manifest)
-        html_doc.write_text(markup, encoding="utf-8")
-        (WORK_DIR / f"{slug}.inline-manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        structure_file.write_text(json.dumps({
-            "schema_version": 1, "document_id": slug,
-            "source_sha256": source_sha256, "tables": table_structure,
-        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        return manifest, table_structure
-
     try:
-        inline_manifest, table_structure = prepare_html()
+        validate_vfm_code_fences(document.read_text(encoding="utf-8"), converted.stdout)
+        converted_markup = join_cjk_soft_breaks(converted.stdout)
+        annotated, inline_manifest = annotate_inline_code(converted_markup, slug)
     except ValueError as error:
-        return [f"{path.name}: HTML組版準備に失敗: {error}"]
+        problems.append(f"{path.name}: 行内コードを監査用に識別できません: {error}")
+        return problems
+    (WORK_DIR / f"{slug}.inline-manifest.json").write_text(
+        json.dumps(inline_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    residuals: list[str] = []
+    markup = wrap_code_in_html(annotated, residuals)
+    if residuals:
+        # フォント縮小の下限も割る行＝コピー安全な見た目を作れない行。
+        # 出さずに止める。材料側のコード整形で対処する。
+        problems.append(
+            f"{path.name}: コピー安全に組版できないコード行: {residuals[0][:80]}"
+        )
+        return problems
+    unsafe = unsafe_runs(markup)
+    if unsafe:
+        # 折返し候補を作れなかった行が残る＝語の途中で切れる可能性が残る。
+        # 出さずに止める。材料のコードを変えずに済む範囲の限界。
+        problems.append(
+            f"{path.name}: コード行に折返し候補を作れません: {unsafe[0][:80]}"
+        )
+        return problems
+    # 折返し後の実DOMを最終CSS・フォント・幅で測る。版面に収まる pre は
+    # 行数に関係なく丸ごと送り、実寸が1ページを超えるものだけ分割を許す。
+    try:
+        markup, pre_sources = annotate_pres(markup)
+    except ValueError as error:
+        problems.append(f"{path.name}: コードブロックへ測定IDを付けられません: {error}")
+        return problems
+    pre_measure_html = WORK_DIR / f"{slug}.pre-measure.html"
+    pre_measure_sources = WORK_DIR / f"{slug}.pre-sources.json"
+    pre_measure_report = WORK_DIR / f"{slug}.pre-measurement.json"
+    pre_measure_html.write_text(markup, encoding="utf-8")
+    pre_measure_sources.write_text(
+        json.dumps(
+            [
+                {"id": source.pre_id, "source_sha256": source.source_sha256}
+                for source in pre_sources
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    if pre_sources:
+        if not browser:
+            problems.append(f"{path.name}: pre の実寸測定に使う Chromium がありません")
+            return problems
+        theme_path = Path(env.get("PDF_BOOK_THEME_PATH", THEME))
+        theme_css = theme_path / "theme.css" if theme_path.is_dir() else theme_path
+        pre_measure_report.unlink(missing_ok=True)
+        pre_measure_command = [
+            "node",
+            str(MEASURE_BREAKABLE_CODE),
+            "--html",
+            str(pre_measure_html),
+            "--theme-css",
+            str(theme_css),
+            "--book-css",
+            str(WORK_DIR / "book.css"),
+            "--per-book-css",
+            str(per_book_css),
+            "--sources",
+            str(pre_measure_sources),
+            "--report",
+            str(pre_measure_report),
+            "--browser",
+            str(browser),
+            "--toolchain-dir",
+            str(TOOLCHAIN_DIR),
+            "--page-width-mm",
+            "210",
+            "--page-height-mm",
+            "297",
+        ]
+        try:
+            measured_pre = subprocess.run(
+                pre_measure_command,
+                capture_output=True,
+                text=True,
+                cwd=WORK_DIR,
+                env=env,
+                timeout=BUILD_TIMEOUT,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            problems.append(f"{path.name}: pre の実寸測定を起動できません: {error}")
+            return problems
+        if measured_pre.returncode != 0 or not pre_measure_report.is_file():
+            detail = (measured_pre.stderr or measured_pre.stdout).strip()[-500:]
+            problems.append(f"{path.name}: pre の実寸測定に失敗: {detail}")
+            return problems
+        try:
+            pre_report = json.loads(pre_measure_report.read_text(encoding="utf-8"))
+            markup = apply_breakable_measurements(markup, pre_sources, pre_report)
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            problems.append(f"{path.name}: pre の実寸結果を適用できません: {error}")
+            return problems
+    # 実寸で分割可否を確定した後、明示的な前向き案内だけを直後の
+    # コード・図・表・一覧と同じページへ置く。開始 p タグの class 以外は触らない。
+    markup = mark_keep_next(markup)
+    try:
+        markup = number_external_link_footnotes(markup)
+    except ValueError as error:
+        problems.append(f"{path.name}: 外部リンクの印刷脚注を作れません: {error}")
+        return problems
+    try:
+        validate_annotated_html(markup, inline_manifest)
+    except ValueError as error:
+        problems.append(f"{path.name}: コード組版後のHTMLまたは監査IDが不正です: {error}")
+        return problems
+    html_doc = WORK_DIR / f"{slug}.html"
+    html_doc.write_text(markup, encoding="utf-8")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     # HTMLの直接入力ではテーマの準備経路を通らないため、原稿として登録する。
@@ -1598,9 +2067,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         "title": title,
         "language": "ja",
         "entry": [{"path": html_doc.name, "title": title}],
-        "theme": [env.get("PDF_BOOK_THEME_PATH", THEME),
-                  "./book.css", f"./{per_book_css.name}"],
+        "theme": [LOCAL_THEME_CSS, "./book.css", f"./{per_book_css.name}"],
         "workspaceDir": f".vivliostyle-{slug}",
+        "copyAsset": {"includes": ["local-theme/**"]},
     }
     config_file.write_text(
         "module.exports = " + json.dumps(config, ensure_ascii=False) + ";\n",
@@ -1624,56 +2093,129 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
 
     manifest_file = WORK_DIR / f"{slug}.inline-manifest.json"
     measurement_file = WORK_DIR / f"{slug}.inline-measurement.json"
+    measurement_cli_file = WORK_DIR / f"{slug}.inline-measurement-cli.json"
     measurement_pdf = WORK_DIR / f"{slug}.inline-measurement.pdf"
     audit_env = {
         **env,
         "PDF_BOOK_TOOLCHAIN_DIR": str(TOOLCHAIN_DIR),
         "PDF_BOOK_INLINE_LAYOUT_MANIFEST": str(manifest_file),
         "PDF_BOOK_INLINE_LAYOUT_REPORT": str(measurement_file),
+        "PDF_BOOK_MARGIN_OUTLINE_GLYPHS": str(
+            DECORATIVE_MARGIN_GLYPHS.resolve()
+        ),
+        "PDF_BOOK_MARGIN_OUTLINE_FONT": str(
+            (WORK_DIR / "fonts" / "BIZUDPGothic_400Regular.ttf").resolve()
+        ),
+        "PDF_BOOK_MARGIN_OUTLINE_SOURCE": str(path.resolve()),
     }
     measurement_file.unlink(missing_ok=True)
+    measurement_cli_file.unlink(missing_ok=True)
     measure_command = command.copy()
     measure_command[measure_command.index("-o") + 1] = str(measurement_pdf)
+    measurement_cli_detail = None
+    measurement_cli_receipt = {
+        "schema": 1,
+        "kind": "PDF_BOOK_INLINE_MEASUREMENT_CLI_DIAGNOSTIC",
+        "document_id": slug,
+        "argv": measure_command,
+        "cwd": str(WORK_DIR),
+        "environment": {
+            key: audit_env[key]
+            for key in [
+                "PDF_BOOK_TOOLCHAIN_DIR",
+                "PDF_BOOK_INLINE_LAYOUT_MANIFEST",
+                "PDF_BOOK_INLINE_LAYOUT_REPORT",
+                "PDF_BOOK_MARGIN_OUTLINE_GLYPHS",
+                "PDF_BOOK_MARGIN_OUTLINE_FONT",
+                "PDF_BOOK_MARGIN_OUTLINE_SOURCE",
+            ]
+        },
+    }
     try:
-        # 変換後は同じHTMLを再計測し、古い表の寸法を最終PDFへ流用しない。
-        for attempt in range(len(table_structure) + 1):
-            measurement_file.unlink(missing_ok=True)
-            subprocess.run(
+        # 第1組版のはみ出しは縮小候補を求める入力で、出荷成功とは扱わない。
+        try:
+            measured_cli = subprocess.run(
                 measure_command, capture_output=True, text=True, cwd=WORK_DIR,
                 env=audit_env, timeout=BUILD_TIMEOUT,
             )
-            measured = json.loads(measurement_file.read_text(encoding="utf-8"))
-            remaining_orders = [t["source_order"] for t in table_structure if t["layout"] == "table"]
-            to_stack = measured_tables_to_stack(inline_manifest, measured, remaining_orders)
-            if to_stack:
-                table_css, table_changes, unresolved_tables = '', [], []
-            else:
-                table_css, table_changes, unresolved_tables = derive_table_css(inline_manifest, measured)
-            (WORK_DIR / f"{slug}.table-adjustment.json").write_text(json.dumps({
-                "adjustments": table_changes, "unresolved": unresolved_tables,
-                "restructure_requested": to_stack,
-            }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            id_to_order = {t["id"]: order for t, order in zip(inline_manifest["tables"], remaining_orders)}
-            # 別の列から幅を奪う配分案は使わず、行ごとの全幅表示へ変える。
-            for change in table_changes:
-                to_stack[id_to_order[change["table_id"]]] = "measured_inline_code_needs_more_width"
-            for unresolved in unresolved_tables:
-                if unresolved["reason"] not in {"minimum_width_sum_exceeds_table", "code_free_column_width_not_proven", "no_width_change_derived"}:
-                    raise ValueError(f"表の寸法を証明できません: {unresolved}")
-                to_stack[id_to_order[unresolved["table_id"]]] = unresolved["reason"]
-            if to_stack:
-                forced_tables.update(to_stack)
-                inline_manifest, table_structure = prepare_html()
-                per_book_css.write_text(base_css + NOWRAP_CSS, encoding="utf-8")
-                continue
-            candidate_css, changes = derive_flow_css(inline_manifest, measured)
-            break
-        else:
-            raise ValueError("表の自動変換が収束しません")
+            measurement_cli_receipt.update({
+                "result": "completed",
+                "returncode": measured_cli.returncode,
+                "stdout": measured_cli.stdout,
+                "stderr": measured_cli.stderr,
+            })
+            measurement_cli_detail = (
+                f"計測CLI returncode={measured_cli.returncode}; "
+                f"stderr末尾(最大2048文字)={measured_cli.stderr[-2048:]!r}; "
+                f"完全なCLI診断={measurement_cli_file}"
+            )
+        except subprocess.TimeoutExpired as error:
+            stdout = (
+                error.stdout.decode("utf-8", "replace")
+                if isinstance(error.stdout, bytes)
+                else (error.stdout or "")
+            )
+            stderr = (
+                error.stderr.decode("utf-8", "replace")
+                if isinstance(error.stderr, bytes)
+                else (error.stderr or "")
+            )
+            measurement_cli_receipt.update({
+                "result": "timeout",
+                "returncode": None,
+                "stdout": stdout,
+                "stderr": stderr,
+                "timeout_seconds": error.timeout,
+                "error_type": type(error).__name__,
+                "error": str(error),
+            })
+            measurement_cli_detail = (
+                "計測CLI returncode=timeout; "
+                f"stderr末尾(最大2048文字)={stderr[-2048:]!r}; "
+                f"完全なCLI診断={measurement_cli_file}"
+            )
+            raise
+        except OSError as error:
+            measurement_cli_receipt.update({
+                "result": "launch_error",
+                "returncode": None,
+                "stdout": "",
+                "stderr": "",
+                "error_type": type(error).__name__,
+                "error": str(error),
+            })
+            measurement_cli_detail = (
+                "計測CLI returncode=not_started; stderr=''; "
+                f"完全なCLI診断={measurement_cli_file}"
+            )
+            raise
+        finally:
+            measurement_cli_file.write_text(
+                json.dumps(
+                    measurement_cli_receipt, ensure_ascii=False, indent=2
+                ) + "\n",
+                encoding="utf-8",
+            )
+        measured = json.loads(measurement_file.read_text(encoding="utf-8"))
+        if measured.get("result") == "setup_or_hook_fail":
+            raise ValueError("組版の計測を開始できません: " + str(measured.get("error", "原因の記録がありません")))
+        candidate_css, changes = derive_flow_css(inline_manifest, measured)
+        table_css, table_changes, unresolved_tables = derive_table_css(inline_manifest, measured)
         per_book_css.write_text(base_css + candidate_css + table_css, encoding="utf-8")
         (WORK_DIR / f"{slug}.inline-adjustment.json").write_text(
             json.dumps(changes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
+        (WORK_DIR / f"{slug}.table-adjustment.json").write_text(
+            json.dumps(
+                {"adjustments": table_changes, "unresolved": unresolved_tables},
+                ensure_ascii=False, indent=2,
+            ) + "\n", encoding="utf-8"
+        )
+        if unresolved_tables:
+            raise ValueError(
+                "表の配置変更が必要です: "
+                + ", ".join(f"{item['table_id']} ({item['reason']})" for item in unresolved_tables)
+            )
         reviewed_css, reviewed_tables = derive_reviewed_table_css(
             load_table_layout_overrides(TABLE_LAYOUT_OVERRIDES),
             path, inline_manifest, measured,
@@ -1690,9 +2232,11 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             ) + "\n", encoding="utf-8"
         )
     except (OSError, ValueError, subprocess.TimeoutExpired) as error:
-        if isinstance(error, subprocess.TimeoutExpired):
-            _append_build_log(slug, f"measurement timeout {BUILD_TIMEOUT}s", _expired_output(error))
-        problems.append(f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: {error}")
+        cli_suffix = f"; {measurement_cli_detail}" if measurement_cli_detail else ""
+        problems.append(
+            f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: "
+            f"{error}{cli_suffix}"
+        )
         return problems
     finally:
         measurement_pdf.unlink(missing_ok=True)
@@ -1704,19 +2248,14 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             command, capture_output=True, text=True, cwd=WORK_DIR, env=audit_env,
             timeout=BUILD_TIMEOUT,
         )
-    except subprocess.TimeoutExpired as error:
+    except subprocess.TimeoutExpired:
         # 例外のまま抜けると、ここまでに集めた他の冊の問題ごと落ちる
-        _append_build_log(slug, f"vivliostyle timeout {BUILD_TIMEOUT}s", _expired_output(error))
         problems.append(f"{path.name}: 組版が{BUILD_TIMEOUT}秒を超えました")
         return problems
     except OSError as error:
         problems.append(f"{path.name}: 組版コマンドを起動できません: {error}")
         return problems
     if result.returncode != 0 or not output.exists() or output.stat().st_size <= 0:
-        _append_build_log(
-            slug, f"vivliostyle exit {result.returncode}",
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
-        )
         problems.append(
             f"{path.name}: 組版に失敗: {(result.stderr or result.stdout).strip()[-300:]}"
         )
@@ -1742,22 +2281,6 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         problems.append(f"{path.name}: PDF生成後の行内コード検査に失敗: {error}")
         output.unlink(missing_ok=True)
         return problems
-
-    if sha256_file(path) != source_sha256:
-        output.unlink(missing_ok=True)
-        return [f"{path.name}: 組版中に原稿が変更されました"]
-    artifacts = {
-        "source": path, "html": html_doc, "inline_manifest": manifest_file,
-        "inline_layout": Path(audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"]),
-        "inline_pdf": pdf_audit_file, "pdf": output, "table_structure": structure_file,
-        "per_book_css": per_book_css, "config": config_file,
-        "book_css": WORK_DIR / "book.css", "source_book_css": BOOK_CSS,
-    }
-    binding_file.write_text(json.dumps({
-        "schema_version": 1, "document_id": slug,
-        "artifacts": {name: {"path": str(file.resolve()), "sha256": sha256_file(file)}
-                      for name, file in artifacts.items()},
-    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # ページ数は進捗表示のためだけに読む。poppler が無い環境でも組版は続ける
     try:
@@ -1800,12 +2323,6 @@ def main(argv: list[str]) -> int:
         print(f'表幅設定を正本冊子と照合できません: {error}', file=sys.stderr)
         return 2
     browser = find_browser()
-    # 使う実体と版を毎回ログに残す。Chrome と Playwright 同梱の Chromium では
-    # 合字など描画が変わり得るので、どちらで組んだかは検査結果を読む前提になる
-    if browser:
-        print(f"組版ブラウザ: {browser}（{browser_version(browser)}）", flush=True)
-    else:
-        print("組版ブラウザ: 見つからない（Vivliostyle が自前で取得する）", flush=True)
     # symlink 越しの別名を正本36冊の指定と認めると、別名PDFだけを生成したあとに
     # 古い正本PDFへ証跡を発行できる。正本パスそのものだけを全冊ビルドとする。
     release_source_paths = {path.absolute() for path in all_sources}
@@ -1815,7 +2332,6 @@ def main(argv: list[str]) -> int:
         and target_paths == release_source_paths
         and len(targets) == len(all_sources)
     )
-    touches_release_outputs = bool(target_paths & release_source_paths)
     env = dict(os.environ)
     # mermaid-cliはpuppeteerをpeer dependencyとして要求する。アプリ用npm設定で省略させない。
     env['npm_config_legacy_peer_deps'] = 'false'
@@ -1837,22 +2353,37 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         toolchain = prepare_release_toolchain(env)
+        if "node_exec_path" in toolchain:
+            env["PATH"] = (
+                f"{Path(toolchain['node_exec_path']).parent}{os.pathsep}{env.get('PATH', '')}"
+            )
         env["PDF_BOOK_VIVLIOSTYLE_BIN"] = toolchain["vivliostyle_bin"]
         env["PDF_BOOK_VFM_BIN"] = toolchain["vfm_bin"]
         env["PDF_BOOK_MERMAID_BIN"] = toolchain["mermaid_bin"]
         env["PDF_BOOK_THEME_PATH"] = toolchain["theme_path"]
+    except (OSError, ValueError) as error:
+        print(f"PDF生成ツールを固定できません: {error}", file=sys.stderr)
+        return 2
+    try:
+        # Markdownの画像文法を別実装するとVFMと判定がずれる。固定した実VFMで
+        # 全対象を描画し、出力と証跡を触る前に実際のimg参照を確定する。
+        validate_referenced_images(targets, toolchain["vfm_bin"], env)
+    except (OSError, ValueError) as error:
+        print(f"画像参照を解決できません: {error}", file=sys.stderr)
+        return 2
+    try:
         if full_release_build:
             before_inputs = release_input_snapshot(
                 all_sources, link_map_filename, browser, toolchain
             )
     except (OSError, ValueError) as error:
-        print(f"PDF生成ツールと入力を固定できません: {error}", file=sys.stderr)
+        print(f"PDF生成入力を固定できません: {error}", file=sys.stderr)
         return 2
 
     # この先はPDFを上書きし得る。部分ビルドや失敗のあとに、過去の全冊証跡を
     # 現在の出力へ流用させないため、実行直前に失効させる。
-    if touches_release_outputs:
-        RELEASE_RECEIPT.unlink(missing_ok=True)
+    # 追加PDFも全冊inventoryを変えるため、正本と名前が異なる入力でも失効させる。
+    RELEASE_RECEIPT.unlink(missing_ok=True)
 
     try:
         prepare_work_dir()
@@ -1863,9 +2394,7 @@ def main(argv: list[str]) -> int:
 
     problems: list[str] = []
     built_outputs: list[dict] = []
-    for index, path in enumerate(targets, start=1):
-        # 完了時だけ出すと、固まった冊が分からないまま job timeout まで沈黙する（#501）。
-        print(f"[{index}/{len(targets)}] 組み始め: {path.name}", flush=True)
+    for path in targets:
         book_problems = build_one(path, browser, env, link_map)
         problems += book_problems
         if full_release_build and not book_problems:

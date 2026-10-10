@@ -25,6 +25,30 @@ GENERATED_ATTRIBUTE = re.compile(
 
 
 class InlineLayoutTest(unittest.TestCase):
+    def test_bound_day07_path_column_gets_idempotent_copy_neutral_breaks(self):
+        prefix = "".join("<table><tr><td>x</td></tr></table>" for _ in range(13))
+        source = (
+            prefix
+            + "<table><tr><td><code>src/server/api/routers/_helpers/user-email-conflict.ts"
+            "</code></td><td>役割</td><td>Step 0</td></tr></table>"
+        )
+        annotated, manifest = annotate_inline_code(source, "day07-ec8746")
+        self.assertIn("src/<wbr>server/<wbr>api/<wbr>routers/<wbr>_helpers/", annotated)
+        self.assertEqual(
+            manifest["entries"][0]["expected_text"],
+            "src/server/api/routers/_helpers/user-email-conflict.ts",
+        )
+        self.assertIs(manifest["entries"][0]["allow_line_wrap"], True)
+        validate_annotated_html(annotated, manifest)
+
+    def test_path_breaks_are_not_added_to_other_documents_or_columns(self):
+        prefix = "".join("<table><tr><td>x</td></tr></table>" for _ in range(13))
+        target = "<table><tr><td><code>src/server/a.ts</code></td><td><code>role/path</code></td></tr></table>"
+        other, _ = annotate_inline_code(prefix + target, "day08-other")
+        day07, _ = annotate_inline_code(prefix + target, "day07-ec8746")
+        self.assertNotIn("<wbr>", other)
+        self.assertIn("src/<wbr>server/<wbr>a.ts", day07)
+        self.assertIn(">role/path</code>", day07)
     def test_entities_and_nested_spans_produce_browser_text(self):
         source = (
             '<p class="lead">before <code class="language-ts" title="keep">'
@@ -73,6 +97,40 @@ class InlineLayoutTest(unittest.TestCase):
         self.assertNotIn("data-pdf-inline-id", pre)
         self.assertEqual(GENERATED_ATTRIBUTE.sub("", annotated), source)
 
+    def test_repeating_header_identity_is_source_derived_with_spans(self):
+        source = (
+            "<table><thead><tr><th rowspan=\"2\"><code>HEAD-A</code></th>"
+            "<th colspan=\"2\"><code>HEAD-B</code></th></tr>"
+            "<tr><th><code>HEAD-C</code></th><th><code>HEAD-D</code></th></tr></thead>"
+            "<tbody><tr><td><code>BODY</code></td><td>x</td><td>y</td></tr></tbody></table>"
+        )
+        _, manifest = annotate_inline_code(source, "repeat-header")
+
+        headers = manifest["entries"][:4]
+        self.assertTrue(
+            all(entry["pagination_role"] == "repeating_table_header" for entry in headers)
+        )
+        self.assertEqual(
+            [entry["table_cell"]["column_index"] for entry in headers], [0, 1, 1, 2]
+        )
+        self.assertEqual(
+            [entry["table_cell"]["row_index"] for entry in headers], [0, 0, 1, 1]
+        )
+        self.assertEqual(headers[0]["table_cell"]["row_span"], 2)
+        self.assertEqual(headers[1]["table_cell"]["column_span"], 2)
+        self.assertEqual([entry["table_cell"]["code_index"] for entry in headers], [0, 0, 0, 0])
+        self.assertNotIn("pagination_role", manifest["entries"][4])
+        self.assertNotIn("table_cell", manifest["entries"][4])
+
+    def test_invalid_table_spans_fail_closed(self):
+        for attribute in ('rowspan="0"', 'colspan="x"', 'rowspan="-1"'):
+            with self.subTest(attribute=attribute):
+                with self.assertRaisesRegex(InlineLayoutMarkupError, "正の整数"):
+                    annotate_inline_code(
+                        f"<table><tr><th {attribute}><code>x</code></th></tr></table>",
+                        "bad-span",
+                    )
+
     def test_ids_are_stable_and_document_scoped(self):
         source = "<table><tr><td>x</td></tr></table><p><code>same</code> <code>same</code></p>"
         first_html, first_manifest = annotate_inline_code(source, "book-a")
@@ -113,6 +171,7 @@ class InlineLayoutTest(unittest.TestCase):
             '<p><code class="a" class="b">x</code></p>',
             "<p><code><code>x</code></code></p>",
             "<code",
+            "<table><tr><td><table><tr><td>x</td></tr></table></td></tr></table>",
         )
         for source in malformed:
             with self.subTest(source=source):
@@ -204,7 +263,11 @@ class InlineLayoutTest(unittest.TestCase):
                 annotated, manifest = annotate_inline_code(source, "malformed-wrap")
                 residuals: list[str] = []
                 wrapped = wrap_code_in_html(annotated, residuals)
-                self.assertEqual(residuals, [])
+                # 終了tagが空白付きの経路はrendererでも明示停止し、DOM拒否も保持します。
+                if "</span >" in source:
+                    self.assertEqual(len(residuals), 1)
+                else:
+                    self.assertEqual(residuals, [])
                 with self.assertRaises(InlineLayoutMarkupError):
                     validate_annotated_html(wrapped, manifest)
 

@@ -2,7 +2,8 @@
 
 import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDetailView } from '@/component/project/project-detail-view';
@@ -36,6 +37,7 @@ import {
 } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
+import { classifyProjectWriteError, type ProjectWriteOperation } from '@/lib/project-write-error';
 import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
@@ -44,22 +46,135 @@ const shouldRetryProjectQuery = (failureCount: number, error: unknown) =>
 
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+  const [memberDialogProjectId, setMemberDialogProjectId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(PROJECT_MEMBER_ROLE.MEMBER);
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
-  const [removeMemberTargetId, setRemoveMemberTargetId] = useState<string | null>(null);
+  const [removeMemberDialogProjectId, setRemoveMemberDialogProjectId] = useState<string | null>(
+    null,
+  );
 
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
   const selectedProject = projectIdParam;
   const router = useRouter();
 
+  const previousProject = useRef(selectedProject);
+  const viewRef = useRef(selectedProject);
+  useEffect(() => {
+    viewRef.current = selectedProject;
+  }, [selectedProject]);
+  const authExpiredRef = useRef(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const formSession = useRef({ generation: 0, target: null as string | null });
+  const memberSession = useRef({ generation: 0, target: null as string | null });
+  const deleteSession = useRef({ generation: 0, target: null as string | null });
+  const removeSession = useRef({
+    generation: 0,
+    projectId: null as string | null,
+    userId: null as string | null,
+  });
+  const notifiedWriteErrors = useRef(new Set<unknown>());
+  const formSubmitting = useRef(false);
+  const memberSubmitting = useRef(false);
+  const deleteSubmitting = useRef(false);
+  const removeSubmitting = useRef(false);
+  const memberDialogOpen =
+    memberDialogProjectId !== null && memberDialogProjectId === selectedProject;
+  const removeMemberDialogOpen =
+    removeMemberDialogProjectId !== null && removeMemberDialogProjectId === selectedProject;
+
+  const closeProjectDialog = () => {
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    setDialogOpen(false);
+  };
+  const closeMemberDialog = () => {
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    setMemberDialogProjectId(null);
+  };
+  const closeDeleteDialog = () => {
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    setDeleteDialogOpen(false);
+  };
+  const closeRemoveDialog = () => {
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+    };
+    setRemoveMemberDialogProjectId(null);
+  };
+
+  useEffect(() => {
+    if (previousProject.current === selectedProject) return;
+    previousProject.current = selectedProject;
+    // 別のプロジェクトへ移ったとき、前の選択を送信しないためです。
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+    };
+    setDialogOpen(false);
+    setMemberDialogProjectId(null);
+    setDeleteDialogOpen(false);
+    setRemoveMemberDialogProjectId(null);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  }, [selectedProject]);
+
   const utils = api.useUtils();
+  const refreshProject = async (projectId?: string, membershipChanged = false) => {
+    // 認証切れの後に届いた成功はキャッシュだけを無効にし、再通信しません。
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [utils.project.getAll.invalidate(undefined, filters)];
+      if (projectId) {
+        updates.push(utils.project.getById.invalidate({ id: projectId }, filters));
+        if (membershipChanged)
+          updates.push(utils.project.getAvailableUsers.invalidate({ projectId }, filters));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+      // 表示更新の失敗を、書き込みの失敗として通知しないためです。
+      console.error('プロジェクトの表示更新に失敗しました。', error);
+      if (!authExpiredRef.current)
+        toast.error('最新の表示を取得できませんでした。再表示して操作結果を確認してください。');
+    }
+  };
+  const reportWriteError = (
+    error: unknown,
+    operation: ProjectWriteOperation,
+    projectId?: string,
+    membershipChanged = false,
+  ) => {
+    if (['create', 'update', 'delete', 'addMember', 'removeMember'].includes(operation)) {
+      notifiedWriteErrors.current.add(error);
+    }
+    const result = classifyProjectWriteError(error, operation);
+    if (result.kind === 'auth') {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    toast.error(result.message);
+    refreshProject(projectId, membershipChanged);
+  };
+  const leaveSubmittedDetail = (projectId: string) => {
+    if (authExpiredRef.current || viewRef.current !== projectId) return;
+    try {
+      router.push('/project');
+    } catch (error) {
+      console.error('プロジェクト一覧への移動に失敗しました。', error);
+      toast.error('一覧へ移動できませんでした。再表示して操作結果を確認してください。');
+    }
+  };
 
   const {
     data: currentUser,
@@ -68,7 +183,10 @@ function ProjectPageContent() {
     isFetching: currentUserFetching,
     error: currentUserQueryError,
     refetch: refetchCurrentUser,
-  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryProjectQuery });
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    retry: shouldRetryProjectQuery,
+    enabled: !authExpired,
+  });
   const {
     data: projects,
     isLoading: projectsLoading,
@@ -82,7 +200,7 @@ function ProjectPageContent() {
       // 進行中・アーカイブ両方を取得する
       isArchived: showArchived ? undefined : false,
     },
-    { enabled: !selectedProject, retry: shouldRetryProjectQuery },
+    { enabled: !authExpired && !selectedProject, retry: shouldRetryProjectQuery },
   );
   const {
     data: projectDetail,
@@ -93,7 +211,7 @@ function ProjectPageContent() {
     refetch: refetchProjectDetail,
   } = api.project.getById.useQuery(
     { id: selectedProject ?? '' },
-    { enabled: !!selectedProject, retry: shouldRetryProjectQuery },
+    { enabled: !authExpired && !!selectedProject, retry: shouldRetryProjectQuery },
   );
 
   // 詳細画面で操作ボタンの表示可否を決めるため、
@@ -111,93 +229,90 @@ function ProjectPageContent() {
   const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
     { projectId: selectedProject ?? '' },
     {
-      enabled: !!selectedProject && canManageMembers,
+      enabled: !authExpired && !!selectedProject && canManageMembers,
       retry: shouldRetryProjectQuery,
     },
   );
 
   const createMutation = api.project.create.useMutation({
+    retry: false,
     onSuccess: () => {
-      utils.project.getAll.invalidate();
-      setDialogOpen(false);
+      refreshProject();
     },
+    onError: (error) => reportWriteError(error, 'create'),
   });
 
   const updateMutation = api.project.update.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
-      setDialogOpen(false);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'update', variables.id),
   });
 
   const deleteMutation = api.project.delete.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      setDeleteDialogOpen(false);
-      setDeleteTargetId(null);
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'delete', variables.id),
   });
 
   const addMemberMutation = api.project.addMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
-      setMemberDialogOpen(false);
-      setNewMemberUserId('');
-      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
     },
+    onError: (error, variables) => reportWriteError(error, 'addMember', variables.projectId, true),
   });
 
   const removeMemberMutation = api.project.removeMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
-      // 確認ダイアログは成功するまで開いたままにするため、閉じるのはここ
-      setRemoveMemberDialogOpen(false);
-      setRemoveMemberTargetId(null);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
     },
+    onError: (error, variables) =>
+      reportWriteError(error, 'removeMember', variables.projectId, true),
   });
 
   const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
-    onSuccess: () => {
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId);
     },
+    onError: (error, variables) => reportWriteError(error, 'updateMemberRole', variables.projectId),
   });
 
   const archiveMutation = api.project.archive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'archive', variables.id),
   });
 
   const unarchiveMutation = api.project.unarchive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'unarchive', variables.id),
   });
 
   const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
     setEditingProject(undefined);
     setDialogOpen(true);
   };
 
   const handleEdit = (projectId: string) => {
     const project = projects?.find((p) => p.id === projectId);
-    if (project) {
+    if (project && !authExpiredRef.current) {
+      formSession.current = { generation: formSession.current.generation + 1, target: projectId };
       const startDate = project.startDate ? dateOnlyFromValue(project.startDate) : undefined;
       const endDate = project.endDate ? dateOnlyFromValue(project.endDate) : undefined;
 
@@ -214,31 +329,49 @@ function ProjectPageContent() {
   };
 
   const handleDelete = (projectId: string) => {
-    setDeleteTargetId(projectId);
+    if (authExpiredRef.current) return;
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: projectId };
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: ProjectFormData) => {
-    if (data.id) {
-      updateMutation.mutate({
-        id: data.id,
-        name: data.name,
-        description: data.description || null,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : null,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : null,
-      });
-    } else {
-      if (!currentUser?.id) {
-        return;
+  const handleSubmit = async (data: ProjectFormData) => {
+    if (authExpiredRef.current || formSubmitting.current) return;
+    if (!data.id && !currentUser?.id) return;
+    const session = { ...formSession.current };
+    if (session.target !== (data.id ?? null)) return;
+    const payload = {
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
+      endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
+    };
+    formSubmitting.current = true;
+    try {
+      if (data.id) {
+        await updateMutation.mutateAsync({
+          ...payload,
+          id: data.id,
+          description: data.description || null,
+          startDate: payload.startDate ?? null,
+          endDate: payload.endDate ?? null,
+        });
+      } else {
+        await createMutation.mutateAsync(payload);
       }
-      createMutation.mutate({
-        name: data.name,
-        description: data.description,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
-      });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      formSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      formSession.current.generation === session.generation &&
+      formSession.current.target === session.target
+    ) {
+      closeProjectDialog();
+      setEditingProject(undefined);
     }
   };
 
@@ -250,23 +383,105 @@ function ProjectPageContent() {
     router.push('/project');
   };
 
-  const handleAddMember = () => {
-    if (selectedProject && newMemberUserId) {
-      addMemberMutation.mutate({
-        projectId: selectedProject,
+  const openMemberDialog = () => {
+    if (!selectedProject || authExpiredRef.current) return;
+    memberSession.current = {
+      generation: memberSession.current.generation + 1,
+      target: selectedProject,
+    };
+    setMemberDialogProjectId(selectedProject);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  };
+  const handleAddMember = async () => {
+    if (authExpiredRef.current || memberSubmitting.current || !selectedProject || !newMemberUserId)
+      return;
+    const session = { ...memberSession.current };
+    if (session.target !== selectedProject || !memberDialogOpen) return;
+    memberSubmitting.current = true;
+    try {
+      await addMemberMutation.mutateAsync({
+        projectId: session.target,
         userId: newMemberUserId,
         role: newMemberRole,
       });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      memberSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      memberSession.current.generation === session.generation &&
+      memberSession.current.target === session.target
+    ) {
+      closeMemberDialog();
+      setNewMemberUserId('');
+      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
     }
   };
-
   const handleRemoveMember = (userId: string) => {
-    setRemoveMemberTargetId(userId);
-    setRemoveMemberDialogOpen(true);
+    if (!selectedProject || authExpiredRef.current) return;
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: selectedProject,
+      userId,
+    };
+    setRemoveMemberDialogProjectId(selectedProject);
+  };
+  const confirmRemoveMember = async () => {
+    const session = { ...removeSession.current };
+    if (
+      authExpiredRef.current ||
+      removeSubmitting.current ||
+      !session.projectId ||
+      !session.userId ||
+      viewRef.current !== session.projectId
+    )
+      return;
+    removeSubmitting.current = true;
+    try {
+      await removeMemberMutation.mutateAsync({
+        projectId: session.projectId,
+        userId: session.userId,
+      });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      removeSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      removeSession.current.generation === session.generation &&
+      removeSession.current.projectId === session.projectId &&
+      removeSession.current.userId === session.userId
+    )
+      closeRemoveDialog();
+  };
+  const confirmDeleteProject = async () => {
+    const session = { ...deleteSession.current };
+    if (authExpiredRef.current || deleteSubmitting.current || !session.target) return;
+    deleteSubmitting.current = true;
+    try {
+      await deleteMutation.mutateAsync({ id: session.target });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      deleteSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      deleteSession.current.generation === session.generation &&
+      deleteSession.current.target === session.target
+    )
+      closeDeleteDialog();
   };
 
   const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
-    if (selectedProject) {
+    if (selectedProject && !authExpiredRef.current) {
       updateMemberRoleMutation.mutate({
         projectId: selectedProject,
         userId,
@@ -276,6 +491,7 @@ function ProjectPageContent() {
   };
 
   const handleArchive = (projectId: string, isArchived: boolean) => {
+    if (authExpiredRef.current) return;
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
   };
@@ -287,7 +503,14 @@ function ProjectPageContent() {
         projectDetailError ? projectDetailQueryError : null,
       ]
     : [currentUserError ? currentUserQueryError : null, projectsError ? projectsQueryError : null];
-  const authFailed = queryErrors.some(isAuthError);
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    // 読み取りで判明した認証切れも、後続の書き込み成功では解除しません。
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
   const forbidden = queryErrors.some(isForbiddenError);
   const notFound =
     viewingDetail && projectDetailError && httpStatusOf(projectDetailQueryError) === 404;
@@ -336,7 +559,7 @@ function ProjectPageContent() {
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
             {authFailed
-              ? 'もう一度ログインしてください。'
+              ? 'もう一度ログインしてください。入力内容はログイン後に入力し直してください。'
               : forbidden
                 ? '権限が必要です。プロジェクトの管理者に確認してください。'
                 : notFound
@@ -356,7 +579,7 @@ function ProjectPageContent() {
               }
               refetchRequiredData();
             }}
-            disabled={requiredFetching}
+            disabled={!authFailed && requiredFetching}
           >
             {authFailed
               ? 'ログイン画面へ'
@@ -396,7 +619,7 @@ function ProjectPageContent() {
           <ProjectDetailView
             projectDetail={projectDetail}
             onBack={handleDetailClose}
-            onAddMemberClick={() => setMemberDialogOpen(true)}
+            onAddMemberClick={openMemberDialog}
             onRemoveMember={handleRemoveMember}
             onUpdateMemberRole={handleUpdateMemberRole}
             onArchive={handleArchive}
@@ -405,7 +628,12 @@ function ProjectPageContent() {
           />
         </div>
 
-        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>メンバー追加</DialogTitle>
@@ -451,10 +679,13 @@ function ProjectPageContent() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+              <Button variant="outline" onClick={closeMemberDialog}>
                 キャンセル
               </Button>
-              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
                 メンバー追加
               </Button>
             </DialogFooter>
@@ -463,15 +694,11 @@ function ProjectPageContent() {
 
         <DeleteConfirmDialog
           open={removeMemberDialogOpen}
-          onOpenChange={setRemoveMemberDialogOpen}
-          onConfirm={() => {
-            if (selectedProject && removeMemberTargetId) {
-              removeMemberMutation.mutate({
-                projectId: selectedProject,
-                userId: removeMemberTargetId,
-              });
-            }
+          onOpenChange={(open) => {
+            if (!open) closeRemoveDialog();
           }}
+          onConfirm={confirmRemoveMember}
+          closeOnConfirm={false}
           isPending={removeMemberMutation.isPending}
           title="このメンバーを削除しますか？"
         />
@@ -514,6 +741,14 @@ function ProjectPageContent() {
                 if (t.status === TASK_STATUS.DONE) doneCount++;
               }
 
+              const listMemberRole = project.members?.find(
+                (member) => member.userId === currentUser?.id,
+              )?.role;
+              const canUpdateProject =
+                isProjectMemberRole(listMemberRole) &&
+                hasPermission(listMemberRole, 'canManageMembers');
+              const canDeleteProject = listMemberRole === PROJECT_MEMBER_ROLE.OWNER;
+
               return (
                 <ProjectCard
                   key={project.id}
@@ -523,8 +758,8 @@ function ProjectPageContent() {
                   color={project.color}
                   memberCount={project.members?.length ?? 0}
                   taskStats={{ total: taskCount, done: doneCount }}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
+                  {...(canUpdateProject ? { onEdit: handleEdit } : {})}
+                  {...(canDeleteProject ? { onDelete: handleDelete } : {})}
                   onClick={handleProjectClick}
                   isArchived={project.isArchived}
                 />
@@ -532,20 +767,35 @@ function ProjectPageContent() {
             })
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>プロジェクトが見つかりません。</p>
-              <p>最初のプロジェクトを作成しましょう！</p>
+              {showArchived ? (
+                <>
+                  <p>プロジェクトが見つかりません。</p>
+                  <p>最初のプロジェクトを作成しましょう！</p>
+                </>
+              ) : (
+                <>
+                  <p>進行中のプロジェクトが見つかりません。</p>
+                  <p>アーカイブ表示をオンにすると、アーカイブ済みのプロジェクトも確認できます。</p>
+                </>
+              )}
             </div>
           )}
         </div>
 
         <ProjectDialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={closeProjectDialog}
           onSubmit={handleSubmit}
+          isPending={createMutation.isPending || updateMutation.isPending}
           initialData={editingProject}
         />
 
-        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>メンバー追加</DialogTitle>
@@ -591,10 +841,13 @@ function ProjectPageContent() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+              <Button variant="outline" onClick={closeMemberDialog}>
                 キャンセル
               </Button>
-              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
                 メンバー追加
               </Button>
             </DialogFooter>
@@ -604,27 +857,22 @@ function ProjectPageContent() {
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={() => {
-          if (deleteTargetId) {
-            deleteMutation.mutate({ id: deleteTargetId });
-          }
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog();
         }}
+        onConfirm={confirmDeleteProject}
+        closeOnConfirm={false}
         isPending={deleteMutation.isPending}
         title="プロジェクトを削除しますか？"
       />
 
       <DeleteConfirmDialog
         open={removeMemberDialogOpen}
-        onOpenChange={setRemoveMemberDialogOpen}
-        onConfirm={() => {
-          if (selectedProject && removeMemberTargetId) {
-            removeMemberMutation.mutate({
-              projectId: selectedProject,
-              userId: removeMemberTargetId,
-            });
-          }
+        onOpenChange={(open) => {
+          if (!open) closeRemoveDialog();
         }}
+        onConfirm={confirmRemoveMember}
+        closeOnConfirm={false}
         isPending={removeMemberMutation.isPending}
         title="このメンバーを削除しますか？"
       />

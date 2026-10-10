@@ -23,19 +23,14 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 >
 > 現在の完成形は `ProjectDetailDialog` のモーダルではなく、`ProjectDetailView` を使った**インライン詳細表示**です。URL は `/project?projectId=xxx` のように変わり、同じページの中で一覧 ↔ 詳細を切り替えます。
 >
-> **この Day は Day 11・12 で作った機能の
-> 統合確認です。** 以下のコードは完成状態との
-> 照合用です。同じ名前の state、query、mutation、
-> handler、Props を追加し直してはいけません。
-> 不足がある場合だけ、該当箇所を補ってください。
+> **この Day は Day 11・12 で作った機能の統合確認です。**
+> 同じ名前の state、query、mutation、handler を追加し直さず、完成状態と照合します。
+> Step 3 では、配布済みの `ProjectDetailView` を必須の8 props を持つ完成形へ揃えます。
 >
-> `project-detail-view.tsx` は写経の土台に含まれています。
-> 画面の表示と操作はこの Day の完成版と同じです。
-> コードに2か所、コメントに2か所の違いがあります。
-> 違いは後半の `src/component/project/project-detail-view.tsx` の見出しの下で説明します。
+> `project-detail-view.tsx` は写経の土台に含まれています。3つの props は途中の日程でも使えるように省略可能になっています。
 > Day 01 で `scaffold-from-scratch.sh` を走らせた時点で、手元に置かれています。
 > 販売用 ZIP に入るのはこの土台までで、完成版の `src/` 一式は入っていません。
-> この Day のコードブロックは**読んで見比べるためのもの**で、書き写す必要はありません。
+> Step 1、2、4、5、6はコードを読んで見比べます。Step 3では `ProjectDetailView`、Step 7では `page.tsx` のファイル全体を置き換えます。説明用の抜粋を既存コードへ追記しないでください。
 
 ## なぜこれを作るのか
 
@@ -44,7 +39,7 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 今回は詳細を別ルートに分離するのではなく、一覧ページの延長として表示を切り替える構成にします。この構成には次の利点があります。
 
 - URL に `projectId` が残るので再読み込みや共有に強い
-- 一覧画面へ戻る導線をシンプルに保てる
+- 一覧画面へ戻る導線をシンプルに保てます
 - ページ全体の責務を `page.tsx` に集約しやすい
 
 また、完了したプロジェクトは削除ではなく**アーカイブ**します。アーカイブは「使わないものを棚にしまう」イメージです。履歴は残したまま、普段の一覧からは外せます。
@@ -53,19 +48,28 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 
 ```mermaid
 flowchart TD
-    A["/project 一覧表示"] -->|"カードをクリック"| B["router.push('/project?projectId=...')"]
-    B --> C["page.tsx が searchParams.projectId を読む"]
-    C --> D["projectIdParam を selectedProject として使う"]
-    D --> E["api.project.getById を取得"]
-    E --> F["ProjectDetailView をインライン表示"]
-    F --> G["メンバー一覧"]
-    F --> H["タスク一覧"]
-    F --> I["アーカイブ / アーカイブ解除"]
-    I --> J["tRPC: project.archive / unarchive"]
-    J --> K["一覧を invalidate して /project に戻る"]
+    A["/project<br/>一覧表示"] -->|"カードをクリック"| B["router.push<br/>('/project?projectId=...')"]
+    B --> C["page.tsx が<br/>searchParams.projectId<br/>を読む"]
+    C --> D["projectIdParam を<br/>selectedProject として使う"]
+    D --> E["api.project.getById<br/>を取得"]
+    E --> F["ProjectDetailView<br/>をインライン表示"]
 ```
 
-この図で目を留めてほしいのは B から C の流れです。カードをクリックしたとき`selectedProject` を直接書き換えてはいません。いったん URL を書き換え、そのあと `page.tsx` が URL を読み直します。`selectedProject` は読み取った値の別名です。遠回りに見えますが画面の状態を決める大元が URL 1か所にそろいます。だから再読み込みしてもリンクを人に送っても同じ詳細画面が開きます。
+次の図は、前の図の最後にある `ProjectDetailView` からの続きです。2つの図に出る `ProjectDetailView` は同じコンポーネントです。
+
+```mermaid
+flowchart TD
+    F["ProjectDetailView<br/>をインライン表示"] --> G["メンバー一覧"]
+    F --> H["タスク一覧"]
+    F --> I["アーカイブ<br/>アーカイブ解除"]
+    I --> J["tRPC<br/>project.archive / unarchive"]
+    J -->|成功| K["一覧・送信対象の詳細を<br/>再取得対象にする"]
+    K --> L{"認証切れがなく<br/>まだ送信対象の詳細を<br/>表示中？"}
+    L -->|はい| M["/project に戻る"]
+    L -->|いいえ| N["今の表示を維持"]
+```
+
+最初の図で目を留めてほしいのは B から C の流れです。カードをクリックしたとき`selectedProject` を直接書き換えてはいません。いったん URL を書き換え、そのあと `page.tsx` が URL を読み直します。`selectedProject` は読み取った値の別名です。遠回りに見えますが画面の状態を決める大元が URL 1か所にそろいます。だから再読み込みしてもリンクを人に送っても同じ詳細画面が開きます。
 
 ### やること / やらないこと
 
@@ -93,28 +97,29 @@ flowchart TD
 | コールバック Props | Day 15 以降 |
 | `useQuery` / `useMutation` | Day 08 以降 |
 
----
-
-## 実装ステップ一覧
-
-| ステップ | 作業内容・触るファイル・成功状態 | 所要時間 |
-|---------|---------------------------------|----------|
-| Step 1 | **作業内容**: アーカイブ API の完成形を読む<br>**触るファイル**: `src/server/api/routers/project.ts`<br>**成功状態**: `archive` / `unarchive` が呼べる | 5分 |
-| Step 2 | **作業内容**: 一覧 ↔ 詳細の切り替えを読む<br>**触るファイル**: `src/app/project/page.tsx`<br>**成功状態**: カードクリックで詳細へ切り替わる | 8分 |
-| Step 3 | **作業内容**: `ProjectDetailView` の型と骨格を確かめる<br>**触るファイル**: `src/component/project/project-detail-view.tsx`<br>**成功状態**: 戻るボタン付きの詳細画面が出る | 8分 |
-| Step 4 | **作業内容**: メンバー一覧とタスク一覧の表示を確かめる<br>**触るファイル**: `project-detail-view.tsx`<br>**成功状態**: 主要情報が確認できる | 10分 |
-| Step 5 | **作業内容**: アーカイブのつなぎ込みを確かめる<br>**触るファイル**: `page.tsx`, `project-detail-view.tsx`<br>**成功状態**: ボタンで状態が切り替わる | 5分 |
-| Step 6 | **作業内容**: 補助ダイアログの置き場所を確かめる<br>**触るファイル**: `src/app/project/page.tsx`<br>**成功状態**: メンバー追加・削除確認も動く | 5分 |
-
-**合計時間**: 約41分です。
-
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
 開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
 
 ---
 
-### Step 1: アーカイブ API の完成形を読む（5分）
+## 実装ステップ一覧
+
+| ステップ | 作業内容・触るファイル・成功状態 | 読む時間の目安 |
+|---------|---------------------------------|----------|
+| Step 1 | **作業内容**: アーカイブ API の完成形を読む<br>**触るファイル**: `src/server/api/routers/project.ts`<br>**成功状態**: `archive` / `unarchive` が呼べる | 5分 |
+| Step 2 | **作業内容**: 一覧 ↔ 詳細の切り替えを読む<br>**触るファイル**: `src/app/project/page.tsx`<br>**成功状態**: カードクリックで詳細へ切り替わる | 8分 |
+| Step 3 | **作業内容**: `ProjectDetailView` を完成形へ揃える<br>**触るファイル**: `src/component/project/project-detail-view.tsx`<br>**成功状態**: 戻るボタン付きの詳細画面が出る | 8分 |
+| Step 4 | **作業内容**: メンバー一覧とタスク一覧の表示を確かめる<br>**触るファイル**: `project-detail-view.tsx`<br>**成功状態**: 主要情報が確認できる | 10分 |
+| Step 5 | **作業内容**: アーカイブのつなぎ込みを確かめる<br>**触るファイル**: `page.tsx`, `project-detail-view.tsx`<br>**成功状態**: ボタンで状態が切り替わる | 5分 |
+| Step 6 | **作業内容**: 補助ダイアログの置き場所を確かめる<br>**触るファイル**: `src/app/project/page.tsx`<br>**成功状態**: メンバー追加・削除確認も動く | 5分 |
+| Step 7 | **作業内容**: 書き込み失敗時の画面を整える<br>**触るファイル**: `src/app/project/page.tsx`<br>**成功状態**: 失敗時に入力と対象が残る | 20分 |
+
+**読む時間の合計（仮）**: 約61分です。
+
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
+
+---
+
+### Step 1: アーカイブ API の完成形を読む （読む目安: 5分）
 
 **ゴール**: `project.archive` と `project.unarchive` で `isArchived` を切り替えられるようにします。
 
@@ -147,28 +152,37 @@ model Project {
 
 現在の実装では`archive` と `unarchive` は共通ヘルパー `setArchiveStatus` を使っています。
 
+Day 11・12で使った `Prisma` の値インポートを残します。`Prisma.sql` は文字列と入力値を分けてSQLを組み立てる関数です。メンバーの役割を変える処理もプロジェクト行をロックするので、同じ行のロックを待ってから現在の役割を確認します。先に降格が確定した場合、古いオーナー権限でアーカイブしません。ロックの取得から権限確認、更新までを1つのトランザクションにまとめます。
+
 ```ts
 // filepath: src/server/api/routers/project.ts
 const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
-  const userMember = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    // メンバー変更と同じ行を先にロックし、待機中に確定した現在の権限を確認する。
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    const userMember = await tx.projectMember.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
 
-  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+    assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
 
-  return await prisma.project.update({
-    where: { id: projectId },
-    data: { isArchived },
+    return await tx.project.update({
+      where: { id: projectId },
+      data: { isArchived },
+    });
   });
 };
 ```
 
-ポイントは次の2つです。
+ポイントは次の3つです。
 
-- 権限確認は `prisma.project` ではなく `prisma.projectMember` で行う
-- `assertMemberPermission(..., 'canArchive')` でアーカイブ権限を明示する
+- プロジェクト行をロックした後、同じトランザクションの `tx.projectMember` で現在の役割を調べます
+- 権限確認は `Project` の値ではなく `ProjectMember` の役割で行います
+- `assertMemberPermission(..., 'canArchive')` でアーカイブ権限を明示します
 
 `prisma.project` を引いてもそのユーザーがそのプロジェクトの何なのかは分かりません。役割が載っているのは `ProjectMember` の行のほうです。
 
@@ -202,17 +216,17 @@ unarchive: protectedProcedure
   }),
 ```
 
-2つの procedure で違うのは最後に渡す `true` と `false` だけです。1つにまとめて現在値を反転させる作り方もできますがそうすると画面が送ってきた「今の状態」を信じることになります。同じプロジェクトを2人が開いていると反転した結果がお互いにずれます。呼ぶ名前で結果を決めておけばサーバーが受け取るのは「こうしたい」という最終状態だけです。`archive` を続けて2回呼んでも、`isArchived` は `true` のままで変わりません。権限確認をヘルパー1か所に寄せてあるので片方だけ確認を書き忘れる事故も起きません。
+2つの procedure で違うのは最後に渡す `true` と `false` だけです。画面に表示された現在値を反転して送る方式では、別の人が更新する前の古い値から送信先を決める場合があります。ここでは `archive` は `true`、`unarchive` は `false` を保存するように決め、要求した最終状態を明示します。呼ぶ名前で結果を決めておけばサーバーが受け取るのは「こうしたい」という最終状態だけです。`archive` を続けて2回呼んでも、`isArchived` は `true` のままで変わりません。権限確認をヘルパー1か所に寄せてあるので片方だけ確認を書き忘れる事故も起きません。
 
 **確認ポイント**
 
-- `archive` と `unarchive` の両方がある
-- どちらも `setArchiveStatus` を使っている
-- `getAll` は `isArchived` で一覧を絞り込める
+- `archive` と `unarchive` の両方があります
+- どちらも `setArchiveStatus` を使っています
+- `getAll` は `isArchived` で一覧を絞り込めます
 
 ---
 
-### Step 2: 一覧 ↔ 詳細の切り替えを読む（8分）
+### Step 2: 一覧 ↔ 詳細の切り替えを読む （読む目安: 8分）
 
 **ゴール**: 一覧カードをクリックしたら URL の `projectId` を更新し、同じ `/project` ページ内で詳細表示へ切り替えます。
 
@@ -252,7 +266,7 @@ const {
 } = api.project.getById.useQuery(
   { id: selectedProject ?? '' },
   {
-    enabled: !!selectedProject,
+    enabled: !authExpired && !!selectedProject,
     retry: shouldRetryProjectQuery,
   },
 );
@@ -260,7 +274,7 @@ const {
 
 詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
 
-`enabled` は一覧を見ている間の通信を止めます。取得中・失敗・再取得中を別々に受け取るため、応答待ちを「見つかりません」と誤表示しません。`retry` は 401・403・404 を繰り返さず、通信失敗だけを再試行します。
+`enabled` は一覧を見ている間と認証切れ後の通信を止めます。取得中・失敗・再取得中を別々に受け取るため、応答待ちを「見つかりません」と誤表示しません。`retry` は 401・403・404 を繰り返さず、通信失敗だけを再試行します。
 
 カードクリック時は `router.push()` で URL を変えます。
 
@@ -287,22 +301,27 @@ const handleDetailClose = () => {
   const queryErrors = viewingDetail
     ? [
         currentUserError ? currentUserQueryError : null,
-        projectDetailError
-          ? projectDetailQueryError
-          : null,
+        projectDetailError ? projectDetailQueryError : null,
       ]
     : [
         currentUserError ? currentUserQueryError : null,
         projectsError ? projectsQueryError : null,
       ];
-  const authFailed = queryErrors.some(isAuthError);
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    // 読み取りで判明した認証切れも、後続の書き込み成功では解除しません。
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
   const forbidden = queryErrors.some(isForbiddenError);
   const notFound = viewingDetail
     && projectDetailError
     && httpStatusOf(projectDetailQueryError) === 404;
 ```
 
-URLに詳細IDがあるかで対象の問い合わせを選びます。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
+URLに詳細IDがあるかで対象の問い合わせを選びます。401を検出したら `authExpired` に保持し、書き込み成功など別の処理で解除されないようにします。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -347,11 +366,12 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   }
 ```
 
+表示中の画面に必要な問い合わせだけを取り直します。一覧と詳細を分けることで、関係のない通信を増やさず待機状態も正しく表示できます。
+
 `viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
 
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
+エラー表示は見出し・説明・移動先が一体になった分岐です。次の2ブロックは完成形を読み取るための連続した抜粋です。このStepでは貼り付けません。Step 7でファイル全体を置き換えます。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/project/page.tsx
   if (authFailed || forbidden || notFound
@@ -370,7 +390,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
             {authFailed
-              ? 'もう一度ログインしてください。'
+              ? 'もう一度ログインしてください。入力内容はログイン後に入力し直してください。'
               : forbidden
                 ? '権限が必要です。プロジェクトの管理者に確認してください。'
                 : notFound
@@ -378,6 +398,12 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   : '通信状況を確認して、再読み込みしてください。'}
           </p>
           <Button
+```
+
+ここまででエラー説明の条件分岐が続いています。三項演算子の残りと操作ボタンは次のフェンスへ続きます。2つを掲載順に読み、条件と表示の対応を確認してください。
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             type="button"
             onClick={() => {
               if (authFailed) {
@@ -390,7 +416,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
               }
               refetchRequiredData();
             }}
-            disabled={requiredFetching}
+            disabled={!authFailed && requiredFetching}
           >
             {authFailed
               ? 'ログイン画面へ'
@@ -404,7 +430,9 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   }
 ```
 
-401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
+ボタンの行き先もエラーの種類で決めます。認証切れならログインへ、権限不足か削除済みなら一覧へ移動します。通信失敗のときだけ現在の画面を再取得し、取得中は連打を止めます。
+
+401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。
 
 ```tsx
 // filepath: src/app/project/page.tsx
@@ -429,7 +457,8 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   ) : null;
 ```
 
-再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
+この警告は再取得に失敗しても以前のデータが残る場合だけ作ります。内容を消さず、古い可能性と再試行の入口を同時に示すためです。
+
 
 最後に `viewingDetail` で描画を分岐します。
 
@@ -443,7 +472,7 @@ if (viewingDetail) {
         <ProjectDetailView
           projectDetail={projectDetail}
           onBack={handleDetailClose}
-          onAddMemberClick={() => setMemberDialogOpen(true)}
+          onAddMemberClick={openMemberDialog}
           onRemoveMember={handleRemoveMember}
           onUpdateMemberRole={handleUpdateMemberRole}
           onArchive={handleArchive}
@@ -460,21 +489,25 @@ if (viewingDetail) {
 
 **確認ポイント**
 
-- 一覧クリックで `/project?projectId=...` に変わる
-- URL を直接開いても詳細が表示される
-- 戻るボタンで `/project` に戻る
+- 一覧クリックで `/project?projectId=...` に変わります
+- URL を直接開いても詳細が表示されます
+- 戻るボタンで `/project` に戻ります
 
 ---
 
-### Step 3: `ProjectDetailView` の型と骨格を確かめる（8分）
+### Step 3: `ProjectDetailView` を完成形へ揃える （読む目安: 8分）
 
-**ゴール**: モーダルではなく、ページ内に表示する詳細ビューコンポーネントの中身を読みます。
+**ゴール**: 配布済みの詳細ビューを、8つの props を必須で受け取る形へ揃えます。
 
-scaffold で配布済みのファイルを削除したり、
-5 props の旧形式へ置き換えたりしないでください。
-現在の8 props 契約を、次の完成形と照合します。
+配布版では `onUpdateMemberRole`、`canManageMembers`、`canArchive` に `?` が付き、省略できる形になっています。Day 12 までに親ページから8つとも渡す形を作ったので、ここで必須にします。
 
-まず tRPC の戻り値から型を取ります。
+この章の後半にある「完成コード全体」の「`src/component/project/project-detail-view.tsx`」へ進んでください。その見出しから「今日のまとめ」の直前までにあるコードブロックを、掲載順につなげます。説明文やコードを囲む三連のバッククオートはコピーしません。
+
+つなげたコードで、手元の `src/component/project/project-detail-view.tsx` の内容全体を置き換えて保存します。`scripts/` 内の配布元は変更しません。3つの `?` だけでなく、権限の既定値とコールバックの省略時の処理も完成形へ揃えるため、ファイル全体を置き換えます。
+
+保存したらこの位置に戻り、型と表示の役割を読み進めてください。この Step と Step 4 の抜粋は説明用なので追記しません。
+
+まず tRPC の戻り値から型を取り出す箇所を確認します。
 
 ```ts
 // filepath: src/component/project/project-detail-view.tsx
@@ -509,7 +542,8 @@ interface ProjectDetailViewProps {
 }
 ```
 
-8つとも `?` を付けていません。つまり全部必須です。`?` は「渡さなくてもよい」という意味で、渡し忘れても型検査が通ります。`canManageMembers` のような権限の値でそれをやると渡し忘れがそのまま「ボタンが出ない」という不具合になり、しかもエラーは出ません。必須にしておけば呼ぶ側が忘れた時点でエラーが出ます。Day 11 の呼び出し（`onUpdateMemberRole={() => {}}` など）はこの8つを全部渡しているので必須にしても型エラーにはなりません。
+
+8つとも `?` を付けていません。つまり全部必須です。`?` は「渡さなくてもよい」という意味で、渡し忘れても型検査が通ります。配布版は権限の値を省略すると `true` を使うため、渡し忘れてもボタンが表示されます。必須にしておけば呼ぶ側が忘れた時点でエラーが出ます。Day 11 の呼び出し（`onUpdateMemberRole={() => {}}` など）はこの8つを全部渡しているので必須にしても型エラーにはなりません。
 
 8つと聞くと多く感じますが中身は2種類しかありません。`projectDetail` と `canManageMembers` / `canArchive` は「表示に必要な材料」、`on` で始まる5つは「押されたことを親に伝える窓口」です。裏を返すと`ProjectDetailView` は mutation を1つも持ちません。通信も権限の判定もこの部品の仕事ではありません。Day 15 以降で使ってきたコールバック Props と同じ考え方で、判断は `page.tsx` に集めます。こう分けておくとあとで詳細を別ページへ移したくなったときも、この部品はそのまま持っていけます。
 
@@ -532,7 +566,7 @@ if (!projectDetail) {
 
 Props の型が `ProjectDetail | null | undefined` なので、この `if` は部品を単独で使ったときの防御になります。ただし現在の `page.tsx` は、この部品を呼ぶ前に取得状態を判定します。取得中はスピナー、初回500は再読み込み、401・403は権限案内、404は不在案内を親が返すため、通常の画面操作で `undefined` のままこの部品へ進みません。ここを通り抜けた先ではTypeScript が「`projectDetail` には必ず中身がある」と判断します。だからこの後に出てくる `projectDetail.color` や `projectDetail.name` を、`?.` を付けずにそのまま書けます。逆にこの `if` を消すと以降の参照で型エラーが出ます。
 
-詳細ビュー本体の骨格はこうなります。ヘッダーは説明のため1段に削った形で載せています。手元のファイルは「戻る・アーカイブ操作」の行と「色丸・名前・アーカイブ済みバッジ」の行の2段です。`className` も一部違います。全文は「完成コード全体」で確かめます。
+詳細ビューの外枠を、説明用に簡略化したコードで確認します。
 
 ```tsx
 // filepath: src/component/project/project-detail-view.tsx
@@ -561,7 +595,7 @@ return (
     <div className="grid gap-6 lg:grid-cols-2">
 ```
 
-この抜粋では外枠だけを示しています。上から順にヘッダー、説明文、2カラムの入れ物を並べた3段構えです。ヘッダーでは戻るボタンと色の丸と名前を1行に並べています。`projectDetail.description && (...)` としてあるので説明が空のプロジェクトでは段落そのものが出ません。空の `<p>` が残って行間だけ空くのを防げます。`lg:grid-cols-2` は Day 09 のグリッドと同じ考え方で画面が広いときだけ横2列にします。スマートフォンの幅ではメンバーとタスクが縦に積まれます。
+この抜粋では外枠だけを示しています。上から順に、戻るボタンと色の丸と名前を1行に並べたヘッダー、説明文、そして下半分に来る2カラムの入れ物、という3段構えです。`projectDetail.description && (...)` としてあるので説明が空のプロジェクトでは段落そのものが出ません。空の `<p>` が残って行間だけ空くのを防げます。`lg:grid-cols-2` は Day 09 のグリッドと同じ考え方で、画面が広いときだけ横2列にします。スマートフォンの幅ではメンバーとタスクが縦に積まれます。
 
 なお最後の `<div className="grid ...">` は開いたままです。閉じタグは次のブロックにあります。手元のファイルではすでに閉じているのでそちらと見比べてください。
 
@@ -577,20 +611,21 @@ return (
 
 **確認ポイント**
 
-- モーダルの `Dialog` は使っていない
-- 戻るボタンは `onBack` で親に処理を委譲している
-- 詳細画面は 2 カラムのカード構成になっている
+- `onUpdateMemberRole`、`canManageMembers`、`canArchive` に `?` がなく、8つの props が必須になっています
+- 権限の引数に `= true` がなく、`onUpdateMemberRole` の呼び出しに `?.` がありません
+- モーダルの `Dialog` は使っていません
+- 戻るボタンは `onBack` で親に処理を委譲しています
+- 詳細画面は 2 カラムのカード構成になっています
 
 ---
 
-### Step 4: メンバー一覧とタスク一覧の表示を確かめる（10分）
+### Step 4: メンバー一覧とタスク一覧の表示を確かめる （読む目安: 10分）
 
 **ゴール**: `ProjectDetailView` の中に並ぶ、メンバー一覧とタスク一覧の 2 つのカードを読みます。ここに載せるのは完成版を少し削った形です。削ってある部分はそれぞれのカードの後ろで説明します。
 
-Day 12 で実装済みなら以下は読み比べだけ行います。
-既存の権限制御やロール変更 UI を残してください。
+Step 3 で置き換えた完成形と、以下の説明用の抜粋を読み比べます。抜粋の追記や置き換えはせず、完成形の権限制御やロール変更 UI を残してください。
 
-メンバーカードは `Card` と `Avatar` を使って構成します。
+メンバーカードの `Card` と `Avatar` の役割を確認します。
 
 ```tsx
 {/* filepath: src/component/project/project-detail-view.tsx */}
@@ -619,7 +654,7 @@ Day 12 で実装済みなら以下は読み比べだけ行います。
             </Avatar>
 ```
 
-`Avatar` の中を2段構えにしているのはアイコン画像を持たないメンバーがいるからです。`member.user?.avatar` があるときだけ `AvatarImage` を出し無ければ `AvatarFallback` が受け止めて名前かメールの1文字目を大文字にして丸の中に置きます。`(member.user?.name || member.user?.email || '?')` と3段に重ねてあるのは名前とメールが両方空だったときに `?` を出すためです。ここを `member.user.name[0]` と書くと名前が `null` のメンバーを表示したときに例外が出ます。名前が空文字なら例外にはなりませんが先頭の文字が無いため何も表示されません。Day 26 で `error.tsx` を置いたので行き先は真っ白な画面ではなくあのエラーページです。それでも1人分のデータ欠けで詳細画面ごと消える点は変わりません。
+`Avatar` の中を2段構えにしているのはアイコン画像を持たないメンバーがいるからです。`member.user?.avatar` があるときだけ `AvatarImage` を出し、無ければ `AvatarFallback` が受け止めて名前かメールの1文字目を大文字にして丸の中に置きます。`(member.user?.name || member.user?.email || '?')` と3段に重ねてあるのは名前とメールが両方空だったときに `?` を出すためです。ここを `member.user.name[0]` と書くと、名前が `null` のメンバーを表示したときに例外が出ます。名前が空文字なら例外にはなりませんが、先頭の文字が無いため何も表示されません。Day 26 で `error.tsx` を置いたので行き先は真っ白な画面ではなく、あのエラーページです。それでも、1人分のデータ欠けで詳細画面ごと消える点は変わりません。
 
 `<Avatar>` を閉じた直後で抜粋を区切っています。続きは次のブロックで読みます。
 
@@ -650,13 +685,13 @@ Day 12 で実装済みなら以下は読み比べだけ行います。
 </Card>
 ```
 
-この一覧でいちばん大事な1行は削除ボタンの `disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}` です。最後のオーナーを消せてしまうとそのプロジェクトを操作できる人が誰も残らず、誰も直せない状態のプロジェクトが残ります。押せない見た目にしておけばうっかりクリックがそこで止まります。ここでは相手がオーナーなら一律で押せなくしているのでオーナーが2人以上いるプロジェクトでも片方を外せません。サーバー側の `removeMember` は2段構えで止めます。オーナー以外がオーナーを外そうとしたら `FORBIDDEN` で拒み、そのうえでオーナーが1人しか残っていなければ `BAD_REQUEST` で拒みます。つまりオーナー同士なら2人目以降を外せるので一律で押させない画面のほうが厳しい作りです。安全側に倒した分、オーナーの入れ替えは画面からはできません。ただし画面側の `disabled` は入口の防波堤にすぎません。本当の門番は Step 1 で見た `assertMemberPermission` で、そちらが最後に権限を確かめます。ロール名を `PROJECT_MEMBER_ROLE_LABELS` に通しているのも同じ発想で、`'OWNER'` という英字をそのまま出さず、他の画面と同じ日本語のラベルにそろえます。
+この一覧でいちばん大事な1行は削除ボタンの `disabled={member.role === PROJECT_MEMBER_ROLE.OWNER}` です。最後のオーナーを消せてしまうとそのプロジェクトを操作できる人が誰も残らず、誰も直せない状態のプロジェクトが残ります。押せない見た目にしておけばうっかりクリックがそこで止まります。ここでは相手がオーナーなら一律で押せなくしているのでオーナーが2人以上いるプロジェクトでも片方を外せません。サーバー側の `removeMember` は2段構えで止めます。オーナー以外がオーナーを外そうとしたら `FORBIDDEN` で拒み、そのうえでオーナーが1人しか残っていなければ `BAD_REQUEST` で拒みます。つまりオーナー同士なら2人目以降を外せるので一律で押させない画面のほうが厳しい作りです。安全側に倒した分、オーナーの入れ替えは画面からはできません。ただし画面側の `disabled` は入口の防波堤にすぎません。サーバー側では Day 12 の `removeMember` がプロジェクトの行をロックした後に現在の権限とオーナー人数を確かめます。画面の表示後に権限が変わっていても、その確認で削除を拒みます。ロール名を `PROJECT_MEMBER_ROLE_LABELS` に通しているのも同じ発想で、`'OWNER'` という英字をそのまま出さず、他の画面と同じ日本語のラベルにそろえます。
 
 削除ボタンはアイコン1つなので`aria-label` で名前を付けています。Day 16 で見たとおり、名前が無いと読み上げでは同じボタンが人数分並ぶだけになり、どの行を押しているのか分かりません。
 
-ここで書いたメンバーカードは完成版から2つ削ってあります。完成版はロール名をただのラベルではなく `Select` で出し、その場で権限を変えられます。さらに `canManageMembers` が false の人には `Select` と削除ボタンを見せず、ラベルだけの読み取り専用にします。今日はまず一覧を出すところまでで、この出し分けは Day 12 で書いた既存のコードにそのまま残しておいて問題ありません。
+ここに載せたメンバーカードの抜粋は、完成版から2つ削ってあります。完成版はロール名をただのラベルではなく `Select` で出し、その場で権限を変えられます。さらに `canManageMembers` が false の人には `Select` と削除ボタンを見せず、ラベルだけの読み取り専用にします。この出し分けは Step 3 で置き換えた完成形に含まれています。手元の `Select` と `canManageMembers` の条件を確認してください。
 
-タスクカードは 0 件のときの表示も入れておくのがポイントです。
+タスクカードでは、0 件のときの表示も確認します。
 
 ```tsx
 {/* filepath: src/component/project/project-detail-view.tsx */}
@@ -684,11 +719,11 @@ Day 12 で実装済みなら以下は読み比べだけ行います。
               <StatusBadge status={task.status} />
 ```
 
-タスクカードで先に書いてあるのは0 件のときの分岐です。`projectDetail.tasks?.length === 0` を最初に見て空なら「タスクがありません。」の1行だけを出します。これが無いとタスクを作っていないプロジェクトでは枠の中が空のまま残ります。読み込み中や初回の取得失敗は親の `page.tsx` で分けます。再取得だけが失敗した場合は前回の内容であることを親が警告します。ここでは取得済みのタスク配列が0件かを確かめます。それを1行で言い切っておくと画面が壊れているのかタスクが無いだけなのかで読者が迷いません。`StatusBadge` はタスク一覧でも使っている共通の部品で`task.status` を渡すだけで状態に応じた色の札になります。ここで色分けを直に書かないので状態の色を変えたいときは部品側を1か所直すだけで全画面に効きます。
+タスクカードで先に書いてあるのは0 件のときの分岐です。`projectDetail.tasks?.length === 0` を最初に見て空なら「タスクがありません。」の1行だけを出します。これが無いとタスクを作っていないプロジェクトでは枠の中が空のまま残ります。読み込み中や初回の取得失敗は、親の `page.tsx` で分けています。ここでは取得済みのタスク配列が0件かを確かめます。再取得に失敗している場合は、親が前回の内容であることを警告します。タスクが無いことを表示しておくと、画面が壊れているのかタスクが無いだけなのかで読者が迷いません。`StatusBadge` はタスク一覧でも使っている共通の部品で、`task.status` を渡すだけで状態に応じた色の札になります。ここで色分けを直に書かないので状態の色を変えたいときは部品側を1か所直すだけで全画面に効きます。
 
-見出しの件数も、完成版とは数え方が違います。ここでは `projectDetail.tasks?.length ?? 0` として全件を数えますが完成版はキャンセル済みを外した件数を `タスク (3)` のように出し、外した分を「（キャンセル済 1）」と脇に添えます。Day 21 の統計カードと同じで、中止したタスクを混ぜると「今動いている作業の量」として読めなくなるためです。今日は数え分けまでは踏み込まずまず一覧が出る状態を作ります。
+見出しの件数も、完成版とは数え方が違います。ここでは `projectDetail.tasks?.length ?? 0` として全件を数えますが完成版はキャンセル済みを外した件数を `タスク (3)` のように出し、外した分を「（キャンセル済 1）」と脇に添えます。Day 21 の統計カードと同じで、中止したタスクを混ぜると「今動いている作業の量」として読めなくなるためです。Step 3 で置き換えた完成形には、この数え分けも含まれています。手元の見出しは全件を数える抜粋へ戻さず、キャンセル済みの件数を分けた表示のまま確認してください。
 
-こちらも `<div>` の途中で切れています。続きを次のブロックで書きます。
+こちらも `<div>` の途中で抜粋を区切っています。次のブロックで優先度の表示と閉じタグを確認します。
 
 ```tsx
               {/* filepath: src/component/project/project-detail-view.tsx（同じファイルの続き） */}
@@ -704,146 +739,76 @@ Day 12 で実装済みなら以下は読み比べだけ行います。
 </Card>
 ```
 
-優先度の札だけは専用の部品にせず、共通の `Badge` に `variant` を渡す形にしています。色を決める役目は `getPriorityBadgeVariant` が持っていて`URGENT` なら `destructive`、`HIGH` なら `secondary`、残り（`MEDIUM` と `LOW`）は `outline` を返します。ここで `task.priority === 'URGENT' ? ... : ...` と書き始めると同じ優先度がタスク一覧と詳細で違う色になっていきます。文字のほうは `TASK_PRIORITY_LABELS[task.priority]` を通して「緊急」「高」「中」「低」の日本語にします。`?? task.priority` を添えてあるのは対応表で見つからない値が届いても札を空にしないためです。
+優先度の札だけは専用の部品にせず、共通の `Badge` に `variant` を渡す形にしています。色を決める役目は `getPriorityBadgeVariant` が持っていて`URGENT` なら `destructive`、`HIGH` なら `secondary`、`MEDIUM` と `LOW` なら `outline` を返します。ここで `task.priority === 'URGENT' ? ... : ...` と書き始めると同じ優先度がタスク一覧と詳細で違う色になっていきます。文字のほうは `TASK_PRIORITY_LABELS[task.priority]` を通して「緊急」「高」「中」「低」の日本語にします。`?? task.priority` を添えてあるのは対応表で見つからない値が届いても札を空にしないためです。
 
 **確認ポイント**
 
-- メンバー追加ボタンがヘッダー右上にある
-- オーナーの削除ボタンは無効化される
-- タスク 0 件でも空表示で崩れない
+- メンバー追加ボタンがヘッダー右上にあります
+- オーナーの削除ボタンは無効化されます
+- タスク 0 件でも空表示で崩れません
 
 ---
 
-### Step 5: アーカイブのつなぎ込みを確かめる（5分）
+### Step 5: アーカイブのつなぎ込みを確かめる （読む目安: 5分）
 
-**ゴール**: 詳細画面上部のボタンで `archive` / `unarchive` を切り替えられるようにします。
+**ゴール**: 詳細画面上部のボタンから、送信時のプロジェクトだけを安全にアーカイブ・解除できることを確かめます。
 
-Day 11 で作った mutation と handler があれば
-追加し直さず、次の条件を満たすか確認します。
-
-`ProjectDetailView` 側では「どちらを呼ぶか」は判断せず、現在状態だけを親へ渡します。
-
-```tsx
-{/* filepath: src/component/project/project-detail-view.tsx */}
-<Button
-  variant="outline"
-  onClick={() => onArchive(projectDetail.id, projectDetail.isArchived)}
->
-  {projectDetail.isArchived ? (
-    <>
-      <ArchiveRestore className="mr-2 h-4 w-4" /> アーカイブ解除
-    </>
-  ) : (
-    <>
-      <Archive className="mr-2 h-4 w-4" /> アーカイブ
-    </>
-  )}
-</Button>
-```
-
-このボタンは `archive` と `unarchive` のどちらを呼ぶかを決めていません。親に渡しているのは `projectDetail.isArchived`、つまり今どちらの状態なのかという事実だけです。判断を親に預けておくとあとで「アーカイブ前に確認ダイアログを挟む」と決めても直すのは `page.tsx` の1か所で済みます。表示のほうは `isArchived` を見て文字とアイコンを入れ替えるのでアーカイブが成功して詳細のデータが取り直されるとラベルも自動で反対側へ変わります。押すたびに文字を書き換える処理を自分で持つ必要はありません。
-
-親の `page.tsx` では2つの mutation を持ちます。Day 11 Step 7 で追加した `getById.invalidate()` も残してください。これが詳細の古いアーカイブ状態を更新対象にします。
+Day 12で作ったmutationとhandlerは追加し直しません。次のコードは現在の完成形を読むための抜粋です。
 
 ```ts
-// filepath: src/app/project/page.tsx
+// filepath: src/app/project/page.tsx（読むだけ）
 const archiveMutation = api.project.archive.useMutation({
-  onSuccess: () => {
-    utils.project.getAll.invalidate();
-    utils.project.getById.invalidate();
-    router.push('/project');
+  retry: false,
+  onSuccess: (_data, variables) => {
+    refreshProject(variables.id);
+    leaveSubmittedDetail(variables.id);
   },
-});
-
-const unarchiveMutation = api.project.unarchive.useMutation({
-  onSuccess: () => {
-    utils.project.getAll.invalidate();
-    utils.project.getById.invalidate();
-    router.push('/project');
-  },
+  onError: (error, variables) =>
+    reportWriteError(error, 'archive', variables.id),
 });
 ```
 
-2つの mutation で `onSuccess` の中身がそろっているのはどちらも「一覧の中身が変わった」という同じ結果を生むからです。`utils.project.getAll.invalidate()` はtRPC が手元に持っている一覧のデータに古いという印を付けて次に表示されるときに取り直させます。これを忘れるとアーカイブしたはずのプロジェクトが一覧に残って見えます。サーバー側は正しく更新されているのに画面だけが古い、という一番気付きにくいずれ方です。続く `router.push('/project')` で詳細から一覧へ戻すので読者は取り直された一覧をその場で確かめられます。
+`unarchiveMutation` も同じ形で、操作名だけが `unarchive` です。`variables.id` は送信時の対象なので、通信中に別の詳細へ移っても現在のURLを誤って更新しません。`leaveSubmittedDetail` は送信した詳細をまだ表示している場合だけ一覧へ戻します。`retry: false` は、返事だけ失われた通信を自動再送しないためです。
 
-切り替え関数は次の通りです。
+`handleArchive` は `authExpiredRef.current` を確認し、現在の状態に応じて `archiveMutation` または `unarchiveMutation` を1回だけ呼びます。`ProjectDetailView` は判断せず、`projectDetail.id` と現在の `isArchived` を親へ渡します。
 
-```ts
-// filepath: src/app/project/page.tsx
-const handleArchive = (projectId: string, isArchived: boolean) => {
-  const mutation = isArchived ? unarchiveMutation : archiveMutation;
-  mutation.mutate({ id: projectId });
-};
-```
+**確認ポイント**:
 
-3行しかありませんがこの関数がアーカイブ機能の分かれ道です。受け取る `isArchived` は今の状態なので`true`（すでにアーカイブ済み）なら呼ぶのは `unarchiveMutation` のほうです。渡ってくるのは現在で、呼ぶのは反対側、と覚えてください。ここを逆にするとアーカイブ済みのプロジェクトをもう一度アーカイブする通信になります。エラーにはならず、ボタンを押しても何も変わらないので原因を見つけるのに時間がかかります。`useMutation` の戻り値をいったん変数に入れてから `mutate` を呼べるのは戻り値がただのオブジェクトだからです。おかげで `if` を2つに分けて同じ `mutate` を2回書かずに済みます。
-
-**確認ポイント**
-
-- 未アーカイブなら「アーカイブ」と表示される
-- アーカイブ済みなら「アーカイブ解除」と表示される
-- 成功後は `/project` に戻って一覧が更新される
+- 2つのmutationが `variables.id` を `refreshProject` と `leaveSubmittedDetail` へ渡します
+- `retry: false` と操作別の `reportWriteError` があります
+- 未アーカイブなら「アーカイブ」、アーカイブ済みなら「アーカイブ解除」と表示されます
+- 成功後は、送信した詳細を表示中の場合だけ `/project` に戻ります
 
 ---
 
-### Step 6: 補助ダイアログの置き場所を確かめる（5分）
+### Step 6: 補助ダイアログの置き場所を確かめる （読む目安: 5分）
 
-**ゴール**: 詳細表示はインラインのままにしつつ、補助的なモーダルだけ `page.tsx` 側で扱う現在構成を完成させます。
+**ゴール**: 詳細表示はインラインのままにし、削除確認は失敗時に対象を残すダイアログで扱うことを確かめます。
 
-Day 12 で実装済みのダイアログや state は
-再宣言しません。以下は配置と動作の確認用です。
-
-ここが少し重要です。**いまも `Dialog` は使っていますが詳細表示のためではありません。**
-
-- `ProjectDialog`: プロジェクト作成 / 編集用
-- メンバー追加用 `Dialog`
-- 削除確認用 `DeleteConfirmDialog`
-
-つまり現在の役割分担はこうです。
-
-| コンポーネント | 役割 |
-|---------------|------|
-| `ProjectDetailView` | 詳細をインライン表示する |
-| `ProjectDialog` | プロジェクト作成・編集 |
-| `DeleteConfirmDialog` | 削除確認 |
-
-メンバー削除は即時実行ではなく、確認ダイアログを挟みます。
-
-```ts
-// filepath: src/app/project/page.tsx
-const handleRemoveMember = (userId: string) => {
-  setRemoveMemberTargetId(userId);
-  setRemoveMemberDialogOpen(true);
-};
-```
-
-この関数は削除そのものを行いません。誰を消すのかを `removeMemberTargetId` に覚えてダイアログを開くところまでです。実際に消すのは次に置く `DeleteConfirmDialog` の `onConfirm` の中です。ここで即座に mutation を呼ぶ形にすると押し間違いがそのままメンバーの削除になります。取り消せない操作では「対象を覚える」と「実行する」を2段に分ける、という形を覚えてください。`ProjectDetailView` 側が `onRemoveMember` を呼ぶだけで済んでいるのも、この2段を親が引き受けているからです。
+Day 12で実装済みのstate、handler、ダイアログは再宣言しません。`handleRemoveMember` は対象のプロジェクトID、ユーザーID、session番号を保存して確認ダイアログを開きます。`confirmRemoveMember` は保存した対象を `mutateAsync` へ渡し、成功した場合だけ `closeRemoveDialog` を呼びます。
 
 ```tsx
-{/* filepath: src/app/project/page.tsx */}
+{/* filepath: src/app/project/page.tsx（読むだけ） */}
 <DeleteConfirmDialog
   open={removeMemberDialogOpen}
-  onOpenChange={setRemoveMemberDialogOpen}
-  onConfirm={() => {
-    if (selectedProject && removeMemberTargetId) {
-      removeMemberMutation.mutate({
-        projectId: selectedProject,
-        userId: removeMemberTargetId,
-      });
-    }
+  onOpenChange={(open) => {
+    if (!open) closeRemoveDialog();
   }}
+  onConfirm={confirmRemoveMember}
+  closeOnConfirm={false}
   isPending={removeMemberMutation.isPending}
   title="このメンバーを削除しますか？"
 />
 ```
 
-`onConfirm` の中で `selectedProject && removeMemberTargetId` を確かめてから `mutate` を呼びます。`selectedProject` の型は `string | null` なのでこの確認が無いと `projectId` に `null` が入りうる形になり、TypeScript が先に止めます。`isPending` を渡しているのは通信の返事を待つ間にボタンを押せなくするためです。`DeleteConfirmDialog` は `isPending` が `true` の間、削除ボタンの文字を「削除中...」に変えてキャンセルも含めて `disabled` にします。これが無いと連打で同じ削除要求が何本も飛びます。`title` を上書きしているのは既定の文言が削除対象を名指ししない一般的な言い回しで、プロジェクトそのものの削除と見分けが付かないためです。
-
-これで完成です。
+`closeOnConfirm={false}` があるため、確認ボタンを押しただけでは閉じません。利用者がキャンセルしない場合、通信が失敗しても同じ削除対象を表示したままにします。成功後に自動で閉じるのはsession番号と対象が一致した場合だけです。`isPending` は削除ボタンを止め、送信中のrefは同じ描画での連打も止めます。キャンセルで確認を閉じても、送信済みの削除を取り消せるとは限りません。
 
 **確認ポイント**:
-- メンバー削除は確認ダイアログを挟んで実行される
-- 詳細表示そのものはインライン表示のままになっている
+
+- メンバー削除は確認ダイアログを挟みます
+- 失敗時はダイアログと削除対象が残ります
+- 成功時だけ `closeRemoveDialog` が呼ばれます
+- 詳細表示そのものはインライン表示のままになっています
 
 ![プロジェクト詳細。赤枠の中がメンバーカードで、各行の右に権限の選択欄と削除ボタンが並んでいる](./screenshots/day27/project-detail-members.png)
 
@@ -851,12 +816,12 @@ const handleRemoveMember = (userId: string) => {
 
 ## 現在の完成形の流れ
 
-1. 一覧カードをクリックする
-2. `router.push('/project?projectId=...')` が走る
-3. `page.tsx` が `projectId` を読み、`selectedProject` という別名で使う
-4. `api.project.getById` が有効化される
-5. `ProjectDetailView` が表示される
-6. 戻る・アーカイブ・メンバー操作は親の `page.tsx` が処理する
+1. 一覧カードをクリックします
+2. `router.push('/project?projectId=...')` が走ります
+3. `page.tsx` が `projectId` を読み、`selectedProject` という別名で使います
+4. `api.project.getById` が有効化されます
+5. `ProjectDetailView` が表示されます
+6. 戻る・アーカイブ・メンバー操作は親の `page.tsx` が処理します
 
 ---
 
@@ -886,9 +851,9 @@ const handleRemoveMember = (userId: string) => {
 
 ---
 
-### Pro パターンで書こう（アーカイブ状態の絞り込みは配列メソッドで選ぶ）
+### Pro パターンで書こう（絞り込み条件と処理を対応表にする）
 
-絞り込み条件を配列メソッドで並べると条件が増えても追記だけで対応でき、見渡しが保てます。
+絞り込み条件と処理を対応表にすると、型にある条件をすべて扱ったか確かめられます。
 なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
@@ -930,8 +895,8 @@ export function filterProjectsByArchiveStatus(
 
 **このコードの問題点**:
 
-- `if` が増えるほどどの条件が一覧のルールなのか見渡しにくくなる
-- 新しい絞り込み条件を足すと関数の中に分岐がさらに増える
+- `if` が増えるほどどの条件が一覧のルールなのか見渡しにくくなります
+- 新しい絞り込み条件を足すと関数の中に分岐がさらに増えます
 - `filter` の値と実際の絞り込み処理が離れているためUI 側の選択肢と対応づけにくい
 
 #### After（プロが書くコード）
@@ -951,56 +916,78 @@ type ArchiveFilter = 'active' | 'archived' | 'all';
 型の定義は Before とまったく同じです。書き換えるのはこの3つの値と処理をどこで結びつけるか、その1点だけです。型を触らずに組み立て方だけを差し替えられる、という確認も兼ねています。
 
 ```typescript
-const ARCHIVE_FILTERS: Array<{
-  key: ArchiveFilter;
-  apply: (projects: ProjectListItem[]) => ProjectListItem[];
-}> = [
-  {
-    key: 'active',
-    apply: (projects) => projects.filter((project) => !project.isArchived),
-  },
-  {
-    key: 'archived',
-    apply: (projects) => projects.filter((project) => project.isArchived),
-  },
-  {
-    key: 'all',
-    apply: (projects) => projects,
-  },
-];
+const ARCHIVE_FILTERS: Record<
+  ArchiveFilter,
+  (projects: ProjectListItem[]) => ProjectListItem[]
+> = {
+  active: (projects) => projects.filter((project) => !project.isArchived),
+  archived: (projects) => projects.filter((project) => project.isArchived),
+  all: (projects) => projects,
+};
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここで効いているのは配列の要素が `key` と `apply` の組になっている点です。`'active'` という選択肢の名前と「アーカイブ済みを除く」という処理が同じ1つの要素の中で隣り合います。Before では選択肢の名前と処理が `if` を挟んで数行離れていました。並べて置くと画面の絞り込みメニューの選択肢をこの配列から作る、といった使い回しもできます。
+`Record`（指定したキーすべてに同じ型の値を持たせる型）を使っています。`ArchiveFilter` の3つの値がキーなので、`archived` の処理を書き忘れると型検査が失敗します。条件の名前と処理を同じ行へ置き、対応を確かめやすくします。
 
 ```typescript
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
   filter: ArchiveFilter,
 ) {
-  const archiveFilter = ARCHIVE_FILTERS.find((item) => item.key === filter);
-
-  return archiveFilter?.apply(projects) ?? projects;
+  return ARCHIVE_FILTERS[filter](projects);
 }
 ```
 
 **このコードの強み**:
 
-- 絞り込み条件が配列にまとまり、選択肢と処理の対応が一覧できる
-- 新しい条件を足すときは `ARCHIVE_FILTERS` に1要素追加するだけで済む
-- `find` で対象ルールを選ぶ形なので分岐のネストが増えにくい
+絞り込み条件と処理の対応を一覧で確認できます。条件を追加するときは `ArchiveFilter` と `ARCHIVE_FILTERS` の両方を更新します。対応する処理の書き忘れは型検査で見つけられます。
+
+`Before` の末尾では条件を扱い忘れても全件を返します。対応表は型にあるキーをすべて要求するので、未実装の条件が黙って全件表示になるのを防ぎます。
 
 #### 覚えておきたいエッセンス
 
-同じ値を見て分岐する `if` が並び始めたら
-「条件と処理を配列にして選ぶ」形にできないか考えます。
+条件が増えたときは、その条件を扱う処理もそろっているか確かめます。対応表と型を結びつけると、書き忘れをビルド時に見つけられます。
+
+### Step 7: 書き込みの失敗を画面へ返す（読む目安: 20分）
+
+Day 12までの画面は、アーカイブ表示のスイッチをONにするとアーカイブ済みだけを取得します。今日は進行中とアーカイブ済みを同じ一覧で確認できる完成形へ進め、8つの書き込み操作の失敗処理もまとめて照合します。
+
+`src/lib/project-write-error.ts` は教材のscaffold（最初に配布される土台）に含まれています。見つからない場合は `scripts/_lib-base/project-write-error.ts` を `src/lib/project-write-error.ts` へコピーします。`query-error.ts` も同じく `scripts/_lib-base/` が復元元です。通信切断など結果が分からない失敗では自動再送しません。サーバー側で書き込みだけ完了している可能性があるため、最新表示を確認してから必要な場合だけ再実行します。
+
+このStepではimportやmutationの抜粋を個別に追記しません。後ろの「完成コード全体」にある **`### src/app/project/page.tsx` の見出しから、次の `### src/component/project/project-detail-view.tsx` の直前まで**を使います。その範囲にある41個のコードブロックを掲載順につなげ、手元の `src/app/project/page.tsx` 全体を置き換えて保存してください。各ブロック先頭の `filepath` 行もコードの一部です。
+
+置き換え後、このStepへ戻って次を確認します。
+
+**確認ポイント**:
+
+- `showArchived` がtrueなら `isArchived` フィルターを外し、進行中とアーカイブ済みを取得します
+- 8つのmutationが `retry: false` と操作別の `onError` を持ちます
+- 作成・編集・追加・2つの削除は、成功後だけダイアログと対象をリセットします
+- `refreshProject` が送信時のIDを使って一覧と対象の詳細を更新します
+- `leaveSubmittedDetail` が送信対象の詳細をまだ表示中か確かめてから一覧へ戻ります
+- フォームを閉じる処理が送信時のIDとsession番号（Day 11で「世代」と呼んだ番号）を照合します
+- `ProjectDialog` に `isPending`、3つの削除確認に `closeOnConfirm={false}` を渡します
+- 認証切れ後は新しい書き込みと自動再取得を止めます
+
+次のコマンドで型エラーがないことを確認してから、Step 5と6の確認ポイントをもう一度見直します。
+
+```bash
+# filepath: ターミナル
+npm run build
+```
+
+コマンドがエラーなしで終了し、ターミナルへ入力できる状態に戻れば、Step 5と6の画面確認へ進みます。途中に型エラーや構文エラーが出た場合は、先にそのエラーを直します。
+
+最初のエラーに書かれたファイル名と行番号を開きます。`page.tsx` の場合は、41個のブロックをすべて掲載順につないだか確認してください。最初の `'use client';` から最後の `ProjectPage` の閉じ括弧までが必要です。本文、見出し、コードを囲む三連のバッククオートは貼り付けず、コード内の `filepath` コメントは残します。抜けた部分を補い、同じコードを2回貼った場合は重複分を除いて保存します。
+
+`project-detail-view.tsx` のエラーなら、Step 3で指定した完成版の範囲をつないだか確認します。`Cannot find module` と出た場合は、表示された import のパスと手元のファイル名を照合し、`project-write-error.ts` と `query-error.ts` はこのStepの復元元を確認します。直した後に `npm run build` をもう一度実行してください。エラーが残る間は次の画面確認へ進みません。
 
 ## 完成コード全体
 
 今日は3つのファイルを扱いました。各 Step のコードは説明のために短く切ってあり、途中で切れたブロックも混ざっています。ここでは同じ3ファイルの完成状態を、意味のまとまりごとに最初から最後まで載せます。手元のファイルを開いて上から順に見比べてください。
 
-`src/server/api/routers/project.ts` だけはアーカイブに関わる部分だけを載せます。このファイルには Day 09 から Day 12 で作った手続きも並んでおり全体で 500 行を超えます。今日確認するアーカイブ関連のコードはこの2か所です。
+`src/server/api/routers/project.ts` だけはアーカイブに関わる部分だけを載せます。このファイルには Day 09 から Day 12 で作った手続きも並んでおり、全体で 500 行を超えます。今日確認するアーカイブ関連のコードは、この2か所です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1014,19 +1001,25 @@ export function filterProjectsByArchiveStatus(
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: アーカイブ状態を書き換える共通ヘルパー
+// 照合用: アーカイブ状態を書き換える共通ヘルパー
 const setArchiveStatus = async (userId: string, projectId: string, isArchived: boolean) => {
-  const userMember = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    // メンバー変更と同じ行を先にロックし、待機中に確定した現在の権限を確認する。
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    const userMember = await tx.projectMember.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
 
-  assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
+    assertMemberPermission(userMember ? [userMember] : [], 'canArchive');
 
-  return await prisma.project.update({
-    where: { id: projectId },
-    data: { isArchived },
+    return await tx.project.update({
+      where: { id: projectId },
+      data: { isArchived },
+    });
   });
 };
 ```
@@ -1039,7 +1032,7 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: archive と unarchive の手続き
+// 照合用: archive と unarchive の手続き
   archive: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -1059,33 +1052,22 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 
 ### `src/app/project/page.tsx`
 
-**外部ライブラリと画面部品の import**:
+Day 27 全 Step を反映した完成版です。41個のフェンスを上から順番につなげ、手元のファイル全体を置き換えてください。途中で括弧やJSXが閉じていない部分もあるので、最後の `ProjectPage` の閉じ括弧まで順番を変えずに貼ります。
 
 ```tsx
 // filepath: src/app/project/page.tsx
-// 完成版: インポート（外部ライブラリと画面部品）
 'use client';
 
 import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { ProjectCard } from '@/component/project/project-card';
 import { ProjectDetailView } from '@/component/project/project-detail-view';
 import { ProjectDialog, type ProjectFormData } from '@/component/project/project-dialog';
 import { Button } from '@/component/ui/button';
 import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
-```
-
-`'use client'` が先頭にあるのはこのページが `useState` とルーター用フックを使うためです。この1行が無いとサーバー側の部品として扱われ、状態を持てないというエラーで止まります。
-
-`ProjectDialog` の行だけ `type ProjectFormData` が並んでいます。同じファイルから部品と型をまとめて取り込む書き方です。型のほうに `type` を付けておくとビルド時にその名前が実行するコードから外れます。型は型検査だけに使うもので動くコードには要らないためです。
-
-**UI 部品と共通の道具の import**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: インポート（UI 部品と共通の道具）
 import {
   Dialog,
   DialogContent,
@@ -1098,21 +1080,19 @@ import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
   Select,
+```
+
+画面で使う部品を取り込みます。`DeleteConfirmDialog` は送信中の表示を扱い、通常の `Dialog` はメンバー追加に使います。ここでは `Select` の import が途中なので、次のフェンスへ続けます。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/component/ui/select';
 import { Switch } from '@/component/ui/switch';
-```
-
-`Dialog` と `Select` は名前を6つ前後まとめて取り込むのでBiome が1行へ収めず縦に並べます。shadcn/ui の部品は「枠・中身・見出し・footer」と役割ごとに分かれており、使う組み合わせを自分で選べます。
-
-**権限・日付・tRPC の import**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: インポート（権限・日付・tRPC）
 import {
   hasPermission,
   isProjectMemberRole,
@@ -1122,66 +1102,195 @@ import {
 } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
-import {
-  httpStatusOf,
-  isAuthError,
-  isForbiddenError,
-  shouldRetryQuery,
-} from '@/lib/query-error';
+import { classifyProjectWriteError, type ProjectWriteOperation } from '@/lib/project-write-error';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 
-const shouldRetryProjectQuery = (
-  failureCount: number,
-  error: unknown,
-) => httpStatusOf(error) !== 404
-  && shouldRetryQuery(failureCount, error);
-```
+const shouldRetryProjectQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
-役割やステータスの文字列を `@/lib/constant/` から取り込んでいるのは`'OWNER'` や `'CANCELLED'` をこのファイルに直接書かないためです。直接書くと綴りを1文字間違えても TypeScript は気付かず、条件が静かに外れます。定数を通せば間違った名前はその場でエラーになります。
-
-**useState で持つ状態**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 状態（useState）
 function ProjectPageContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+```
+
+ロールと日付の共通関数、読み取りと書き込みのエラー判定を取り込みます。詳細の404は再試行しても消えた対象を戻せないため、`shouldRetryProjectQuery` で再試行から外します。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const [memberDialogProjectId, setMemberDialogProjectId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectFormData | undefined>(undefined);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<ProjectMemberRole>(PROJECT_MEMBER_ROLE.MEMBER);
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
-  const [removeMemberTargetId, setRemoveMemberTargetId] = useState<string | null>(null);
-```
+  const [removeMemberDialogProjectId, setRemoveMemberDialogProjectId] = useState<string | null>(
+    null,
+  );
 
-10 個並んでいますが対になっているものを探すと数はぐっと減ります。`deleteDialogOpen` と `deleteTargetId`、`removeMemberDialogOpen` と `removeMemberTargetId` はそれぞれ「開いているか」と「対象は誰か」の組です。Step 6 で見た2段構えの操作はこの組があって初めて成り立ちます。
-
-`editingProject` の初期値が `undefined` なのは`ProjectDialog` が「初期値が無い＝新規作成」と読む約束だからです。`null` にすると型が合いません。
-
-**URL から読み取る詳細の対象**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: URL から詳細の対象を読む
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
+  const selectedProject = projectIdParam;
   const router = useRouter();
 
-  const selectedProject = projectIdParam;
+  const previousProject = useRef(selectedProject);
+  const viewRef = useRef(selectedProject);
+  useEffect(() => {
+    viewRef.current = selectedProject;
+  }, [selectedProject]);
+  const authExpiredRef = useRef(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const formSession = useRef({ generation: 0, target: null as string | null });
+  const memberSession = useRef({ generation: 0, target: null as string | null });
 ```
 
-`selectedProject` は URL の `projectIdParam` をそのまま参照します。詳細から一覧へ戻ってパラメータが消えると同じ描画で `null` になり、詳細取得も止まります。
+URL の `projectId` が表示対象です。`viewRef` は遅れて届いた成功が現在の詳細に関係するかを確かめるために残します。フォームとメンバー追加には、それぞれ開き直しを区別する世代番号を用意します。
 
-**データ取得と権限判定**
 
-一覧と詳細で必要な問い合わせが異なるため、取得状態も別々に受け取ります。
-
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
+  const deleteSession = useRef({ generation: 0, target: null as string | null });
+  const removeSession = useRef({
+    generation: 0,
+    projectId: null as string | null,
+    userId: null as string | null,
+  });
+  const notifiedWriteErrors = useRef(new Set<unknown>());
+  const formSubmitting = useRef(false);
+  const memberSubmitting = useRef(false);
+  const deleteSubmitting = useRef(false);
+  const removeSubmitting = useRef(false);
+  const memberDialogOpen =
+    memberDialogProjectId !== null && memberDialogProjectId === selectedProject;
+  const removeMemberDialogOpen =
+    removeMemberDialogProjectId !== null && removeMemberDialogProjectId === selectedProject;
+
+  const closeProjectDialog = () => {
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    setDialogOpen(false);
+  };
+  const closeMemberDialog = () => {
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    setMemberDialogProjectId(null);
+  };
+```
+
+削除対象と送信中の状態を操作別に持ちます。メンバーダイアログは、開いたときのIDと表示中のIDが一致するときだけ出します。閉じるたびに世代を進め、以前の送信結果が新しいダイアログを閉じるのを防ぎます。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const closeDeleteDialog = () => {
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    setDeleteDialogOpen(false);
+  };
+  const closeRemoveDialog = () => {
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+    };
+    setRemoveMemberDialogProjectId(null);
+  };
+
+  useEffect(() => {
+    if (previousProject.current === selectedProject) return;
+    previousProject.current = selectedProject;
+    // 別のプロジェクトへ移ったとき、前の選択を送信しないためです。
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    memberSession.current = { generation: memberSession.current.generation + 1, target: null };
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: null };
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
+      projectId: null,
+      userId: null,
+```
+
+削除確認を閉じた場合も世代を進めます。別のプロジェクトへ移ったときは、編集・追加・削除の対象をまとめて無効にします。前の画面で選んだ人を移動後に削除しないためです。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    };
+    setDialogOpen(false);
+    setMemberDialogProjectId(null);
+    setDeleteDialogOpen(false);
+    setRemoveMemberDialogProjectId(null);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  }, [selectedProject]);
+
   const utils = api.useUtils();
+  const refreshProject = async (projectId?: string, membershipChanged = false) => {
+    // 認証切れの後に届いた成功はキャッシュだけを無効にし、再通信しません。
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [utils.project.getAll.invalidate(undefined, filters)];
+      if (projectId) {
+        updates.push(utils.project.getById.invalidate({ id: projectId }, filters));
+        if (membershipChanged)
+          updates.push(utils.project.getAvailableUsers.invalidate({ projectId }, filters));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+```
+
+移動後は選択したユーザーとロールも初期値へ戻します。`refreshProject` は一覧に加え、指定されたプロジェクトの詳細を更新します。認証切れ後はキャッシュの無効化だけにとどめ、再通信しません。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      // 表示更新の失敗を、書き込みの失敗として通知しないためです。
+      console.error('プロジェクトの表示更新に失敗しました。', error);
+      if (!authExpiredRef.current)
+        toast.error(('最新の表示を取得できませんでした。' +
+          '再表示して' +
+          '操作結果を確認してください。'));
+    }
+  };
+```
+
+ここまででメンバー変更後の一覧と詳細を更新し、表示更新だけが失敗した場合の案内も終えます。次は操作の種類と対象を使って、保存そのものの失敗を分類します。
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const reportWriteError = (
+    error: unknown,
+    operation: ProjectWriteOperation,
+    projectId?: string,
+    membershipChanged = false,
+  ) => {
+    if (['create', 'update', 'delete', 'addMember', 'removeMember'].includes(operation)) {
+      notifiedWriteErrors.current.add(error);
+    }
+    const result = classifyProjectWriteError(error, operation);
+    if (result.kind === 'auth') {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    toast.error(result.message);
+    refreshProject(projectId, membershipChanged);
+  };
+```
+
+表示更新の失敗は、保存失敗とは別に通知します。`reportWriteError` は操作別にエラーを分類し、認証切れを記録します。権限不足などの場合には送信対象を再取得して、古い権限表示を更新します。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const leaveSubmittedDetail = (projectId: string) => {
+    if (authExpiredRef.current || viewRef.current !== projectId) return;
+    try {
+      router.push('/project');
+    } catch (error) {
+      console.error('プロジェクト一覧への移動に失敗しました。', error);
+      toast.error('一覧へ移動できませんでした。再表示して操作結果を確認してください。');
+    }
+  };
+
   const {
     data: currentUser,
     isLoading: currentUserLoading,
@@ -1189,44 +1298,32 @@ function ProjectPageContent() {
     isFetching: currentUserFetching,
     error: currentUserQueryError,
     refetch: refetchCurrentUser,
-  } = api.auth.getCurrentUser.useQuery(
-    undefined,
-    { retry: shouldRetryProjectQuery },
-  );
-```
-
-ログイン情報の取得状態も表示判定に含めます。本人の確認が終わる前に詳細や操作ボタンを描かず、認証失敗時のデータ露出を防ぐためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    retry: shouldRetryProjectQuery,
+    enabled: !authExpired,
+  });
   const {
     data: projects,
     isLoading: projectsLoading,
+```
+
+削除・アーカイブの成功で一覧へ戻るのは、まだ送信対象の詳細を表示している場合だけです。Aの応答待ち中にBへ移った場合はBを維持します。ログイン情報の取得も認証切れ後は止めます。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
     isError: projectsError,
     isFetching: projectsFetching,
     error: projectsQueryError,
     refetch: refetchProjects,
   } = api.project.getAll.useQuery(
     {
-      isArchived: showArchived
-        ? undefined
-        : false,
+      // showArchived が true のとき isArchived フィルターを外して
+      // 進行中・アーカイブ両方を取得する
+      isArchived: showArchived ? undefined : false,
     },
-    {
-      enabled: !selectedProject,
-      retry: shouldRetryProjectQuery,
-    },
+    { enabled: !authExpired && !selectedProject, retry: shouldRetryProjectQuery },
   );
-```
-
-**手元のコードを書き換えます**。Day 12 で書いた `isArchived: showArchived` の行を、上の `isArchived: showArchived ? undefined : false` に置き換えてください。Day 12 で予告したとおり、ここで絞り込みの意味を変えます。
-
-`isArchived: showArchived ? undefined : false` は `false` と `undefined` を別物として使い分けています。`false` は「アーカイブしていないものだけ」という絞り込みで、`undefined` は「この条件を送らない」という意味です。サーバー側は条件が来なければ絞り込みをしないので両方が返ります。ここを `true` にするとアーカイブ済みだけが並ぶ別の画面になってしまいます。
-
-一覧の取得状態をデータと分けて受け取ります。0件と通信待ちを区別し、失敗時には空の一覧ではなく再読み込みの入口を示すためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
   const {
     data: projectDetail,
     isLoading: projectDetailLoading,
@@ -1236,175 +1333,143 @@ function ProjectPageContent() {
     refetch: refetchProjectDetail,
   } = api.project.getById.useQuery(
     { id: selectedProject ?? '' },
-    {
-      enabled: !!selectedProject,
-      retry: shouldRetryProjectQuery,
-    },
-  );
+    { enabled: !authExpired && !!selectedProject, retry: shouldRetryProjectQuery },
 ```
 
-詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
+一覧と詳細の問い合わせをURLで切り替えます。アーカイブ表示がオンなら状態の絞り込みを外し、進行中とアーカイブ済みの両方を取得します。詳細IDがない間は `getById` を呼びません。
 
-詳細を開いている間は一覧の取得を止めます。401・403・404は同じ問い合わせを繰り返しても解決しないため再試行しません。
 
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-  const currentMember = projectDetail?.members
-    ?.find((m) => m.userId === currentUser?.id);
-  const currentMemberRole = currentMember
-    && isProjectMemberRole(currentMember.role)
-      ? currentMember.role
-      : undefined;
+  );
+
+  // 詳細画面で操作ボタンの表示可否を決めるため、
+  // ログインユーザー自身のプロジェクト内ロールから権限を求める
+  const currentMember = projectDetail?.members?.find((m) => m.userId === currentUser?.id);
+  const currentMemberRole =
+    currentMember && isProjectMemberRole(currentMember.role) ? currentMember.role : undefined;
   const canManageMembers = currentMemberRole
-    ? hasPermission(
-        currentMemberRole,
-        'canManageMembers',
-      )
+    ? hasPermission(currentMemberRole, 'canManageMembers')
     : false;
   const canArchiveProject = currentMemberRole
     ? hasPermission(currentMemberRole, 'canArchive')
     : false;
+
+  const { data: availableUsers } = api.project.getAvailableUsers.useQuery(
+    { projectId: selectedProject ?? '' },
+    {
+      enabled: !authExpired && !!selectedProject && canManageMembers,
+      retry: shouldRetryProjectQuery,
+    },
+  );
+
+  const createMutation = api.project.create.useMutation({
+    retry: false,
 ```
 
-権限の計算を `ProjectDetailView` の中ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。`isProjectMemberRole` は `members` に並ぶ値が4種のロールのどれかを確かめる型ガードで、予期しない値が混ざっていても `undefined` へ倒れます。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
+自分のプロジェクト内ロールから、メンバー管理とアーカイブの可否を別々に求めます。追加候補の問い合わせはメンバー管理権限がある場合だけ有効にし、操作できない人には不要な候補を取得しません。
 
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
-  const { data: availableUsers } =
-    api.project.getAvailableUsers.useQuery(
-      { projectId: selectedProject ?? '' },
-      {
-        enabled:
-          !!selectedProject && canManageMembers,
-        retry: shouldRetryProjectQuery,
-      },
-    );
-```
-
-候補一覧はメンバー管理権限がある場合だけ取得します。MEMBERやVIEWERが詳細を開いただけで403を発生させないためです。
-
-**プロジェクトを作る・直す・消す通信**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクトを作る・直す・消す通信
-  const createMutation = api.project.create.useMutation({
+// filepath: src/app/project/page.tsx（同じファイルの続き）
     onSuccess: () => {
-      utils.project.getAll.invalidate();
-      setDialogOpen(false);
+      refreshProject();
     },
+    onError: (error) => reportWriteError(error, 'create'),
   });
 
   const updateMutation = api.project.update.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
-      setDialogOpen(false);
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'update', variables.id),
   });
-```
 
-`update` のほうだけ `getById.invalidate` も呼んでいます。別のタブで詳細を開いている間に一覧側から編集すると、一覧だけを取り直しても詳細のキャッシュには古い名前が残るためです。`create` にこれが要らないのは作ったばかりのプロジェクトの詳細キャッシュがまだ無いためです。
-
-`setDialogOpen(false)` を `onSuccess` の中に置いているのは保存が終わってからダイアログを閉じるためです。送信した瞬間に閉じると失敗したときに入力内容ごと消えます。
-
-**削除とメンバー追加の通信**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 削除とメンバー追加の通信
   const deleteMutation = api.project.delete.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'delete', variables.id),
   });
 
   const addMemberMutation = api.project.addMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
-      setMemberDialogOpen(false);
-      setNewMemberUserId('');
-      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
-    },
-  });
 ```
 
-削除の `onSuccess` で `router.push('/project')` を呼ぶのは消したプロジェクトの詳細を開いたままにしないためです。URL に `projectId` が残っていると無くなった ID を取りに行って「プロジェクトが見つかりません」の画面になります。
+作成・更新・削除の成功で表示を更新します。更新と削除は、応答時の表示対象ではなく送信時の `variables.id` を使います。削除成功で別のプロジェクトの詳細を閉じないよう、移動にも同じIDを渡します。
 
-メンバー追加のほうは閉じるだけでなく入力欄も初期値へ戻しています。ここを戻さないと次に開いたときに前回選んだ人が残ったままで続けて同じ人を追加しかけます。
-
-**メンバーを外す・権限を変える通信**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: メンバーを外す・権限を変える通信
-  const removeMemberMutation = api.project.removeMember.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
     },
+    onError: (error, variables) => reportWriteError(error, 'addMember', variables.projectId, true),
+  });
+
+  const removeMemberMutation = api.project.removeMember.useMutation({
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId, true);
+    },
+    onError: (error, variables) =>
+      reportWriteError(error, 'removeMember', variables.projectId, true),
   });
 
   const updateMemberRoleMutation = api.project.updateMemberRole.useMutation({
-    onSuccess: () => {
-      if (selectedProject) {
-        utils.project.getById.invalidate({ id: selectedProject });
-      }
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.projectId);
     },
-  });
+    onError: (error, variables) => reportWriteError(error, 'updateMemberRole', variables.projectId),
 ```
 
-追加と削除は詳細に加えて一覧も取り直します。一覧カードにメンバー数が表示されるためです。権限変更は人数を変えないので、`updateMemberRoleMutation` は詳細だけを取り直します。更新対象に合わせて無関係なqueryの再取得を増やしません。
+メンバー追加と削除は詳細に加えて追加候補も更新します。追加済みの人を候補に残さず、外した人を再び候補に出すためです。ロール変更は人数を変えないので、プロジェクトの表示を更新します。
 
-`if (selectedProject)` で囲んであるのは`invalidate` に渡す `id` が `string` でなければならないためです。詳細を開いていなければこの通信自体が起きません。
-
-**アーカイブの通信**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: アーカイブの通信
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+  });
+
   const archiveMutation = api.project.archive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'archive', variables.id),
   });
 
   const unarchiveMutation = api.project.unarchive.useMutation({
-    onSuccess: () => {
-      utils.project.getAll.invalidate();
-      utils.project.getById.invalidate();
-      router.push('/project');
+    retry: false,
+    onSuccess: (_data, variables) => {
+      refreshProject(variables.id);
+      leaveSubmittedDetail(variables.id);
     },
+    onError: (error, variables) => reportWriteError(error, 'unarchive', variables.id),
   });
+
+  const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formSession.current = { generation: formSession.current.generation + 1, target: null };
+    setEditingProject(undefined);
 ```
 
-2つの中身がそろっているのはどちらも一覧の並びを変える操作だからです。アーカイブすれば進行中の一覧から消え、解除すれば戻ります。どちらでも `getAll` に古いという印が要ります。
+アーカイブと解除も送信時のIDで更新します。新規フォームを開くと世代を進め、編集対象を消します。以前の編集値が新規作成へ残るのを防ぎます。
 
-`router.push('/project')` で一覧へ戻すので読者は自分の操作の結果をその場で確かめられます。詳細へ留まる作りにするとボタンの文字が入れ替わるだけになり、一覧がどうなったかは分かりません。
-
-**新規作成と編集を開くハンドラー**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 新規作成と編集を開くハンドラー
-  const handleCreate = () => {
-    setEditingProject(undefined);
+// filepath: src/app/project/page.tsx（同じファイルの続き）
     setDialogOpen(true);
   };
 
   const handleEdit = (projectId: string) => {
     const project = projects?.find((p) => p.id === projectId);
-    if (project) {
+    if (project && !authExpiredRef.current) {
+      formSession.current = { generation: formSession.current.generation + 1, target: projectId };
       const startDate = project.startDate ? dateOnlyFromValue(project.startDate) : undefined;
       const endDate = project.endDate ? dateOnlyFromValue(project.endDate) : undefined;
 
@@ -1419,102 +1484,210 @@ function ProjectPageContent() {
       setDialogOpen(true);
     }
   };
+
+  const handleDelete = (projectId: string) => {
+    if (authExpiredRef.current) return;
 ```
 
-`handleCreate` の1行目で `undefined` を入れ直しているのは直前に編集を開いていた場合に前のプロジェクトの内容が残るのを防ぐためです。
+編集では一覧から対象を探し、日付をフォーム用の値へ変換します。認証切れ後にはフォームを開きません。削除確認も開く時点のIDを次のフェンスで記録します。
 
-`...(startDate && { startDate })` という書き方は日付が入っているときだけその項目を作ります。`startDate: undefined` と書いてもエラーにはなりませんがその場合はキーだけが残ります。Day 11 で決めたとおり、`editingProject` へ入れる値は「日付が入っているか、項目が無いか」のどちらかにそろえます。
-
-**保存の送信先の振り分け**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 保存の送信先を振り分ける
-  const handleDelete = (projectId: string) => {
-    setDeleteTargetId(projectId);
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    deleteSession.current = { generation: deleteSession.current.generation + 1, target: projectId };
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: ProjectFormData) => {
-    if (data.id) {
-      updateMutation.mutate({
-        id: data.id,
-        name: data.name,
-        description: data.description || null,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : null,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : null,
-      });
-    } else {
-      if (!currentUser?.id) {
-        return;
-      }
+  const handleSubmit = async (data: ProjectFormData) => {
+    if (authExpiredRef.current || formSubmitting.current) return;
+    if (!data.id && !currentUser?.id) return;
+    const session = { ...formSession.current };
+    if (session.target !== (data.id ?? null)) return;
+    const payload = {
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
+      endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
+    };
+    formSubmitting.current = true;
+    try {
+      if (data.id) {
+        await updateMutation.mutateAsync({
+          ...payload,
+          id: data.id,
+          description: data.description || null,
+          startDate: payload.startDate ?? null,
 ```
 
-`data.id` があるかどうかで作成と更新を分けています。ダイアログは1つしか無いので開いたときに ID を入れたかどうかがそのまま送信先の分かれ道になります。
+送信前に対象IDがフォームを開いた時点と一致するかを確かめます。`formSubmitting` で同じ処理の重複を止めます。更新で説明や日付を空にした場合は `null` を送り、保存済みの値を消します。
 
-更新のときだけ `null` を送っている点も見ておいてください。更新では「説明を空にする」という指示を送る必要があり、`null` はその意思表示です。項目を送らないとサーバー側は「触らない」と受け取ります。
-
-**新規作成の送信**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 新規作成の送信
-      createMutation.mutate({
-        name: data.name,
-        description: data.description,
-        color: data.color,
-        startDate: data.startDate ? dateOnlyToUtcStartIso(data.startDate) : undefined,
-        endDate: data.endDate ? dateOnlyToUtcStartIso(data.endDate) : undefined,
-      });
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+          endDate: payload.endDate ?? null,
+        });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      formSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      formSession.current.generation === session.generation &&
+      formSession.current.target === session.target
+    ) {
+      closeProjectDialog();
+      setEditingProject(undefined);
     }
   };
-```
 
-作成では未入力の日付を `undefined` にします。更新の `null` と使い分けているのは作成に「空にする」という指示が要らないためです。値が無ければその項目は最初から無い状態で作られます。
-
-説明が未入力のとき、フォームは空文字を返します。作成では空文字のまま保存し、更新で消したときは `null` を保存するためDB上の値は異なります。ただし表示側はどちらも説明なしとして扱います。この Day では既存データの保存形式を変えず、画面上の同じ結果を保ちます。
-
-`dateOnlyToUtcStartIso` を通しているのは画面が扱う「年月日だけ」の値を、サーバーが扱う日時の文字列へそろえるためです。ここを素通しにすると時差の分だけ日付が前後します。
-
-**一覧と詳細を行き来するハンドラー**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧と詳細を行き来するハンドラー
   const handleProjectClick = (projectId: string) => {
     router.push(`/project?projectId=${projectId}`);
+```
+
+作成と更新の応答を待ち、世代と対象が一致する場合だけフォームを閉じます。通知済みのエラーはここで二重通知しません。カードクリックはURLへIDを書き込み、一覧から詳細へ切り替えます。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
   };
 
   const handleDetailClose = () => {
     router.push('/project');
   };
 
-  const handleAddMember = () => {
-    if (selectedProject && newMemberUserId) {
-      addMemberMutation.mutate({
-        projectId: selectedProject,
+  const openMemberDialog = () => {
+    if (!selectedProject || authExpiredRef.current) return;
+    memberSession.current = {
+      generation: memberSession.current.generation + 1,
+      target: selectedProject,
+    };
+    setMemberDialogProjectId(selectedProject);
+    setNewMemberUserId('');
+    setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
+  };
+  const handleAddMember = async () => {
+    if (authExpiredRef.current || memberSubmitting.current || !selectedProject || !newMemberUserId)
+      return;
+    const session = { ...memberSession.current };
+    if (session.target !== selectedProject || !memberDialogOpen) return;
+    memberSubmitting.current = true;
+    try {
+      await addMemberMutation.mutateAsync({
+```
+
+メンバー追加を開くたびに、対象IDと世代を記録して選択を消します。送信は、表示対象とダイアログの対象が一致し、ユーザーが選ばれている場合だけ行います。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+        projectId: session.target,
         userId: newMemberUserId,
         role: newMemberRole,
       });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      memberSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      memberSession.current.generation === session.generation &&
+      memberSession.current.target === session.target
+    ) {
+      closeMemberDialog();
+      setNewMemberUserId('');
+      setNewMemberRole(PROJECT_MEMBER_ROLE.MEMBER);
     }
   };
+  const handleRemoveMember = (userId: string) => {
+    if (!selectedProject || authExpiredRef.current) return;
+    removeSession.current = {
+      generation: removeSession.current.generation + 1,
 ```
 
-`handleAddMember` が `selectedProject && newMemberUserId` を確かめてから送っているのは`newMemberUserId` の初期値が空文字だからです。ユーザーを選ばずにボタンを押せた場合でも、ここで止まります。画面側でもボタンを押せなくしてありますが確認は両方に置きます。
+追加成功でも、別の世代へ開き直していれば現在の選択を消しません。メンバー削除は別の操作として、削除するユーザーとプロジェクトを次のフェンスで組にして記録します。
 
-**メンバー操作とアーカイブのハンドラー**:
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: メンバー操作とアーカイブのハンドラー
-  const handleRemoveMember = (userId: string) => {
-    setRemoveMemberTargetId(userId);
-    setRemoveMemberDialogOpen(true);
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      projectId: selectedProject,
+      userId,
+    };
+    setRemoveMemberDialogProjectId(selectedProject);
+  };
+  const confirmRemoveMember = async () => {
+    const session = { ...removeSession.current };
+    if (
+      authExpiredRef.current ||
+      removeSubmitting.current ||
+      !session.projectId ||
+      !session.userId ||
+      viewRef.current !== session.projectId
+    )
+      return;
+    removeSubmitting.current = true;
+    try {
+      await removeMemberMutation.mutateAsync({
+        projectId: session.projectId,
+        userId: session.userId,
+      });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+```
+
+メンバー削除の確認は、記録したプロジェクトをまだ表示している場合だけ送信します。確認ダイアログを開いた後に移動しても、前の対象への削除を送らないためです。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+    } finally {
+      removeSubmitting.current = false;
+    }
+    if (
+      !authExpiredRef.current &&
+      removeSession.current.generation === session.generation &&
+      removeSession.current.projectId === session.projectId &&
+      removeSession.current.userId === session.userId
+    )
+      closeRemoveDialog();
+  };
+  const confirmDeleteProject = async () => {
+    const session = { ...deleteSession.current };
+    if (authExpiredRef.current || deleteSubmitting.current || !session.target) return;
+    deleteSubmitting.current = true;
+    try {
+      await deleteMutation.mutateAsync({ id: session.target });
+    } catch (error) {
+      if (!notifiedWriteErrors.current.delete(error)) throw error;
+      return;
+    } finally {
+      deleteSubmitting.current = false;
+    }
+    if (
+```
+
+メンバー削除の成功は世代・プロジェクト・ユーザーが一致する確認だけを閉じます。プロジェクト削除も独立した送信中フラグを持ち、応答を待ってから確認を閉じる条件を判定します。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+      !authExpiredRef.current &&
+      deleteSession.current.generation === session.generation &&
+      deleteSession.current.target === session.target
+    )
+      closeDeleteDialog();
   };
 
   const handleUpdateMemberRole = (userId: string, role: ProjectMemberRole) => {
-    if (selectedProject) {
+    if (selectedProject && !authExpiredRef.current) {
       updateMemberRoleMutation.mutate({
         projectId: selectedProject,
         userId,
@@ -1524,64 +1697,56 @@ function ProjectPageContent() {
   };
 
   const handleArchive = (projectId: string, isArchived: boolean) => {
+    if (authExpiredRef.current) return;
     const mutation = isArchived ? unarchiveMutation : archiveMutation;
     mutation.mutate({ id: projectId });
   };
+
+  const viewingDetail = Boolean(selectedProject);
 ```
 
-3つのうちその場で通信するのは `handleUpdateMemberRole` と `handleArchive` だけです。権限の変更は選んだ時点で保存されます。管理者が自分をメンバーや閲覧者へ変更すると権限を変更する操作欄が消えます。自分では元に戻せないためオーナーなどメンバー管理権限のある人に復旧を依頼します。
+プロジェクト削除の確認を閉じる前に、世代と対象を照合します。アーカイブ操作は現在の画面が示す状態から呼び出すAPIを選び、サーバーへは反転値ではなく対象IDを送ります。
 
-アーカイブは一覧の「アーカイブ表示」をオンにし対象の詳細を開いて「アーカイブ解除」を押すと戻せます。メンバー削除は Step 6 の確認ダイアログで対象を確かめてから実行します。
 
-**表示に必要な取得状態**
-
-```typescript
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-  const viewingDetail = Boolean(selectedProject);
   const queryErrors = viewingDetail
     ? [
         currentUserError ? currentUserQueryError : null,
-        projectDetailError
-          ? projectDetailQueryError
-          : null,
+        projectDetailError ? projectDetailQueryError : null,
       ]
-    : [
-        currentUserError ? currentUserQueryError : null,
-        projectsError ? projectsQueryError : null,
-      ];
-  const authFailed = queryErrors.some(isAuthError);
+    : [currentUserError ? currentUserQueryError : null, projectsError ? projectsQueryError : null];
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    // 読み取りで判明した認証切れも、後続の書き込み成功では解除しません。
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
   const forbidden = queryErrors.some(isForbiddenError);
-  const notFound = viewingDetail
-    && projectDetailError
-    && httpStatusOf(projectDetailQueryError) === 404;
-```
-
-URLに詳細IDがあるかで対象の問い合わせを選びます。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
-
-```typescript
-// filepath: src/app/project/page.tsx（同じファイルの続き）
+  const notFound =
+    viewingDetail && projectDetailError && httpStatusOf(projectDetailQueryError) === 404;
   const hasFetchError = viewingDetail
     ? currentUserError || projectDetailError
     : currentUserError || projectsError;
   const hasRequiredData =
-    (!currentUserError || currentUser != null)
-    && (viewingDetail
+    (!currentUserError || currentUser != null) &&
+    (viewingDetail
       ? !projectDetailError || projectDetail != null
-      : !projectsError || projects != null);
-  const requiredLoading = currentUserLoading
-    || (viewingDetail
-      ? projectDetailLoading
-      : projectsLoading);
-  const requiredFetching = currentUserFetching
-    || (viewingDetail
-      ? projectDetailFetching
-      : projectsFetching);
 ```
 
-エラーの有無と利用できるデータの有無を別々に判定します。初回失敗ではエラー画面を出し、再取得失敗では既存データを残すためです。
+表示中の画面に必要な問い合わせのエラーを集めます。読み取りで判明した認証切れも保持し、遅い書き込み成功で解除しません。認証・権限・削除済みのエラーと、前回データを残せる通信失敗を分けます。
 
-```typescript
+
+```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
+      : !projectsError || projects != null);
+  const requiredLoading =
+    currentUserLoading || (viewingDetail ? projectDetailLoading : projectsLoading);
+  const requiredFetching =
+    currentUserFetching || (viewingDetail ? projectDetailFetching : projectsFetching);
+
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     if (viewingDetail) {
@@ -1591,25 +1756,22 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     void refetchProjects();
   };
 
-  if (requiredLoading
-    && !authFailed && !forbidden && !notFound) {
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
       </AppLayout>
     );
   }
+
+  if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData)) {
 ```
 
-`viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
+一覧と詳細に必要な待機状態を選びます。初回取得中はスピナーを表示し、未取得の詳細を「見つかりません」と表示しません。再取得も現在表示中の画面に必要な問い合わせへ限定します。
 
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-  if (authFailed || forbidden || notFound
-    || (hasFetchError && !hasRequiredData)) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -1624,7 +1786,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
             {authFailed
-              ? 'もう一度ログインしてください。'
+              ? 'もう一度ログインしてください。入力内容はログイン後に入力し直してください。'
               : forbidden
                 ? '権限が必要です。プロジェクトの管理者に確認してください。'
                 : notFound
@@ -1634,6 +1796,13 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
           <Button
             type="button"
             onClick={() => {
+```
+
+認証切れ、権限不足、削除済み、初回取得失敗で見出しと案内を変えます。古い保護データを表示する代わりに、利用者が次に取れる操作を示します。ボタンの処理は次のフェンスに続きます。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
               if (authFailed) {
                 router.push('/login');
                 return;
@@ -1644,7 +1813,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
               }
               refetchRequiredData();
             }}
-            disabled={requiredFetching}
+            disabled={!authFailed && requiredFetching}
           >
             {authFailed
               ? 'ログイン画面へ'
@@ -1656,9 +1825,11 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       </AppLayout>
     );
   }
+
 ```
 
-401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
+認証切れはログインへ、権限不足と削除済みは一覧へ移動します。通信失敗だけ再読み込みを行います。再取得中でもログインへの移動は押せるよう、無効化条件から認証切れを外します。
+
 
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -1667,9 +1838,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       role="alert"
       className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
     >
-      <span>
-        最新のプロジェクト情報を取得できませんでした。前回取得時の内容です。
-      </span>
+      <span>最新のプロジェクト情報を取得できませんでした。前回取得時の内容です。</span>
       <Button
         type="button"
         variant="outline"
@@ -1681,25 +1850,24 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       </Button>
     </div>
   ) : null;
-```
 
-再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
-
-**詳細画面を返す分岐**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 詳細画面を返す分岐
   // プロジェクト詳細をインラインページとして表示（ダイアログオーバーレイなし）
   if (viewingDetail) {
     return (
       <AppLayout>
         <div className="space-y-4">
           {staleDataWarning}
+```
+
+再取得だけが失敗した場合は、前回の内容に警告と再試行ボタンを添えます。詳細表示ではこの警告も詳細ビューと一緒に表示し、古い内容であることを見落とさせません。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
           <ProjectDetailView
             projectDetail={projectDetail}
             onBack={handleDetailClose}
-            onAddMemberClick={() => setMemberDialogOpen(true)}
+            onAddMemberClick={openMemberDialog}
             onRemoveMember={handleRemoveMember}
             onUpdateMemberRole={handleUpdateMemberRole}
             onArchive={handleArchive}
@@ -1707,24 +1875,26 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
             canArchive={canArchiveProject}
           />
         </div>
-```
 
-`onAddMemberClick` だけ、その場で書いた短い関数を渡しています。やることが `setMemberDialogOpen(true)` の1つだけで、名前を付けて上に置いても読む手掛かりが増えないためです。何段階かある処理は上のハンドラーのように名前を付けて分けます。
-
-渡している `canArchive` の名前と、こちら側の変数名 `canArchiveProject` がずれている点にも気付いてください。部品の側は「アーカイブしてよいか」だけを知ればよく、何のアーカイブかは呼ぶ側の関心です。
-
-**メンバー追加ダイアログのユーザー選択欄**:
-
-```tsx
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: メンバー追加ダイアログ（ユーザー選択） */}
-        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>メンバー追加</DialogTitle>
               <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+```
+
+詳細ビューへ取得済みデータ、操作関数、権限を渡します。メンバー追加ダイアログも詳細の分岐内へ置き、一覧へ戻るとその画面から外れます。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
               <div className="grid gap-2">
                 <Label htmlFor="user">ユーザー</Label>
                 <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
@@ -1740,17 +1910,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   </SelectContent>
                 </Select>
               </div>
-```
-
-`onOpenChange={setMemberDialogOpen}` と書けるのは`onOpenChange` の渡す値が `true` か `false` の2択で、`setMemberDialogOpen` の求める形と一致するからです。`Escape` キーや背景のクリックで閉じたときも、この1本の線を通って状態が戻ります。
-
-`availableUsers` はまだこのプロジェクトに入っていない人だけを返す手続きです。全ユーザーを出すとすでにメンバーの人を選んで失敗する道ができます。
-
-**メンバー追加ダイアログのロール選択欄**:
-
-```tsx
-              {/* filepath: src/app/project/page.tsx */}
-              {/* 完成版: メンバー追加ダイアログ（ロール選択） */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -1760,6 +1919,13 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   }}
                 >
                   <SelectTrigger id="role">
+```
+
+追加するユーザーとロールを別々に選びます。ロールは対応表にある値かを確かめてから状態へ入れ、任意の文字列を送信しません。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
                     <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1774,72 +1940,54 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                 </Select>
               </div>
             </div>
-```
-
-`onValueChange` が `isProjectMemberRole` を挟んでいるのは`Select` が渡してくる値の型が `string` だからです。`newMemberRole` は4つの名前しか受け付けないのでそのままでは代入できません。ここで確かめてから入れると`as` を使わずに型が通ります。
-
-`.filter(([value]) => value !== PROJECT_MEMBER_ROLE.OWNER)` がオーナーを選択肢から外します。オーナーはプロジェクトを作った人へ自動で付く役割なのであとから他人へ配るものではありません。
-
-**メンバー追加ダイアログの操作ボタン**:
-
-```tsx
-            {/* filepath: src/app/project/page.tsx */}
-            {/* 完成版: メンバー追加ダイアログの操作ボタン */}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+              <Button variant="outline" onClick={closeMemberDialog}>
                 キャンセル
               </Button>
-              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
                 メンバー追加
               </Button>
+```
+
+追加候補にオーナーは出しません。送信する人が決まっていない場合と送信中は追加ボタンを止めます。キャンセルは対象と世代を無効にする関数を呼びます。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             </DialogFooter>
           </DialogContent>
         </Dialog>
-```
 
-`disabled={!newMemberUserId}` で、ユーザーを選ぶまで追加ボタンを押せなくしています。押せてしまうと何も起きないボタンを押した人が「壊れている」と受け取ります。
-
-キャンセル側を `variant="outline"` にしてあるのは色の付いたボタンを画面に1つだけにするためです。2つとも目立つとどちらが本命の操作か迷います。
-
-**詳細画面のメンバー削除確認**:
-
-```tsx
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: 詳細画面のメンバー削除確認 */}
         <DeleteConfirmDialog
           open={removeMemberDialogOpen}
-          onOpenChange={setRemoveMemberDialogOpen}
-          onConfirm={() => {
-            if (selectedProject && removeMemberTargetId) {
-              removeMemberMutation.mutate({
-                projectId: selectedProject,
-                userId: removeMemberTargetId,
-              });
-            }
+          onOpenChange={(open) => {
+            if (!open) closeRemoveDialog();
           }}
+          onConfirm={confirmRemoveMember}
+          closeOnConfirm={false}
           isPending={removeMemberMutation.isPending}
           title="このメンバーを削除しますか？"
         />
       </AppLayout>
     );
   }
-```
 
-この `</AppLayout>` と `}` で、詳細を返す `if` が閉じます。ここから下は `projectIdParam` が無いときつまり一覧のときだけ動く部分です。
-
-ダイアログをこの `if` の中にも置いてあるのは詳細画面から開くダイアログだからです。下の一覧側にも同じ形が出てきますが返り値が別々なのでそれぞれの中に置く必要があります。
-
-**一覧画面のヘッダー**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: 一覧画面のヘッダー
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
         {staleDataWarning}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="shrink-0 whitespace-nowrap text-3xl font-bold tracking-tight">
+```
+
+メンバー削除の確認は送信だけでは閉じず、成功後の世代確認へ任せます。`isPending` で待機中の削除ボタンを止めます。キャンセルは押せますが、送信済みの削除そのものを取り消す操作ではありません。詳細分岐の `return` が終わった後に、一覧の表示が続きます。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             プロジェクト
           </h1>
           <div className="flex shrink-0 items-center gap-4">
@@ -1854,17 +2002,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
             </Button>
           </div>
         </div>
-```
 
-`flex-col` から始めて `sm:flex-row` を足しているのは狭い画面では見出しと操作を縦に積むためです。横1列のまま狭めると見出しが折り返して読みにくくなります。
-
-`Label` の `htmlFor="show-archived"` と `Switch` の `id` をそろえてあるので文字のほうを押しても切り替わります。小さなスイッチだけを狙わずに済み、指でも操作しやすくなります。
-
-**カードに渡す件数の集計**:
-
-```tsx
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: カードに渡す件数の集計 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0 ? (
             projects.map((project) => {
@@ -1874,21 +2012,32 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
               let taskCount = 0;
               let doneCount = 0;
               for (const t of project.tasks ?? []) {
+```
+
+一覧にはアーカイブ表示の切り替えと新規作成を置きます。カードの件数はキャンセル済みを除いて数え、完了数も同じループで集計します。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
                 if (t.status === TASK_STATUS.CANCELLED) continue;
                 taskCount++;
                 if (t.status === TASK_STATUS.DONE) doneCount++;
               }
 ```
 
-`filter` を2回呼ぶ書き方もできますがここでは `for` の1周で2つの数を数えています。1周のあいだに両方を数えればタスクの配列を2度読む必要がありません。
-
-キャンセル済みを `continue` で飛ばしているのは中止した作業を分母に入れると進捗率が実態より低く出るためです。10 件のうち3件を中止して7件を終えたらその画面が示すべきは 100% です。
-
-**プロジェクトカードの描画**:
+一覧の各カードも、詳細と同じロール情報を使います。現在のプロジェクトでログインユーザーが持つロールを、カードを返す直前に確かめます。
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクトカードの描画
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+              const listMemberRole = project.members?.find(
+                (member) => member.userId === currentUser?.id,
+              )?.role;
+              const canUpdateProject =
+                isProjectMemberRole(listMemberRole) &&
+                hasPermission(listMemberRole, 'canManageMembers');
+              const canDeleteProject =
+                listMemberRole === PROJECT_MEMBER_ROLE.OWNER;
+
               return (
                 <ProjectCard
                   key={project.id}
@@ -1898,63 +2047,78 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   color={project.color}
                   memberCount={project.members?.length ?? 0}
                   taskStats={{ total: taskCount, done: doneCount }}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
+                  {...(canUpdateProject ? { onEdit: handleEdit } : {})}
+                  {...(canDeleteProject ? { onDelete: handleDelete } : {})}
                   onClick={handleProjectClick}
                   isArchived={project.isArchived}
                 />
               );
-            })
 ```
 
-`key={project.id}` はReact が並び替えや削除のときにどのカードが同じものかを見分ける目印です。配列の番号を使うと先頭を消した後に番号がずれます。その結果、別のプロジェクトへ同じカードの状態を引き継いでしまうことがあります。
-
-`onClick={handleProjectClick}` で詳細へ移りますがこの関数がやるのは URL の書き換えだけです。カードの側は「押された」と伝えるところまでで、その先をどうするかは知りません。
-
-**プロジェクトが0件のときの表示**:
+編集は OWNER と ADMIN、削除は OWNER だけに表示します。`ProjectCard` へ関数を渡さない操作はボタンも表示されないため、画面とサーバーの権限がそろいます。
 
 ```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: プロジェクトが0件のときの表示
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+            })
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <p>プロジェクトが見つかりません。</p>
-              <p>最初のプロジェクトを作成しましょう！</p>
+              {showArchived ? (
+                <>
+                  <p>プロジェクトが見つかりません。</p>
+```
+
+各カードへ名前、色、人数、タスク件数と許可された操作関数を渡します。キャンセル済みを分母へ入れないので、詳細の件数と一覧の進捗が同じ数え方になります。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
+                  <p>最初のプロジェクトを作成しましょう！</p>
+                </>
+              ) : (
+                <>
+                  <p>進行中のプロジェクトが見つかりません。</p>
+                  <p>
+                    アーカイブ表示をオンにすると、アーカイブ済みのプロジェクトも確認できます。
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
 ```
 
-`col-span-full` を付けているのはこの案内がグリッドの中に入るからです。付けないと4列のうちの1列ぶんの幅に押し込まれ、中央にそろいません。
-
-2行に分けてあるのは事実と次の行動を分けて読ませるためです。1行にまとめると初めて開いた人には長い1文になります。
-
-**作成・編集ダイアログ**:
+アーカイブ表示の状態に合う空表示までを閉じます。続けて、作成・メンバー操作・削除の各ダイアログを同じ return の中へ置きます。
 
 ```tsx
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: 作成・編集ダイアログ */}
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
         <ProjectDialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={closeProjectDialog}
           onSubmit={handleSubmit}
+          isPending={createMutation.isPending || updateMutation.isPending}
           initialData={editingProject}
         />
-```
 
-作成と編集で `ProjectDialog` を1つだけ置いているのは入力欄がまったく同じだからです。違うのは `initialData` に中身が入っているかどうかで、その1点を `handleSubmit` が読んで送信先を分けます。
-
-**一覧側のメンバー追加ダイアログのユーザー選択欄**:
-
-```tsx
-        {/* filepath: src/app/project/page.tsx */}
-        {/* 完成版: 一覧側のメンバー追加ダイアログ（ユーザー選択） */}
-        <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
+        <Dialog
+          open={memberDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeMemberDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>メンバー追加</DialogTitle>
               <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
             </DialogHeader>
+```
+
+スイッチがオフのときは進行中だけを取得するため、0件でもアーカイブ済みのプロジェクトが残っている場合があります。先にアーカイブ表示を案内し、オンでも0件だった場合だけ新規作成を案内します。
+
+作成・編集フォームは同じ `ProjectDialog` を使い、初期値で用途を分けます。作成と更新のどちらかが送信中なら待機状態にします。後続のメンバーダイアログは既存の一覧側の配置ですが、一覧から開く導線はありません。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="user">ユーザー</Label>
@@ -1971,17 +2135,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   </SelectContent>
                 </Select>
               </div>
-```
-
-ここから先は詳細側で見たメンバー追加ダイアログと中身が重なります。手元のファイルでも2か所に書かれていれば正しい状態です。
-
-重なっているのは詳細と一覧が別々の `return` に分かれているためです。`if` の中で返してしまうとその下の JSX は描かれません。この重複が気になる場合はダイアログを部品として切り出して両方から呼ぶ形にできます。今日は現状の形をそのまま載せます。
-
-**一覧側のメンバー追加ダイアログのロール選択欄**:
-
-```tsx
-              {/* filepath: src/app/project/page.tsx */}
-              {/* 完成版: 一覧側のメンバー追加ダイアログ（ロール選択） */}
               <div className="grid gap-2">
                 <Label htmlFor="role">ロール</Label>
                 <Select
@@ -1990,6 +2143,13 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                     if (isProjectMemberRole(value)) setNewMemberRole(value);
                   }}
                 >
+```
+
+一覧側に残るメンバーダイアログも、ユーザーとロールを別々に保持します。実際の追加操作は詳細側から開きます。このブロックを新たな一覧側の導線として数えないでください。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
                   <SelectTrigger id="role">
                     <SelectValue placeholder="ロールを選択" />
                   </SelectTrigger>
@@ -2005,83 +2165,60 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                 </Select>
               </div>
             </div>
-```
-
-状態の変数は詳細側と共有しています。`newMemberRole` は1つしか無いのでどちらのダイアログから選んでも同じ場所へ入ります。片方を開いているときはもう片方が画面に無いため値が混ざる心配はありません。
-
-**一覧側ダイアログの操作ボタン**:
-
-```tsx
-            {/* filepath: src/app/project/page.tsx */}
-            {/* 完成版: 一覧側ダイアログの操作ボタン */}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMemberDialogOpen(false)}>
+              <Button variant="outline" onClick={closeMemberDialog}>
                 キャンセル
               </Button>
-              <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+              <Button
+                onClick={handleAddMember}
+                disabled={!newMemberUserId || addMemberMutation.isPending}
+              >
                 メンバー追加
+```
+
+一覧側の追加欄もオーナーを候補から外し、ユーザー未選択時と送信中はボタンを止めます。詳細側と同じ送信関数を渡すため、独自の保存処理は増やしません。
+
+
+```tsx
+{/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-```
 
-最後の `</div>` がヘッダーから始まった `flex flex-col gap-6` の外枠を閉じます。この下に置く削除確認のダイアログは外枠の外に出してあり、画面の縦の並びには入りません。
-
-**プロジェクト削除の確認**:
-
-```tsx
-      {/* filepath: src/app/project/page.tsx */}
-      {/* 完成版: プロジェクト削除の確認 */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={() => {
-          if (deleteTargetId) {
-            deleteMutation.mutate({ id: deleteTargetId });
-          }
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog();
         }}
+        onConfirm={confirmDeleteProject}
+        closeOnConfirm={false}
         isPending={deleteMutation.isPending}
         title="プロジェクトを削除しますか？"
       />
-```
 
-`title` に `プロジェクトを削除しますか？` を渡して対象を名指ししています。この画面には削除の確認が2つあり、文言が同じだと何を消そうとしているのか分かりません。
-
-**一覧側に残るメンバー削除確認とページの出口**:
-
-```tsx
-      {/* filepath: src/app/project/page.tsx */}
-      {/* 完成版: 一覧側のメンバー削除確認とページの出口 */}
       <DeleteConfirmDialog
         open={removeMemberDialogOpen}
-        onOpenChange={setRemoveMemberDialogOpen}
-        onConfirm={() => {
-          if (selectedProject && removeMemberTargetId) {
-            removeMemberMutation.mutate({
-              projectId: selectedProject,
-              userId: removeMemberTargetId,
-            });
-          }
+        onOpenChange={(open) => {
+          if (!open) closeRemoveDialog();
         }}
+        onConfirm={confirmRemoveMember}
+        closeOnConfirm={false}
+```
+
+プロジェクト削除とメンバー削除の確認を操作別に配置します。どちらも `closeOnConfirm={false}` にして、送信開始で閉じず、成功した対象と世代が一致するときに自動で閉じます。利用者がキャンセルした場合も世代を進め、前の成功が開き直した確認を閉じないようにします。
+
+
+```tsx
+// filepath: src/app/project/page.tsx（同じファイルの続き）
         isPending={removeMemberMutation.isPending}
         title="このメンバーを削除しますか？"
       />
     </AppLayout>
   );
 }
-```
 
-`removeMemberMutation.isPending` を渡しているので返事を待つあいだボタンが押せなくなります。これが無いと反応が遅いときに読者が何度も押し、同じ削除の要求が重なって飛びます。
-
-現在のコードでこの一覧側ダイアログを開く導線はありません。メンバー削除は詳細分岐にある同じダイアログから行います。このブロックは既存の完成コードに残っていますが、一覧側の機能として数えません。
-
-**Suspense で包んだページ本体**:
-
-```tsx
-// filepath: src/app/project/page.tsx
-// 完成版: Suspense で包んだページ本体
 export default function ProjectPage() {
   return (
     <Suspense fallback={<PageLoadingSpinner />}>
@@ -2091,17 +2228,13 @@ export default function ProjectPage() {
 }
 ```
 
-ここまで書いてきた中身が `ProjectPageContent` で、外へ出しているのはこの短い関数のほうです。2つに分けているのは `useSearchParams` のためで、この関数を使う部品は `Suspense` で包まないとビルドが通りません。URL の中身が決まるまで待つ必要があり、その待ち時間に何を出すかを `fallback` で指定します。
-
-`fallback` に `PageLoadingSpinner` を置いてあるので待っているあいだも画面は白のままになりません。
+一覧側に残るメンバー削除確認には開く導線がありません。実際には詳細側の確認を使います。最後に `Suspense` でURLの読み取りを待つ画面を包み、待機中のスピナーを指定します。
 
 ### `src/component/project/project-detail-view.tsx`
 
-このファイルは Day 01 の配布物に入っています。配布物とこの完成版でコードが違うのはロールを変える `Select` まわりの2か所だけです。配布物ではロールを読み取り専用で出す条件が3つ並んでいます。3つ目の `!onUpdateMemberRole` は完成版にはありません。もう1か所は配布物の `onUpdateMemberRole?.(...)` に付いた `?.` です。props はすべて必須なのでこの2か所が残っていても動きは同じです。
+このファイルは Step 3 で置き換える完成形です。この見出しから「今日のまとめ」の直前までのコードブロックを掲載順につなげ、手元のファイル全体を置き換えて保存してください。Step 3 から来た場合は、保存後に Step 3 へ戻ります。置き換え済みなら読み比べだけ行います。
 
-ほかにコメントが2か所違います。タスク件数の集計と、変更できない場合の役割表示に付いたコメントです。紙面の幅に収めるためどちらも配布物より細かく改行してあります。役割表示のコメントには言い回しの違いも1つあります。配布物の「ユーザーには」が完成版では「ユーザーは」です。コメントは動きに関わらないので手元のファイルを書き換える必要はありません。
-
-Step 3 と Step 4 では説明のために一部を削った形を載せたのでここで完成版を確かめてください。Step 3・4 の形との主な差分はロールを変える `Select`、権限による出し分け、キャンセル済みタスクの数え分けです。完成版にはヘッダーの2段構成、長い名前の折り返し、アーカイブ済みバッジ、アーカイブボタンの権限判定も含まれます。
+Step 3 と Step 4 の抜粋では説明のために一部を削っています。主な差分はロールを変える `Select`、権限による出し分け、キャンセル済みタスクの数え分けです。完成版にはヘッダーの2段構成、長い名前の折り返し、アーカイブ済みバッジ、アーカイブボタンの権限判定も含まれます。
 
 **画面部品の import**:
 
@@ -2126,7 +2259,7 @@ import {
 } from '@/component/ui/select';
 ```
 
-`'use client'` が必要なのは`Select` が開閉を自分で覚える部品だからです。その動きはブラウザ側でしか成り立ちません。Step 3 と Step 4 のコードだけを見ると状態を持っていないように見えますが完成版はここで `Select` を使います。
+`'use client'` は、このファイルを Client Component の入口にする宣言です。`ProjectDetailView` は `onClick` や `onValueChange` でブラウザ上の操作を扱います。現在は `'use client'` を持つ `src/app/project/page.tsx` から読み込まれるため、`ProjectDetailView` もブラウザへ送るコードに含まれます。`Select` が内部で状態を持つことだけを理由に、`Select` を使う親すべてへ `'use client'` を付ける必要はありません。
 
 `inferRouterOutputs` にだけ `import type` が付いています。これは型を取り出すためだけの名前で、動くコードには残りません。
 
@@ -2171,7 +2304,8 @@ interface ProjectDetailViewProps {
 }
 ```
 
-Step 3 で書いたものと同じで、8つとも必須です。
+
+Step 3 で置き換えた形と同じで、8つとも必須です。
 
 `onUpdateMemberRole` が引数を2つ取るのは誰の役割をどれに変えるかの両方が要るためです。
 
@@ -2202,6 +2336,7 @@ export function ProjectDetailView({
     );
   }
 ```
+
 
 `export function` は関数名を指定して読み込む形式です。別名にするには import 側に `as` を書くため元の名前もコードに残ります。`page.tsx` の import と見比べると波括弧が付いた形になっています。
 
@@ -2251,7 +2386,7 @@ Step 3 では戻るボタンとプロジェクト名を横1列に並べていま
 
 `shrink-0` は隣の要素が広がってもこのボタンを縮ませない指定です。付けないと文字が2行へ折り返した細長いボタンになります。
 
-**ヘッダー右側のアーカイブ操作**:
+次のコードはヘッダー右側のアーカイブ操作です。
 
 ```tsx
           {/* filepath: src/component/project/project-detail-view.tsx */}
@@ -2281,7 +2416,7 @@ Step 5 のコードには無かった `canArchive &&` が完成版では付い�
 
 `<>` と `</>` はフラグメントと呼ばれ、アイコンと文字の2つを1つとして扱うための入れ物です。`<div>` で囲むとその `div` の分だけ余分な箱ができてボタンの中の並びが崩れます。
 
-**タイトル行**:
+次のコードはプロジェクト名を表示するタイトル行です。
 
 ```tsx
         {/* filepath: src/component/project/project-detail-view.tsx */}
@@ -2344,6 +2479,7 @@ Step 5 のコードには無かった `canArchive &&` が完成版では付い�
           </CardHeader>
 ```
 
+
 Step 4 では常に出していたメンバー追加ボタンが完成版では `canManageMembers &&` で囲まれています。追加できない人にボタンを見せると押してから断られる形になります。
 
 `space-y-0` を付けているのは`CardHeader` が既定で子要素を縦に離すためです。ここは横1列に並べたいのでその既定を打ち消します。
@@ -2392,18 +2528,19 @@ Step 4 では常に出していたメンバー追加ボタンが完成版では 
                             ? PROJECT_MEMBER_ROLE_LABELS[member.role]
                             : member.role}
                         </Badge>
-                      ) : (
 ```
+
 
 条件が2つ並んでいてどちらかに当たれば読み取り専用の札になります。相手がオーナーのときと、見ている自分にメンバー管理の権限が無いときです。
 
-`isProjectMemberRole(member.role)` で確かめてから対応表を引いているのは実行時に届く値を守るためです。型の上では `member.role` は Prisma の enum と同じ4つの文字列に決まっています。確かめずに `PROJECT_MEMBER_ROLE_LABELS[member.role]` と書いても型エラーは出ません。それでも挟むのは型検査がビルドの時点までしか働かないからです。実行時にデータベースから届いた値までは確かめません。当てはまらない値が来たときは変換せずそのまま出します。
+`member.role` の型は Prisma の列挙型で、4つの役割に限られています。`isProjectMemberRole` は実行時に届いた値も確かめるために使います。対応表にない値が届いた場合は、その値をそのまま表示して、役割の表示が空になるのを防ぎます。
 
 **役割を変える Select**:
 
 ```tsx
-                        {/* filepath: src/component/project/project-detail-view.tsx */}
-                        {/* 完成版: 役割の変更（Select） */}
+                        // filepath: src/component/project/project-detail-view.tsx
+                        // 完成版: 役割の変更（Select）
+                      ) : (
                         <Select
                           value={member.role}
                           onValueChange={(value) => {
@@ -2420,7 +2557,7 @@ Step 4 では常に出していたメンバー追加ボタンが完成版では 
                           </SelectTrigger>
 ```
 
-Step 4 の形にはこの `Select` がありませんでした。役割を選び直した瞬間に `onUpdateMemberRole` が呼ばれ保存ボタンを押す手間がありません。確認ダイアログは出ないので対象の名前と変更先を確かめてから選びます。自分の管理権限を外した場合は別の権限ある人に戻してもらう必要があります。
+Step 4 の形にはこの `Select` がありませんでした。役割を選び直した瞬間に `onUpdateMemberRole` が呼ばれ、保存ボタンを押す手間がありません。確認ダイアログは出ないので、対象の名前と変更先を確かめてから選びます。自分の管理権限を外した場合は、別の権限ある人に戻してもらう必要があります。
 
 `aria-label` に名前を入れているのは同じ見た目の選択欄が人数分並ぶからです。読み上げでは「権限」だけが繰り返され、誰のものか分かりません。
 
@@ -2446,7 +2583,7 @@ Step 4 の形にはこの `Select` がありませんでした。役割を選び
 
 選択肢を対応表から作っているので役割を1つ増やしたときにこの画面を直す必要がありません。手で `<SelectItem>` を並べると増やした役割がここだけ抜け落ちます。
 
-オーナーを `filter` で外している理由は選べる状態にすると1つのプロジェクトへオーナーを2人以上作る道が開くからです。
+この画面からオーナーへの変更は提供しません。サーバーでは操作する本人がオーナーなら変更できる場合もありますが、画面は選択肢から外し、オーナーの追加や入れ替えを扱わない範囲にしています。
 
 **メンバーを外すボタン**:
 
@@ -2470,6 +2607,7 @@ Step 4 の形にはこの `Select` がありませんでした。役割を選び
           </CardContent>
         </Card>
 ```
+
 
 `canManageMembers &&` で丸ごと隠す形と、`disabled` で押せなくする形を使い分けています。権限が無い人にはボタンそのものを見せず、権限がある人にはオーナー行だけを押せない状態で見せます。押せない状態で残しておくと「ここは操作できる場所だがこの相手だけは外せない」と伝わります。
 
@@ -2522,7 +2660,7 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が完成版�
 
 0件の判定に使っているのは `projectDetail.tasks?.length === 0` で、`activeTaskCount` ではありません。中止したタスクだけが並ぶプロジェクトでも、その中止分は一覧に出したいためです。見出しの数字と一覧の中身で、数え方が別になっています。
 
-読み込み中や初回の取得失敗は親の `page.tsx` で分けています。ここでは取得済みのタスク配列が0件かを確かめます。再取得に失敗している場合は親が前回の内容であることを警告します。
+読み込み中や初回の取得失敗は、親の `page.tsx` で分けています。ここでは取得済みのタスク配列が0件かを確かめます。再取得に失敗している場合は、親が前回の内容であることを警告します。
 
 **タスク1件ぶんの中身**:
 
@@ -2554,23 +2692,65 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が完成版�
 
 ## 今日のまとめ
 
-- [ ] `archive` / `unarchive` が `setArchiveStatus` を呼ぶ形になっていることを確かめた
-- [ ] `/project?projectId=...` で一覧と詳細が入れ替わることを確かめた
-- [ ] `ProjectDetailView` にメンバー一覧とタスク一覧が並ぶことを確かめた
-- [ ] アーカイブボタンで `isArchived` が変わり、一覧が更新されることを確かめた
-- [ ] 詳細表示がモーダルではなくインラインであることを確かめた
+- [ ] `archive` / `unarchive` が `setArchiveStatus` を呼ぶ形になっていることを確かめました
+- [ ] `/project?projectId=...` で一覧と詳細が入れ替わることを確かめました
+- [ ] `ProjectDetailView` にメンバー一覧とタスク一覧が並ぶことを確かめました
+- [ ] アーカイブボタンで `isArchived` が変わり、一覧が更新されることを確かめました
+- [ ] 詳細表示がモーダルではなくインラインであることを確かめました
 
 ---
 
 ## つまずきポイント
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| 詳細が開かない | `router.push('/project?projectId=...')` していない | カードクリック時の URL 更新を確認する |
-| API が毎回エラーになる | `selectedProject` が空なのに `getById` を呼んでいる | `enabled: !!selectedProject` を付ける |
-| 一覧に戻れない | `onBack` が `router.push('/project')` になっていない | 戻る処理を URL ベースにそろえる |
-| アーカイブ後に画面が古いまま | `invalidate()` を呼んでいない | `utils.project.getAll.invalidate()` を `onSuccess` に入れる |
-| 詳細 UI が教材画像と違う | 旧モーダル版の資料を見ている | 現在は `ProjectDetailView` のインライン表示が正解 |
+#### 詳細が開かない
+
+**原因**
+
+`router.push('/project?projectId=...')` を呼んでいないためです。
+
+**解決方法**
+
+カードクリック時の URL 更新を確認してください。
+
+#### API が毎回エラーになる
+
+**原因**
+
+`selectedProject` が空のまま `getById` を呼んでいるためです。
+
+**解決方法**
+
+`enabled: !authExpired && !!selectedProject` になっているか確認してください。認証切れ後に同じ取得を繰り返さない条件も残します。
+
+#### 一覧に戻れない
+
+**原因**
+
+`onBack` が `router.push('/project')` になっていないためです。
+
+**解決方法**
+
+戻る処理を URL ベースにそろえてください。
+
+#### アーカイブ後に画面が古いまま
+
+**原因**
+
+`invalidate()` を呼んでいないためです。
+
+**解決方法**
+
+`onSuccess` が送信時の `variables.id` を `refreshProject` と `leaveSubmittedDetail` へ渡しているか確認してください。
+
+#### 詳細 UI が教材画像と違う
+
+**原因**
+
+旧モーダル版の資料を見ているためです。
+
+**解決方法**
+
+現在は `ProjectDetailView` のインライン表示が正解です。
 
 ---
 
@@ -2597,7 +2777,7 @@ A. 画面の状態を決める大元を URL の1か所にそろえるためで�
 
 **Q2. `archive` と `unarchive` を1つにまとめて「現在値を反転させる」作りにしないのはなぜですか。**
 
-A. 反転にすると画面が送ってきた「今の状態」をサーバーが信じることになるためです。同じプロジェクトを2人が開いているとお互いの結果がずれます。呼ぶ名前で結果を決めておけばサーバーが受け取るのは「こうしたい」という最終状態だけになり、`archive` を2回呼んでも `isArchived` は `true` のままです。
+A. 同じ要求を2回受け取っても、結果が反対へ戻らないようにするためです。`archive` は `true`、`unarchive` は `false` を保存します。サーバーの現在値を毎回反転するAPIでは、2回目に元へ戻ります。最終状態を明示すれば、`archive` を2回呼んでも `isArchived` は `true` のままです。
 
 **Q3. メンバー一覧の削除ボタンは相手がオーナーなら一律で押せません。サーバー側の `removeMember` も同じ厳しさですか。**
 
@@ -2615,7 +2795,7 @@ A. 画面のほうが厳しいです。サーバーは2段構えで、オーナ�
 
 元のタブへ戻り、ブラウザの戻るボタンで一覧へ戻ります。進むボタンで先ほどの詳細へ戻れれば成功です。`src/app/project/page.tsx` の `projectIdParam` を読み取る箇所から表示対象が決まるまでを説明してみましょう。
 
-ブラウザの戻るボタンを押しても詳細が残る場合はアドレスが `/project` に戻ったか確認します。次に `selectedProject` が `projectIdParam` を直接参照し表示分岐がその値から決まるかを見てください。画面内の「プロジェクト一覧」ボタンで戻れない場合は`onBack` から `router.push('/project')` が呼ばれているかを確認します。詳細の通信が一覧で続く場合は`getById` の `enabled` が `!!selectedProject` になっているかを確認してください。確認後は追加したタブを閉じ元のタブを一覧へ戻します。アーカイブや削除は実行せずDB とコードは変更しません。
+ブラウザの戻るボタンを押しても詳細が残る場合は、アドレスが `/project` に戻ったか確認します。次に `selectedProject` が `projectIdParam` を直接参照し、表示分岐がその値から決まるかを見てください。画面内の「プロジェクト一覧」ボタンで戻れない場合は、`onBack` から `router.push('/project')` が呼ばれているかを確認します。詳細の通信が一覧で続く場合は、`getById` の `enabled` が `!authExpired && !!selectedProject` になっているかを確認してください。確認後は追加したタブを閉じ、元のタブを一覧へ戻します。アーカイブや削除は実行せず、DB とコードは変更しません。
 
 ## 次回予告
 
@@ -2627,7 +2807,7 @@ Day 28ではタスクの一括操作を実装します。複数選択したタ�
 
 ### `src/app/project/page.tsx`
 
-Day 27 全 Step 完了後の状態は完成版の `src/app/project/page.tsx` と同じです。ただし `selectedProject` の宣言は完成版が `router` の前に置いています。読み取る順番が違うだけで動きは同じです。手元のコードが各 Step の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+Day 27 全 Step 完了後の状態は完成版の `src/app/project/page.tsx` と同じです。手元のコードが各 Step の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
 ---
 

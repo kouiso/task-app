@@ -26,6 +26,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from sale_package import excluded_routers, scaffold_copies  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+USER_ROUTER_DEST = "src/server/api/routers/user.ts"
+USER_ROUTER_SOURCE = REPO_ROOT / "scripts" / "_server-routers" / "user.ts"
 
 # 読者が教材の中で書き換えるので、配布物は途中の版で止まっている。
 # 値は「なぜ違ってよいか」。理由を書けない差分は、ただのズレとして落とす。
@@ -42,6 +44,73 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     # doc/post-release-backlog.md に記録してある。
     "prisma/schema.prisma": "配布物にだけ残る未使用の2列。リリース後に消す（backlog 記載）",
 }
+
+
+class UserRouterNormalizationError(ValueError):
+    """許可した user router の差分を一意に特定できない。"""
+
+
+def _replace_user_hunk_once(source: str, old: str, new: str, label: str) -> str:
+    count = source.count(old)
+    if count != 1:
+        raise UserRouterNormalizationError(
+            f"user router の {label} は1件必要だが {count} 件だった",
+        )
+    return source.replace(old, new)
+
+
+USER_ROUTER_NORMALIZATIONS = (
+    (
+        "import { writeStructuredLog } from '@/lib/observability';\n"
+        "import { createPasswordSchema } from '@/lib/password';\n",
+        "import { createPasswordSchema } from '@/lib/password';\n",
+        "observability import",
+    ),
+    (
+        """async function tryReissueSession(
+  requestId: string,
+  path: string,
+  user: SessionUser,
+): Promise<boolean> {""",
+        """async function tryReissueSession(path: string, user: SessionUser): Promise<boolean> {""",
+        "helper signature",
+    ),
+    (
+        """    writeStructuredLog({
+      level: 'error',
+      event: 'auth.session_reissue_failed',
+      requestId,
+      path,
+      status: 200,
+      userId: user.id,
+    });""",
+        """    console.error('[auth] session reissue failed', {
+      event: 'auth.session_reissue_failed',
+      path,
+      userId: user.id,
+    });""",
+        "safe logger",
+    ),
+    (
+        "await tryReissueSession(ctx.requestId, 'user.updateProfile', {",
+        "await tryReissueSession('user.updateProfile', {",
+        "profile call",
+    ),
+    (
+        "await tryReissueSession(ctx.requestId, 'user.changePassword', {",
+        "await tryReissueSession('user.changePassword', {",
+        "password call",
+    ),
+)
+
+
+def normalize_product_user_router(source: str) -> str:
+    """本体固有の構造化ログ5差分だけを配布版の表現へそろえる。"""
+    for old, _, label in USER_ROUTER_NORMALIZATIONS:
+        _replace_user_hunk_once(source, old, old, label)
+    for old, new, label in USER_ROUTER_NORMALIZATIONS:
+        source = _replace_user_hunk_once(source, old, new, label)
+    return source
 
 
 def digest(path: Path) -> str:
@@ -70,44 +139,66 @@ def classify(
 
 
 def observe() -> list[tuple[str, str, bool]]:
+    if USER_ROUTER_DEST in EXPECTED_DIFFERENT:
+        raise UserRouterNormalizationError("user router は例外登録できない")
     out: list[tuple[str, str, bool]] = []
+    user_mapping_count = 0
     for dest_rel, source in scaffold_copies():
+        if dest_rel == USER_ROUTER_DEST:
+            user_mapping_count += 1
+            if source != USER_ROUTER_SOURCE or user_mapping_count > 1:
+                raise UserRouterNormalizationError("user router の配布元対応が変わっている")
+            # build-zip 側の除外が将来変わっても、user router は下の厳密比較を1回だけ使う。
+            continue
         target = REPO_ROOT / dest_rel
         if not target.exists():
             # 置き場が `src/` の外や、リポジトリに対応物が無い配布物は対象外。
             # import の解決は check_scaffold_curriculum_alignment.py が見ている。
             continue
         out.append((dest_rel, str(source.relative_to(REPO_ROOT)), digest(source) == digest(target)))
+
+    # user router は本体だけ requestId 付き構造化ログを使うため、許可した5差分を
+    # 取り除いてから残りを丸ごと比較する。例外登録では未知の差分まで通ってしまう。
+    target = REPO_ROOT / USER_ROUTER_DEST
+    if not target.exists() or not USER_ROUTER_SOURCE.exists():
+        raise UserRouterNormalizationError("本体または配布版の user router が存在しない")
+    normalized = normalize_product_user_router(target.read_bytes().decode("utf-8"))
+    scaffold = USER_ROUTER_SOURCE.read_bytes().decode("utf-8")
+    out.append(
+        (
+            USER_ROUTER_DEST,
+            str(USER_ROUTER_SOURCE.relative_to(REPO_ROOT)),
+            normalized == scaffold,
+        ),
+    )
     return out
 
 
 def observe_excluded_routers(
     scripts_dir: Path, routers_dir: Path
 ) -> list[tuple[str, str, bool]]:
-    """読者に配らない `_server-routers` の写しも本体と突き合わせる。
-
-    scaffold_copies() は配らない6本を外すので、observe() だけではこの写しの
-    ズレを誰も見ていない。ZIP にも scaffold にも入らなくても、リポジトリに
-    残っている写しは次に「正本」と取り違えられる。置き場の表示名は
-    observe() と同じ形（src/ 側のパス, scripts/ 側のパス, 中身が同じか）に
-    そろえ、そのまま classify() へ流せるようにする。
-    """
+    """配らない router の写しも見張る。user は本体固有ログを正規化して observe が扱う。"""
     out: list[tuple[str, str, bool]] = []
-    for name in sorted(excluded_routers()):
+    for name in sorted(excluded_routers() - {Path(USER_ROUTER_DEST).name}):
         copy = scripts_dir / name
         source = routers_dir / name
         same = source.is_file() and copy.is_file() and digest(source) == digest(copy)
         out.append(
-            (f"src/server/api/routers/{name}", f"scripts/_server-routers/{name}", same)
+            (f"scripts/_server-routers/{name}", f"src/server/api/routers/{name}", same)
         )
     return out
 
 
 def main() -> int:
-    observations = observe() + observe_excluded_routers(
-        REPO_ROOT / "scripts" / "_server-routers",
-        REPO_ROOT / "src" / "server" / "api" / "routers",
-    )
+    try:
+        observations = observe() + observe_excluded_routers(
+            REPO_ROOT / "scripts" / "_server-routers",
+            REPO_ROOT / "src" / "server" / "api" / "routers",
+        )
+    except UserRouterNormalizationError as err:
+        print("❌ user router の許可済み差分を特定できない")
+        print(f"   {err}")
+        return 1
     checked = len(observations)
     drifted, stale = classify(observations, EXPECTED_DIFFERENT)
 

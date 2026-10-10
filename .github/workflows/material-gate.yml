@@ -261,6 +261,9 @@ jobs:
       # 同じ検査を一度だけ走らせる。ここと向こうで顔ぶれがずれたら、また同じずれが戻る。
       # 引数は明示して渡す。スクリプト側の既定値に頼ると、教材の置き場所を変えたときに
       # 「0件検査して緑」になる。
+      - name: Seed data safety regression
+        run: python3 scripts/curriculum-qa/test_seed_safety.py
+
       - name: Gate 4 — 用語ゆれ・day間参照チェック (corpus 全体)
         run: |
           # 2つのチェックを1つの run: に置くと、前半が落ちた時点で bash -e が

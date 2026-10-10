@@ -219,23 +219,17 @@ material-gate 系のジョブ。`Assign author to PR` のような補助ジョ�
 
 ## 6. main の npm audit 赤
 
-`npm audit` ワークフローが定期実行で落ち続けている。**直近の失敗は 2026-08-24。**
-2026-06-01 以降は 2026-08-17 の1回を除いて連続 failure。
+deepmerge-ts、@prisma/config、prisma の高危険度3件は、同じ deepmerge-ts の advisory から派生していた。到達するのは Prisma CLI が設定を読む開発時・ビルド時の経路で、現在のアプリが HTTP リクエストを処理する経路ではない。
 
-ローカル実測（`npm audit`）: moderate 2 / high 3 / **計5件**。
+Prisma の既存の版指定は変えず、@prisma/config が使う deepmerge-ts だけを scoped override で8.0.2へ置き換えた。通常インストールの検証時に解決された Prisma は6.19.3で、6.19.3へ新しく固定したわけではない。上流Prismaで修正済みという意味でもない。上流の @prisma/config が警告のない版を宣言したら、通常インストールと互換性を確認してoverrideを外す。
 
-| パッケージ | 深刻度 | 内容 |
-|---|---|---|
-| `deepmerge-ts` | high | 再帰オブジェクトのマージでスタック枯渇 |
-| `@prisma/config` | high | `deepmerge-ts` 経由 |
-| `prisma` | high | `@prisma/config` 経由 |
-| `uuid` | moderate | v3/v5/v6 で `buf` 指定時のバッファ境界チェック漏れ |
-| `@lhci/cli` | moderate | `uuid` 経由 |
+owner環境では Prisma Client生成、スキーマ検証、786テスト、型検査、ビルド、scaffold checker 28件が通り、npm audit --omit=dev は0件になった。開発依存を含む npm audit は moderate 4 / high 16 / 計20件で、main の監査はまだ赤い。
 
-**なぜ今やらんでええか**: 5件とも開発時にしか使わない依存
-（Prisma CLI 側と Lighthouse CI）で、読者に配る ZIP にも PDF にも入らない。
-実害は「CI が赤いまま慣れる」ことなので、赤を放置する期間は短いほどよい。
-Prisma の更新で3件がまとめて解ける見込みなので、リリース直後に着手する。
+既存の単一dependency treeを用いたbuyer検証でも、scripts-enabledの通常インストール、npm ls、Prisma生成・検証、型検査、ビルドが通った。本番依存の監査は0件、開発依存を含めるとVitest経路のmoderate 3件だった。以前のPostCSS警告は再現しなかった。このbuyer検証はfresh empty bootstrapの証明ではない。
+
+配布ZIPには完成アプリのpackage.jsonとlockfileを収録しない。代わりに、ZIP内のscaffold scriptがownerとbyte単位で一致し、scoped overrideを生成することを確認した。ZIP組成と販売物の検査も通った。
+
+この項目で解消扱いにするのは、Prisma経路の高危険度3件だけ。残る開発ツールの警告は別件として追跡する。mainの監査が赤いことや、この依存関係以外のリリース条件まで解消したとは扱わない。
 
 ---
 

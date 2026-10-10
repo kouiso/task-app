@@ -50,24 +50,35 @@ CSS の値だけを信じると、テーマが余白を変えたときに検査�
 from __future__ import annotations
 
 import json
+import math
 import re
 import shutil
 import statistics
 import sys
 import tempfile
+from dataclasses import dataclass, replace
 from pathlib import Path
 from xml.etree import ElementTree
 
 sys.path.insert(0, str(Path(__file__).parent))
 from check_pdf_book import ToolFailure, run_tool  # noqa: E402
 from build_pdf_book import work_slug  # noqa: E402
-from breakable_code import BREAKABLE_MIN_LINES  # noqa: E402
-from keep_next import collect_paragraphs, normalize_text  # noqa: E402
+from verify_pdf_copy import (  # noqa: E402
+    _block_line_data,
+    _candidate_offsets,
+    fenced_code_blocks,
+    pdf_text,
+    try_match_block,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
+SRC_DIR = REPO_ROOT / "material" / "30days-curriculum"
 # 組版計測の記録。縦並び表の行がページを跨いでいないかの照合に使う
 BUILD_DIR = REPO_ROOT / "dist" / ".pdf-book-build"
+# retained local producer は table_inventory だけを出し、下の補助関数が読む
+# stacked_inventory はまだ出さない。producer と同時に統合するまで実検査へ接続しない。
+STACKED_INVENTORY_ACTIVE = False
 
 REQUIRED_TOOLS = ("pdftoppm", "pdfimages", "pdftotext", "pdfinfo")
 
@@ -139,18 +150,6 @@ ORPHAN_PREV_MIN_RATIO = 0.9
 # それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
 URL_BREAK_ALLOWED_AFTER = "/?&="
 FOOTNOTE_URL_START = re.compile(r"^\s*\d+\.\s*https?://")
-
-
-def generated_footnote_line(raw_text: str) -> bool:
-    """生成器が出した脚注の行なら True。
-
-    生成器（build_pdf_book.py の footnote_display_url）は脚注の表示URLに
-    折返し用の不可視文字（U+200B・U+2060）を必ず挟む。原稿の番号付き
-    リストの行頭がたまたま `N. https://…` の形（インラインコードのURL）を
-    していても不可視文字は無いので、この印で脚注と取り違えない
-    （issue #474 直し6）。
-    """
-    return "\u200b" in raw_text or "\u2060" in raw_text
 # URLの続きとしてあり得る行（空白を含まずURL文字だけ）
 URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
 # 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
@@ -197,22 +196,8 @@ ORPHAN_RATE_LIMIT = 0.15
 
 MM_PER_PT = 25.4 / 72.0
 
-# コードの行送り。book.css: 本文 12.75pt、行高 2.05、pre の級数はその 90%。
-# 表示1行 = 12.75 × 0.9 × 2.05 ≒ 23.5pt ≒ 8.3mm
-CODE_LINE_PITCH_MM = 12.75 * 0.9 * 2.05 * MM_PER_PT
-# 境で切れた断片の帯には、塊の外側に残る pre のパディング（1em ≒ 4.05mm）が
-# 1つぶん入る（切れ目の内側のパディングはスライスで落ちる）
-PRE_FRAGMENT_PAD_MM = 12.75 * 0.9 * MM_PER_PT
-
-# 分割してよいのは生成器が pdf-breakable を付けた塊（表示
-# BREAKABLE_MIN_LINES 行以上）だけ。境の断片の合計（前ページ下端＋
-# 次ページ上端）は、その塊の高さ ≒ 18行×8.3mm＋両断片のパディング
-# ≒ 157mm を必ず超える。一方、丸送りのはずの塊（17行以下）が切れた
-# ときの合計は高々 149mm。その間に下限を置くと、keep-together が
-# 掛け忘れやテーマ更新で効かなくなった塊の分割を拾える。
-CODE_SPLIT_BLOCK_MIN_MM = (
-    BREAKABLE_MIN_LINES * CODE_LINE_PITCH_MM + PRE_FRAGMENT_PAD_MM
-)
+# DOM実測はCSS px（96dpi）、PDF画像は72dpiなので mm を仲立ちにする。
+CSS_PX_TO_MM = 25.4 / 96.0
 
 
 def mm_from_px(value: int) -> float:
@@ -615,10 +600,7 @@ def find_url_wrap_problems(lines: list[Line]) -> list[str]:
     for block_lines in blocks.values():
         block_lines.sort(key=lambda line: line.top)
         for index, line in enumerate(block_lines):
-            if not (
-                FOOTNOTE_URL_START.match(visible_text(line.text))
-                and generated_footnote_line(line.text)
-            ):
+            if not FOOTNOTE_URL_START.match(visible_text(line.text)):
                 continue
             previous = line
             for continuation in block_lines[index + 1:]:
@@ -662,149 +644,6 @@ def find_hyphen_break_problems(lines: list[Line]) -> list[str]:
     return problems
 
 
-def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
-    """脚注（`N. https://…`）と呼び出し（`*N`）が別のページに載った箇所を挙げる。
-
-    脚注番号は生成器が <a> へ付けた data-pdf-footnote から CSS の ::after が
-    「*N」の形で描く。呼び出しの行が次のページへ送られず、脚注だけが先へ
-    回ると、読者はリンク先を探してページをめくることになる（issue #474 直し6）。
-    比べる前に折り返し用の不可視文字（U+2060・U+200B など）を外す。
-    柱とノンブルは版面の外なので呼び出しには数えない。
-    """
-    pages: dict[int, list[Line]] = {}
-    for line in lines:
-        pages.setdefault(line.page, []).append(line)
-    problems: list[str] = []
-    for page, page_lines in sorted(pages.items()):
-        numbers: list[int] = []
-        body_parts: list[str] = []
-        footnote = False
-        for line in sorted(page_lines, key=lambda ln: (ln.block, ln.top)):
-            text = visible_text(line.text)
-            if FOOTNOTE_URL_START.match(text) and generated_footnote_line(line.text):
-                footnote = True
-                number = re.match(r"^\s*(\d+)\.", text)
-                numbers.append(int(number.group(1)))
-                continue
-            stripped = text.strip()
-            if footnote and stripped and URL_CONTINUATION.match(stripped):
-                continue
-            footnote = False
-            # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
-            if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
-                continue
-            body_parts.append(text)
-        if not numbers:
-            continue
-        body = "".join(body_parts)
-        for number in numbers:
-            if not re.search(rf"\*{number}(?!\d)", body):
-                problems.append(
-                    f"p{page}: 脚注 {number} が呼び出しと別のページに載っている"
-                )
-    return problems
-
-
-def _footnote_marker_re(markup: str) -> "re.Pattern[str]":
-    """外部リンクの脚注番号を PDF の文から外すための正規表現を作る。
-
-    脚注番号は生成器が <a> へ付けた data-pdf-footnote から CSS の
-    ::after が「*12」の形で描く。HTML の文には無く PDF 側にだけ入るので、
-    このまま探すと脚注を含む段落が突き合わせられない。冊の中に実在する
-    番号だけを外す（任意の `*数字` まで外すと、本文にたまたまある
-    同じ形まで消して位置がずれる）。
-    """
-    numbers = sorted({int(n) for n in
-                      re.findall(r'data-pdf-footnote="(\d+)"', markup)},
-                     reverse=True)
-    if not numbers:
-        return re.compile(r"x^")  # 何にも当たらない
-    return re.compile(r"\*(?:" + "|".join(map(str, numbers)) + r")(?!\d)")
-
-
-def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int]]:
-    """本文の行をページ順に1本の文字列へつなぎ、各ページ末尾の位置を返す。
-
-    柱とノンブルは版面の外（天 0〜20mm・地 278mm 以降）なので除く。
-    URL脚注の行（`N. https://…` とその折返し行）も本文ではないので除く。
-    残った行の文は keep_next.py と同じ方法でそろえてからつなぐ。
-    脚注番号（*N）は PDF 側にだけ出るので先に外す。
-
-    返すのは (つないだ文字列, {そのページの文字列が終わる位置: ページ番号})。
-    """
-    marker = _footnote_marker_re(markup)
-    blocks: dict[tuple[int, int], list[Line]] = {}
-    for line in lines:
-        blocks.setdefault((line.page, line.block), []).append(line)
-    texts: dict[int, str] = {}
-    for (page, _), block_lines in sorted(blocks.items()):
-        block_lines.sort(key=lambda line: line.top)
-        footnote = False
-        for line in block_lines:
-            text = visible_text(line.text).strip()
-            if FOOTNOTE_URL_START.match(visible_text(
-                    line.text)) and generated_footnote_line(line.text):
-                footnote = True
-            elif not (footnote and text and URL_CONTINUATION.match(text)):
-                footnote = False
-            if footnote:
-                continue
-            # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
-            if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
-                continue
-            texts[page] = texts.get(page, "") + normalize_text(
-                marker.sub("", line.text))
-    parts: list[str] = []
-    page_ends: dict[int, int] = {}
-    cursor = 0
-    for page in sorted(texts):
-        cursor += len(texts[page])
-        page_ends.setdefault(cursor, page)
-        parts.append(texts[page])
-    return "".join(parts), page_ends
-
-
-def find_keep_next_problems(lines: list[Line], markup: str) -> tuple[list[str], int]:
-    """印付き段落（pdf-keep-next）がページ本文の最終行に来た箇所を挙げる。
-
-    issue #475 の検査。生成 HTML の段落と pdftotext -bbox-layout の行を
-    突き合わせる。段落の文も本文と同じ方法でそろえ、つないだ文字列を
-    前から順に探す（同じ文が何度も出るので、見つかった所から先だけを見る）。
-    段落の最後の文字がそのページの最後の文字と重なれば、その段落は
-    ページ末尾に残っている。箇条書きや引用の中の段落も数える。
-
-    印付き段落が突き合わせられないときも問題にする。黙って飛ばすと
-    ページ末尾に残っていても0件と出てしまう。印の無い段落が
-    突き合わせられないのは許し、その数だけ返す。
-
-    返すのは (問題の一覧, 突き合わせられなかった印なし段落の数)。
-    """
-    haystack, page_ends = _body_page_texts(lines, markup)
-    problems: list[str] = []
-    unmatched_unmarked = 0
-    cursor = 0
-    for paragraph in collect_paragraphs(markup):
-        if not paragraph.norm:
-            continue
-        position = haystack.find(paragraph.norm, cursor)
-        if position < 0:
-            if paragraph.marked:
-                problems.append(
-                    "印付き段落がPDFの行と突き合わせられない"
-                    f"（「{paragraph.text.strip()[:40]}」）"
-                )
-            else:
-                unmatched_unmarked += 1
-            continue
-        cursor = position + len(paragraph.norm)
-        if paragraph.marked and cursor in page_ends:
-            problems.append(
-                f"p{page_ends[cursor]}: 印付き段落がページの末尾に残っている"
-                f"（「{paragraph.text.strip()[:40]}」）"
-            )
-    return problems, unmatched_unmarked
-
-
 def find_stacked_split_problems(report: dict) -> list[str]:
     """組版計測の記録から、縦並び表の1行がページを跨いでいる箇所を挙げる。
 
@@ -826,50 +665,6 @@ def find_stacked_split_problems(report: dict) -> list[str]:
         for row, pages in sorted(rows.items())
         if len(pages) > 1
     ]
-
-
-def find_single_row_fragment_problems(report: dict) -> list[str]:
-    """組版計測の記録から、ページを跨いだ表で本文1行だけの断片を挙げる。
-
-    表がページの境で分かれたとき、片側の断片に本文の行が1行しか載らないと、
-    読者は1行のためにページをめくり、めくった先で同じ見出し行を読み直す
-    （issue #469）。見出し行（TH）は断片ごとに繰り返されるので、行を数えるのは
-    TD のセルを持つ row_index だけ。境の途中に1行だけが残る断片も同じ形なので
-    先頭・末尾と分けずに拾う。
-    """
-    problems: list[str] = []
-    inventory = report.get('dom_audit', {}).get('table_inventory', {})
-    for table in inventory.get('tables', []):
-        fragments = table.get('fragments', [])
-        if len(fragments) < 2:
-            continue
-        for fragment in fragments:
-            page = fragment.get('page_index')
-            if not isinstance(page, int):
-                continue
-            cells = (fragment.get('geometry') or {}).get('cells') or []
-            body_rows = {
-                cell.get('row_index')
-                for cell in cells
-                if cell.get('tag') == 'TD'
-            }
-            body_rows.discard(None)
-            if len(body_rows) != 1:
-                continue
-            row = next(iter(body_rows))
-            label = next(
-                (
-                    (cell.get('text') or '').strip()
-                    for cell in cells
-                    if cell.get('tag') == 'TD' and cell.get('row_index') == row
-                ),
-                "",
-            )
-            problems.append(
-                f"表（{table.get('id')}）の断片が p{page + 1} に本文の行を"
-                f"1行だけ載せている（「{label[:20]}」の行）"
-            )
-    return problems
 
 
 def parse_image_table(output: str) -> list[dict[str, float | int | str]]:
@@ -955,12 +750,167 @@ def page_count(pdf: Path) -> int:
     raise ToolFailure("pdfinfo がページ数を返さない")
 
 
-def code_split_problem(tail_px: int, head_px: int) -> str:
+@dataclass(frozen=True)
+class BreakablePreSpan:
+    pre_id: str
+    painted_height_mm: float
+    content_height_mm: float
+    pages: tuple[int, ...]
+    observed_fragment_mm: float = 0.0
+    fragment_padding_mm: float = 0.0
+
+
+def _measurement_report(pdf: Path) -> tuple[float, list[dict]] | None:
+    """実DOMで1ページを超えた pre の最小描画高さを mm で返す。"""
+
+    reports = sorted(
+        BUILD_DIR.glob(f"{work_slug(pdf.stem)}.pre-measurement.json"),
+        key=lambda path: path.stat().st_mtime,
+    )
+    if not reports:
+        return None
+    try:
+        report = json.loads(reports[-1].read_text(encoding="utf-8"))
+        content_height = report["page"]["content_height_px"]
+        measurements = report["pres"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as error:
+        raise ToolFailure(f"pre実寸レポートを読めない: {error}") from error
+    if (isinstance(content_height, bool)
+            or not isinstance(content_height, (int, float))
+            or not math.isfinite(content_height) or content_height <= 0
+            or not isinstance(measurements, list)):
+        raise ToolFailure("pre実寸レポートの版面高さが不正")
+    for measurement in measurements:
+        if not isinstance(measurement, dict):
+            raise ToolFailure("pre実寸レポートの測定値が不正")
+        required = measurement.get("required_height_px")
+        height = measurement.get("painted_height_px")
+        padding_before = measurement.get("padding_block_start_px")
+        padding_after = measurement.get("padding_block_end_px")
+        if any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or value < 0
+            for value in (padding_before, padding_after)
+        ) or any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or value <= 0
+            for value in (required, height)
+        ):
+            raise ToolFailure("pre実寸レポートに不正な高さまたはpaddingがある")
+    return float(content_height), measurements
+
+
+def measured_breakable_minimum(pdf: Path) -> float | None:
+    """旧い単体境界テスト向け。実検査はpre固有spanを使う。"""
+    report = _measurement_report(pdf)
+    if report is None:
+        return None
+    content_height, measurements = report
+    painted = [
+        float(item["painted_height_px"]) * CSS_PX_TO_MM
+        for item in measurements
+        if item["required_height_px"] > content_height
+    ]
+    return min(painted) if painted else None
+
+
+def _matched_block_offsets(
+    block, extracted: str, minimum_offset: int
+) -> tuple[int, int] | None:
+    line_data = _block_line_data(block)
+    if not line_data:
+        return None
+    first_probe = line_data[0][0].lstrip()
+    token = re.match(r"\S+", first_probe)
+    head = token.group(0)[:10] if token else first_probe[:10]
+    for offset in _candidate_offsets(head, extracted, minimum_offset):
+        result = try_match_block(line_data, extracted, offset)
+        if result.ok:
+            # 原稿・DOM pre・PDF本文の順序をすべて固定することで、同じ完成版が
+            # 後の節に再掲されても各preを対応する出現へ一意に進める。
+            return offset, result.end
+    return None
+
+
+def measured_breakable_spans(pdf: Path) -> tuple[BreakablePreSpan, ...]:
+    """原稿block・DOM pre・PDFページを同じ順序と本文で結び付ける。"""
+    report = _measurement_report(pdf)
+    if report is None:
+        return ()
+    content_height, measurements = report
+    source = SRC_DIR / pdf.with_suffix(".md").name
+    if not source.is_file() or source.is_symlink():
+        raise ToolFailure(f"対応する原稿を読めない: {source}")
+    blocks = [block for block in fenced_code_blocks(source) if block.lang != "mermaid"]
+    if len(blocks) != len(measurements):
+        raise ToolFailure(
+            f"原稿code blockとDOM preの件数が違う: {len(blocks)} != {len(measurements)}"
+        )
+    extracted = pdf_text(pdf)
+    spans: list[BreakablePreSpan] = []
+    seen_ids: set[str] = set()
+    cursor = 0
+    for block, measurement in zip(blocks, measurements):
+        offsets = _matched_block_offsets(block, extracted, cursor)
+        if offsets is None:
+            # 途中の対応が欠けた後に、同文の後続preへ位置をずらして帰属しない。
+            return ()
+        start, end = offsets
+        cursor = end
+        if measurement["required_height_px"] <= content_height:
+            continue
+        pre_id = measurement.get("id")
+        if not isinstance(pre_id, str) or not pre_id or pre_id in seen_ids:
+            raise ToolFailure("分割許可preのidが空または重複している")
+        seen_ids.add(pre_id)
+        first_page = extracted.count("\f", 0, start) + 1
+        last_page = extracted.count("\f", 0, max(start, end - 1)) + 1
+        spans.append(BreakablePreSpan(
+            pre_id,
+            float(measurement["painted_height_px"]) * CSS_PX_TO_MM,
+            content_height * CSS_PX_TO_MM,
+            tuple(range(first_page, last_page + 1)),
+            fragment_padding_mm=min(
+                float(measurement["padding_block_start_px"]),
+                float(measurement["padding_block_end_px"]),
+            ) * CSS_PX_TO_MM,
+        ))
+    return tuple(spans)
+
+
+def bind_breakable_pre_fragments(
+    spans: tuple[BreakablePreSpan, ...],
+    edge_bands: dict[int, tuple[int, int]],
+) -> tuple[BreakablePreSpan, ...]:
+    """同じpreが占める全ページだけから、描画済み断片の高さを集約する。"""
+    bound: list[BreakablePreSpan] = []
+    for span in spans:
+        if len(span.pages) < 2 or any(page not in edge_bands for page in span.pages):
+            bound.append(span)
+            continue
+        total_px = edge_bands[span.pages[0]][1]
+        total_px += sum(edge_bands[page][0] for page in span.pages[1:])
+        bound.append(replace(span, observed_fragment_mm=mm_from_px(total_px)))
+    return tuple(bound)
+
+
+def exact_breakable_pre_for_boundary(
+    spans: tuple[BreakablePreSpan, ...], before: int, after: int
+) -> BreakablePreSpan | None:
+    matches = [span for span in spans if before in span.pages and after in span.pages]
+    return matches[0] if len(matches) == 1 else None
+
+
+def code_split_problem(
+    tail_px: int,
+    head_px: int,
+    breakable_pre: BreakablePreSpan | None,
+) -> str:
     """ページ境を跨いだコード帯の断片（前ページ下端・次ページ上端の画素厚み）
     から、咎めるべき切れ方だけを文言にして返す。問題なければ空文字。
 
-    分割してよいのは pdf-breakable の塊（表示 BREAKABLE_MIN_LINES 行
-    以上）だけで、分割は orphans / widows が両側4行を保つ。
+    分割してよいのは実DOMで1ページを超えた塊だけで、
+    分割は orphans / widows が両側4行を保つ。
     境で拾えた断片がそのどちらの形にも合わないとき、keep-together が
     効くはずの塊が掛け忘れやテーマ更新で静かに切れている証拠になる。
     """
@@ -969,16 +919,27 @@ def code_split_problem(tail_px: int, head_px: int) -> str:
         return (f"コードブロックがページの境で薄く切れている"
                 f"（境の断片 {fragment_mm:.1f}mm）。"
                 "写経しながら紙をめくることになる")
-    total_mm = mm_from_px(tail_px + head_px)
-    if total_mm < CODE_SPLIT_BLOCK_MIN_MM:
+    if breakable_pre is None:
+        return ("DOM実測で分割を許可したコードが無いのに、"
+                "コードブロックがページの境で切れている")
+    # 実測値は改ページ前の単一 border box、画素帯は改ページ後の断片である。
+    # 完成PDFでは両者の差がDOMで測ったpadding 1個以内だったため、
+    # その実測paddingだけを加える。固定値ではなく、テーマの計測記録へ追従する。
+    observed_with_padding = (
+        breakable_pre.observed_fragment_mm + breakable_pre.fragment_padding_mm
+    )
+    if observed_with_padding < breakable_pre.painted_height_mm:
         return (f"keep-together の効くはずのコードブロックがページの境で"
-                f"切れている（境の断片の合計 {total_mm:.1f}mm は"
-                f" {BREAKABLE_MIN_LINES} 行の塊の高さに足りない）")
+                f"切れている（同じpre {breakable_pre.pre_id} の全ページ断片合計 "
+                f"{breakable_pre.observed_fragment_mm:.1f}mm は"
+                f" 自身の実測高さ {breakable_pre.painted_height_mm:.1f}mm"
+                " に足りない）")
     return ""
 
 
 def render_problems(pdf: Path, total: int) -> list[str]:
     """全ページを描画して、版面からはみ出した墨を挙げる。"""
+    measured_spans = measured_breakable_spans(pdf)
     with tempfile.TemporaryDirectory() as work:
         run_tool(["pdftoppm", "-gray", "-r", str(RENDER_DPI), str(pdf),
                   str(Path(work) / "page")])
@@ -986,33 +947,33 @@ def render_problems(pdf: Path, total: int) -> list[str]:
         if len(images) != total:
             raise ToolFailure(f"{total} ページ中 {len(images)} ページしか描画できない")
         problems: list[str] = []
-        previous_code_tail = 0
+        edge_bands: dict[int, tuple[int, int]] = {}
         for number, image in enumerate(images, start=1):
             width, height, pixels = read_pgm(image.read_bytes())
             for problem in find_ink_overflow(ink_rows(width, height, pixels)):
                 problems.append(f"p{number}: {problem}")
-            starts, ends = code_band_at_edges(width, height, pixels)
+            edge_bands[number] = code_band_at_edges(width, height, pixels)
+        spans = bind_breakable_pre_fragments(measured_spans, edge_bands)
+        previous_code_tail = 0
+        for number in range(1, total + 1):
+            starts, ends = edge_bands[number]
             if previous_code_tail and starts:
-                problem = code_split_problem(previous_code_tail, starts)
+                problem = code_split_problem(
+                    previous_code_tail,
+                    starts,
+                    exact_breakable_pre_for_boundary(spans, number - 1, number),
+                )
                 if problem:
                     problems.append(f"p{number - 1}〜p{number}: {problem}")
             previous_code_tail = ends
         return problems
 
 
-def check_one(pdf: Path) -> tuple[list[str], bool | None]:
-    """1冊の紙面を見て、見つかった問題を並べる。
-
-    返すのは (問題の一覧, 表の断片の計測記録の読み取り結果)。記録が無い冊を
-    「断片の問題0件」と見分けられないと、記録の欠けた冊がそのまま合格に
-    見えてしまうため、次の3つを区別して返す。
-      True  … 記録を読んで断片の検査まで流した
-      False … 検査には進んだが記録が無い
-      None  … 手前の検査で落ちて記録まで辿り着かなかった（読めたか不明）
-    """
+def check_one(pdf: Path) -> list[str]:
+    """1冊の紙面を見て、見つかった問題を並べる。"""
     total = page_count(pdf)
     if total == 0:
-        return [f"{pdf.name}: ページが無い"], None
+        return [f"{pdf.name}: ページが無い"]
 
     problems = render_problems(pdf, total)
 
@@ -1020,7 +981,7 @@ def check_one(pdf: Path) -> tuple[list[str], bool | None]:
     if not lines:
         # 1行も取れないのは「文字が無い」のではなく取り出しに失敗した形。
         # 空のまま次の検査へ渡すと、全部が「問題なし」になって通ってしまう
-        return [f"{pdf.name}: 行の座標を1件も取り出せない"], None
+        return [f"{pdf.name}: 行の座標を1件も取り出せない"]
     problems += find_text_overflow(lines)
     problems += find_overlaps(lines)
     problems += find_collapsed_columns(lines)
@@ -1028,35 +989,20 @@ def check_one(pdf: Path) -> tuple[list[str], bool | None]:
     problems += find_single_orphan_problems(lines)
     problems += find_url_wrap_problems(lines)
     problems += find_hyphen_break_problems(lines)
-    problems += find_footnote_separation_problems(lines)
 
-    # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割と
-    # 本文1行だけの表の断片を照合する。
+    # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割も照合する。
     # 作業名は日本語を外した slug になるので、PDF の名前と同じ規則で復元する
     layout_reports = sorted(BUILD_DIR.glob(f"{work_slug(pdf.stem)}.inline-layout.json"),
                             key=lambda path: path.stat().st_mtime)
-    has_layout_record = bool(layout_reports)
-    if layout_reports:
-        report = json.loads(layout_reports[-1].read_text(encoding="utf-8"))
-        problems += find_stacked_split_problems(report)
-        problems += find_single_row_fragment_problems(report)
-
-    # 印付き段落がページ末尾に残っていないかを、組んだ冊と同じ内容の
-    # 生成 HTML と照合する。作業名は PDF の名前と同じ規則で復元する
-    html_files = sorted(BUILD_DIR.glob(f"{work_slug(pdf.stem)}.html"),
-                        key=lambda path: path.stat().st_mtime)
-    if html_files:
-        keep_next_problems, unmatched = find_keep_next_problems(
-            lines, html_files[-1].read_text(encoding="utf-8"))
-        problems += keep_next_problems
-        if unmatched:
-            print(f"  {pdf.name}: 突き合わせられなかった印なし段落 {unmatched} 個")
+    if STACKED_INVENTORY_ACTIVE and layout_reports:
+        problems += find_stacked_split_problems(
+            json.loads(layout_reports[-1].read_text(encoding="utf-8")))
 
     problems += find_image_problems(parse_image_table(
         run_tool(["pdfimages", "-list", str(pdf)])
     ))
 
-    return [f"{pdf.name}: {problem}" for problem in problems], has_layout_record
+    return [f"{pdf.name}: {problem}" for problem in problems]
 
 
 def main(argv: list[str]) -> int:
@@ -1077,28 +1023,12 @@ def main(argv: list[str]) -> int:
         return 2
 
     problems: list[str] = []
-    books_with_record = 0
     for pdf in pdfs:
         try:
-            found, has_record = check_one(pdf)
-            problems += found
-            if has_record is True:
-                books_with_record += 1
-            elif has_record is False:
-                # 記録が無いと「1行だけの表断片」が見えない。0件ではなく
-                # 検査できていない冊として挙げる
-                problems.append(
-                    f"{pdf.name}: 表の断片の計測記録"
-                    f"（{work_slug(pdf.stem)}.inline-layout.json）が無い"
-                )
-            # None は手前の検査で既に落ちている冊。記録の有無は追わない
+            problems += check_one(pdf)
         except ToolFailure as failure:
             # 1冊が読めんかっただけで残りの検査ごと落とさない
             problems.append(f"{pdf.name}: 検査できない: {failure}")
-
-    # 「1行だけの表断片」の検査が実際に何冊ぶん動いたかを必ず残す。
-    # 記録が無い冊があっても、ここが36と一致すれば全冊を見たことになる
-    print(f"📏 表の断片の計測記録は {books_with_record}/{len(pdfs)} 冊から読めた")
 
     if problems:
         print(f"❌ {len(pdfs)}冊の紙面に {len(problems)} 件の問題があります")

@@ -5,15 +5,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import test, { after, before } from 'node:test';
+import test, { before } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import {
-  exactOccurrences,
-  extractPdfModel,
-  verifyAuditModel,
-  verifyInlinePdf,
-} from './verify-inline-pdf.mjs';
+import { extractPdfModel, verifyAuditModel, verifyInlinePdf } from './verify-inline-pdf.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -22,8 +17,9 @@ const PDF_VERIFIER = path.join(HERE, 'verify-inline-pdf.mjs');
 const TOOLCHAIN = path.join(REPO, 'dist', '.pdf-book-toolchain');
 const BROWSER = ['/usr/bin/google-chrome', '/usr/bin/chromium'].find(fs.existsSync);
 const CAN_INTEGRATE = Boolean(BROWSER) && fs.existsSync(path.join(TOOLCHAIN, 'node_modules'));
-// 個人の作業場所を決め打ちせん。置き場所を変えたい時だけ環境変数で渡す
-const SCRATCH_ROOT = process.env.PDF_BOOK_TEST_SCRATCH_DIR ?? os.tmpdir();
+const SCRATCH_ROOT = fs.existsSync('/home/kouiso/.codex/scratch')
+  ? '/home/kouiso/.codex/scratch'
+  : os.tmpdir();
 
 let directory;
 let manifest;
@@ -37,13 +33,48 @@ function fixtureManifest() {
     minimum_font_size_pt: 8,
     page_content_selector: '[data-vivliostyle-page-area-container="true"]',
     entries: [
-      { id: 'p1-ascii', expected_text: 'ASCII-ALPHA-19', source_order: 0, context: 'flow' },
-      { id: 'repeat-a', expected_text: 'REPEAT-CODE', source_order: 1, context: 'flow' },
-      { id: 'repeat-b', expected_text: 'REPEAT-CODE', source_order: 2, context: 'flow' },
-      { id: 'p2-japanese', expected_text: '日本語コード', source_order: 3, context: 'table' },
-      { id: 'repeat-c', expected_text: 'REPEAT-CODE', source_order: 4, context: 'flow' },
-      { id: 'p3-eight', expected_text: 'EIGHT-PT', source_order: 5, context: 'flow' },
-      { id: 'repeat-d', expected_text: 'REPEAT-CODE', source_order: 6, context: 'flow' },
+      {
+        id: 'p1-ascii',
+        expected_text: 'ASCII-ALPHA-19',
+        source_order: 0,
+        context: 'flow',
+      },
+      {
+        id: 'repeat-a',
+        expected_text: 'REPEAT-CODE',
+        source_order: 1,
+        context: 'flow',
+      },
+      {
+        id: 'repeat-b',
+        expected_text: 'REPEAT-CODE',
+        source_order: 2,
+        context: 'flow',
+      },
+      {
+        id: 'p2-japanese',
+        expected_text: '日本語コード',
+        source_order: 3,
+        context: 'table',
+      },
+      {
+        id: 'repeat-c',
+        expected_text: 'REPEAT-CODE',
+        source_order: 4,
+        context: 'flow',
+      },
+      {
+        id: 'p3-eight',
+        expected_text: 'EIGHT-PT',
+        source_order: 5,
+        context: 'flow',
+      },
+      {
+        id: 'repeat-d',
+        expected_text: 'REPEAT-CODE',
+        source_order: 6,
+        context: 'flow',
+      },
     ],
   };
 }
@@ -124,10 +155,6 @@ function syntheticSuffixLine(text, template, left, topShift = 0) {
   };
 }
 
-after(() => {
-  if (directory) fs.rmSync(directory, { recursive: true, force: true });
-});
-
 before(() => {
   if (!CAN_INTEGRATE) return;
   directory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-pdf-verifier-test-'));
@@ -196,6 +223,122 @@ before(async () => {
 
 const integration = { skip: !CAN_INTEGRATE };
 
+let punctuationFixturePromise;
+
+function repeatedPunctuationFixture() {
+  punctuationFixturePromise ??= (async () => {
+    const fixtureDirectory = fs.mkdtempSync(
+      path.join(SCRATCH_ROOT, 'inline-pdf-punctuation-order-test-'),
+    );
+    const tableId = 'pdf-table-2304a72f96b0-00000';
+    const id = 'pdf-inline-2304a72f96b0-00000';
+    const fixtureManifestData = {
+      schema_version: 1,
+      document_id: 'punctuation-order',
+      minimum_font_size_pt: 8,
+      page_content_selector: '[data-vivliostyle-page-area-container="true"]',
+      entries: [
+        {
+          id,
+          expected_text: '。',
+          source_order: 0,
+          context: 'table',
+          pagination_role: 'repeating_table_header',
+          table_cell: {
+            table_id: tableId,
+            section: 'thead',
+            row_index: 0,
+            cell_index: 0,
+            column_index: 0,
+            row_span: 1,
+            column_span: 1,
+            tag: 'TH',
+            code_index: 0,
+          },
+        },
+      ],
+      tables: [{ id: tableId }],
+    };
+    const rows = Array.from(
+      { length: 18 },
+      (_, index) => `<tr><td>row ${index}</td><td>value ${index}</td></tr>`,
+    ).join('');
+    fs.writeFileSync(
+      path.join(fixtureDirectory, 'fixture.html'),
+      `<!doctype html><html lang="ja"><body><table data-pdf-table-id="${tableId}"><thead><tr><th>前<code data-pdf-inline-id="${id}">。</code>。。後</th><th>説明</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+    );
+    fs.writeFileSync(
+      path.join(fixtureDirectory, 'fixture.css'),
+      '@page{size:A5;margin:15mm}body{font:11pt sans-serif}table{width:100%;border-spacing:0}th,td{height:18mm;padding:2mm;border:0}code{font:9pt monospace;white-space:nowrap}',
+    );
+    fs.writeFileSync(
+      path.join(fixtureDirectory, 'fixture.config.cjs'),
+      "module.exports={title:'punctuation order',language:'ja',entry:[{path:'fixture.html'}],theme:['./fixture.css'],workspaceDir:'.vivliostyle-test'};\n",
+    );
+    fs.writeFileSync(
+      path.join(fixtureDirectory, 'manifest.json'),
+      `${JSON.stringify(fixtureManifestData, null, 2)}\n`,
+    );
+    const build = spawnSync(
+      process.execPath,
+      [
+        DOM_WRAPPER,
+        'build',
+        '-c',
+        'fixture.config.cjs',
+        '-s',
+        'A5',
+        '--executable-browser',
+        BROWSER,
+        '-o',
+        'fixture.pdf',
+      ],
+      {
+        cwd: fixtureDirectory,
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          PDF_BOOK_INLINE_LAYOUT_MANIFEST: path.join(fixtureDirectory, 'manifest.json'),
+          PDF_BOOK_INLINE_LAYOUT_REPORT: path.join(fixtureDirectory, 'dom-report.json'),
+          PDF_BOOK_TOOLCHAIN_DIR: TOOLCHAIN,
+        },
+      },
+    );
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+    const fixtureReport = JSON.parse(
+      fs.readFileSync(path.join(fixtureDirectory, 'dom-report.json'), 'utf8'),
+    );
+    const mupdf = await import(
+      pathToFileURL(path.join(TOOLCHAIN, 'node_modules', 'mupdf', 'dist', 'mupdf.js'))
+    );
+    const document = mupdf.default.Document.openDocument(
+      path.join(fixtureDirectory, 'fixture.pdf'),
+    ).asPDF();
+    const fixtureModel = extractPdfModel(document);
+    const positive = verifyAuditModel(fixtureManifestData, fixtureReport, fixtureModel);
+    assert.equal(positive.result, 'pass', JSON.stringify(positive.issues));
+    return { manifest: fixtureManifestData, report: fixtureReport, model: fixtureModel };
+  })();
+  return punctuationFixturePromise;
+}
+
+function mutateRepeatedPunctuationProse(report, mutate) {
+  for (const observed of report.dom_audit.observed) {
+    for (const item of observed.items) {
+      const cell = item.table_geometry.cells.find(
+        (entry) => entry.row_index === 0 && entry.cell_index === 0,
+      );
+      assert.ok(cell);
+      const periods = cell.prose_lines[0].characters.filter(
+        (character) => character.character === '。',
+      );
+      assert.equal(periods.length, 2);
+      mutate(periods);
+    }
+  }
+}
+
 test(
   'real three-page PDF uniquely matches exact text, repeated text, table and 8pt glyphs',
   integration,
@@ -235,6 +378,570 @@ test(
       assert.match(report.inputs[input].sha256, /^[0-9a-f]{64}$/);
     }
     assert.deepEqual(JSON.parse(fs.readFileSync(outputPath, 'utf8')), report);
+  },
+);
+
+test(
+  'real paginated table verifies every repeated THEAD clone in the PDF',
+  integration,
+  async () => {
+    const repeatedDirectory = fs.mkdtempSync(path.join(SCRATCH_ROOT, 'inline-pdf-thead-test-'));
+    const tableId = 'pdf-table-0123456789ab-00000';
+    const ids = ['pdf-inline-0123456789ab-00000', 'pdf-inline-0123456789ab-00001'];
+    const cell = (cellIndex, columnIndex) => ({
+      table_id: tableId,
+      section: 'thead',
+      row_index: 0,
+      cell_index: cellIndex,
+      column_index: columnIndex,
+      row_span: 1,
+      column_span: 1,
+      tag: 'TH',
+      code_index: 0,
+    });
+    const repeatedManifest = {
+      schema_version: 1,
+      document_id: 'repeated-header-pdf',
+      minimum_font_size_pt: 8,
+      page_content_selector: '[data-vivliostyle-page-area-container="true"]',
+      entries: [
+        {
+          id: ids[0],
+          expected_text: 'HEADER-A',
+          source_order: 0,
+          context: 'table',
+          pagination_role: 'repeating_table_header',
+          table_cell: cell(0, 0),
+        },
+        {
+          id: ids[1],
+          expected_text: 'HEADER-B',
+          source_order: 1,
+          context: 'table',
+          pagination_role: 'repeating_table_header',
+          table_cell: cell(1, 1),
+        },
+      ],
+      tables: [{ id: tableId }],
+    };
+    const rows = Array.from(
+      { length: 18 },
+      (_, index) => `<tr><td>row ${index}</td><td>value ${index}</td></tr>`,
+    ).join('');
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.html'),
+      `<!doctype html><html lang="ja"><body><table data-pdf-table-id="${tableId}"><thead><tr><th><code data-pdf-inline-id="${ids[0]}">HEADER-A</code></th><th><code data-pdf-inline-id="${ids[1]}">HEADER-B</code></th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.css'),
+      '@page{size:A5;margin:15mm}body{font:11pt sans-serif}table{width:100%;border-spacing:0}th,td{height:18mm;padding:2mm;border:0}code{font:9pt monospace;white-space:nowrap}',
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.config.cjs'),
+      "module.exports={title:'repeated header PDF',language:'ja',entry:[{path:'fixture.html'}],theme:['./fixture.css'],workspaceDir:'.vivliostyle-test'};\n",
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'manifest.json'),
+      `${JSON.stringify(repeatedManifest, null, 2)}\n`,
+    );
+    const build = spawnSync(
+      process.execPath,
+      [
+        DOM_WRAPPER,
+        'build',
+        '-c',
+        'fixture.config.cjs',
+        '-s',
+        'A5',
+        '--executable-browser',
+        BROWSER,
+        '-o',
+        'fixture.pdf',
+      ],
+      {
+        cwd: repeatedDirectory,
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          PDF_BOOK_INLINE_LAYOUT_MANIFEST: path.join(repeatedDirectory, 'manifest.json'),
+          PDF_BOOK_INLINE_LAYOUT_REPORT: path.join(repeatedDirectory, 'dom-report.json'),
+          PDF_BOOK_TOOLCHAIN_DIR: TOOLCHAIN,
+        },
+      },
+    );
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+    const repeatedReport = JSON.parse(
+      fs.readFileSync(path.join(repeatedDirectory, 'dom-report.json'), 'utf8'),
+    );
+    const output = path.join(repeatedDirectory, 'post-pdf.json');
+    const verified = await verifyInlinePdf({
+      manifestPath: path.join(repeatedDirectory, 'manifest.json'),
+      domReportPath: path.join(repeatedDirectory, 'dom-report.json'),
+      pdfPath: path.join(repeatedDirectory, 'fixture.pdf'),
+      toolchainDir: TOOLCHAIN,
+      outputPath: output,
+    });
+    assert.equal(verified.result, 'pass', JSON.stringify(verified.issues));
+    assert.ok(repeatedReport.dom_audit.observed.every((entry) => entry.items.length >= 2));
+    assert.equal(
+      verified.observations.length,
+      repeatedReport.dom_audit.observed.reduce((sum, entry) => sum + entry.items.length, 0),
+    );
+
+    const originalModel = await import(
+      pathToFileURL(path.join(TOOLCHAIN, 'node_modules', 'mupdf', 'dist', 'mupdf.js'))
+    ).then((mupdf) => {
+      const document = mupdf.default.Document.openDocument(
+        path.join(repeatedDirectory, 'fixture.pdf'),
+      ).asPDF();
+      return extractPdfModel(document);
+    });
+    const mutations = [
+      (report) => {
+        report.dom_audit.observed[0].items[1].page_index =
+          report.dom_audit.observed[0].items[0].page_index;
+      },
+      (report) => {
+        report.dom_audit.observed[0].items[1].table_cell.column_index = 1;
+      },
+      (report) => {
+        report.dom_audit.observed[0].items[1].table_cell.column_span = 2;
+      },
+      (report) => {
+        report.dom_audit.observed[0].items[1].text = 'TAMPERED';
+      },
+      (report) => {
+        report.dom_audit.observed[1].items.pop();
+      },
+    ];
+    for (const mutate of mutations) {
+      const changed = structuredClone(repeatedReport);
+      mutate(changed);
+      assert.notEqual(
+        verifyAuditModel(repeatedManifest, changed, structuredClone(originalModel)).result,
+        'pass',
+      );
+    }
+    const incompleteInventory = structuredClone(repeatedReport);
+    incompleteInventory.dom_audit.table_inventory.tables[0].fragments.pop();
+    const incompleteInventoryResult = verifyAuditModel(
+      repeatedManifest,
+      incompleteInventory,
+      structuredClone(originalModel),
+    );
+    assert.equal(incompleteInventoryResult.result, 'fail');
+    assert.ok(
+      incompleteInventoryResult.issues.some(
+        (entry) => entry.reason === 'repeated_header_fragment_coverage_extra',
+      ),
+    );
+
+    const extraInventory = structuredClone(repeatedReport);
+    extraInventory.dom_audit.table_inventory.tables[0].fragments.push({
+      ...structuredClone(extraInventory.dom_audit.table_inventory.tables[0].fragments.at(-1)),
+      page_index: originalModel.pages.length,
+    });
+    const extraInventoryResult = verifyAuditModel(
+      repeatedManifest,
+      extraInventory,
+      structuredClone(originalModel),
+    );
+    assert.equal(extraInventoryResult.result, 'fail');
+    assert.ok(
+      extraInventoryResult.issues.some(
+        (entry) => entry.reason === 'repeated_header_fragment_coverage_missing',
+      ),
+    );
+
+    const duplicateInventory = structuredClone(repeatedReport);
+    duplicateInventory.dom_audit.table_inventory.tables.push(
+      structuredClone(duplicateInventory.dom_audit.table_inventory.tables[0]),
+    );
+    const duplicateInventoryResult = verifyAuditModel(
+      repeatedManifest,
+      duplicateInventory,
+      structuredClone(originalModel),
+    );
+    assert.equal(duplicateInventoryResult.result, 'fail');
+    assert.ok(
+      duplicateInventoryResult.issues.some(
+        (entry) => entry.reason === 'repeated_header_table_inventory_duplicate',
+      ),
+    );
+    const extraHeaderModel = structuredClone(originalModel);
+    const firstHeaderPage = repeatedReport.dom_audit.observed[0].items[0].page_index;
+    const extraHeaderLine = structuredClone(
+      lineContaining(extraHeaderModel, firstHeaderPage, 'HEADER-A'),
+    );
+    for (const character of extraHeaderLine.characters) shiftCharacter(character, 5, 0);
+    extraHeaderModel.pages[firstHeaderPage].lines.push(extraHeaderLine);
+    const extraHeader = verifyAuditModel(repeatedManifest, repeatedReport, extraHeaderModel);
+    assert.equal(extraHeader.result, 'fail');
+    assert.ok(
+      extraHeader.issues.some(
+        (entry) => entry.reason === 'repeated_header_pdf_cell_bijection_failed',
+      ),
+    );
+  },
+);
+
+test(
+  'same-text code nodes in one repeated THEAD cell form a PDF bijection',
+  integration,
+  async () => {
+    const repeatedDirectory = fs.mkdtempSync(
+      path.join(SCRATCH_ROOT, 'inline-pdf-same-cell-text-test-'),
+    );
+    const tableId = 'pdf-table-2304a72f96b0-00000';
+    const ids = ['pdf-inline-2304a72f96b0-00000', 'pdf-inline-2304a72f96b0-00001'];
+    const cell = (codeIndex) => ({
+      table_id: tableId,
+      section: 'thead',
+      row_index: 0,
+      cell_index: 0,
+      column_index: 0,
+      row_span: 1,
+      column_span: 1,
+      tag: 'TH',
+      code_index: codeIndex,
+    });
+    const repeatedManifest = {
+      schema_version: 1,
+      document_id: 'same-header-text',
+      minimum_font_size_pt: 8,
+      page_content_selector: '[data-vivliostyle-page-area-container="true"]',
+      entries: ids.map((id, codeIndex) => ({
+        id,
+        expected_text: 'DUP-CODE',
+        source_order: codeIndex,
+        context: 'table',
+        pagination_role: 'repeating_table_header',
+        table_cell: cell(codeIndex),
+      })),
+      tables: [{ id: tableId }],
+    };
+    const rows = Array.from(
+      { length: 18 },
+      (_, index) => `<tr><td>row ${index}</td><td>value ${index}</td></tr>`,
+    ).join('');
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.html'),
+      `<!doctype html><html lang="ja"><body><table data-pdf-table-id="${tableId}"><thead><tr><th><code data-pdf-inline-id="${ids[0]}">DUP-CODE</code> / <code data-pdf-inline-id="${ids[1]}">DUP-CODE</code></th><th>説明</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.css'),
+      '@page{size:A5;margin:15mm}body{font:11pt sans-serif}table{width:100%;border-spacing:0}th,td{height:18mm;padding:2mm;border:0}code{font:9pt monospace;white-space:nowrap}',
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'fixture.config.cjs'),
+      "module.exports={title:'same header text',language:'ja',entry:[{path:'fixture.html'}],theme:['./fixture.css'],workspaceDir:'.vivliostyle-test'};\n",
+    );
+    fs.writeFileSync(
+      path.join(repeatedDirectory, 'manifest.json'),
+      `${JSON.stringify(repeatedManifest, null, 2)}\n`,
+    );
+    const build = spawnSync(
+      process.execPath,
+      [
+        DOM_WRAPPER,
+        'build',
+        '-c',
+        'fixture.config.cjs',
+        '-s',
+        'A5',
+        '--executable-browser',
+        BROWSER,
+        '-o',
+        'fixture.pdf',
+      ],
+      {
+        cwd: repeatedDirectory,
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          PDF_BOOK_INLINE_LAYOUT_MANIFEST: path.join(repeatedDirectory, 'manifest.json'),
+          PDF_BOOK_INLINE_LAYOUT_REPORT: path.join(repeatedDirectory, 'dom-report.json'),
+          PDF_BOOK_TOOLCHAIN_DIR: TOOLCHAIN,
+        },
+      },
+    );
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+    const repeatedReport = JSON.parse(
+      fs.readFileSync(path.join(repeatedDirectory, 'dom-report.json'), 'utf8'),
+    );
+    const mupdf = await import(
+      pathToFileURL(path.join(TOOLCHAIN, 'node_modules', 'mupdf', 'dist', 'mupdf.js'))
+    );
+    const document = mupdf.default.Document.openDocument(
+      path.join(repeatedDirectory, 'fixture.pdf'),
+    ).asPDF();
+    const originalModel = extractPdfModel(document);
+    const verified = verifyAuditModel(repeatedManifest, repeatedReport, originalModel);
+    assert.equal(verified.result, 'pass', JSON.stringify(verified.issues));
+    assert.ok(repeatedReport.dom_audit.observed.every((entry) => entry.items.length >= 2));
+    assert.ok(
+      verified.observations.every(
+        (entry) => entry.geometry_candidates === 1 && entry.header_cell_exact_text_candidates === 2,
+      ),
+    );
+
+    const extraOccurrenceModel = structuredClone(originalModel);
+    const firstPage = repeatedReport.dom_audit.observed[0].items[0].page_index;
+    const originalLine = lineContaining(extraOccurrenceModel, firstPage, 'DUP-CODE');
+    const originalText = originalLine.characters.map((character) => character.character).join('');
+    const start = originalText.indexOf('DUP-CODE');
+    assert.notEqual(start, -1);
+    const extraLine = {
+      ...structuredClone(originalLine),
+      characters: structuredClone(originalLine.characters.slice(start, start + 'DUP-CODE'.length)),
+    };
+    for (const character of extraLine.characters) shiftCharacter(character, 0, 4);
+    extraOccurrenceModel.pages[firstPage].lines.push(extraLine);
+    const extraOccurrence = verifyAuditModel(
+      repeatedManifest,
+      repeatedReport,
+      extraOccurrenceModel,
+    );
+    assert.equal(extraOccurrence.result, 'fail');
+    assert.ok(
+      extraOccurrence.issues.some(
+        (entry) =>
+          entry.reason === 'repeated_header_pdf_cell_bijection_failed' &&
+          entry.expected_count === 2 &&
+          entry.unassigned_cell_glyph_count > 0,
+      ),
+    );
+  },
+);
+
+test(
+  'repeated THEAD distinguishes adjacent code glyphs from identical ordinary prose',
+  integration,
+  async () => {
+    const tableId = 'pdf-table-2304a72f96b0-00000';
+    const ids = ['pdf-inline-2304a72f96b0-00000', 'pdf-inline-2304a72f96b0-00001'];
+    const rows = Array.from(
+      { length: 18 },
+      (_, index) => `<tr><td>row ${index}</td><td>value ${index}</td></tr>`,
+    ).join('');
+    const cell = (codeIndex) => ({
+      table_id: tableId,
+      section: 'thead',
+      row_index: 0,
+      cell_index: 0,
+      column_index: 0,
+      row_span: 1,
+      column_span: 1,
+      tag: 'TH',
+      code_index: codeIndex,
+    });
+    const buildCase = async (
+      name,
+      header,
+      entryCount,
+      expectedPass,
+      expectedTexts = Array.from({ length: entryCount }, () => 'AAA'),
+    ) => {
+      const caseDirectory = fs.mkdtempSync(path.join(SCRATCH_ROOT, `${name}-`));
+      const caseManifest = {
+        schema_version: 1,
+        document_id: name,
+        minimum_font_size_pt: 8,
+        page_content_selector: '[data-vivliostyle-page-area-container="true"]',
+        entries: ids.slice(0, entryCount).map((id, codeIndex) => ({
+          id,
+          expected_text: expectedTexts[codeIndex],
+          source_order: codeIndex,
+          context: 'table',
+          pagination_role: 'repeating_table_header',
+          table_cell: cell(codeIndex),
+        })),
+        tables: [{ id: tableId }],
+      };
+      fs.writeFileSync(
+        path.join(caseDirectory, 'fixture.html'),
+        `<!doctype html><html lang="ja"><body><table data-pdf-table-id="${tableId}"><thead><tr><th>${header}</th><th>説明</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+      );
+      fs.writeFileSync(
+        path.join(caseDirectory, 'fixture.css'),
+        '@page{size:A5;margin:15mm}body{font:11pt sans-serif}table{width:100%;border-spacing:0}th,td{height:18mm;padding:2mm;border:0}code{font:9pt monospace;white-space:nowrap}',
+      );
+      fs.writeFileSync(
+        path.join(caseDirectory, 'fixture.config.cjs'),
+        `module.exports={title:${JSON.stringify(name)},language:'ja',entry:[{path:'fixture.html'}],theme:['./fixture.css'],workspaceDir:'.vivliostyle-test'};\n`,
+      );
+      fs.writeFileSync(
+        path.join(caseDirectory, 'manifest.json'),
+        `${JSON.stringify(caseManifest, null, 2)}\n`,
+      );
+      const build = spawnSync(
+        process.execPath,
+        [
+          DOM_WRAPPER,
+          'build',
+          '-c',
+          'fixture.config.cjs',
+          '-s',
+          'A5',
+          '--executable-browser',
+          BROWSER,
+          '-o',
+          'fixture.pdf',
+        ],
+        {
+          cwd: caseDirectory,
+          encoding: 'utf8',
+          timeout: 120_000,
+          env: {
+            ...process.env,
+            PDF_BOOK_INLINE_LAYOUT_MANIFEST: path.join(caseDirectory, 'manifest.json'),
+            PDF_BOOK_INLINE_LAYOUT_REPORT: path.join(caseDirectory, 'dom-report.json'),
+            PDF_BOOK_TOOLCHAIN_DIR: TOOLCHAIN,
+          },
+        },
+      );
+      if (!expectedPass) {
+        assert.notEqual(build.status, 0, `${name} unexpectedly passed`);
+        const failedReport = JSON.parse(
+          fs.readFileSync(path.join(caseDirectory, 'dom-report.json'), 'utf8'),
+        );
+        assert.equal(failedReport.result, 'dom_fail');
+        assert.match(
+          JSON.stringify(failedReport.dom_audit.violations),
+          /manifest|unexpected|coverage/,
+        );
+        assert.equal(fs.existsSync(path.join(caseDirectory, 'fixture.pdf')), false);
+        return;
+      }
+      assert.equal(build.status, 0, build.stderr || build.stdout);
+      const caseReport = JSON.parse(
+        fs.readFileSync(path.join(caseDirectory, 'dom-report.json'), 'utf8'),
+      );
+      const mupdf = await import(
+        pathToFileURL(path.join(TOOLCHAIN, 'node_modules', 'mupdf', 'dist', 'mupdf.js'))
+      );
+      const document = mupdf.default.Document.openDocument(
+        path.join(caseDirectory, 'fixture.pdf'),
+      ).asPDF();
+      const result = verifyAuditModel(caseManifest, caseReport, extractPdfModel(document));
+      assert.equal(result.result, 'pass', `${name}: ${JSON.stringify(result.issues)}`);
+      assert.ok(result.observations.every((observation) => observation.geometry_candidates === 1));
+    };
+
+    await buildCase(
+      'adjacent-identical-code',
+      `<code data-pdf-inline-id="${ids[0]}">AAA</code><code data-pdf-inline-id="${ids[1]}">AAA</code>`,
+      2,
+      true,
+    );
+    await buildCase(
+      'one-code-identical-prose',
+      `<code data-pdf-inline-id="${ids[0]}">AAA</code> AAA`,
+      1,
+      true,
+    );
+    await buildCase(
+      'two-code-identical-prose',
+      `<code data-pdf-inline-id="${ids[0]}">AAA</code> AAA <code data-pdf-inline-id="${ids[1]}">AAA</code>`,
+      2,
+      true,
+    );
+    await buildCase(
+      'different-code-substring',
+      `<code data-pdf-inline-id="${ids[0]}">AAA</code> / <code data-pdf-inline-id="${ids[1]}">AAAA</code>`,
+      2,
+      true,
+      ['AAA', 'AAAA'],
+    );
+    await buildCase(
+      'shorter-code-substring',
+      `<code data-pdf-inline-id="${ids[0]}">AA</code> / <code data-pdf-inline-id="${ids[1]}">AAAA</code>`,
+      2,
+      true,
+      ['AA', 'AAAA'],
+    );
+    await buildCase(
+      'code-with-internal-space',
+      `<code data-pdf-inline-id="${ids[0]}">A A</code>`,
+      1,
+      true,
+      ['A A'],
+    );
+    await buildCase(
+      'japanese-closing-parenthesis',
+      `前<code data-pdf-inline-id="${ids[0]}">x</code>（例：値）。後`,
+      1,
+      true,
+      ['x'],
+    );
+    await buildCase(
+      'japanese-closing-quote',
+      `「<code data-pdf-inline-id="${ids[0]}">x</code>」。後`,
+      1,
+      true,
+      ['x'],
+    );
+    await buildCase(
+      'japanese-adjacent-periods',
+      `前<code data-pdf-inline-id="${ids[0]}">。</code>。。後`,
+      1,
+      true,
+      ['。'],
+    );
+    await buildCase(
+      'unmanifested-third-code',
+      `<code data-pdf-inline-id="${ids[0]}">AAA</code><code data-pdf-inline-id="${ids[1]}">AAA</code><code data-pdf-inline-id="unmanifested-code">AAA</code>`,
+      2,
+      false,
+    );
+  },
+);
+
+test(
+  'repeated THEAD prose cannot alias one PDF glyph from two DOM characters',
+  integration,
+  async () => {
+    const fixture = await repeatedPunctuationFixture();
+    const changedReport = structuredClone(fixture.report);
+    mutateRepeatedPunctuationProse(changedReport, (periods) => {
+      periods[1].rect = structuredClone(periods[0].rect);
+    });
+    const result = verifyAuditModel(
+      fixture.manifest,
+      changedReport,
+      structuredClone(fixture.model),
+    );
+    const mappingIssues = result.issues.filter(
+      (issue) => issue.reason === 'repeated_header_prose_pdf_mapping_not_unique',
+    );
+    assert.equal(result.result, 'fail');
+    assert.equal(mappingIssues.length, fixture.report.dom_audit.observed[0].items.length);
+  },
+);
+
+test(
+  'repeated THEAD prose must retain DOM source order in PDF glyph order',
+  integration,
+  async () => {
+    const fixture = await repeatedPunctuationFixture();
+    const changedReport = structuredClone(fixture.report);
+    mutateRepeatedPunctuationProse(changedReport, (periods) => {
+      const first = structuredClone(periods[0].rect);
+      periods[0].rect = structuredClone(periods[1].rect);
+      periods[1].rect = first;
+    });
+    const result = verifyAuditModel(
+      fixture.manifest,
+      changedReport,
+      structuredClone(fixture.model),
+    );
+    const mappingIssues = result.issues.filter(
+      (issue) => issue.reason === 'repeated_header_prose_pdf_mapping_not_unique',
+    );
+    assert.equal(result.result, 'fail');
+    assert.equal(mappingIssues.length, fixture.report.dom_audit.observed[0].items.length);
   },
 );
 
@@ -483,177 +1190,4 @@ test('CLI uses the builder contract and exits zero only for pass', integration, 
   });
   assert.notEqual(failing.status, 0);
   assert.equal(JSON.parse(fs.readFileSync(failedOutput, 'utf8')).result, 'fail');
-});
-
-// 合字を MuPDF が分解すると 2 文字目は幅 0 で次の字と同じ x に置かれる。実 PDF(BIZ UDPGothic の
-// "fi")では 1e-5pt の揺れで 'l' が 'i' の前に並び "Proflie" になった。ブラウザ不要の単体検査。
-function syntheticLigatureLine(text, ligatureIndex, drift) {
-  const top = 470;
-  const bottom = 482.75;
-  let x = 60;
-  const characters = [];
-  for (const [index, character] of [...text].entries()) {
-    const width = index === ligatureIndex ? 0 : 6.5;
-    const left = index === ligatureIndex + 1 ? x + drift : x;
-    characters.push({
-      character,
-      origin: [left, bottom],
-      font: 'BIZUDPGothic-Regular',
-      size: 12,
-      quad: [left, top, left + width, top, left, bottom, left + width, bottom],
-      bbox: [left, top, left + width, bottom],
-    });
-    x += width;
-  }
-  return { bbox: [60, top, x, bottom], characters };
-}
-
-test('zero-width ligature glyph keeps source order when x differs below the box epsilon', () => {
-  // ±0.00116 は Linux の Chromium で day25 の `refine` が実際に出したずれ
-  for (const drift of [-0.005, -0.00116, -1e-5, 0, 1e-5, 0.00116, 0.005]) {
-    const page = { page_index: 0, lines: [syntheticLigatureLine('updateProfile', 9, drift)] };
-    const found = exactOccurrences(page, 'updateProfile');
-    assert.equal(found.length, 1, `drift ${drift}`);
-    assert.equal(found[0].characters.map((item) => item.character).join(''), 'updateProfile');
-  }
-});
-
-test('a real horizontal gap beyond the box epsilon still orders by x, not by source order', () => {
-  const line = syntheticLigatureLine('updateProfile', -1, 0);
-  const reversed = { ...line, characters: [...line.characters].reverse() };
-  const page = { page_index: 0, lines: [reversed] };
-  assert.equal(exactOccurrences(page, 'updateProfile').length, 1);
-  assert.equal(exactOccurrences(page, 'eliforPetadpu').length, 0);
-});
-
-// 字の持ち主検査: 2つの一致が列の一部だけ共有しても抽出文字の使い回しになる。
-// ブラウザ不要の単体検査として、DOM/PDF を合成して verifyAuditModel を通す。
-function syntheticReusePage(text) {
-  const characters = [...text].map((character, index) => {
-    const left = index * 10;
-    return {
-      character,
-      origin: [left, 10],
-      font: 'SyntheticMono',
-      size: 12,
-      quad: [left, 0, left + 8, 0, left, 10, left + 8, 10],
-      bbox: [left, 0, left + 8, 10],
-    };
-  });
-  return {
-    page_index: 0,
-    media_box: [0, 0, 300, 300],
-    crop_box: [0, 0, 300, 300],
-    rotation: 0,
-    lines: [{ bbox: [0, 0, text.length * 10, 10], characters }],
-  };
-}
-
-function reuseFixture(pageText, selections) {
-  const pageRect = { left: 0, top: 0, right: 300, bottom: 300 };
-  const checks = Object.fromEntries(
-    [
-      'renderer_ready',
-      'page_content_selector',
-      'manifest_coverage',
-      'measurement_support',
-      'physical_page_box_selector',
-      'single_line',
-      'minimum_font_size',
-      'cell_content_bounds',
-      'page_content_bounds',
-      'sibling_cell_overlap',
-      'clipping_ancestors',
-    ].map((name) => [name, { status: 'pass' }]),
-  );
-  checks.post_pdf_text_and_geometry = { status: 'unsupported' };
-  const manifest = {
-    schema_version: 1,
-    document_id: 'glyph-reuse-test',
-    minimum_font_size_pt: 8,
-    entries: selections.map(({ id, start, end }, order) => ({
-      id,
-      expected_text: pageText.slice(start, end),
-      source_order: order,
-      context: 'flow',
-    })),
-  };
-  const domReport = {
-    result: 'dom_pass_post_pdf_pending',
-    document_id: 'glyph-reuse-test',
-    dom_audit: {
-      ready_state: 'complete',
-      violations: [],
-      checks,
-      page_count: 1,
-      page_geometry: [{ status: 'observed_uncalibrated', page_index: 0, rect: pageRect }],
-      observed: selections.map(({ id, start, end }) => {
-        const codeRect = {
-          left: start * 10,
-          top: 0,
-          right: (end - 1) * 10 + 8,
-          bottom: 10,
-        };
-        return {
-          id,
-          items: [
-            {
-              page_index: 0,
-              text: pageText.slice(start, end),
-              line_rects: [codeRect],
-              font_size_pt: 12,
-              code_rect: codeRect,
-              code_box: {
-                padding_left: 0,
-                padding_right: 0,
-                border_left: 0,
-                border_right: 0,
-                border_box_rect: codeRect,
-              },
-              page_content_rect: pageRect,
-              physical_page_box: {
-                status: 'observed_uncalibrated',
-                page_index: 0,
-                rect: pageRect,
-              },
-            },
-          ],
-        };
-      }),
-    },
-  };
-  return { manifest, domReport, pdfModel: { pages: [syntheticReusePage(pageText)] } };
-}
-
-test('two matches sharing only some glyphs fail as reused', () => {
-  const { manifest, domReport, pdfModel } = reuseFixture('ABC', [
-    { id: 'reuse-a', start: 0, end: 2 },
-    { id: 'reuse-b', start: 1, end: 3 },
-  ]);
-  const result = verifyAuditModel(manifest, domReport, pdfModel);
-  assert.equal(result.result, 'fail');
-  const reuse = result.issues.find((entry) => entry.reason === 'glyph_sequence_reused');
-  assert.deepEqual(reuse.ids, ['reuse-a', 'reuse-b']);
-  assert.equal(reuse.key, '0:0:1');
-});
-
-test('two matches on disjoint glyph sequences pass', () => {
-  const { manifest, domReport, pdfModel } = reuseFixture('ABCD', [
-    { id: 'reuse-a', start: 0, end: 2 },
-    { id: 'reuse-b', start: 2, end: 4 },
-  ]);
-  const result = verifyAuditModel(manifest, domReport, pdfModel);
-  assert.equal(result.result, 'pass');
-  assert.deepEqual(result.issues, []);
-});
-
-test('two matches on the identical glyph sequence still fail as reused', () => {
-  const { manifest, domReport, pdfModel } = reuseFixture('AB', [
-    { id: 'reuse-a', start: 0, end: 2 },
-    { id: 'reuse-b', start: 0, end: 2 },
-  ]);
-  const result = verifyAuditModel(manifest, domReport, pdfModel);
-  assert.equal(result.result, 'fail');
-  const reuse = result.issues.find((entry) => entry.reason === 'glyph_sequence_reused');
-  assert.deepEqual(reuse.ids, ['reuse-a', 'reuse-b']);
 });

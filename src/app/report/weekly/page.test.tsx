@@ -80,7 +80,7 @@ describe('週次レポートの対象期間', () => {
   it('UTCの開始日と終了日を、端末のタイムゾーンに変換せず表示する', () => {
     render(<WeeklyReportPage />);
     expect(screen.getByText('2026/01/01 - 2026/01/28')).toBeInTheDocument();
-    expect(screen.getByText('対象期間（UTC）')).toBeInTheDocument();
+    expect(screen.getByText('集計期間（UTC基準）')).toBeInTheDocument();
   });
 });
 

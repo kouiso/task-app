@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { createPasswordSchema } from '@/lib/password';
 import { prisma } from '@/lib/prisma';
 import {
   checkLoginRateLimit,
@@ -12,6 +13,7 @@ import {
 import { createSession, deleteSession, type SessionUser } from '@/lib/session';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
+import { isUserEmailUniqueConstraintError } from './_helpers/user-email-conflict';
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -21,13 +23,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   email: z.string().email('有効なメールアドレスを入力してください'),
-  password: z
-    .string()
-    .min(8, 'パスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
-    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
-    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
-    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+  password: createPasswordSchema('パスワードは8文字以上で入力してください'),
 });
 
 function handleUnexpectedError(context: string, error: unknown): never {
@@ -90,6 +86,7 @@ export const authRouter = createTRPCRouter({
         id: user.id,
         email: user.email,
         role: user.role,
+        version: user.sessionVersion,
       };
 
       // セッション発行の前に成功記録を確定させる。
@@ -142,6 +139,7 @@ export const authRouter = createTRPCRouter({
         id: user.id,
         email: user.email,
         role: user.role,
+        version: user.sessionVersion,
       };
 
       await createSession(sessionUser);
@@ -157,6 +155,12 @@ export const authRouter = createTRPCRouter({
       };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
+      if (isUserEmailUniqueConstraintError(error)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に登録されています',
+        });
+      }
       handleUnexpectedError('ユーザー登録処理', error);
     }
   }),
@@ -173,15 +177,25 @@ export const authRouter = createTRPCRouter({
 
     const user = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
-      select: USER_DETAIL_SELECT,
+      select: {
+        ...USER_DETAIL_SELECT,
+        sessionVersion: true,
+      },
     });
 
-    if (!user?.isActive) {
+    if (!user?.isActive || user.sessionVersion !== ctx.session.version) {
       return null;
     }
 
     return {
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        role: user.role,
+        isActive: user.isActive,
+      },
     };
   }),
 

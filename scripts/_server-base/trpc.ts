@@ -41,8 +41,10 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     where: { id: ctx.session.userId },
     select: {
       id: true,
+      email: true,
       role: true,
       isActive: true,
+      sessionVersion: true,
     },
   });
 
@@ -60,10 +62,18 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     });
   }
 
+  if (currentUser.sessionVersion !== ctx.session.version) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'セッションが無効になりました。再度ログインしてください',
+    });
+  }
+
   return next({
     ctx: {
       session: {
         ...ctx.session,
+        email: currentUser.email,
         role: currentUser.role,
       },
     },

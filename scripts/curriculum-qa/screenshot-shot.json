@@ -1554,18 +1554,6 @@
       "full_page": true
     },
     {
-      "name": "day26/error-fallback.png",
-      "day": 26,
-      "path": "/dashboard",
-      "login": {
-        "email": "admin@example.com",
-        "password": "password123"
-      },
-      "wait_for": "text=エラーが発生しました",
-      "note": "Step 2 の手順3『ダッシュボードへ一時的にエラーを追加する』の直後に見える error.tsx の画面。dashboard/page.tsx へ練習用の throw を入れた状態で撮る（撮るだけの注入なので教材へは残さない）。",
-      "full_page": true
-    },
-    {
       "name": "day26/not-found-action.png",
       "day": 26,
       "path": "/this-page-does-not-exist",
@@ -1797,13 +1785,13 @@
       "wait_for": "form",
       "marks": [
         {
-          "selector": "div.rounded-lg.border.bg-card:has(form)",
+          "selector": "div.rounded-lg:has(form)",
           "label": "Step 6 で整えた Card"
         }
       ],
       "note": "Step 6 の『Card で囲まれたログインフォームが画面中央に並んだ状態』。ゴールと Step 9 が同じ day05/login.png を指しており、1冊で3回の貼り回しになっていた。Step 6 の時点では登録リンクがまだ無いので、完成後の画面であることを本文で断ったうえで Card を赤枠で指す。",
       "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "selector": "div.rounded-lg:has(form)",
         "padding": 40
       }
     },
@@ -1820,7 +1808,7 @@
       ],
       "note": "Step 9 の『登録リンク付きの完成したログイン画面』。Step 6 の1枚と分けるため、今日いちばん最後に足した行を赤枠で指す。",
       "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "selector": "div.rounded-lg:has(form)",
         "padding": 40
       }
     },
@@ -1841,7 +1829,7 @@
       ],
       "note": "Step 4 の『名前とメールアドレスの入力欄が表示された状態』。旧 register_step4.png は4欄そろった完成版で、キャプションと写っているものが食い違っていた。Step 4 の時点のフォームは JSX が閉じていないので描画できず、この道具では撮れない。完成後の画面であることを本文で断ったうえで、この Step で足す2欄を赤枠で指す。",
       "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "selector": "div.rounded-lg:has(form)",
         "padding": 40
       }
     },
@@ -1862,7 +1850,7 @@
       ],
       "note": "Step 6 の『4つの入力欄が揃ったフォーム』。Step 4 の1枚と分けるため、この Step で足す2欄を赤枠で指す。",
       "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "selector": "div.rounded-lg:has(form)",
         "padding": 40
       }
     },
@@ -1879,7 +1867,7 @@
       ],
       "note": "Step 9 の『デザインが整った登録画面の完成形』。冒頭のゴール（day06/register.png）と同じ画面なので、この日の最後に足したリンクを赤枠で指して区別する。",
       "clip": {
-        "selector": "div.rounded-lg.border.bg-card:has(form)",
+        "selector": "div.rounded-lg:has(form)",
         "padding": 40
       }
     },

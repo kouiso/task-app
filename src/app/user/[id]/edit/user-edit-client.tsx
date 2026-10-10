@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -57,6 +57,10 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       isActive: true,
     },
   });
+  const { dirtyFields } = form.formState;
+  const dirtyFieldsRef = useRef(dirtyFields);
+  dirtyFieldsRef.current = dirtyFields;
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   const {
     data: currentUser,
@@ -84,6 +88,8 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       retry: shouldRetryUserQuery,
     },
   );
+  const submitContextRef = useRef({ targetUserId: userId, user, canEditUser, canManageAccount });
+  submitContextRef.current = { targetUserId: userId, user, canEditUser, canManageAccount };
 
   const utils = api.useUtils();
 
@@ -106,22 +112,42 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
   useEffect(() => {
     if (user) {
-      form.reset({
-        name: user.name ?? '',
-        avatar: user.avatar ?? '',
-        role: user.role,
-        isActive: user.isActive,
-      });
+      const sameUser = hydratedUserIdRef.current === user.id;
+      form.reset(
+        {
+          name: user.name ?? '',
+          avatar: user.avatar ?? '',
+          role: user.role,
+          isActive: user.isActive,
+        },
+        sameUser && Object.keys(dirtyFieldsRef.current).length > 0
+          ? { keepDirtyValues: true }
+          : undefined,
+      );
+      hydratedUserIdRef.current = user.id;
     }
   }, [user, form]);
 
   const handleSubmit = (values: UserEditFormValues) => {
+    const submitContext = submitContextRef.current;
+    if (
+      !submitContext.user ||
+      !submitContext.canEditUser ||
+      submitContext.targetUserId !== userId ||
+      submitContext.user.id !== userId
+    )
+      return;
     updateUser.mutate({
       id: userId,
       name: values.name,
       avatar: normalizeAvatarValue(values.avatar),
-      // 管理者でも本人編集時は role/isActive を送らない
-      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
+      // 同じ値を送り直すと別の管理者による更新を古いフォームで巻き戻すためです。
+      ...(submitContext.canManageAccount && values.role !== submitContext.user.role
+        ? { role: values.role }
+        : {}),
+      ...(submitContext.canManageAccount && values.isActive !== submitContext.user.isActive
+        ? { isActive: values.isActive }
+        : {}),
     });
   };
 
@@ -327,7 +353,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                       value={form.watch('role')}
                       onValueChange={(value) => {
                         if (isUserRole(value)) {
-                          form.setValue('role', value);
+                          form.setValue('role', value, { shouldDirty: true });
                         }
                       }}
                       disabled={updateUser.isPending}
@@ -349,7 +375,9 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                     <Checkbox
                       id="isActive"
                       checked={form.watch('isActive')}
-                      onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
+                      onCheckedChange={(checked) =>
+                        form.setValue('isActive', checked === true, { shouldDirty: true })
+                      }
                       disabled={updateUser.isPending}
                     />
                     <Label htmlFor="isActive">アクティブ</Label>

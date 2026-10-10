@@ -2,8 +2,17 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Search } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { type KeyboardEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type KeyboardEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -27,13 +36,9 @@ import { isTaskPriority, TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import { isTaskStatus, TASK_STATUS_LABELS } from '@/lib/constant/status';
 import { dateOnlyToUtcEndIso, dateOnlyToUtcStartIso } from '@/lib/date';
-import {
-  isAuthError,
-  isForbiddenError,
-  isUnknownResult,
-  shouldRetryQuery,
-} from '@/lib/query-error';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { applySearchParamsToValues, buildSearchParamsFromValues } from '@/lib/search-filters';
+import { classifyTaskWriteError } from '@/lib/task-write-error';
 import { api } from '@/trpc/react';
 
 const TASK_STATUS_VALUES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'] as const;
@@ -50,10 +55,55 @@ const searchFormSchema = z.object({
 });
 type SearchFormValues = z.infer<typeof searchFormSchema>;
 
+type SupportQueryWarningProps = {
+  ariaLabel: string;
+  message: string;
+  retryLabel: string;
+  hasCachedData: boolean;
+  isFetching: boolean;
+  onRetry: () => void;
+};
+
+function SupportQueryWarning({
+  ariaLabel,
+  message,
+  retryLabel,
+  hasCachedData,
+  isFetching,
+  onRetry,
+}: SupportQueryWarningProps) {
+  return (
+    <div
+      role="alert"
+      aria-label={ariaLabel}
+      className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+    >
+      <span>
+        {message}
+        {hasCachedData
+          ? '前回取得時の内容を表示しています。'
+          : '選択肢や操作権限は利用できません。'}
+      </span>
+      <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isFetching}>
+        {retryLabel}
+      </Button>
+    </div>
+  );
+}
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const utils = api.useUtils();
+
+  // 書き込み時に401を受けた場合、読み取り系の判定を待たず即座に期限切れとして扱い、
+  // それ以降の保護操作を止める。ref は再描画前の同期ガード用。
+  const [authExpired, setAuthExpired] = useState(false);
+  const authExpiredRef = useRef(false);
+  const markAuthExpired = () => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  };
 
   const defaultSearchValues: SearchFormValues = {
     keyword: '',
@@ -105,16 +155,77 @@ function SearchPageContent() {
     !!searchValues.dateFrom ||
     !!searchValues.dateTo;
 
-  const { data: session } = api.auth.getSession.useQuery();
-  const { data: projects } = api.search.getUserProjects.useQuery();
-  const { data: memberProjects } = api.project.getAll.useQuery();
-  const { data: users } = api.search.getProjectMembers.useQuery();
+  const {
+    data: session,
+    isError: sessionErrorPresent,
+    isFetching: sessionFetching,
+    error: sessionError,
+    failureReason: sessionFailure,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, { retry: shouldRetryQuery });
+  const {
+    data: projects,
+    isError: projectOptionsErrorPresent,
+    isFetching: projectOptionsFetching,
+    error: projectOptionsError,
+    failureReason: projectOptionsFailure,
+    refetch: refetchProjectOptions,
+  } = api.search.getUserProjects.useQuery(undefined, { retry: shouldRetryQuery });
+  const {
+    data: memberProjects,
+    isError: memberProjectsErrorPresent,
+    isFetching: memberProjectsFetching,
+    error: memberProjectsError,
+    failureReason: memberProjectsFailure,
+    refetch: refetchMemberProjects,
+  } = api.project.getAll.useQuery(undefined, { retry: shouldRetryQuery });
+  const {
+    data: users,
+    isError: assigneeOptionsErrorPresent,
+    isFetching: assigneeOptionsFetching,
+    error: assigneeOptionsError,
+    failureReason: assigneeOptionsFailure,
+    refetch: refetchAssigneeOptions,
+  } = api.search.getProjectMembers.useQuery(undefined, { retry: shouldRetryQuery });
+
+  const supportAuthFailed =
+    authExpired ||
+    session === null ||
+    [
+      sessionError,
+      sessionFailure,
+      projectOptionsError,
+      projectOptionsFailure,
+      memberProjectsError,
+      memberProjectsFailure,
+      assigneeOptionsError,
+      assigneeOptionsFailure,
+    ].some(isAuthError);
+  const supportForbidden = [
+    sessionError,
+    sessionFailure,
+    projectOptionsError,
+    projectOptionsFailure,
+    memberProjectsError,
+    memberProjectsFailure,
+    assigneeOptionsError,
+    assigneeOptionsFailure,
+  ].some(isForbiddenError);
+  const projectOptionsProtected = [projectOptionsError, projectOptionsFailure].some(
+    (error) => isAuthError(error) || isForbiddenError(error),
+  );
+  const assigneeOptionsProtected = [assigneeOptionsError, assigneeOptionsFailure].some(
+    (error) => isAuthError(error) || isForbiddenError(error),
+  );
+  const permissionDataUnavailable =
+    sessionErrorPresent || memberProjectsErrorPresent || supportForbidden;
+  const supportWriteBlocked = supportAuthFailed || permissionDataUnavailable;
 
   // プロジェクトごとのログインユーザー自身のロールを引けるようにする
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
-    if (!userId || !memberProjects) {
+    if (!userId || !memberProjects || permissionDataUnavailable) {
       return map;
     }
     for (const project of memberProjects) {
@@ -124,7 +235,7 @@ function SearchPageContent() {
       }
     }
     return map;
-  }, [memberProjects, session?.user?.id]);
+  }, [memberProjects, permissionDataUnavailable, session?.user?.id]);
 
   const canEditProject = useCallback(
     (projectId: string) => {
@@ -164,6 +275,32 @@ function SearchPageContent() {
       retry: shouldRetryQuery,
     },
   );
+
+  const authFailed = isAuthError(searchError);
+  const forbidden = isForbiddenError(searchError);
+  const protectedSearchError = searchErrorPresent && (authFailed || forbidden);
+  const queryWriteBlocked = supportWriteBlocked || protectedSearchError;
+
+  const canDeleteTask = useCallback(
+    (taskId: string) => {
+      const task = searchResults?.tasks.find((item) => item.id === taskId);
+      return task ? canDeleteProject(task.projectId) : false;
+    },
+    [canDeleteProject, searchResults?.tasks],
+  );
+  const canEditTask = useCallback(
+    (taskId: string) => {
+      const task = searchResults?.tasks.find((item) => item.id === taskId);
+      return task ? canEditProject(task.projectId) : false;
+    },
+    [canEditProject, searchResults?.tasks],
+  );
+  const queryWriteBlockedRef = useRef(queryWriteBlocked);
+  const canDeleteTaskRef = useRef(canDeleteTask);
+  const canEditTaskRef = useRef(canEditTask);
+  queryWriteBlockedRef.current = queryWriteBlocked;
+  canDeleteTaskRef.current = canDeleteTask;
+  canEditTaskRef.current = canEditTask;
 
   // URL → フォーム: ブラウザの戻る/進む・共有リンクからの復元用。
   // 自前の「フォーム → URL」同期で生じた変更時は値が一致するため reset をスキップし、無限ループと入力中のカーソル飛びを防ぐ。
@@ -229,6 +366,8 @@ function SearchPageContent() {
   };
 
   const handleTaskEdit = (taskId: string) => {
+    if (authExpiredRef.current || queryWriteBlockedRef.current || !canEditTaskRef.current(taskId))
+      return;
     router.push(`/task?taskId=${taskId}&edit=true`);
   };
 
@@ -237,37 +376,57 @@ function SearchPageContent() {
     taskId: string | null;
   }>({ open: false, taskId: null });
 
+  const deleteSubmission = useRef<{ taskId: string } | null>(null);
   const deleteMutation = api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.search.search.invalidate();
-      // 確認ダイアログは成功するまで開いたままにするため、閉じるのはここ
-      setDeleteTaskConfirm({ open: false, taskId: null });
+    retry: false,
+    onMutate: () => deleteSubmission.current,
+    onSuccess: (_data, variables, submitted) => {
+      // 成功時だけ、送信した本人の確認ダイアログを閉じる。
+      // 別タスクの確認やキャンセル済みの確認を成功応答で閉じない。
+      if (submitted && submitted.taskId === variables.id) {
+        setDeleteTaskConfirm((current) =>
+          current.taskId === variables.id ? { open: false, taskId: null } : current,
+        );
+      }
+      void utils.search.search.invalidate();
     },
     onError: (error) => {
-      if (isAuthError(error)) {
-        toast.error('ログインの有効期限が切れました');
+      const failure = classifyTaskWriteError(error, 'delete');
+      if (failure.kind === 'auth') {
+        markAuthExpired();
         return;
       }
-      if (isUnknownResult(error)) {
-        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
-        void utils.search.search.invalidate();
-        return;
-      }
-      toast.error(error.message ?? 'タスクの削除に失敗しました');
+      toast.error(failure.message);
+      // 失敗と結果不明（ネットワーク断等でサーバー応答を受け取れない）を分けず、
+      // どちらも一覧を再取得して実際の削除結果を画面に反映する。
+      void utils.search.search.invalidate();
+    },
+    onSettled: (_data, _error, _variables, submitted) => {
+      if (deleteSubmission.current === submitted) deleteSubmission.current = null;
     },
   });
 
+  useEffect(() => {
+    if (
+      deleteTaskConfirm.open &&
+      (queryWriteBlocked || !deleteTaskConfirm.taskId || !canDeleteTask(deleteTaskConfirm.taskId))
+    ) {
+      setDeleteTaskConfirm({ open: false, taskId: null });
+    }
+  }, [canDeleteTask, deleteTaskConfirm, queryWriteBlocked]);
+
   const handleTaskDelete = (taskId: string) => {
+    if (
+      authExpiredRef.current ||
+      queryWriteBlockedRef.current ||
+      !canDeleteTaskRef.current(taskId) ||
+      deleteSubmission.current ||
+      deleteMutation.isPending
+    ) {
+      return;
+    }
     setDeleteTaskConfirm({ open: true, taskId });
   };
-
-  const handleProjectClick = (projectId: string) => {
-    router.push(`/project?projectId=${projectId}`);
-  };
-
-  const authFailed = isAuthError(searchError);
-  const forbidden = isForbiddenError(searchError);
-  const protectedSearchError = searchErrorPresent && (authFailed || forbidden);
 
   const handleSearchErrorAction = () => {
     if (authFailed) {
@@ -318,17 +477,25 @@ function SearchPageContent() {
                   <Select
                     value={formValues.projectId}
                     onValueChange={(v) => form.setValue('projectId', v)}
+                    disabled={
+                      supportAuthFailed ||
+                      supportForbidden ||
+                      (projectOptionsErrorPresent && !projects)
+                    }
                   >
                     <SelectTrigger id="project">
                       <SelectValue placeholder="すべてのプロジェクト" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべてのプロジェクト</SelectItem>
-                      {projects?.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
+                      {!supportAuthFailed &&
+                        !supportForbidden &&
+                        !projectOptionsProtected &&
+                        projects?.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -390,17 +557,25 @@ function SearchPageContent() {
                   <Select
                     value={formValues.assignedTo}
                     onValueChange={(v) => form.setValue('assignedTo', v)}
+                    disabled={
+                      supportAuthFailed ||
+                      supportForbidden ||
+                      (assigneeOptionsErrorPresent && !users)
+                    }
                   >
                     <SelectTrigger id="assignedTo">
                       <SelectValue placeholder="すべての担当者" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべての担当者</SelectItem>
-                      {users?.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email}
-                        </SelectItem>
-                      ))}
+                      {!supportAuthFailed &&
+                        !supportForbidden &&
+                        !assigneeOptionsProtected &&
+                        users?.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name || user.email}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -425,7 +600,63 @@ function SearchPageContent() {
           </CardContent>
         </Card>
 
-        {isLoading ? (
+        {!supportAuthFailed && !supportForbidden && projectOptionsErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="プロジェクトの選択肢を取得できませんでした"
+            message="プロジェクトの選択肢を取得できませんでした。"
+            retryLabel="プロジェクト選択肢を再試行"
+            hasCachedData={projects !== undefined}
+            isFetching={projectOptionsFetching}
+            onRetry={() => void refetchProjectOptions()}
+          />
+        ) : null}
+        {!supportAuthFailed && !supportForbidden && assigneeOptionsErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="担当者の選択肢を取得できませんでした"
+            message="担当者の選択肢を取得できませんでした。"
+            retryLabel="担当者選択肢を再試行"
+            hasCachedData={users !== undefined}
+            isFetching={assigneeOptionsFetching}
+            onRetry={() => void refetchAssigneeOptions()}
+          />
+        ) : null}
+        {!supportAuthFailed && !supportForbidden && sessionErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="操作権限を確認できませんでした"
+            message="ログインユーザーの操作権限を確認できませんでした。"
+            retryLabel="ログインユーザーを再試行"
+            hasCachedData={session !== undefined}
+            isFetching={sessionFetching}
+            onRetry={() => void refetchSession()}
+          />
+        ) : null}
+        {!supportAuthFailed && !supportForbidden && memberProjectsErrorPresent ? (
+          <SupportQueryWarning
+            ariaLabel="操作権限を確認できませんでした"
+            message="プロジェクトの操作権限を確認できませんでした。"
+            retryLabel="プロジェクト権限を再試行"
+            hasCachedData={memberProjects !== undefined}
+            isFetching={memberProjectsFetching}
+            onRetry={() => void refetchMemberProjects()}
+          />
+        ) : null}
+        {!supportAuthFailed && supportForbidden ? (
+          <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-center">
+            <p className="font-medium">検索条件に必要な情報を見る権限がありません</p>
+            <p className="text-sm text-muted-foreground">
+              選択肢やタスクの操作権限は利用できません。
+            </p>
+          </div>
+        ) : null}
+
+        {supportAuthFailed ? (
+          <div className="space-y-4 rounded-lg border border-destructive/40 p-6 text-center">
+            <p className="font-medium">ログインの有効期限が切れました</p>
+            <Button type="button" variant="outline" onClick={() => router.push('/login')}>
+              ログイン画面へ
+            </Button>
+          </div>
+        ) : isLoading ? (
           <PageLoadingSpinner />
         ) : shouldSearch && searchErrorPresent && (!searchResults || protectedSearchError) ? (
           <div className="space-y-4 rounded-lg border border-destructive/40 p-6 text-center">
@@ -452,7 +683,7 @@ function SearchPageContent() {
                 role="alert"
                 className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
               >
-                <span>最新の検索結果を取得できませんでした。前回取得時の内容です。</span>
+                <span>取得できませんでした。前回の検索結果です。</span>
                 <Button
                   type="button"
                   variant="outline"
@@ -514,22 +745,24 @@ function SearchPageContent() {
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {searchResults.projects.map((project) => (
-                    <Card
+                    <Link
                       key={project.id}
-                      className="cursor-pointer hover:shadow-md transition-all"
-                      onClick={() => handleProjectClick(project.id)}
+                      href={`/project?projectId=${project.id}`}
+                      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      <CardContent className="pt-6">
-                        <h4 className="font-semibold truncate mb-2">{project.name}</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px] mb-4">
-                          {project.description || '説明なし'}
-                        </p>
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                          <span>タスク: {project._count.tasks}件</span>
-                          <span>メンバー: {project.members.length}人</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      <Card className="hover:shadow-md transition-all">
+                        <CardContent className="pt-6">
+                          <h4 className="font-semibold truncate mb-2">{project.name}</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px] mb-4">
+                            {project.description || '説明なし'}
+                          </p>
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>タスク: {project._count.tasks}件</span>
+                            <span>メンバー: {project.members.length}人</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -553,11 +786,20 @@ function SearchPageContent() {
           open={deleteTaskConfirm.open}
           onOpenChange={(open) => !open && setDeleteTaskConfirm({ open: false, taskId: null })}
           onConfirm={() => {
-            if (deleteTaskConfirm.taskId) {
+            if (
+              deleteTaskConfirm.taskId &&
+              !authExpiredRef.current &&
+              !queryWriteBlockedRef.current &&
+              canDeleteTaskRef.current(deleteTaskConfirm.taskId) &&
+              !deleteSubmission.current &&
+              !deleteMutation.isPending
+            ) {
+              deleteSubmission.current = { taskId: deleteTaskConfirm.taskId };
               deleteMutation.mutate({ id: deleteTaskConfirm.taskId });
             }
           }}
           isPending={deleteMutation.isPending}
+          closeOnConfirm={false}
         />
       </div>
     </AppLayout>

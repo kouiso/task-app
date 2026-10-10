@@ -26,9 +26,7 @@ class DedentSemanticsTest(unittest.TestCase):
         return copied, residuals
 
     def test_standalone_text_dedents_without_changing_words(self):
-        # 字幅は実フォントの送り幅で数える。TEXT は実幅で約60桁のため、
-        # 字下げを削る分岐（70%未満）へ入るには行全体を83桁より広くする必要がある
-        copied, residuals = self.check_semantics(f'const view = <p>\n                            {TEXT}\n</p>;')
+        copied, residuals = self.check_semantics(f'const view = <p>\n                  {TEXT}\n</p>;')
         self.assertFalse(residuals)
         self.assertIn('\n' + TEXT + '\n', copied)
 
@@ -66,9 +64,7 @@ class DedentSemanticsTest(unittest.TestCase):
         self.assertIn('&nbsp;', rendered)
 
     def test_template_indentation_remains_part_of_literal(self):
-        # テンプレート本文は strict で縮小のみ。残件（70%未満）へ届くよう
-        # 実幅基準で83桁を超える字下げにしておく
-        source = f'const text = `\n                              {TEXT}\n`;'
+        source = f'const text = `\n                  {TEXT}\n`;'
         copied, residuals = self.check_semantics(source)
         self.assertEqual(copied, source)
         self.assertTrue(residuals)

@@ -40,7 +40,7 @@ Day 20 ではキーワードや複数フィルターで
 |------|------|
 | 対象ファイル | `src/app/report/page.tsx`、`src/server/api/routers/report.ts`、`src/server/api/root.ts`、`src/component/layout/app-layout.tsx` |
 | 今日作る範囲 | 統計カード4枚 + プロジェクト統計テーブル |
-| 実コードとの違い | 実コードにはグラフ（Day 22）や週次リンク（Day 23）もあるが今日は扱わない |
+| 実コードとの違い | 実コードにはグラフ（Day 22）や週次リンク（Day 23）もありますが、今日は扱いません |
 
 ### レポートページのデータフロー
 
@@ -82,14 +82,16 @@ flowchart TD
 | aggregate | アグリゲート | 合計値をまとめて計算 | レジで合計金額を出す |
 | toFixed | トゥフィクスト | 小数点の桁数を丸める | 小数第1位まで表示 |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
 | Step 0 | レポート集計 API（getOverview）を自分で書く | 14分 |
 | Step 1 | サーバー集計の考え方 | 3分 |
 | Step 2 | import 文を書く | 3分 |
-| Step 3 | ページの骨組みを作る | 5分 |
+| Step 3 | ページの骨組みとサイドバー導線を作る | 8分 |
 | Step 4 | データを取得する | 3分 |
 | Step 5 | 受け取った概要データを読む | 5分 |
 | Step 6 | ローディング判定を追加 | 3分 |
@@ -97,15 +99,13 @@ flowchart TD
 | Step 8 | プロジェクト統計テーブル | 5分 |
 | Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約49分です。
+**読む時間の合計（仮）**: 約52分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 0: レポート集計 API（getOverview）を自分で書く（14分）
+### Step 0: レポート集計 API（getOverview）を自分で書く（読む目安: 14分）
 
 **ゴール**: `src/server/api/routers/report.ts` を新規作成し、`getOverview` を写経して `api.report.getOverview` を自分で生やします。Day 09 の `project.getAll` や Day 13 の `task.getAll` と同じで、今日は「統計カードに渡す集計の入口」を1つ作ります。
 
@@ -120,39 +120,20 @@ flowchart TD
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 ```
 
-`TASK_STATUS` はこの後でステータス別に件数を数えるために使います。`getUserProjectIds` は Day 13 でも使った共有ヘルパーで、「ログイン中のユーザーが参加中のプロジェクト id 一覧」を返します。Day 23 で初めて使う `TRPCError`・`z`・`USER_ROLE` は未使用 import にしないため今日はまだ追加しません。
+`TASK_STATUS` はこの後でステータス別に件数を数えるために使います。プロジェクト所属は、各集計クエリの `where` へ直接書きます。Day 23 で初めて使う `TRPCError`・`z`・`USER_ROLE` は未使用 import にしないため今日はまだ追加しません。
 
-#### 0-2. 空配列のとき先に返す
+#### 0-2. ログイン中のユーザー ID を受け取る
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（続き）
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
-    const projectIds = await getUserProjectIds(ctx.session.userId);
-
-    if (projectIds.length === 0) {
-      return {
-        totalProjects: 0,
-        totalTasks: 0,
-        completedTasks: 0,
-        inProgressTasks: 0,
-        inReviewTasks: 0,
-        todoTasks: 0,
-        completionRate: 0,
-        totalTimeSpent: 0,
-        averageTimePerTask: 0,
-        recentTasks: [],
-        statusData: [],
-        priorityData: [],
-        projectStats: [],
-      };
-    }
+    const userId = ctx.session.userId;
 ```
 
-ここは **early return（先に返して処理を終える書き方）** です。参加中のプロジェクトが1件もない人に対してその先の集計処理を走らせる意味はありません。空の配列と 0 をまとめて返し、画面側は「空のレポート」としてそのまま描画できます。
+`userId` は、この後の12本すべてで現在のプロジェクト所属を確かめるために使います。参加中のプロジェクトが0件なら、各クエリが0件や空配列を返すため、最後に同じ形の「空のレポート」が組み立てられます。
 
 #### 0-3. 集計の土台となる条件を作る
 
@@ -161,8 +142,10 @@ export const reportRouter = createTRPCRouter({
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
-      projectId: { in: projectIds },
-      project: { isArchived: false },
+      project: {
+        isArchived: false,
+        members: { some: { userId } },
+      },
     } as const;
 
     // ダッシュボードの「アクティブな作業」を母数とするため、
@@ -213,7 +196,10 @@ flowchart TB
 ```typescript
 // filepath: src/server/api/routers/report.ts（続き）
       prisma.project.findMany({
-        where: { id: { in: projectIds }, isArchived: false },
+        where: {
+          isArchived: false,
+          members: { some: { userId } },
+        },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
@@ -418,13 +404,13 @@ export const appRouter = createTRPCRouter({
 `appRouter` の中の順番は教材で作ってきた時系列に揃えます。Day 21 の時点では `report` が `comment` の次にある最後の router です。`user` は Day 24 でファイルを作ってから追加します。
 
 **確認ポイント**:
-- `src/server/api/routers/report.ts` を新規作成し、`getOverview` を最後の `});` まで書いた
-- `root.ts` に `reportRouter` を追加し、`report: reportRouter` を時系列順で登録した
-- `npx tsc --noEmit` で型エラーが出ていない
+- `src/server/api/routers/report.ts` を新規作成し、`getOverview` を最後の `});` まで書きました
+- `root.ts` に `reportRouter` を追加し、`report: reportRouter` を時系列順で登録しました
+- `npx tsc --noEmit` で型エラーが出ていません
 
 ---
 
-### Step 1: サーバー集計の考え方（3分）
+### Step 1: サーバー集計の考え方（読む目安: 3分）
 
 **ゴール**: なぜ完成版のコードでは
 専用の集計APIを使うのかを理解します。
@@ -467,17 +453,141 @@ api.report.getOverview.useQuery();
 実際に書くのは Step 4 です。ここでは形だけ見ておきます。かっこの中が空なのは誰の集計を出すかを画面が指定しないからです。対象のユーザーは server 側が `ctx.session` から取り出すのでブラウザから他人のIDを渡しても覗けません。Day 09 の `getAll` では `userId` を受け取ったうえで管理者だけに許しましたが今日は「そもそも受け取らない」形で同じ守りを掛けています。
 
 **確認ポイント**:
-- 完成版のコードがサーバー集計を選んだ理由を理解した
-- 一覧APIと統計APIは責務を分けるべきだと理解した
+- 完成版のコードがサーバー集計を選んだ理由を理解しました
+- 一覧APIと統計APIは責務を分けるべきだと理解しました
 
 ---
 
-### Step 2: import 文を書く（3分）
+### Step 2: import 文を書く（読む目安: 3分）
 
 **ゴール**: 必要なモジュールを読み込みます。
 
-先にDay 08 で作ったサイドバーから
-レポートページへ移動できるようにします。
+
+まず `src/app/report/page.tsx` を新規作成し、
+先頭に以下の import を書きます。
+
+**実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+'use client';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+```
+
+`'use client'` は、このファイルをクライアントコンポーネントの入口にする宣言です。Step 4で使うtRPCの `useQuery` はこの境界の内側で呼びます。宣言を忘れると、サーバーコンポーネントから呼べない機能を使うためエラーになります。初回のHTMLはクライアントコンポーネントもサーバーで生成されます。`AppLayout` は Day 08 で仕上げた共通の枠で、これで囲んだページにはサイドバーとヘッダーが自動で付きます。
+
+**確認ポイント**:
+- ファイルを新規作成しました
+- `'use client'` を先頭に書きました
+
+```typescript
+// filepath: src/app/report/page.tsx
+// shadcn/ui のカード部品
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+// ローディング表示
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+```
+
+`Card` は shadcn/ui のカード部品です。`CardHeader` が見出しの帯、`CardContent` が中身の入れ物、`CardTitle` が見出しの文字を受け持ちます。統計カードは4枚とも同じ見た目にそろえたいので枠線や角丸を自分で書かず、すでにある部品を使います。`PageLoadingSpinner` は Day 09 の一覧画面でも出した読み込み中の表示です。集計は件数が増えるほど返るまでが長くなるので待っている間に見せる画面を先に手元へ用意しておきます。
+
+**確認ポイント**:
+- `Card` 関連をインポートしました
+- `PageLoadingSpinner` をインポートしました
+
+```typescript
+// filepath: src/app/report/page.tsx
+// テーブル部品（プロジェクト統計用）
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+```
+
+テーブルは6つの部品に分かれています。`Table` が外枠、`TableHeader` と `TableBody` が見出し行と本体行のまとまり、`TableRow` が1行、`TableHead` が見出しのセル、`TableCell` が中身のセルです。素の `<table>` タグでも表は組めますがこの部品を通すと罫線の色や文字の大きさがアプリの他の画面とそろいます。6つ全部を Step 8 のプロジェクト統計テーブルで使うのでここでまとめて読み込んでおきます。
+
+**確認ポイント**:
+- テーブル関連の部品をインポートしました
+
+```typescript
+// filepath: src/app/report/page.tsx
+// APIクライアント
+import { api } from '@/trpc/react';
+```
+
+`api` は tRPC のクライアントで、これを通すとサーバー側の手続きをただの関数のように呼べます。`api.report.getOverview` という呼び名が使えるのはStep 0-6 で `root.ts` に `report: reportRouter` を登録したからです。登録を飛ばしているとこの import 自体は通るのに `api.report` のところで型エラーが出ます。エディタで `api.` と打ったとき候補に `report` が出てこないならStep 0-6 に戻ってください。
+
+**確認ポイント**:
+- `api` をインポートしました
+- 保存してエラーが出ないこと
+
+---
+
+### Step 3: ページの骨組みを作る（読む目安: 5分）
+
+**ゴール**: ReportPage コンポーネントの
+骨組みを作ります。サイドバーの「レポート」を
+クリックして表示を確認します。
+
+> この時点では中身はまだ空です。
+> 見出しと説明文だけが表示されます。
+
+**実装**:
+
+```typescript
+// filepath: src/app/report/page.tsx
+// コンポーネント本体（骨組み）
+export default function ReportPage() {
+  // Step 4〜6 でここにフックを追加
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl
+            font-bold tracking-tight">
+            レポート・統計
+          </h1>
+```
+
+数字を出す前に、空の器だけを置いて表示を確かめます。この段階で `/report` が開くと分かっていればあとでカードが出ないときに「ページ自体が無い」のか「データが来ていない」のかを切り分けられます。`export default` を付けた関数がNext.js ではそのURLの画面そのものになります。`AppLayout` で囲んでいるのでサイドバーとヘッダーは書かなくても付いてきます。`space-y-6` はこの中に縦へ並べる要素の間隔をそろえる指定です。
+
+**確認ポイント**:
+- 関数コンポーネントを定義しました
+- `AppLayout` で囲みました
+
+```typescript
+{/* filepath: src/app/report/page.tsx */}
+{/* 骨組み続き: 説明文と閉じタグ */}
+          <p className=
+            "text-muted-foreground">
+            プロジェクトの進捗とタスクの状況を確認できます。
+          </p>
+        </div>
+        {/* Step 7〜8 でカード等を追加 */}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+開いていたタグを内側から順に閉じて骨組みが完成します。`{/* Step 7〜8 でカード等を追加 */}` は目印のコメントで、あとで JSX を差し込む場所を見失わないために置いています。ここで保存すると見出しと説明文だけのページが出ます。数字は1つも並びませんがそれで正常です。データを取りに行く処理は次の Step 4 で、このコメントより上へ足していきます。
+
+**確認ポイント**:
+- `/report` にアクセスして表示されます
+- 見出しと説明文が表示されます
+
+骨組み確認: 下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で出るところです。いまの自分の画面にはその下のカードとテーブルがまだ出ていません。カードは Step 7、テーブルは Step 8 で足します。
+
+![完成後のレポートページ。赤枠の中に、見出し「レポート・統計」と説明文の2行が出ている](./screenshots/day21/report-heading.png)
+
+レポートページが表示できたので、Day 08 で作ったサイドバーから
+移動できるようにします。
 `src/component/layout/app-layout.tsx` の
 `lucide-react` の import に `BarChart` を追加してください。
 
@@ -509,138 +619,15 @@ import {
 },
 ```
 
-`menuItems` はサイドバーに並べるリンクの配列です。1つの要素が1行のメニューに対応し、`text` が表示名、`icon` が左に置くアイコン、`path` が飛び先のURLになります。ここに書いた `/report` はこのあと作るファイルの場所と同じ綴りでなければいけません。ずれているとメニューは出るのに押した先が404になります。配列の末尾へ入れるのは教材で作ってきた順にメニューが並ぶようにするためです。
+`menuItems` はサイドバーに並べるリンクの配列です。1つの要素が1行のメニューに対応し、`text` が表示名、`icon` が左に置くアイコン、`path` が飛び先のURLになります。ここに書いた `/report` は先ほど作ったファイルの場所と同じ綴りでなければいけません。ずれているとメニューは出るのに押した先が404になります。配列の末尾へ入れるのは教材で作ってきた順にメニューが並ぶようにするためです。
 
 **確認ポイント**:
-- サイドバーに「レポート」が表示された
-- 既存のメニュー項目が消えていない
-
-まず `src/app/report/page.tsx` を新規作成し、
-先頭に以下の import を書きます。
-
-**実装**:
-
-```typescript
-// filepath: src/app/report/page.tsx
-'use client';
-
-import { AppLayout }
-  from '@/component/layout/app-layout';
-```
-
-`'use client'` は、このファイルをクライアントコンポーネントの入口にする宣言です。Step 4で使うtRPCの `useQuery` はこの境界の内側で呼びます。宣言を忘れると、サーバーコンポーネントから呼べない機能を使うためエラーになります。初回のHTMLはクライアントコンポーネントもサーバーで生成されます。`AppLayout` は Day 08 で仕上げた共通の枠で、これで囲んだページにはサイドバーとヘッダーが自動で付きます。
-
-**確認ポイント**:
-- ファイルを新規作成した
-- `'use client'` を先頭に書いた
-
-```typescript
-// filepath: src/app/report/page.tsx
-// shadcn/ui のカード部品
-import {
-  Card, CardContent,
-  CardHeader, CardTitle,
-} from '@/component/ui/card';
-// ローディング表示
-import { PageLoadingSpinner }
-  from '@/component/ui/loading-spinner';
-```
-
-`Card` は shadcn/ui のカード部品です。`CardHeader` が見出しの帯、`CardContent` が中身の入れ物、`CardTitle` が見出しの文字を受け持ちます。統計カードは4枚とも同じ見た目にそろえたいので枠線や角丸を自分で書かず、すでにある部品を使います。`PageLoadingSpinner` は Day 09 の一覧画面でも出した読み込み中の表示です。集計は件数が増えるほど返るまでが長くなるので待っている間に見せる画面を先に手元へ用意しておきます。
-
-**確認ポイント**:
-- `Card` 関連をインポートした
-- `PageLoadingSpinner` をインポートした
-
-```typescript
-// filepath: src/app/report/page.tsx
-// テーブル部品（プロジェクト統計用）
-import {
-  Table, TableBody, TableCell,
-  TableHead, TableHeader, TableRow,
-} from '@/component/ui/table';
-```
-
-テーブルは6つの部品に分かれています。`Table` が外枠、`TableHeader` と `TableBody` が見出し行と本体行のまとまり、`TableRow` が1行、`TableHead` が見出しのセル、`TableCell` が中身のセルです。素の `<table>` タグでも表は組めますがこの部品を通すと罫線の色や文字の大きさがアプリの他の画面とそろいます。6つ全部を Step 8 のプロジェクト統計テーブルで使うのでここでまとめて読み込んでおきます。
-
-**確認ポイント**:
-- テーブル関連の部品をインポートした
-
-```typescript
-// filepath: src/app/report/page.tsx
-// APIクライアント
-import { api } from '@/trpc/react';
-```
-
-`api` は tRPC のクライアントで、これを通すとサーバー側の手続きをただの関数のように呼べます。`api.report.getOverview` という呼び名が使えるのはStep 0-6 で `root.ts` に `report: reportRouter` を登録したからです。登録を飛ばしているとこの import 自体は通るのに `api.report` のところで型エラーが出ます。エディタで `api.` と打ったとき候補に `report` が出てこないならStep 0-6 に戻ってください。
-
-**確認ポイント**:
-- `api` をインポートした
-- 保存してエラーが出ないこと
+- サイドバーに「レポート」が表示されました
+- 既存のメニュー項目が消えていません
 
 ---
 
-### Step 3: ページの骨組みを作る（5分）
-
-**ゴール**: ReportPage コンポーネントの
-骨組みを作ります。サイドバーの「レポート」を
-クリックして表示を確認します。
-
-> この時点では中身はまだ空です。
-> 見出しと説明文だけが表示されます。
-
-**実装**:
-
-```typescript
-// filepath: src/app/report/page.tsx
-// コンポーネント本体（骨組み）
-export default function ReportPage() {
-  // Step 4〜6 でここにフックを追加
-
-  return (
-    <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl
-            font-bold tracking-tight">
-            レポート・統計
-          </h1>
-```
-
-数字を出す前に、空の器だけを置いて表示を確かめます。この段階で `/report` が開くと分かっていればあとでカードが出ないときに「ページ自体が無い」のか「データが来ていない」のかを切り分けられます。`export default` を付けた関数がNext.js ではそのURLの画面そのものになります。`AppLayout` で囲んでいるのでサイドバーとヘッダーは書かなくても付いてきます。`space-y-6` はこの中に縦へ並べる要素の間隔をそろえる指定です。
-
-**確認ポイント**:
-- 関数コンポーネントを定義した
-- `AppLayout` で囲んだ
-
-```typescript
-{/* filepath: src/app/report/page.tsx */}
-{/* 骨組み続き: 説明文と閉じタグ */}
-          <p className=
-            "text-muted-foreground">
-            プロジェクトの進捗とタスクの状況を確認できます。
-          </p>
-        </div>
-        {/* Step 7〜8 でカード等を追加 */}
-      </div>
-    </AppLayout>
-  );
-}
-```
-
-開いていたタグを内側から順に閉じて骨組みが完成します。`{/* Step 7〜8 でカード等を追加 */}` は目印のコメントで、あとで JSX を差し込む場所を見失わないために置いています。ここで保存すると見出しと説明文だけのページが出ます。数字は1つも並びませんがそれで正常です。データを取りに行く処理は次の Step 4 で、このコメントより上へ足していきます。
-
-**確認ポイント**:
-- `/report` にアクセスして表示される
-- 見出しと説明文が表示される
-
-骨組み確認: 下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で出るところです。いまの自分の画面にはその下のカードとテーブルがまだ出ていません。カードは Step 7、テーブルは Step 8 で足します。
-
-![完成後のレポートページ。赤枠の中に、見出し「レポート・統計」と説明文の2行が出ている](./screenshots/day21/report-heading.png)
-
----
-
-### Step 4: データを取得する（3分）
+### Step 4: データを取得する（読む目安: 3分）
 
 **ゴール**: tRPC の `getOverview` で
 集計済みデータをまとめて取得します。
@@ -666,12 +653,12 @@ const { data: overview, isLoading } =
 > 正しい統計が作られます。
 
 **確認ポイント**:
-- `getOverview` 1つで統計データをまとめて取得している
+- `getOverview` 1つで統計データをまとめて取得しています
 - 保存してエラーが出ないこと
 
 ---
 
-### Step 5: 受け取った概要データを読む（5分）
+### Step 5: 受け取った概要データを読む（読む目安: 5分）
 
 **ゴール**: `overview` のどのプロパティを
 どのカードに使うか整理します。
@@ -694,7 +681,7 @@ const averageTimeHours =
 
 4つとも `?? 0` で受け止めているのは`overview` が `undefined` になる場面があるからです。`undefined / 60` の答えは `NaN` で、`toFixed(1)` を通しても `NaN` のままです。画面には数字ではなく「NaNh」という文字が出ます。
 
-この4行はStep 6 の読み込み判定より前に置きます。だから読み込み中でも計算そのものは走り、`?? 0` が効いて 0 になります。それでも画面へは出ません。Step 6 が先に読み込み中の表示を返すためです。`?? 0` の結果が実際に画面へ出るのは取得そのものが失敗したときです。ただしその場合画面には失敗した事実ではなく「0」が並びます。本当に0件なのか取得に失敗したのかを読者が見分けられないので実務では `error` も受け取って失敗したときだけ別の案内を出す形にします。`totalTasks` と `completionRate` は server が出した答えをそのまま受け取るだけで、画面側では足し算や割り算を一切していません。
+この4行はStep 6 の読み込み判定より前に置きます。だから読み込み中でも計算そのものは走り、`?? 0` が効いて 0 になります。それでも画面へは出ません。Step 6 が先に読み込み中の表示を返すためです。`?? 0` の結果が実際に画面へ出るのは取得そのものが失敗したときです。ただしその場合画面には失敗した事実ではなく「0」が並びます。本当に0件なのか取得に失敗したのかを読者が見分けられないので実務では `error` も受け取って失敗したときだけ別の案内を出す形にします。この通信エラー表示は Day 26 で追加します。`totalTasks` と `completionRate` は server が出した答えをそのまま受け取るだけで、画面側では足し算や割り算を一切していません。
 
 > 完成版のコードでは
 > `overview.totalTimeSpent` と
@@ -703,8 +690,8 @@ const averageTimeHours =
 > `toFixed(1)` で時間表記にします。
 
 **確認ポイント**:
-- 4枚のカードが `overview` を元に表示される
-- 集計計算をクライアント側で書いていない
+- 4枚のカードが `overview` を元に表示されます
+- 集計計算をクライアント側で書いていません
 
 #### 各統計値の計算ロジック
 
@@ -717,7 +704,7 @@ const averageTimeHours =
 
 ---
 
-### Step 6: ローディング判定を追加（3分）
+### Step 6: ローディング判定を追加（読む目安: 3分）
 
 **ゴール**: データ取得中にスピナーを
 表示する early return を追加します。
@@ -741,8 +728,8 @@ if (isLoading) {
 > スピナーを返して処理を終える書き方です。
 
 **確認ポイント**:
-- ローディング中にスピナーが表示される
-- `getOverview` の結果待ちだけを判定している
+- ローディング中にスピナーが表示されます
+- `getOverview` の結果待ちだけを判定しています
 
 ローディング確認: 読み込んでいる間は画面の中央にスピナーだけが出ます。
 
@@ -754,7 +741,7 @@ if (isLoading) {
 
 ---
 
-### Step 7: 統計カードを表示する（5分）
+### Step 7: 統計カードを表示する（読む目安: 5分）
 
 **ゴール**: 4枚のカードで統計を表示します。
 
@@ -785,7 +772,7 @@ if (isLoading) {
 1枚目に出る `totalTasks` はデータベースにあるタスクの全件数ではありません。Step 0-3 の `activeTasksFilter` を通った件数、つまりアーカイブ済みプロジェクトのタスクと `CANCELLED` のタスクを外した数です。中止を母数に残すとどうなるか、10件のうち5件を終えて3件を中止したプロジェクトで考えます。母数7件なら完了率は71%、中止も数えて母数10件にすると50%になります。手を動かした本人から見れば後者は「やめたはずの仕事に足を引っ張られた数字」に映ります。
 
 **確認ポイント**:
-- グリッドの開始タグを書いた
+- グリッドの開始タグを書きました
 - 1枚目のカードを書いた（表示の確認は4ブロック目で `</div>` を閉じてから。開始タグだけの状態で保存すると構文エラー）
 
 ```typescript
@@ -802,11 +789,11 @@ if (isLoading) {
   </Card>
 ```
 
-`completionRate` は server 側で `Math.round` を通した整数なので画面では `%` を付けるだけで済みます。丸めを server に置いたのはこのカードと Day 22 で足すグラフが必ず同じ数字を出すようにするためです。片方が71、片方が71.4と出ると読者は集計が壊れたと考えます。分子は `DONE` のタスク数、分母は中止を除いた件数です。中止したタスクが `DONE` になることはないので分子には最初から入りません。分母からだけ消えます。
+`completionRate` は server 側で `Math.round` を通した整数なので画面では `%` を付けるだけで済みます。Day 22 の円グラフが使うのはステータス別・優先度別の件数で、完了率は表示しません。完了率カードは整数、プロジェクト統計テーブルの進捗は小数第1位と、表示先に合わせて精度を分けています。分子は `DONE` のタスク数、分母は中止を除いた件数です。中止したタスクが `DONE` になることはないので分子には最初から入りません。分母からだけ消えます。
 
 **確認ポイント**:
-- 2枚目に `completionRate` と `%` を書いた
-- まだ `</div>` を閉じていないので表示の確認は4ブロック目のあとに回す
+- 2枚目に `completionRate` と `%` を書きました
+- まだ `</div>` を閉じていないので表示の確認は4ブロック目のあとに回します
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -825,8 +812,8 @@ if (isLoading) {
 `totalTimeHours` は Step 5 で作った文字列です。server は分で返し、画面へ出す直前だけ60で割ります。分のまま持ち回るほうが時間と分の取り違えを防げるからです。割り忘れると480分の作業が「480h」と表示されます。20日ぶん働いた計算になるので見た瞬間におかしいと気付けます。合計する対象はここでも中止を除いたタスクです。やめた作業に費やした時間は進み具合の目安から外します。
 
 **確認ポイント**:
-- 分を時間に変換（÷60）している
-- `toFixed(1)` で小数1桁に丸めている
+- 分を時間に変換（÷60）しています
+- `toFixed(1)` で小数1桁に丸めています
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -846,8 +833,8 @@ if (isLoading) {
 4枚目の平均作業時間はserver 側で合計時間を `totalTasks` で割った値です。分母がここでも中止を除いた件数なのでやめたタスクが平均を薄めることはありません。最後の `</div>` はこのステップの先頭で開いたグリッドを閉じるタグです。閉じ忘れると開始タグと終了タグの対応が取れなくなり、レイアウトが崩れる前にコンパイル自体が失敗します。ブラウザには統計カードではなく構文エラーの画面が出てターミナルには問題のファイル名と行番号が並びます。カードが1枚も出ないときはまずこの1行を確かめてください。
 
 **確認ポイント**:
-- 4枚のカードが表示される
-- 正しい数値が表示される
+- 4枚のカードが表示されます
+- 正しい数値が表示されます
 
 カード確認: 下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で足した4枚のカードです。いまの自分の画面にはその下のプロジェクト統計テーブルがまだ出ていません。テーブルは Step 8 で足します。
 
@@ -855,7 +842,7 @@ if (isLoading) {
 
 ---
 
-### Step 8: プロジェクト統計テーブル（5分）
+### Step 8: プロジェクト統計テーブル（読む目安: 5分）
 
 **ゴール**: プロジェクトごとの統計を
 テーブルで表示します。
@@ -893,8 +880,8 @@ if (isLoading) {
 この `map` が回すのはStep 0-5 で `Map` から組み立てた `projectStats` です。画面側では `filter` や `reduce` を呼びません。プロジェクトごとの完了数をここで数え直すとカードの数字と表の数字が別々の計算から出ることになります。除外の条件を片方だけ直したとき合計と内訳の合わない表ができあがります。`stat.progress` と `stat.totalTimeHours` に `toFixed(1)` を付けているのは`71.42857142857143` のような値をそのまま出さないためです。
 
 **確認ポイント**:
-- `overview.projectStats` をそのまま描画している
-- クライアント側で `filter` / `reduce` を再実行していない
+- `overview.projectStats` をそのまま描画しています
+- クライアント側で `filter` / `reduce` を再実行していません
 
 次にStep 7 のカードグリッドの `</div>` の
 直後にテーブルの JSX を追加します。
@@ -920,8 +907,8 @@ if (isLoading) {
 テーブルもカードと同じ `Card` の中に置きます。見出しと表を1つの枠にまとめると上の4枚と同じ余白・同じ角丸で並び、レポートページ全体が1つの面に見えます。`TableHeader` の中の `TableRow` は見出しの行で、あとで書く本体の行とは別のまとまりです。先頭の列だけ `w-[200px]` で幅を決めているのはプロジェクト名の長さがまちまちでも、右側の数字の列を行ごとにずらさないためです。
 
 **確認ポイント**:
-- `Card` の中に `Table` を配置している
-- ヘッダー行を書いた
+- `Card` の中に `Table` を配置しています
+- ヘッダー行を書きました
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -939,8 +926,8 @@ if (isLoading) {
 残り3つの見出しを足して5列がそろいます。数字の列に `text-right` を付けているのは桁数の違う数字を右端でそろえるためです。`7` と `123` を左寄せで並べると一の位の位置がずれ、どちらが大きいか一目で分かりません。ここで `</TableRow>` と `</TableHeader>` を閉じて見出しのまとまりを終わらせます。次のブロックからプロジェクト1件が1行になる本体へ入ります。
 
 **確認ポイント**:
-- 5列のヘッダーが揃った
-- 次のブロックで行データを追加する
+- 5列のヘッダーが揃いました
+- 次のブロックで行データを追加します
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -987,12 +974,12 @@ if (isLoading) {
 残り2列を足して開いていたタグを内側から順に閉じます。`TableRow`、`TableBody`、`Table`、`CardContent`、`Card` と、開いた順の逆にたどるのが JSX の決まりです。1つでも順番を入れ違えると保存した瞬間に閉じタグが合わないという構文エラーが出て画面がエラー表示に切り替わります。これで4枚のカードの下に内訳の表が並び、合計がどのプロジェクトから来ているかを追えるようになります。
 
 **確認ポイント**:
-- プロジェクト統計テーブルが表示される
-- 名前・タスク数・完了数・進捗・時間が並ぶ
+- プロジェクト統計テーブルが表示されます
+- 名前・タスク数・完了数・進捗・時間が並びます
 
 ---
 
-### Step 9: 動作確認（3分）
+### Step 9: 動作確認（読む目安: 3分）
 
 **ゴール**: 統計カードの表示を確認します。
 
@@ -1005,16 +992,16 @@ npm run dev
 # http://localhost:3000/report にアクセス
 ```
 
-画面を開いたらまずカードの数字がシードデータと合っているかを確かめます。総タスク数が初期データの5件より少なくても正常です。ログイン中のユーザーが参加しているプロジェクトのタスクだけを数えるためです。管理者アカウントは2つあるプロジェクトのうち1つにしか参加していないので3件と表示されます。この3件は初期データを触っていない場合の数です。Day 14 で自分がタスクを作っていればその分だけ増えます。数が違っても実装の誤りではありません。ただし参加していないプロジェクトのタスクまで数に入っているようならStep 0-3 の `activeTasksFilter` をどこかの `count` で使い忘れています。4枚とも 0 で、テーブルも空のときは参加しているプロジェクトをアーカイブしたままです。`/project` でアーカイブ表示を ON にして解除すると数字が戻ります。
+開発サーバーが動いていればそのまま使います。起動したらまずカードの数字がシードデータと合っているかを確かめます。総タスク数が初期データの5件より少なくても正常です。ログイン中のユーザーが参加しているプロジェクトのタスクだけを数えるためです。管理者アカウントは2つあるプロジェクトのうち1つにしか参加していないので3件と表示されます。この3件は初期データを触っていない場合の数です。Day 14 で自分がタスクを作っていればその分だけ増えます。数が違っても実装の誤りではありません。ただし参加していないプロジェクトのタスクまで数に入っているようならStep 0-3 の `activeTasksFilter` をどこかの `count` で使い忘れています。4枚とも0でテーブルも空なら、まず参加中のアクティブなプロジェクトにタスクがあるかを確認します。プロジェクトのアーカイブは原因の1つです。対象があるのに0のままなら、ブラウザのコンソールと開発サーバーのターミナルで通信やサーバー処理のエラーを確認してください。
 
 ブラウザの DevTools を開き（`F12` キー）、
 画面幅を変更してカードの並びを確認します。
 
 1. `/report` にアクセス
-2. 4枚のカードが表示される
+2. 4枚のカードが表示されます
 3. 総タスク数がキャンセル済みを除いたタスク件数と一致
-4. 完了率が正しく計算されている
-5. 作業時間が時間（`h`）で表示される
+4. 完了率が正しく計算されています
+5. 作業時間が時間（`h`）で表示されます
 6. ブラウザ幅を変えてレスポンシブ確認
 
 #### グリッドのブレークポイント
@@ -1030,9 +1017,9 @@ npm run dev
 > レスポンシブグリッドと同じパターンです。
 
 **確認ポイント**:
-- 数値がシードデータと一致する
-- カードが正しくグリッド表示される
-- ブラウザ幅を変えると列数が変わる
+- 数値がシードデータと一致します
+- カードが正しくグリッド表示されます
+- ブラウザ幅を変えると列数が変わります
 
 レスポンシブ確認: ブラウザの幅を狭めていくとカードの並びが4列から2列、1列へと変わります。下の画像はブラウザの幅を 900px まで縮めたときの姿で、`lg:grid-cols-4` が外れて `sm:grid-cols-2` が効いています。
 
@@ -1065,8 +1052,8 @@ export default function ReportPage() {
 
 **このコードの問題点**:
 
-- 静的な見出しのコードもブラウザへ送られる
-- 表示だけの部分と、データ取得や操作を担う部分が同じファイルにある
+- 静的な見出しのコードもブラウザへ送られます
+- 表示だけの部分と、データ取得や操作を担う部分が同じファイルにあります
 
 ### After（プロが書くコード）
 
@@ -1099,9 +1086,9 @@ export function ReportContent() {
 
 **このコードの強み**:
 
-- 静的な見出しを組み立てるコードをサーバー側に残せる
-- データ取得を担う `ReportContent` を別ファイルで読める
-- ブラウザへ送るコードの範囲を必要な部分に絞れる
+- 静的な見出しを組み立てるコードをサーバー側に残せます
+- データ取得を担う `ReportContent` を別ファイルで読めます
+- ブラウザへ送るコードの範囲を必要な部分に絞れます
 
 #### 覚えておきたいエッセンス
 
@@ -1130,44 +1117,23 @@ export function ReportContent() {
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 ```
 
 `TASK_STATUS` を取り込んでいるので集計の条件に `'DONE'` という文字列を直接書かずに済みます。文字列で書くと打ち間違えても動いてしまい、完了件数が常に0になる不具合として現れます。定数なら打ち間違いは編集中に分かります。
 
-`getUserProjectIds` は Day 20 の検索と同じ関数です。集計の対象を自分が参加しているプロジェクトへ絞るために使います。
+各クエリに `members: { some: { userId } }` を含め、集計の対象を取得時点で自分が参加しているプロジェクトへ絞ります。
 
-**getOverview の入口と空のときの戻り値**:
+**getOverview の入口**:
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
 // 完成版: getOverview の入口と空のときの戻り値
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
-    const projectIds = await getUserProjectIds(ctx.session.userId);
-
-    if (projectIds.length === 0) {
-      return {
-        totalProjects: 0,
-        totalTasks: 0,
-        completedTasks: 0,
-        inProgressTasks: 0,
-        inReviewTasks: 0,
-        todoTasks: 0,
-        completionRate: 0,
-        totalTimeSpent: 0,
-        averageTimePerTask: 0,
-        recentTasks: [],
-        statusData: [],
-        priorityData: [],
-        projectStats: [],
-      };
-    }
+    const userId = ctx.session.userId;
 ```
 
-参加しているプロジェクトが0件のときに13項目すべてを埋めて返しています。ここを `return null` や `return {}` にすると画面側は `overview.totalTasks` を読めず、登録した直後のユーザーだけ画面が落ちます。項目の形をそろえておけば画面は分岐を1本も増やさずに済みます。
-
-`recentTasks` などの配列を `[]` にしているのも同じ理由です。`undefined` を返すと画面の `.map()` がそこで止まります。
+入口ではログイン中の `userId` を受け取ります。参加しているプロジェクトが0件なら、後続の各集計が0または空配列を返します。最後の戻り値は同じ13項目を保つため、画面側はそのまま「空のレポート」を描画できます。
 
 **集計の土台となる条件**:
 
@@ -1177,8 +1143,10 @@ export const reportRouter = createTRPCRouter({
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
-      projectId: { in: projectIds },
-      project: { isArchived: false },
+      project: {
+        isArchived: false,
+        members: { some: { userId } },
+      },
     } as const;
 
     // ダッシュボードの「アクティブな作業」を母数とするため、
@@ -1224,7 +1192,10 @@ export const reportRouter = createTRPCRouter({
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
 // 完成版: プロジェクトと件数の集計・前半
       prisma.project.findMany({
-        where: { id: { in: projectIds }, isArchived: false },
+        where: {
+          isArchived: false,
+          members: { some: { userId } },
+        },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),
@@ -1395,7 +1366,7 @@ export const reportRouter = createTRPCRouter({
 
 項目の並びが空のときの戻り値と同じ順になっている点も確かめてください。並びをそろえておくと項目の足し忘れを目で見つけられます。
 
-**projectStats の組み立て**:
+次のコードは `projectStats` を組み立てる処理です。
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
@@ -1581,7 +1552,7 @@ export default function ReportPage() {
 
 各カードで項目名を `text-sm` の薄い色、数字を `text-3xl font-bold` にしています。見せたいのは数字なので大きさと太さの差で目が先に数字へ行きます。両方を同じ大きさにすると4枚のカードがどれも同じ見た目になり、読者は数字を探すことになります。
 
-**JSX — 統計カードの後半2枚**:
+次のコードは統計カードの後半2枚です。
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
@@ -1667,7 +1638,7 @@ export default function ReportPage() {
 
 `key={stat.id}` は React が行を見分けるための目印です。プロジェクトの id を渡しているので並び順が変わっても行の中身が入れ替わりません。
 
-**JSX — テーブルの行・後半と閉じタグ**:
+次のコードはテーブルの行の後半と閉じタグです。
 
 ```typescript
                     {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
@@ -1745,7 +1716,7 @@ const menuItems: MenuItem[] = [
   },
 ```
 
-ここまでの4件は Day 08 と Day 13 で足したものです。配列を途中で切って載せているのでこの時点では閉じかっこがありません。続きは次のブロックです。
+ここまでの4件は Day 08・Day 09・Day 13・Day 17 で足したものです。配列を途中で切って載せているのでこの時点では閉じかっこがありません。続きは次のブロックです。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
@@ -1763,17 +1734,17 @@ const menuItems: MenuItem[] = [
 ];
 ```
 
-末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 13・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて綴りがずれるとメニューは出るのに押した先が404になります。
+末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 09・Day 13・Day 17・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて綴りがずれるとメニューは出るのに押した先が404になります。
 
-> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードとは一部が異なります。違いは3つです。1つ目は完成版の画面に円グラフが2枚並んでいる点です。これは Day 22 で足します。2つ目は完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は完成版の `report.ts` に `getOverview` 以外の手続きも入っていて`root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
+> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードとは一部が異なります。違いは4つです。1つ目は完成版の画面に円グラフが2枚並んでいる点です。これは Day 22 で足します。2つ目は完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は完成版の `report.ts` に `getOverview` 以外の手続きも入っていて`root.ts` には Day 24 で追加する `user` も登録されている点です。4つ目は完成版の画面が通信エラーと本当の0件を分けて表示する点です。これは Day 26 で足します。この4か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ## 今日のまとめ
 
-- [ ] `api.report.getOverview` の役割を理解した
-- [ ] server 集計済みデータをカードに表示できた
-- [ ] 4枚の統計カードを表示できた
-- [ ] プロジェクト統計テーブルを表示できた
-- [ ] レスポンシブグリッドを適用できた
+- [ ] `api.report.getOverview` の役割を理解しました
+- [ ] server 集計済みデータをカードに表示できました
+- [ ] 4枚の統計カードを表示できました
+- [ ] プロジェクト統計テーブルを表示できました
+- [ ] レスポンシブグリッドを適用できました
 
 ## つまずきポイント
 
@@ -1807,7 +1778,7 @@ A. 中止したタスクが分母に入るので完了率は下がります。�
 
 **Q3. 参加しているプロジェクトが0件のときに`null` や `{}` ではなく13項目すべてを `0` と `[]` で埋めて返すのはなぜですか。**
 
-A. 画面側が `overview.totalTasks` や `.map()` を、分岐を書かずそのまま読めるようにするためです。`null` を返すと登録した直後でプロジェクトが1つも無いユーザーの画面だけが落ちます。配列を `[]` にしているのも同じ理由です。`undefined` を返すと `.map()` がそこで止まります。
+A. APIの戻り値の形を、データがある場合とそろえるためです。現在の画面は `overview?.totalTasks ?? 0` と書いているので、`null` でもカードは0を表示します。ただし、データが0件なのか戻り値が欠けているのかを区別できません。`{}` では `projectStats` などが `undefined` になり、`.map()` を呼ぶ箇所でエラーになります。数値を0、配列を `[]` で返せば、画面側は0件を通常の集計結果として扱えます。
 
 ## 追加課題：未対応の件数をカードにする
 

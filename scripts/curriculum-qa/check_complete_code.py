@@ -91,12 +91,15 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/app/profile/edit/page.tsx": "day25 の注記で aria とアバター空欄ガードの差分を説明済み",
     "src/app/profile/page.tsx": "day25 の注記で min-w-0/break-words/email 代替表示の差分を説明済み",
     "src/app/search/page.tsx": "day20 の注記で search-filters.ts 切り出し等の差分を説明済み",
-    "src/app/report/weekly/page.tsx": "day23 の注記で URL パラメータ・エラー表示・CSV 出力の差分を説明済み",
+    "src/app/report/weekly/page.tsx": "day23 の学習段階注記で通信エラー表示・weeks URL 同期・CSV 出力の差分を説明済み",
     "src/app/project/page.tsx": "day27 の注記で selectedProject 宣言順の差分を説明済み",
     "src/component/project/project-dialog.tsx": "day10 の注記で必須マーク・列の分け方の差分を説明済み",
     "src/component/task/task-detail-dialog.tsx": "day19 の注記で権限の確かめ方の差分を説明済み",
     "src/lib/session.ts": "day07 の注記で saveSessionCookie 切り出しの差分を説明済み",
-    "src/server/api/routers/auth.ts": "day07 は行の折り方の違いで末尾のカンマの有無が3か所違う。動きは同じ",
+    "src/server/api/routers/auth.ts": "day07 の注記で利用者確認の書き方の差分を説明済み",
+    # src/ は requestId を付けた構造化ログを記録する。教材は認証処理を扱う縮小版で、
+    # 観測基盤はカリキュラムの対象外（middleware/trpc と同じ区分）。
+    "src/server/api/routers/user.ts": "src/ のみ requestId 付き構造化ログを持つ。教材では教えない",
 }
 
 # 実ドリフトの棚卸し。src/ が後から改良されて教材が追いついていない差分、
@@ -105,11 +108,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # 処置は「教材を src/ に追従させる（PDF 再生成が要る）」か
 # 「src/ を教材に合わせる」か「意図的として EXPECTED_DIFFERENT へ昇格」かの
 # 3択で、解決したものから順にこの表を空にする。
-KNOWN_DRIFT: dict[str, str] = {
-    # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
-    # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
-    "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま",
-}
+KNOWN_DRIFT: dict[str, str] = {}
 
 
 class FileReport(NamedTuple):

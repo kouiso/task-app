@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 
 const SEARCH_TASK_LIMIT = 100;
@@ -78,13 +77,11 @@ export const searchRouter = createTRPCRouter({
 
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
-    const projectIds = await getUserProjectIds(userId);
-
-    // メンバーシップ条件と caller 指定の projectId を AND で重ねる。
+    // 現在のメンバーシップ条件と caller 指定の projectId を AND で重ねる。
     // spread で合成すると caller の projectId がメンバーシップ条件を上書きして
     // 非所属プロジェクトのタスクが読めてしまうため、必ず両方が効く形にする。
     const andConditions: Prisma.TaskWhereInput[] = [
-      { projectId: { in: projectIds } },
+      { project: { members: { some: { userId } } } },
       buildDynamicWhere(baseFilters),
     ];
     if (dueDateFilter) {
@@ -147,12 +144,10 @@ export const searchRouter = createTRPCRouter({
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
 
-    const projectIds = await getUserProjectIds(userId);
-
     const [tasks, projects] = await Promise.all([
       prisma.task.findMany({
         where: {
-          projectId: { in: projectIds },
+          project: { members: { some: { userId } } },
           OR: buildKeywordFilter(keyword, ['title', 'description']),
         },
         include: {
@@ -240,25 +235,15 @@ export const searchRouter = createTRPCRouter({
   getMembersByProject: protectedProcedure
     .input(z.object({ projectId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      const callerMembership = await prisma.projectMember.findUnique({
+      const members = await prisma.projectMember.findMany({
         where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
+          projectId: input.projectId,
+          project: {
+            members: {
+              some: { userId: ctx.session.userId },
+            },
           },
         },
-        select: { id: true },
-      });
-
-      if (!callerMembership) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'このプロジェクトのメンバーではありません',
-        });
-      }
-
-      const members = await prisma.projectMember.findMany({
-        where: { projectId: input.projectId },
         select: {
           user: {
             select: USER_SELECT,
@@ -270,6 +255,13 @@ export const searchRouter = createTRPCRouter({
           },
         },
       });
+
+      if (members.length === 0) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このプロジェクトのメンバーではありません',
+        });
+      }
 
       return members.map((member) => member.user);
     }),

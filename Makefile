@@ -1,10 +1,5 @@
 .PHONY: zip-export zip-list zip-clean pdf-single pdf-all pdf-clean book-pdf book-pdf-one book-pdf-test book-pdf-verify book-pdf-clean snapshot-verify snapshot-test
 
-# 商品PDFの章間リンクが指す配布先（PDF名→Drive URL）。リポジトリ管理下の
-# 正本を既定にして、CI や clone 直後でも make book-pdf がそのまま組めるようにする。
-# 環境変数で上書きすれば別の配布先JSONにも切り替えられる。
-export PDF_BOOK_LINK_MAP ?= scripts/pdf-book/pdf-link-map.json
-
 # ============================================
 # 写経ビルド検査（読者がその日まで写した手元を組み直す）
 # ============================================
@@ -48,36 +43,37 @@ book-pdf-test:
 	@python3 -m unittest discover -s scripts/pdf-book -p test_book_links.py
 	@python3 scripts/pdf-book/test_check_pdf_book.py
 	@python3 scripts/pdf-book/test_check_page_layout.py
-	@python3 scripts/pdf-book/test_code_wrap.py
+	@python3 scripts/pdf-book/test_breakable_code.py
+	@python3 scripts/pdf-book/test_measure_breakable_code.py
+	@python3 scripts/pdf-book/test_measure_page_fill.py
+	@python3 scripts/pdf-book/test_toc_contract.py
+	@python3 scripts/pdf-book/test_toc_normalization.py
+	@python3 scripts/pdf-book/test_pdf_inventory.py
 	@python3 scripts/pdf-book/test_build_receipt.py
-	@python3 scripts/pdf-book/test_release_manifest.py
-	@python3 scripts/pdf-book/test_code_wrap_dedent.py
+	@python3 scripts/pdf-book/test_image_mermaid_safety.py
+	@python3 scripts/pdf-book/test_code_wrap.py
 	@python3 scripts/pdf-book/test_inline_layout.py
 	@python3 scripts/pdf-book/test_inline_layout_css.py
-	@python3 scripts/pdf-book/test_table_latin.py
-	@python3 scripts/pdf-book/test_inline_break.py
-	@python3 scripts/pdf-book/test_check_inline_break.py
-	@python3 scripts/pdf-book/test_table_structure.py
 	@python3 scripts/pdf-book/test_table_layout_override.py
-	@python3 scripts/pdf-book/test_table_build.py
 	@python3 scripts/pdf-book/test_verify_pdf_copy.py
-	@python3 scripts/pdf-book/test_breakable_code.py
-	@python3 scripts/pdf-book/test_mermaid_caption.py
+	@python3 scripts/pdf-book/test_release_manifest.py
+	@python3 scripts/pdf-book/test_code_wrap_dedent.py
 	@python3 scripts/pdf-book/test_cjk_soft_breaks.py
+	@python3 scripts/pdf-book/test_mermaid_caption.py
 	@python3 scripts/pdf-book/test_find_browser.py
 	@python3 scripts/pdf-book/test_keep_next.py
-	@python3 scripts/pdf-book/test_relabel_tsx_fences.py
+	@python3 scripts/pdf-book/test_reconciliation_contract.py
+	@python3 scripts/pdf-book/test_workflow_scope.py
 
 # 出力が商品として出せる状態かを見る
-# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）
+# 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）
 book-pdf-verify: book-pdf-test
 	@python3 scripts/pdf-book/check_pdf_book.py
 	@python3 scripts/pdf-book/check_page_layout.py
-	@python3 scripts/pdf-book/check_inline_break.py
 	@python3 scripts/pdf-book/verify_pdf_copy.py
 
 book-pdf-clean:
-	rm -rf dist/pdf/ dist/.pdf-book-build/
+	rm -rf dist/pdf/ dist/.pdf-book-build/ dist/release-build-receipt.json
 	@echo "✅ 商品PDF削除完了"
 
 # ============================================

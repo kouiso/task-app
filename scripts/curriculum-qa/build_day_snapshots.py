@@ -8,8 +8,8 @@
 
 ## 何を組むか
 
-土台は `scaffold-from-scratch.sh` の配布物（`scripts/_*`）。その上に day01 から
-day N までの写経ブロックを `concat_by_file` で書き込み先ごとに連結して置く。
+土台は `--reader-base` で渡した、販売ZIPから実際に組み立てた reader base。
+その上に day01 から day N までの写経ブロックを `concat_by_file` で書き込み先ごとに連結して置く。
 出来上がりは `dist/day-snapshots/dayNN/`。
 
 ## 意図的に組まない部分
@@ -18,11 +18,10 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
   教材のブロックはその中の一部を書き換える断片であり、丸ごと置き換えると読者の
   手元より壊れた状態になる。`check_tag_balance.py` がこれらを対象外にするのと同じ理由。
 - `concat_by_file` は TypeScript/JavaScript のブロックだけを集める（`CODE_LANGS`）。
+  CSSはDay01の完全置換と明示した編集を別に再現し、完成した本体のCSSを借りない。
   `prisma/schema.prisma` と `scripts/*.sh` は scaffold の配布物をそのまま使う。
-- リポジトリ直下の設定ファイルは、このリポジトリの現物を借りる。scaffold は
-  `create-next-app` の出力へ `npm pkg set` を掛けて作るので現物が無い。型検査に効くのは
-  `paths` と `strict` 系の設定で、そこは同じものが入る。`tsconfig.json` の exclude だけは
-  scaffold が足す分があるので、`scaffold-from-scratch.sh` から読んで再現する。
+- `--reader-base` を省いた走行は、従来どおりリポジトリの設定と依存を借りる近似モード。
+  実読者の証拠にはならず、実行記録も PASS を発行しない。
 
 ## 書き直しは連結でなく置き換えになる
 
@@ -47,16 +46,13 @@ day N までの写経ブロックを `concat_by_file` で書き込み先ごと�
 `npx tsc --noEmit` は必須。`npm run build` は DB 接続を要求することがあり、DB の
 無い機械で赤くしても教材の欠陥を指していない。失敗したら理由を記録して続行する。
 握り潰しではない。表に NG として残す。
-
-貼る位置の注記（`（delete の直後に追加）` 等）を読めない・指す場所が無いブロックは
-飛ばさずにその日のツリーを NG にする（`PlacementError`）。飛ばすとツリーは前の日の
-コードのまま型検査と build を通り、その日の変更を1行も見ないまま緑になる。
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -69,14 +65,9 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from curriculum_blocks import (  # noqa: E402
-    Block,
-    concat_by_file,
-    day_number,
-    heading_scan_view,
-    mask_code,
-)
+from curriculum_blocks import Block, concat_by_file, day_number, mask_code  # noqa: E402
 from sale_package import scaffold_copies, scaffold_src_paths  # noqa: E402
+from markdown_scan import fence_states  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_DIR = REPO_ROOT / "material" / "30days-curriculum"
@@ -84,18 +75,39 @@ SNAPSHOT_ROOT = REPO_ROOT / "dist" / "day-snapshots"
 RESULT_DOC = REPO_ROOT / "doc" / "review-handoff" / "day-snapshots-result.md"
 SCAFFOLD_SH = REPO_ROOT / "scripts" / "scaffold-from-scratch.sh"
 
-# 読者の手元にあって、scaffold が現物を配らないファイル。設定ファイルは
-# `create-next-app` の出力へ `npm pkg set` を掛けて作られ、`src/app/globals.css` は
-# `create-next-app` がそのまま置く。どちらも配布物として scripts/_* に無いので、
-# このリポジトリの同じ位置の現物を借りる。globals.css は scaffold が配る
-# `_app-base/layout.tsx` が import しており、欠けるとビルドがそこで止まる。
+# `--reader-base` を省いた互換走行だけが使う借り物。証拠走行では一切複写しない。
+# globals.css はどちらのモードでも教材の完全置換・明示追記から組み立てる。
 BORROWED_FILES = (
     "next.config.ts",
     "postcss.config.js",
     "tailwind.config.js",
     "package.json",
-    "src/app/globals.css",
     ".env.example",
+)
+
+READER_BASE: Path | None = None
+READER_BASE_INITIAL_RECEIPT: dict[str, object] | None = None
+READER_RUNTIME_INITIAL_RECEIPT: dict[str, object] | None = None
+READER_CHILD_ENV: dict[str, str] | None = None
+READER_BASE_REQUIRED_FILES = (
+    ".node-version",
+    ".mise.toml",
+    ".env.example",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "next.config.ts",
+    "next-env.d.ts",
+)
+POSTCSS_CONFIG_NAMES = ("postcss.config.js", "postcss.config.mjs", "postcss.config.cjs")
+NEXT_CONFIG_TARGET = "next.config.ts"
+DAY30_HEADER_KEYS = (
+    "X-Frame-Options",
+    "X-Content-Type-Options",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "Permissions-Policy",
+    "X-DNS-Prefetch-Control",
 )
 
 # 表の状態欄。実行しなかったことと落ちたことを同じ記号で書くと、
@@ -177,27 +189,10 @@ INSERT_NOTE = re.compile(r"^[（(](.+?)\s*の\s*(直後に追加|前に追加)[�
 # 指すため、タグ名やのうて行の中の文字列で1つに絞る。`<div>` の書き直しは名前では
 # 決められん（day28 の一覧グリッドと見出し行がどちらも `<div>` から始まる）。
 REWRITE_NOTE = re.compile(r"^[（(](.+?)\s*の要素を書き直す[）)]$")
-# `（isAllSelected の宣言を書き直す）` の形。書き直した宣言が別の名前になるときに使う。
-# 名前が変わると先頭の宣言名では前の宣言に当たらず、新しい宣言として足されて前の宣言が
-# 残る（day28 Step 4 の `selectAllState` が `isAllSelected` を残し、Biome の
-# noUnusedVariables で赤になっとった）。
-REWRITE_DECL_NOTE = re.compile(r"^[（(]([A-Za-z_$][\w$]*)\s*の宣言を書き直す[）)]$")
-# 差し込み先の名前が `open={deleteDialogOpen} の要素` の形なら、その文字列を開始タグに持つ
-# JSX 要素の後ろ（前）を指す。day28 Step 7 の一括削除ダイアログがこれで、Day 15 の1件削除の
-# ダイアログを残したまま、その下へ2つ目として置く。
-ELEMENT_ANCHOR_SUFFIX = "の要素"
 # `（A から B までを書き直す）` の形。並んだ2つの要素をまとめて1つへ包み直すときに使う。
 # 片方だけを書き直すと、もう片方が二重に残る（day28 の見出しと「新規タスク」ボタンを
 # `justify-between` の1行へ包む書き直しがこれ）。
 REWRITE_SPAN_NOTE = re.compile(r"^[（(](.+?)\s*から\s*(.+?)\s*までを書き直す[）)]$")
-# 範囲の終わりを `「新規タスク」の </Button>` と書く形。「」の中は画面に出る文字で、
-# それを中に持つ `<Button>` 要素の閉じタグまでを指す。開始タグの行の文字列
-# （`onClick={handleCreate}>`）で終わりを指すと、読者はそこで切って `</Button>` を残す。
-CLOSING_OF_QUOTED = re.compile(r"^「([^「」]+)」の\s*</([A-Za-z][\w.]*)\s*>$")
-# `（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加）` の形。
-# 前の Step が置いた目印のコメントの位置へ足す。「」の中が目印の行の文字列で、
-# 「」の外（`Step 5 のプレースホルダー`）は読者向けの説明なので見ない。
-POSITION_NOTE = re.compile(r"^[（(].*「([^「」]+)」の位置に追加[）)]$")
 TAG_NAME = re.compile(r"<([A-Za-z][\w.]*)")
 # 抜粋の先頭がトップレベルの宣言なら、それは「その宣言をこの形へ書き直す」という指示である。
 # day13 と day20 の `app-layout.tsx` は `const menuItems: MenuItem[] = [...]` を、項目を1つ
@@ -255,27 +250,6 @@ LEAD_COMMENT = re.compile(r"^\s*(?://|\{/\*)")
 
 # 差し込む1本が複数チャンクに割れたときの、2つ目以降の注記。
 CONTINUATION = re.compile(r"続き")
-# 読者に写させない・あとで消させるブロックの注記。`（一時的に足す行）` `（配布済み・写経しません）`。
-# 当てないのが正しいので、読めない注記として止めない。
-TRANSIENT_NOTE = re.compile(r"一時的|写経しません")
-# ブロックの直前の見出し。注記どおりに貼れんときに、どの Step かを名指しするのに使う。
-HEADING = re.compile(r"^#{2,4}\s+(.+?)\s*$")
-
-# 注記どおりに貼れん理由。PlacementError の各行に出る。
-UNREADABLE_NOTE = (
-    "注記を貼る位置の指示として読めません。読める形は「X の直後に追加」「X の前に追加」"
-    "「X の要素の直後に追加」「X の要素を書き直す」「X の宣言を書き直す」"
-    "「A から B までを書き直す」「…「X」の位置に追加」です"
-)
-ANCHOR_NOT_FOUND = "注記が指す場所が今のファイルに無いか、1つに決まりません"
-NOTE_IN_TARGET = (
-    "注記を書き込み先から切り離せません。注記ごと別のファイル名として読まれ、"
-    "このブロックはどのファイルにも入りません"
-)
-PROVIDED_FILE = (
-    "配布物のファイルへの貼り付けは当てられません。配布物は教材がファイル全体を"
-    "書き直した日にだけ置き換えます"
-)
 # 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
 # トップレベルの宣言（`export const taskRouter`）の両方を受ける。
 ANCHOR = "^(\\s*)(?:{name}\\s*:|(?:export\\s+)?(?:const|let|function|async\\s+function)\\s+{name}\\b)"
@@ -297,7 +271,10 @@ ERROR_MARK = re.compile(r"error|failed|not found|Cannot find|✗|⨯", re.I)
 # 落としても本物の失敗は見逃さん。frame の上には必ずメッセージの行が出て、そっちは残る。
 STACK_FRAME_MARK = re.compile(r"^\s+at \S")
 
-USAGE = "使い方: build_day_snapshots.py (--day N | --all) [--verify]"
+USAGE = (
+    "使い方: build_day_snapshots.py (--day N | --all) [--verify] "
+    "[--reader-base PATH]"
+)
 
 
 class DayResult(NamedTuple):
@@ -319,6 +296,9 @@ class DayResult(NamedTuple):
     generation: str = NOT_RUN
     generation_errors: tuple[str, ...] = ()
     verification_error: str | None = None
+    reader_baseline_hash: str | None = None
+    reader_baseline_hash_after: str | None = None
+    reader_baseline_stable: bool = True
 
 
 class TreeVerification(NamedTuple):
@@ -334,68 +314,6 @@ class TreeVerification(NamedTuple):
     verification_error: str | None = None
 
 
-class PlacementProblem(NamedTuple):
-    """注記どおりに貼れんかったブロック1つと、その理由。"""
-
-    block: Block
-    reason: str
-
-
-def block_heading(block: Block, paths: tuple[Path, ...] = ()) -> str:
-    """ブロックの直前の見出し（`Step 5: …`）。本が読めなければ空文字。
-
-    本の置き場は `paths` から名前で探し、無ければ教材の置き場を見る。
-    自己テストは一時ディレクトリに本を置くので、教材の置き場だけを見ると見出しが取れん。
-    """
-    source = next((p for p in paths if p.name == block.source), MATERIAL_DIR / block.source)
-    if not source.is_file():
-        return ""
-    # コードフェンスの中の `## main`（git status の出力）を見出しに数えない。
-    view = heading_scan_view(source.read_text(encoding="utf-8")).split("\n")
-    for line in reversed(view[: block.lineno - 1]):
-        m = HEADING.match(line)
-        if m:
-            return m.group(1)
-    return ""
-
-
-def describe_problem(problem: PlacementProblem, paths: tuple[Path, ...] = ()) -> str:
-    """本・見出し・書き込み先と注記・理由を1行にする。直す人がそのまま本を開けるように。"""
-    b = problem.block
-    heading = block_heading(b, paths)
-    where = f"{b.source} {b.lineno}行目" + (f"（{heading}）" if heading else "")
-    return f"{where} {b.target}{b.note}: {problem.reason}"
-
-
-class PlacementError(ValueError):
-    """貼る位置の注記どおりに当てられんブロックがあった。
-
-    黙って飛ばすと、組んだツリーは前の日のコードのまま型検査と build を通る。
-    写経の再現検査は緑のまま、その日の変更を1行も見ていない状態になる
-    （day28 の見出し行と一括操作のボタン4ブロックがこれで、Day 28〜30 のツリーは
-    Day 15 の見出しのまま通っとった）。
-
-    `text` は当てられた分だけを当てたファイルの中身。呼び出し側はそれを書き出してから
-    問題をまとめて投げ直す。
-    """
-
-    def __init__(
-        self,
-        problems: list[PlacementProblem] | tuple[PlacementProblem, ...],
-        text: str = "",
-        paths: tuple[Path, ...] = (),
-    ) -> None:
-        self.problems = tuple(problems)
-        self.text = text
-        self.lines = tuple(describe_problem(p, paths) for p in self.problems)
-        super().__init__("\n".join(self.lines))
-
-
-def is_placement_note(note: str) -> bool:
-    """当てるべき位置を言うとる注記か。続きの注記と、写させん注記は違う。"""
-    return bool(note) and not CONTINUATION.search(note) and not TRANSIENT_NOTE.search(note)
-
-
 def available_days() -> list[int]:
     """教材に存在する day 番号を昇順で返す。"""
     return sorted({day_number(p.name) for p in MATERIAL_DIR.glob("day[0-9][0-9]_*.md")})
@@ -407,6 +325,310 @@ def day_sources(upto: int) -> list[Path]:
         (p for p in MATERIAL_DIR.glob("day[0-9][0-9]_*.md") if 1 <= day_number(p.name) <= upto),
         key=lambda p: (day_number(p.name), p.name),
     )
+
+
+def reader_proof_mode() -> bool:
+    """実際に生成・installした reader base を使う走行なら True。"""
+    return READER_BASE is not None
+
+
+def reader_source_root() -> Path:
+    """設定・scaffold・依存を取る基準。未指定時は互換用の近似root。"""
+    return READER_BASE if READER_BASE is not None else REPO_ROOT
+
+
+def postcss_config_path(root: Path) -> Path:
+    """reader が実際に持つ PostCSS 設定を拡張子込みで一意に返す。"""
+    found = [root / name for name in POSTCSS_CONFIG_NAMES if (root / name).is_file()]
+    if len(found) != 1:
+        names = ", ".join(path.name for path in found) or "なし"
+        raise ValueError(f"PostCSS設定は1本必要です: {names}")
+    return found[0]
+
+
+def validate_reader_package_lock(base: Path) -> None:
+    """one-shot scaffold の最終package metadataがlock rootにも反映済みか確かめる。"""
+    package = json.loads((base / "package.json").read_text(encoding="utf-8"))
+    lock = json.loads((base / "package-lock.json").read_text(encoding="utf-8"))
+    lock_root = lock.get("packages", {}).get("")
+    if not isinstance(lock_root, dict):
+        raise ValueError("package-lock.json にroot package entryがありません")
+    mismatches = []
+    for key in (
+        "name", "version", "engines", "dependencies", "devDependencies",
+        "optionalDependencies", "peerDependencies",
+    ):
+        if package.get(key) != lock_root.get(key):
+            mismatches.append(key)
+    scripts = package.get("scripts", {})
+    has_install_script = any(name in scripts for name in ("preinstall", "install", "postinstall"))
+    if bool(lock_root.get("hasInstallScript", False)) != has_install_script:
+        mismatches.append("hasInstallScript")
+    if mismatches:
+        raise ValueError(
+            "package.json と package-lock.json root metadata が一致しません: "
+            + ", ".join(mismatches)
+        )
+
+
+def _reader_runtime_receipt(base: Path) -> dict[str, object]:
+    """snapshot検証と同じPATHで動くNode/npmを実測して固定する。"""
+    node = subprocess.run(
+        ["node", "-p", "JSON.stringify({version:process.versions.node,execPath:process.execPath})"],
+        cwd=base, capture_output=True, text=True, timeout=30,
+    )
+    if node.returncode != 0:
+        raise ValueError("reader proof用Node/npmを起動できません")
+    try:
+        node_data = json.loads(node.stdout)
+        node_version = node_data["version"]
+        node_parts = tuple(int(part) for part in node_version.split("."))
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError("reader proof用Node/npmのversion応答が不正です") from error
+    node_path = Path(node_data["execPath"])
+    npm_path = node_path.parent / "npm"
+    child_env = dict(os.environ)
+    child_env["PATH"] = f"{node_path.parent}{os.pathsep}{os.environ.get('PATH', '')}"
+    npm = subprocess.run(
+        [str(npm_path), "--version"], cwd=base, env=child_env,
+        capture_output=True, text=True, timeout=30,
+    )
+    npm_node = subprocess.run(
+        [
+            str(npm_path), "exec", "--offline", "--yes=false", "--", "node", "-p",
+            "JSON.stringify({version:process.versions.node,execPath:process.execPath})",
+        ],
+        cwd=base, env=child_env, capture_output=True, text=True, timeout=30,
+    )
+    try:
+        npm_version = npm.stdout.strip()
+        npm_parts = tuple(int(part) for part in npm_version.split("."))
+        npm_node_data = json.loads(npm_node.stdout)
+        npm_node_version = npm_node_data["version"]
+        npm_node_path = Path(npm_node_data["execPath"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError("reader proof用npmのruntime応答が不正です") from error
+    if npm.returncode != 0 or npm_node.returncode != 0:
+        raise ValueError("reader proof用npmを起動できません")
+    package = json.loads((base / "package.json").read_text(encoding="utf-8"))
+    if package.get("engines", {}).get("node") != ">=22.12.0 <23":
+        raise ValueError("reader base のNode engines契約が想定外です")
+    if len(node_parts) != 3 or node_parts < (22, 12, 0) or node_parts >= (23, 0, 0):
+        raise ValueError(f"reader proofにはNode 22.12.0以上23未満が必要です: {node_version}")
+    if len(npm_parts) != 3 or npm_parts[0] != 10:
+        raise ValueError(f"reader proofにはnpm 10が必要です: {npm_version}")
+    if not node_path.is_absolute() or not npm_path.is_file():
+        raise ValueError("reader proof用Node/npmの実行pathを固定できません")
+    if (
+        npm_node_version != node_version
+        or npm_node_path.resolve() != node_path.resolve()
+        or hashlib.sha256(npm_node_path.read_bytes()).hexdigest()
+        != hashlib.sha256(node_path.read_bytes()).hexdigest()
+    ):
+        raise ValueError("reader proof用npmが固定したNode以外で動作しています")
+    payload = {
+        "nodeVersion": node_version,
+        "nodeExecPath": str(node_path),
+        "nodeExecSha256": hashlib.sha256(node_path.read_bytes()).hexdigest(),
+        "npmVersion": npm_version,
+        "npmExecPath": str(npm_path),
+        "npmExecSha256": hashlib.sha256(npm_path.read_bytes()).hexdigest(),
+        "npmNodeVersion": npm_node_version,
+        "npmNodeExecPath": str(npm_node_path),
+        "npmNodeExecSha256": hashlib.sha256(npm_node_path.read_bytes()).hexdigest(),
+    }
+    payload["digest"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return payload
+
+
+def _regular_file_inside(base: Path, relative: str) -> bool:
+    current = base
+    for part in Path(relative).parts:
+        current = current / part
+        if current.is_symlink():
+            return False
+    try:
+        current.resolve().relative_to(base.resolve())
+    except ValueError:
+        return False
+    return current.is_file()
+
+
+def configure_reader_base(path: Path | None) -> None:
+    """proof mode の入力を固定する。欠けた buyer base は近似へ倒さず止める。"""
+    global READER_BASE, READER_BASE_INITIAL_RECEIPT, READER_RUNTIME_INITIAL_RECEIPT, READER_CHILD_ENV
+    scaffold_exports.cache_clear()
+    if path is None:
+        READER_BASE = None
+        READER_BASE_INITIAL_RECEIPT = reader_baseline_receipt()
+        READER_RUNTIME_INITIAL_RECEIPT = None
+        READER_CHILD_ENV = None
+        return
+    supplied = path.expanduser().absolute()
+    if supplied.is_symlink():
+        raise ValueError(f"reader base 自体がsymlinkです: {supplied}")
+    base = supplied.resolve()
+    if base == REPO_ROOT.resolve():
+        raise ValueError("repository root は reader base として使えません")
+    if not base.is_dir() or base.is_symlink():
+        raise ValueError(f"reader base が通常ディレクトリではありません: {base}")
+    missing = [name for name in READER_BASE_REQUIRED_FILES if not (base / name).is_file()]
+    if missing:
+        raise ValueError(f"reader base の必須ファイルがありません: {', '.join(missing)}")
+    for name in READER_BASE_REQUIRED_FILES:
+        if (base / name).is_symlink():
+            raise ValueError(f"reader base の設定がsymlinkです: {name}")
+    postcss = postcss_config_path(base)
+    if postcss.is_symlink():
+        raise ValueError(f"reader base の設定がsymlinkです: {postcss.name}")
+    validate_reader_package_lock(base)
+    if (base / ".npmrc").exists():
+        raise ValueError("reader base に販売ZIP外の .npmrc が混入しています")
+    modules = base / "node_modules"
+    if not modules.is_dir() or modules.is_symlink():
+        raise ValueError("reader base の node_modules は通常install済みディレクトリが必要です")
+    if not (modules / ".package-lock.json").is_file():
+        raise ValueError("reader base の node_modules/.package-lock.json がありません")
+    external_links = []
+    for item in modules.rglob("*"):
+        if not item.is_symlink():
+            continue
+        resolved = (item.parent / os.readlink(item)).resolve()
+        try:
+            resolved.relative_to(modules.resolve())
+        except ValueError:
+            external_links.append(item.relative_to(modules).as_posix())
+    if external_links:
+        raise ValueError(
+            "reader base の node_modules が外部symlinkを含みます: "
+            + ", ".join(external_links[:5])
+        )
+    missing_scaffold = [
+        relative for relative, _ in scaffold_copies()
+        if not _regular_file_inside(base, relative)
+    ]
+    if missing_scaffold:
+        raise ValueError(
+            "reader base にscaffold出力がありません: " + ", ".join(missing_scaffold)
+        )
+    next_config = (base / NEXT_CONFIG_TARGET).read_text(encoding="utf-8")
+    if "Content-Security-Policy" in next_config or re.search(r"\bheaders\s*\(", next_config):
+        raise ValueError("reader base の next.config.ts に未履修のheaders設定があります")
+    runtime = _reader_runtime_receipt(base)
+    READER_BASE = base
+    READER_RUNTIME_INITIAL_RECEIPT = runtime
+    READER_CHILD_ENV = dict(os.environ)
+    READER_CHILD_ENV["PATH"] = (
+        f"{Path(runtime['nodeExecPath']).parent}{os.pathsep}{os.environ.get('PATH', '')}"
+    )
+    READER_BASE_INITIAL_RECEIPT = reader_baseline_receipt()
+
+
+def _file_receipt(path: Path, root: Path) -> dict[str, object]:
+    stat = path.stat()
+    return {
+        "path": path.relative_to(root).as_posix(),
+        "bytes": stat.st_size,
+        "mode": stat.st_mode & 0o777,
+        "mtimeNs": stat.st_mtime_ns,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
+def _tree_inventory(root: Path) -> dict[str, object]:
+    """依存の全path metadataとpackage manifest内容を小さいdigestへ畳む。"""
+    digest = hashlib.sha256()
+    count = 0
+    package_manifests = 0
+    for base, dirs, files in os.walk(root, followlinks=False):
+        base_path = Path(base)
+        dirs.sort()
+        files.sort()
+        for name in [*dirs, *files]:
+            path = base_path / name
+            relative = path.relative_to(root).as_posix()
+            stat = path.lstat()
+            if path.is_symlink():
+                kind = "symlink"
+                extra = os.readlink(path)
+            elif path.is_dir():
+                kind = "directory"
+                extra = ""
+            else:
+                kind = "file"
+                extra = ""
+            digest.update(
+                f"{kind}\0{relative}\0{stat.st_mode & 0o777}\0{stat.st_size}\0{stat.st_mtime_ns}\0{extra}\0".encode()
+            )
+            if path.is_file() and not path.is_symlink() and name in {"package.json", ".package-lock.json"}:
+                digest.update(hashlib.sha256(path.read_bytes()).digest())
+                package_manifests += 1
+            count += 1
+    return {
+        "source": str(root.resolve()),
+        "entryCount": count,
+        "packageManifestCount": package_manifests,
+        "inventoryDigest": digest.hexdigest(),
+    }
+
+
+def reader_baseline_receipt() -> dict[str, object]:
+    """設定内容・scaffold inventory・依存metadataを証拠用に固定する。"""
+    root = reader_source_root()
+    mode = "reader-base" if reader_proof_mode() else "approximate-root"
+    if reader_proof_mode():
+        config_paths = [
+            *(root / name for name in READER_BASE_REQUIRED_FILES),
+            postcss_config_path(root),
+        ]
+        scaffold_paths = [(relative, root / relative) for relative, _ in scaffold_copies()]
+    else:
+        config_paths = [
+            *(root / name for name in BORROWED_FILES if (root / name).is_file()),
+            *(root / name for name in READ_ONLY_INPUTS if (root / name).is_file()),
+            *(root / name for name in ENVIRONMENT_INPUTS if (root / name).is_file()),
+        ]
+        scaffold_paths = [
+            (relative, source) for relative, source in scaffold_copies() if source.is_file()
+        ]
+    configs = [_file_receipt(path, root) for path in sorted(set(config_paths))]
+    scaffold_files = []
+    for relative, source in sorted(scaffold_paths):
+        stat = source.stat()
+        try:
+            source_path = source.relative_to(root).as_posix()
+        except ValueError:
+            source_path = str(source.resolve())
+        scaffold_files.append({
+            "path": relative,
+            "sourcePath": source_path,
+            "bytes": stat.st_size,
+            "mode": stat.st_mode & 0o777,
+            "mtimeNs": stat.st_mtime_ns,
+            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        })
+    modules = root / "node_modules"
+    dependency = _tree_inventory(modules) if modules.is_dir() else {
+        "source": str(modules.resolve()), "entryCount": 0,
+        "packageManifestCount": 0, "inventoryDigest": None,
+    }
+    payload: dict[str, object] = {
+        "mode": mode,
+        "proofEligible": reader_proof_mode(),
+        "source": str(root.resolve()),
+        "postcssConfig": postcss_config_path(root).name if reader_proof_mode() else next(
+            (name for name in POSTCSS_CONFIG_NAMES if (root / name).is_file()), None
+        ),
+        "configFiles": configs,
+        "scaffoldFiles": scaffold_files,
+        "nodeModules": dependency,
+        "runtime": _reader_runtime_receipt(root) if reader_proof_mode() else None,
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    payload["digest"] = hashlib.sha256(encoded).hexdigest()
+    return payload
 
 
 # ツリーの中身を決めているファイルのうち、教材でも配布物でもないもの。
@@ -486,17 +708,35 @@ def tree_inputs(upto: int) -> list[Path]:
     """
     # 無い物は落とす。`.npmrc` のように置くかどうかが任意の入力があり、消した回に
     # `stat()` で落ちる。その削除は置き場の時刻が拾うので、ここで数えんでも取り逃がさん。
+    if reader_proof_mode():
+        base = reader_source_root()
+        baseline_inputs = [
+            *(base / name for name in READER_BASE_REQUIRED_FILES),
+            postcss_config_path(base),
+            *(base / relative for relative, _ in scaffold_copies()),
+            base / "node_modules" / ".package-lock.json",
+        ]
+        root_inputs = [
+            REPO_ROOT / "scripts" / "build-zip.sh",
+            *BUILDER_SOURCES,
+        ]
+    else:
+        baseline_inputs = [
+            *(REPO_ROOT / name for name in BORROWED_FILES),
+            *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
+            *sorted(PATCH_DIR.glob("*.patch")),
+        ]
+        root_inputs = [
+            *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
+            *watched_dirs(),
+            *BUILDER_SOURCES,
+        ]
     return [
         p
         for p in (
             *day_sources(upto),
-            *(src for _, src in scaffold_copies()),
-            *(REPO_ROOT / name for name in BORROWED_FILES),
-            *(REPO_ROOT / name for name in READ_ONLY_INPUTS),
-            *(REPO_ROOT / name for name in ENVIRONMENT_INPUTS),
-            *sorted(PATCH_DIR.glob("*.patch")),
-            *watched_dirs(),
-            *BUILDER_SOURCES,
+            *baseline_inputs,
+            *root_inputs,
         )
         if p.exists()
     ]
@@ -532,6 +772,9 @@ def tsconfig_excludes() -> tuple[str, ...]:
 
 def write_reader_tsconfig(dest: Path) -> None:
     """読者の手元と同じ tsconfig.json を置く。"""
+    if reader_proof_mode():
+        shutil.copyfile(reader_source_root() / "tsconfig.json", dest / "tsconfig.json")
+        return
     config = json.loads((REPO_ROOT / "tsconfig.json").read_text(encoding="utf-8"))
     for option in STRICTER_THAN_READER:
         config["compilerOptions"].pop(option, None)
@@ -543,14 +786,35 @@ def write_reader_tsconfig(dest: Path) -> None:
     (dest / "tsconfig.json").write_text(f"{json.dumps(config, indent=2, ensure_ascii=False)}\n", encoding="utf-8")
 
 
+def copy_reader_baseline(dest: Path) -> int:
+    """明示 reader base のcanonical設定を、ファイル名も含めてそのまま複写する。"""
+    if not reader_proof_mode():
+        raise ValueError("copy_reader_baseline には --reader-base が必要です")
+    root = reader_source_root()
+    paths = [
+        *(root / name for name in READER_BASE_REQUIRED_FILES),
+        postcss_config_path(root),
+    ]
+    for source in paths:
+        out = dest / source.relative_to(root)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, out)
+    shutil.copyfile(dest / ".env.example", dest / ".env")
+    return len(paths) + 1
+
+
 def copy_scaffold(dest: Path) -> int:
     """scaffold の配布物を読者の置き場へ並べる。返り値は置いたファイル数。"""
     count = 0
-    for rel, src in scaffold_copies():
+    base = reader_source_root()
+    for rel, repository_source in scaffold_copies():
+        src = base / rel if reader_proof_mode() else repository_source
         out = dest / rel
         out.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, out)
         count += 1
+    if reader_proof_mode():
+        return count + copy_reader_baseline(dest)
     for name in BORROWED_FILES:
         src = REPO_ROOT / name
         if not src.is_file():
@@ -713,13 +977,6 @@ def insert_fragment(text: str, name: str, where: str, fragment: str) -> str | No
     要素を切る `_member_end` では次の宣言まで飲み込んでしまう。
     """
     lines = text.split("\n")
-    if name.endswith(ELEMENT_ANCHOR_SUFFIX):
-        # 行の区切りで切ると開始タグの途中へ入る。要素の終わり（前）で切る。
-        span = _element_at_mark(lines, name[: -len(ELEMENT_ANCHOR_SUFFIX)].strip())
-        if span is None:
-            return None
-        at = span[0] if where == "前に追加" else span[1]
-        return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
     if IDENTIFIER_ONLY.match(name):
         pattern = re.compile(ANCHOR.format(name=re.escape(name)))
         for i, line in enumerate(lines):
@@ -780,41 +1037,17 @@ def rewrite_element(text: str, mark: str, fragment: str) -> str | None:
     こちらは行の中の文字列で1つに絞ってから、同じ要素の終わりの見つけ方を借りる。
     """
     lines = text.split("\n")
-    span = _element_at_mark(lines, mark)
-    if span is None:
-        return None
-    start, end = span
-    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
-
-
-def _element_at_mark(lines: list[str], mark: str) -> tuple[int, int] | None:
-    """`mark` を含む行の要素が始まる行と、終わる行の次。1つに決まらなければ None。
-
-    `mark` が開始タグの2行目以降にあるときは、その開始タグの頭まで遡る。
-    `<Checkbox` が一覧の側にもある画面では、`id="select-all"` のような属性でしか
-    1つに絞れず、その属性は開始タグを折り返した2行目に来る（day28 Step 4）。
-    遡った先の開始タグが `mark` の行まで届いてへんなら、`mark` は要素の中身の側にあるので使わん。
-    """
     hits = [i for i, line in enumerate(lines) if mark in line]
     if len(hits) != 1:
         return None
-    at = hits[0]
-    start = at
-    if TAG_NAME.search(lines[at]) is None:
-        heads = [j for j in range(at - 1, -1, -1) if re.match(r"^\s*<[A-Za-z]", lines[j])]
-        if not heads:
-            return None
-        opened, _ = _tag_open_end(lines, heads[0])
-        if opened is None or opened < at:
-            return None
-        start = heads[0]
+    start = hits[0]
     name = TAG_NAME.search(lines[start])
     if name is None:
         return None
     end = _element_end(lines, start, name.group(1))
     if end is None:
         return None
-    return start, end
+    return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
 
 
 def rewrite_span(text: str, start_mark: str, end_mark: str, fragment: str) -> str | None:
@@ -822,64 +1055,22 @@ def rewrite_span(text: str, start_mark: str, end_mark: str, fragment: str) -> st
 
     並んだ2つの要素を1つの入れ物へ包み直す書き直しに使う。片方だけを対象にすると、
     もう片方が新しい入れ物の外に残って二重になる。どちらの目印も1つに決まらなければ触らない。
-
-    `end_mark` が `「新規タスク」の </Button>` の形なら、その文字を中に持つ `<Button>` 要素の
-    閉じタグまでを範囲にする（`CLOSING_OF_QUOTED`）。
     """
     lines = text.split("\n")
     starts = [i for i, line in enumerate(lines) if start_mark in line]
     if len(starts) != 1:
         return None
     start = starts[0]
-    closing = CLOSING_OF_QUOTED.match(end_mark)
-    if closing is not None:
-        end = _enclosing_element_end(lines, start, closing.group(1), closing.group(2))
-    else:
-        ends = [i for i, line in enumerate(lines) if i >= start and end_mark in line]
-        if len(ends) != 1:
-            return None
-        name = TAG_NAME.search(lines[ends[0]])
-        if name is None:
-            return None
-        end = _element_end(lines, ends[0], name.group(1))
+    ends = [i for i, line in enumerate(lines) if i >= start and end_mark in line]
+    if len(ends) != 1:
+        return None
+    name = TAG_NAME.search(lines[ends[0]])
+    if name is None:
+        return None
+    end = _element_end(lines, ends[0], name.group(1))
     if end is None:
         return None
     return "\n".join(lines[:start] + fragment.split("\n") + lines[end:])
-
-
-def _enclosing_element_end(lines: list[str], start: int, inner: str, tag: str) -> int | None:
-    """start 行より後ろで `inner` を中に持つ `<tag>` 要素が終わる行の次を返す。
-
-    `inner` の行は1つに決まらんとアカン。決まったら、そこから上へ `<tag` の開始を探し、
-    その要素が `inner` の行を囲んどるものを採る。いちばん内側の要素が先に当たる。
-    """
-    hits = [k for k in range(start, len(lines)) if inner in lines[k]]
-    if len(hits) != 1:
-        return None
-    inner_at = hits[0]
-    opening = re.compile(rf"^\s*<{re.escape(tag)}\b")
-    for j in range(inner_at, start - 1, -1):
-        if not opening.match(lines[j]):
-            continue
-        end = _element_end(lines, j, tag)
-        if end is not None and end > inner_at:
-            return end
-    return None
-
-
-def insert_at_mark(text: str, mark: str, fragment: str) -> str | None:
-    """`mark` を含む行の位置へ fragment を入れる。1つに決まらなければ None。
-
-    目印の行は fragment の下へ残す。Step 6〜8 が同じプレースホルダーの位置へボタンを
-    1つずつ足すので、1つ目で目印を消すと2つ目から貼る先が無くなる。目印の上へ積むので
-    ボタンは Step の順に並ぶ。目印はコメントの中にあることが多いので、コメントを潰さずに探す。
-    """
-    lines = text.split("\n")
-    hits = [i for i, line in enumerate(lines) if mark in line]
-    if len(hits) != 1:
-        return None
-    at = hits[0]
-    return "\n".join(lines[:at] + fragment.split("\n") + lines[at:])
 
 
 def split_leading_imports(lines: tuple[str, ...]) -> tuple[list[str], list[str]]:
@@ -917,32 +1108,15 @@ def _declaration_end(lines: list[str], start: int) -> int:
     `,` か `;` で終わっているかを見る。関数宣言の終わりは `}` だけなので当たらず、次に来る
     空行まで走る。空行が無ければ次の宣言まで飲み込む（`buildTaskFormValues` の置き換えが
     後ろの `export function TaskDialog` ごと消して、day15 以降が丸ごとビルドできなくなった）。
-    宣言は括弧の収支が0へ戻ったところで終わる。
-
-    ただし式がまだ続いとる行では終わらせん。`const isAllSelected =` のように `=` で折り返した
-    宣言は1行目で収支が0のままなので、そこで切ると2行目以降（`&& selectedTaskList.length`）が
-    宙に浮いて残る（day28 Step 4 の書き直しがこれ）。行末が演算子で終わるか、次の行が演算子で
-    始まるときは、同じ式の続きと見る。
+    宣言は括弧の収支が0へ戻ったところで終わる。見るのはそれだけでよい。
     """
     depth = 0
     for i in range(start, len(lines)):
         masked = mask_code(lines[i])
         depth += sum(masked.count(c) for c in "{([") - sum(masked.count(c) for c in "})]")
-        if depth > 0:
-            continue
-        if EXPRESSION_CONTINUES_AFTER.search(masked):
-            continue
-        following = next((mask_code(x) for x in lines[i + 1 :] if x.strip()), "")
-        if EXPRESSION_CONTINUES_BEFORE.match(following):
-            continue
-        return i + 1
+        if depth <= 0:
+            return i + 1
     return len(lines)
-
-
-# 行末がこれで終わる行は、式が次の行へ続いとる。
-EXPRESSION_CONTINUES_AFTER = re.compile(r"(?:=>|[=?:+,]|&&|\|\||\?\?)\s*$")
-# 次の行がこれで始まるなら、前の行の式の続き。文の頭にこれが来ることは無い。
-EXPRESSION_CONTINUES_BEFORE = re.compile(r"^\s*(?:&&|\|\||\?\?|[?:.+]|===|!==)")
 
 
 def replace_declaration(text: str, name: str, fragment: str) -> str | None:
@@ -1207,24 +1381,14 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
 
     採った版が day15 で day21 を組むとき、day16〜21 が足した手続きはどの版にも入っていない。
     注記が差し込み先を名指ししているものだけを、日の順に入れる。
-
-    貼る位置の注記が付いとるのに当てられんブロックは、全部当て終えてから
-    `PlacementError` でまとめて止める。読めない注記と、指す場所が無い注記の2通り。
-    注記の無いブロックは従来どおり、当てられるものだけ当てる。
     """
-    problems: list[PlacementProblem] = []
     ordered = sorted(blocks, key=lambda x: (x.day, x.lineno))
     for i, b in enumerate(ordered):
         if b.day <= after_day:
             continue
-        noted = b
         m = INSERT_NOTE.match(b.note)
         rewrite = None if m else REWRITE_NOTE.match(b.note)
         span = None if (m or rewrite) else REWRITE_SPAN_NOTE.match(b.note)
-        position = None if (m or rewrite or span) else POSITION_NOTE.match(b.note)
-        renamed = None if (m or rewrite or span or position) else REWRITE_DECL_NOTE.match(b.note)
-        # 注記が貼る位置を言い切っとるブロック。当てられんかったら止める側。
-        noted_op = bool(m or rewrite or span or position or renamed)
         imports = merge_imports(text, render([b]))
         if imports is not None:
             # import だけのチャンクは、差し込み先の指示が無くても置き場所が決まる。
@@ -1238,27 +1402,23 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
                 text = partial
             b = b._replace(lines=tuple(rest))
         head = operation_head(b.lines)
-        element = None if noted_op else ELEMENT_HEAD.match(head)
+        element = None if (m or rewrite or span) else ELEMENT_HEAD.match(head)
         # 要素の書き換え・宣言の書き直し・配列への1要素追加は、`完成版` の目印が付いていても
         # 当てる。要素だけを外していたが、Step の節が省略記号（`// ...` の類）を含む日は
         # そちらが落ち、全文が `完成版` の側にしか無い（day16 の `<TaskCard>`）。
         # ここまで来た時点で「採った版の日より後」に絞れており、採られなかった `完成版` は
         # その日の全文ではなく抜粋である。抜粋なら当てるのが実物に近い
         # （day20 の `menuItems` は `完成版` の側にしか全文が無い）。
-        declaration = None if (noted_op or element) else DECL_HEAD.match(head)
-        is_new_binding = not (noted_op or element or declaration) and bool(
+        declaration = None if (m or rewrite or span or element) else DECL_HEAD.match(head)
+        is_new_binding = not (m or rewrite or span or element or declaration) and bool(
             DESTRUCTURE_HEAD.match(head)
         )
         is_element_add = not (
-            noted_op or element or declaration or is_new_binding
+            m or rewrite or span or element or declaration or is_new_binding
         ) and bool(OBJECT_ELEMENT_HEAD.match(head))
-        if not noted_op and b.note:
-            # 続きの注記は先頭のブロックと一緒に当てる（下の piece）。先頭が当たらんかった
-            # ときは先頭の側で止まる。それ以外の注記は、貼る位置を言うとるのに読めん。
-            if is_placement_note(b.note):
-                problems.append(PlacementProblem(noted, UNREADABLE_NOTE))
-            continue
-        if not noted_op and not (element or declaration or is_new_binding or is_element_add):
+        if not (m or rewrite or span) and (
+            b.note or not (element or declaration or is_new_binding or is_element_add)
+        ):
             continue
         # 差し込む1本が複数チャンクに割れていることがある。先頭だけに差し込み先の注記が付き、
         # 続きは `（同じファイルの続き）` になる。続きを落とすと手続きが途中で切れる
@@ -1274,7 +1434,7 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
         # 管理者リンク）。2度入れるとリンクが2本並ぶので、既に入っていれば飛ばす。
         if body.strip() and body in text:
             continue
-        if not noted_op and (
+        if not (m or rewrite or span) and (
             any(ELISION.match(line) for line in body.split("\n"))
             or introduces_unknown_names(text, body)
         ):
@@ -1285,10 +1445,6 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = rewrite_element(text, rewrite.group(1), body)
         elif span is not None:
             merged = rewrite_span(text, span.group(1), span.group(2), body)
-        elif position is not None:
-            merged = insert_at_mark(text, position.group(1), body)
-        elif renamed is not None:
-            merged = replace_declaration(text, renamed.group(1), body)
         elif element is not None:
             merged = replace_element(text, element.group(1), body)
         elif declaration is not None:
@@ -1307,10 +1463,6 @@ def apply_insertions(text: str, blocks: list[Block], after_day: int) -> str:
             merged = append_array_element(text, body)
         if merged is not None:
             text = merged
-        elif noted_op:
-            problems.append(PlacementProblem(noted, ANCHOR_NOT_FOUND))
-    if problems:
-        raise PlacementError(problems, text)
     return text
 
 
@@ -1329,7 +1481,9 @@ def exported_names(text: str) -> set[str]:
 def scaffold_exports() -> dict[str, frozenset[str]]:
     """scaffold が配るファイルが、それぞれ外へ出す名前。"""
     out: dict[str, frozenset[str]] = {}
-    for dest, src in scaffold_copies():
+    base = reader_source_root()
+    for dest, repository_source in scaffold_copies():
+        src = base / dest if reader_proof_mode() else repository_source
         if src.suffix in {".ts", ".tsx"}:
             out[dest] = frozenset(exported_names(src.read_text(encoding="utf-8")))
     return out
@@ -1358,42 +1512,137 @@ def apply_blocks(dest: Path, paths: list[Path]) -> int:
     `api.project` が無い版のまま残り、day10 以降の画面が軒並み型検査で落ちる。
     逆に抜粋しか無いファイル（`src/lib/utils.ts` 等）は配布物のままが正しい。
     読者が写経していない行がそこに在るためである。
-
-    貼る位置の注記どおりに当てられんブロックがあれば、全部のファイルを書き終えてから
-    `PlacementError` で止める。1本目で止めると、直す人が1件ずつしか知れん。
     """
     provided = scaffold_src_paths()
-    problems: list[PlacementProblem] = []
     count = 0
     for target, blocks in sorted(concat_by_file(paths).items()):
-        # 実在のファイル名は括弧で終わらん。末尾の括弧は切り離せんかった注記で、
-        # このまま置くと注記ごとの名前の別ファイルができ、本来のファイルには入らん
-        # （day28 の `（<h1 … から「新規タスク」の </Button> までを書き直す）`）。
-        if target.endswith(("）", ")")):
-            problems.extend(PlacementProblem(b, NOTE_IN_TARGET) for b in blocks)
+        if target == NEXT_CONFIG_TARGET:
             continue
         version = latest_version(blocks)
         body = render(version)
         if target in provided and not (
             is_complete_file(version) and replaces_scaffold_file(target, body)
         ):
-            problems.extend(
-                PlacementProblem(b, PROVIDED_FILE) for b in blocks if is_placement_note(b.note)
-            )
             continue
         out = dest / target
         out.parent.mkdir(parents=True, exist_ok=True)
         if version:
-            try:
-                body = apply_insertions(body, blocks, version[-1].day)
-            except PlacementError as error:
-                problems.extend(error.problems)
-                body = error.text
+            body = apply_insertions(body, blocks, version[-1].day)
         out.write_text(f"{body}\n", encoding="utf-8")
         count += 1
-    if problems:
-        raise PlacementError(problems, paths=tuple(paths))
     return count
+
+
+def _insert_next_config_members(baseline: str, members: str) -> str:
+    """NextConfig object の閉じ括弧直前へ教材のmemberを1回だけ差し込む。"""
+    if re.search(r"\bheaders\s*\(", baseline) or "Content-Security-Policy" in baseline:
+        raise ValueError("reader baseline の next.config.ts に未履修のheadersがあります")
+    masked = mask_code(baseline)
+    match = re.search(r"\bconst\s+nextConfig\b[^=]*=\s*\{", masked)
+    if match is None:
+        raise ValueError("next.config.ts の nextConfig object を一意に読めません")
+    opening = masked.find("{", match.start(), match.end())
+    depth = 0
+    closing = None
+    for index in range(opening, len(masked)):
+        if masked[index] == "{":
+            depth += 1
+        elif masked[index] == "}":
+            depth -= 1
+            if depth == 0:
+                closing = index
+                break
+    if closing is None:
+        raise ValueError("next.config.ts の nextConfig object が閉じていません")
+    head = baseline[:closing].rstrip()
+    tail = baseline[closing:]
+    return f"{head}\n{members.rstrip()}\n{tail}"
+
+
+def reconstruct_reader_next_config(paths: list[Path]) -> str:
+    """reader baseline と教材の最終版fragmentから、その日の完全な設定を作る。"""
+    baseline = (reader_source_root() / NEXT_CONFIG_TARGET).read_text(encoding="utf-8")
+    if not reader_proof_mode():
+        # 近似モードにはCNA baselineが無い。root設定へ教材断片を混ぜて別物を作らず、
+        # 借り物のまま残す。結果記録はAPPROXIMATEなのでreader証拠にはならない。
+        return baseline
+    blocks = concat_by_file(paths).get(NEXT_CONFIG_TARGET, [])
+    if not blocks:
+        return baseline
+    version = latest_version(blocks)
+    members = render(version)
+    keys = re.findall(r"\bkey:\s*['\"]([^'\"]+)['\"]", members)
+    if tuple(keys) != DAY30_HEADER_KEYS or len(set(keys)) != len(DAY30_HEADER_KEYS):
+        raise ValueError(f"Day30のnext.config.tsは所定の6ヘッダーではありません: {keys}")
+    if "Content-Security-Policy" in members:
+        raise ValueError("Day30教材にないCSPをnext.config.tsへ入れられません")
+    masked = mask_code(members)
+    if not all(masked.count(opening) == masked.count(closing) for opening, closing in ("{}", "()", "[]")):
+        raise ValueError("Day30のnext.config.ts fragmentの括弧が閉じていません")
+    completed = _insert_next_config_members(baseline, members)
+    if completed.count("async headers()") != 1 or "export default nextConfig" not in completed:
+        raise ValueError("Day30の完全なnext.config.tsを復元できません")
+    return completed
+
+
+def reconstruct_reader_css(paths: list[Path]) -> str:
+    """Day01の完全置換と、その後の明示CSS編集だけを読者の順番で反映する。"""
+    baseline: list[str] = []
+    edits: list[tuple[str, str]] = []
+    css_target = "src/app/globals.css"
+    marker = re.compile(r"^\s*/\*\s*filepath:\s*(.*?)\s*\*/\s*$")
+    for path in sorted(paths, key=lambda item: (day_number(item.name), item.name)):
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        day = day_number(path.name)
+        current_target: str | None = None
+        css_lines: list[str] = []
+        css_open = False
+        operation = ""
+        for number, line, state, fence in fence_states(text):
+            if state == "open":
+                css_open = bool(fence and fence.lang == "css")
+                css_lines = []
+                if css_open and day != 1:
+                    current_target = None
+                before = next((item.strip() for item in reversed(lines[:number - 1]) if item.strip()), "")
+                operation = {"<!-- reader-css: append -->": "append",
+                             "<!-- reader-css: theme-inline -->": "theme-inline",
+                             "<!-- day28-edit: filter-grid-css -->": "append"}.get(before, "")
+            elif state == "inside" and css_open:
+                match = marker.fullmatch(line)
+                if match:
+                    value = match.group(1)
+                    if not re.fullmatch(r"src/app/globals\.css(?:（[^）]*）)?", value):
+                        raise ValueError(f"未対応のCSS書き込み先: {path.name}:{number}: {value}")
+                    current_target = css_target
+                else:
+                    css_lines.append(line)
+            elif state == "close" and css_open:
+                body = "\n".join(css_lines).strip()
+                if current_target != css_target or not body:
+                    raise ValueError(f"CSSの書き込み先か本文がありません: {path.name}:{number}")
+                if day == 1:
+                    baseline.append(body)
+                elif operation:
+                    edits.append((operation, body))
+                else:
+                    raise ValueError(f"CSS編集の操作が明示されていません: {path.name}:{number}")
+                css_open = False
+    css = "\n\n".join(baseline)
+    if not css.startswith('@import "tailwindcss" source("../");'):
+        raise ValueError("Day01の完全な読者CSSがありません")
+    for operation, body in edits:
+        if operation == "append":
+            css += "\n\n" + body
+        else:
+            if css.count("@theme inline {") != 1 or not re.fullmatch(r"\s*--[a-z0-9-]+:\s*[^{};]+;\s*", body):
+                raise ValueError("CSSテーマへの挿入先か宣言が一意ではありません")
+            name = body.split(":", 1)[0].strip()
+            if re.search(re.escape(name) + r"\s*:", css):
+                raise ValueError(f"CSSテーマの宣言が重複しています: {name}")
+            css = css.replace("@theme inline {", "@theme inline {\n  " + body.strip(), 1)
+    return css + "\n"
 
 
 def build_tree(day: int) -> tuple[Path, int]:
@@ -1402,7 +1651,11 @@ def build_tree(day: int) -> tuple[Path, int]:
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
-    files = copy_scaffold(dest) + apply_blocks(dest, day_sources(day))
+    paths = day_sources(day)
+    files = copy_scaffold(dest) + apply_blocks(dest, paths)
+    (dest / "src/app/globals.css").write_text(reconstruct_reader_css(paths), encoding="utf-8")
+    (dest / NEXT_CONFIG_TARGET).write_text(reconstruct_reader_next_config(paths), encoding="utf-8")
+    files += 1
     return dest, files
 
 
@@ -1453,7 +1706,13 @@ def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[st
     表示用と判定用を分けるのは、3行に切った標本で赤の理由を判定すると、
     後ろに並んだ本物の失敗が視界から落ちるため。
     """
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    effective = list(cmd)
+    if reader_proof_mode() and effective[0] == "npm":
+        effective[0] = READER_RUNTIME_INITIAL_RECEIPT["npmExecPath"]
+    proc = subprocess.run(
+        effective, cwd=cwd, env=READER_CHILD_ENV if reader_proof_mode() else None,
+        capture_output=True, text=True, check=False,
+    )
     if proc.returncode == 0:
         return True, (), ()
     pool = error_line_pool(f"{proc.stdout}\n{proc.stderr}")
@@ -1468,7 +1727,9 @@ def link_node_modules(dest: Path) -> None:
     elif modules.exists():
         shutil.rmtree(modules)
     modules.mkdir()
-    source = REPO_ROOT / "node_modules"
+    source = reader_source_root() / "node_modules"
+    if not source.is_dir():
+        raise FileNotFoundError(f"依存の基準がありません: {source}")
     for entry in source.iterdir():
         if entry.name == ".prisma":
             continue
@@ -1550,27 +1811,51 @@ def verify_tree(dest: Path) -> TreeVerification:
 def snapshot_day(day: int, verify: bool) -> DayResult:
     """1日ぶんを組んで判定する。"""
     try:
+        baseline_before = reader_baseline_receipt()
+        if (
+            reader_proof_mode()
+            and READER_BASE_INITIAL_RECEIPT is not None
+            and baseline_before["digest"] != READER_BASE_INITIAL_RECEIPT["digest"]
+        ):
+            raise ValueError(
+                "reader base が設定時から変更されました: "
+                f"configured={READER_BASE_INITIAL_RECEIPT['digest']} "
+                f"before={baseline_before['digest']}"
+            )
         input_hash = source_input_hash(day)
     except (OSError, ValueError) as e:
         error = f"ソース入力の事前ハッシュに失敗: {type(e).__name__}: {e}"
         return DayResult(
             day, 0, False, NOT_RUN, NOT_RUN, (error,),
             source_input_stable=False, source_input_error=error,
+            reader_baseline_hash=(
+                READER_BASE_INITIAL_RECEIPT["digest"]
+                if READER_BASE_INITIAL_RECEIPT is not None else None
+            ),
+            reader_baseline_stable=False,
         )
     try:
         dest, files = build_tree(day)
-    except PlacementError as e:
-        # 1ブロック1行で出す。まとめて1行にすると、画面と結果表で本と見出しが読みにくい。
-        return DayResult(
-            day, 0, False, NOT_RUN, NOT_RUN, e.lines,
-            source_input_hash=input_hash,
-        )
     except (OSError, ValueError) as e:
+        after_hash = None
+        stable = False
+        try:
+            after_hash = reader_baseline_receipt()["digest"]
+            stable = after_hash == baseline_before["digest"]
+        except (OSError, ValueError):
+            pass
         return DayResult(
             day, 0, False, NOT_RUN, NOT_RUN, (f"{type(e).__name__}: {e}",),
             source_input_hash=input_hash,
+            reader_baseline_hash=baseline_before["digest"],
+            reader_baseline_hash_after=after_hash,
+            reader_baseline_stable=stable,
+            source_input_stable=False,
         )
-    result = DayResult(day, files, True, NOT_RUN, NOT_RUN, (), source_input_hash=input_hash)
+    result = DayResult(
+        day, files, True, NOT_RUN, NOT_RUN, (), source_input_hash=input_hash,
+        reader_baseline_hash=baseline_before["digest"],
+    )
     if verify:
         try:
             verification = verify_tree(dest)
@@ -1590,6 +1875,17 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
             verification_error=verification.verification_error,
         )
     try:
+        baseline_after = reader_baseline_receipt()
+    except (OSError, ValueError) as e:
+        error = f"ソース入力の事後ハッシュに失敗: {type(e).__name__}: {e}"
+        return result._replace(
+            errors=(*result.errors, error),
+            source_input_stable=False,
+            source_input_error=error,
+            reader_baseline_stable=False,
+        )
+    baseline_stable = baseline_after["digest"] == baseline_before["digest"]
+    try:
         input_hash_after = source_input_hash(day)
     except (OSError, ValueError) as e:
         error = f"ソース入力の事後ハッシュに失敗: {type(e).__name__}: {e}"
@@ -1597,19 +1893,28 @@ def snapshot_day(day: int, verify: bool) -> DayResult:
             errors=(*result.errors, error),
             source_input_stable=False,
             source_input_error=error,
+            reader_baseline_hash_after=baseline_after["digest"],
+            reader_baseline_stable=baseline_stable,
         )
-    if input_hash_after != input_hash:
+    if input_hash_after != input_hash or not baseline_stable:
         error = (
             "再構築・検証中にソース入力が変更されました: "
-            f"before={input_hash} after={input_hash_after}"
+            f"before={input_hash} after={input_hash_after} "
+            f"readerBaseBefore={baseline_before['digest']} "
+            f"readerBaseAfter={baseline_after['digest']}"
         )
         return result._replace(
             errors=(*result.errors, error),
             source_input_hash_after=input_hash_after,
             source_input_stable=False,
             source_input_error=error,
+            reader_baseline_hash_after=baseline_after["digest"],
+            reader_baseline_stable=False,
         )
-    return result._replace(source_input_hash_after=input_hash_after)
+    return result._replace(
+        source_input_hash_after=input_hash_after,
+        reader_baseline_hash_after=baseline_after["digest"],
+    )
 
 
 def _cell(text: str) -> str:
@@ -1636,6 +1941,7 @@ def result_status(result: DayResult, verify: bool) -> str:
     """1日分を、証拠記録用の排他的な状態へ畳む。"""
     if (
         not result.source_input_stable
+        or not result.reader_baseline_stable
         or not result.tree_ok
         or result.verification_error is not None
         or result.generation == "NG"
@@ -1652,14 +1958,31 @@ def result_status(result: DayResult, verify: bool) -> str:
         return "NOT_RUN"
     if result.build == BUILD_SKIPPED:
         return "BLOCKED_ENV"
-    return "PASS"
+    return "PASS" if reader_proof_mode() else "APPROXIMATE"
 
 
 def source_input_hash(day: int) -> str:
     """その日のツリーを決める入力の名前・種類・内容をSHA-256へ畳む。"""
     digest = hashlib.sha256()
-    for path in sorted(tree_inputs(day), key=lambda item: str(item.relative_to(REPO_ROOT))):
-        relative = path.relative_to(REPO_ROOT).as_posix()
+    baseline = reader_baseline_receipt()
+    digest.update(f"reader-baseline\0{baseline['digest']}\0".encode())
+
+    def label(path: Path) -> str:
+        resolved = path.resolve()
+        roots = (
+            (("reader-base", reader_source_root().resolve()), ("repository", REPO_ROOT.resolve()))
+            if reader_proof_mode()
+            else (("repository", REPO_ROOT.resolve()),)
+        )
+        for prefix, root in roots:
+            try:
+                return f"{prefix}/{resolved.relative_to(root).as_posix()}"
+            except ValueError:
+                continue
+        raise ValueError(f"入力がrepository/reader baseの外です: {path}")
+
+    for path in sorted(set(tree_inputs(day)), key=label):
+        relative = label(path)
         kind = "directory" if path.is_dir() else "file"
         digest.update(f"{kind}\0{relative}\0".encode())
         if path.is_dir() and path != REPO_ROOT:
@@ -1686,8 +2009,9 @@ def write_run_record(
     target_days = [result.day for result in results]
     all_days = available_days()
     coverage = "full" if target_days == all_days else "partial"
+    baseline = READER_BASE_INITIAL_RECEIPT or reader_baseline_receipt()
     record = {
-        "schemaVersion": 3,
+        "schemaVersion": 4,
         "runId": run_id,
         "recordedAt": recorded_at.isoformat(),
         "command": command,
@@ -1695,6 +2019,11 @@ def write_run_record(
         "coverage": coverage,
         "targetDays": target_days,
         "availableDays": all_days,
+        "readerEvidence": {
+            "mode": baseline["mode"],
+            "proofEligible": baseline["proofEligible"],
+            "baseline": baseline,
+        },
         "days": [
             {
                 "day": result.day,
@@ -1702,6 +2031,9 @@ def write_run_record(
                 "sourceInputHash": result.source_input_hash,
                 "sourceInputHashAfter": result.source_input_hash_after,
                 "sourceInputStable": result.source_input_stable,
+                "readerBaselineHash": result.reader_baseline_hash,
+                "readerBaselineHashAfter": result.reader_baseline_hash_after,
+                "readerBaselineStable": result.reader_baseline_stable,
                 "tree": {"ok": result.tree_ok, "files": result.files},
                 "generation": result.generation,
                 "tsc": result.tsc,
@@ -1786,17 +2118,11 @@ def write_result_doc(
         for r in results
     )
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    triage = triage_section(results)
-    # 全件 OK の時は切り分けの表が無いので、表を指す文を出したら読み手を迷わせる。
-    triage_hint = (
-        "下の切り分けの表を見ること。"
-        if triage
-        else "NG の日は無いため切り分けの表はありません。"
-    )
     all_days = available_days()
     total = len(all_days)
     target_days = [result.day for result in results]
     full_run = target_days == all_days and verify
+    proof = reader_proof_mode()
     target_label = "・".join(f"day{day:02d}" for day in target_days)
     head = [
         "# Day スナップショットの検査結果",
@@ -1807,6 +2133,7 @@ def write_result_doc(
         f"- 出どころ: `{command}`（{stamp} / {len(results)} 日ぶん）",
         f"- 対象範囲: {'全件実行' if target_days == all_days else f'部分実行（{target_label}）'}",
         f"- 検証: {'要求した（各段階の実行結果は表を参照）' if verify else '実行していない（--verify なし）'}",
+        f"- 読者baseline: {'明示 reader base（実読者証拠に使用可能）' if proof else 'repository借用の近似モード（実読者証拠には使用不可）'}",
         f"- Prisma生成・tsc・build がすべて OK: {passed} / {len(results)} 日",
         f"- ツリーの置き場: `{SNAPSHOT_ROOT.relative_to(REPO_ROOT)}/dayNN/`",
         *(
@@ -1816,6 +2143,15 @@ def write_result_doc(
         ),
         "- これは教材から静的に復元したスナップショットの検査であり、",
         "  初心者が教材だけで完走できたことの証明ではない。",
+        *(
+            []
+            if proof
+            else [
+                "",
+                "> ⚠ `--reader-base` が無いため、この走行は APPROXIMATE です。",
+                "> 全日が緑でも reader PASS や販売物の承認には使えません。",
+            ]
+        ),
         *(
             []
             if full_run
@@ -1829,12 +2165,12 @@ def write_result_doc(
         ),
         "- tsc の NG は教材の欠陥とは限らない。教材がその日の `完成版` として",
         "  変更箇所の抜粋だけを出す日があり、道具はそれを丸ごとの書き直しとして扱う。",
-        f"  1件ずつ現物と突き合わせてから判断すること。{triage_hint}",
+        "  1件ずつ現物と突き合わせてから判断すること。下の切り分けの表を見ること。",
         "",
         "",
     ]
     body = "\n".join(head) + result_table(results) + "\n"
-    RESULT_DOC.write_text(body + triage, encoding="utf-8")
+    RESULT_DOC.write_text(body + triage_section(results), encoding="utf-8")
 
 
 
@@ -2009,6 +2345,25 @@ def triage_build_results(results: list[DayResult]) -> list[DayResult]:
 
 def main(argv: list[str]) -> int:
     args = argv[1:]
+    reader_base: Path | None = None
+    if "--reader-base" in args:
+        positions = [index for index, value in enumerate(args) if value == "--reader-base"]
+        if len(positions) != 1 or positions[0] + 1 >= len(args):
+            print(f"❌ --reader-base にはディレクトリが要ります\n{USAGE}", file=sys.stderr)
+            return 2
+        position = positions[0]
+        reader_base = Path(args[position + 1])
+        args = args[:position] + args[position + 2:]
+    try:
+        configure_reader_base(reader_base)
+    except (OSError, ValueError) as error:
+        print(f"❌ reader base を使えません: {error}\n{USAGE}", file=sys.stderr)
+        return 2
+    if not reader_proof_mode():
+        print(
+            "⚠ --reader-base 未指定: repository借用の近似モードです。reader PASSは発行しません。",
+            file=sys.stderr,
+        )
     verify = "--verify" in args
     rest = [a for a in args if a != "--verify"]
     day: int | None = None
@@ -2073,6 +2428,12 @@ def main(argv: list[str]) -> int:
         )
         print("   この走行は build を検証していません。DB のある機械で流し直してください")
         return 1
+    if not reader_proof_mode():
+        print(
+            f"⚠ {len(results)} 日ぶんを近似モードで組み立てました。"
+            "reader PASSや販売物の承認には使えません"
+        )
+        return 0
     print(f"✅ {len(results)} 日ぶんを組み立てました")
     return 0
 

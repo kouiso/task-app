@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -15,6 +18,7 @@ import { Separator } from '@/component/ui/separator';
 import { getPriorityBadgeVariant } from '@/lib/badge-variant';
 import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
 import { formatDateOnly } from '@/lib/date';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 import { StatusBadge } from './status-badge';
 
@@ -22,13 +26,36 @@ type TaskDetailDialogProps = {
   open: boolean;
   taskId: string | null;
   onClose: () => void;
+  onAuthExpired?: () => void;
 };
 
-export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProps) {
-  const { data: taskDetail } = api.task.getById.useQuery(
+export function TaskDetailDialog({ open, taskId, onClose, onAuthExpired }: TaskDetailDialogProps) {
+  const [authExpired, setAuthExpired] = useState(false);
+  const {
+    data: cachedTask,
+    error: taskError,
+    failureReason: taskFailure,
+    isFetching,
+    refetch,
+  } = api.task.getById.useQuery(
     { id: taskId ?? '' },
-    { enabled: !!taskId },
+    {
+      enabled: open && !!taskId && !authExpired,
+      retry: (count, error) => httpStatusOf(error) !== 404 && shouldRetryQuery(count, error),
+    },
   );
+  const readError = taskError ?? taskFailure;
+  const queryAuthFailed = [taskError, taskFailure].some(isAuthError);
+  const needsLogin = authExpired || queryAuthFailed;
+  const forbidden = [taskError, taskFailure].some(isForbiddenError);
+  const notFound = [taskError, taskFailure].some((error) => httpStatusOf(error) === 404);
+  const taskDetail = needsLogin || forbidden || notFound ? undefined : cachedTask;
+
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    setAuthExpired(true);
+    onAuthExpired?.();
+  }, [queryAuthFailed, onAuthExpired]);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -42,6 +69,32 @@ export function TaskDetailDialog({ open, taskId, onClose }: TaskDetailDialogProp
             <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
           </DialogDescription>
         </DialogHeader>
+
+        {needsLogin ? (
+          <div role="alert" className="space-y-3">
+            <p>ログインの有効期限が切れました。もう一度ログインしてください。</p>
+            <Button asChild>
+              <Link href="/login">ログイン画面へ</Link>
+            </Button>
+          </div>
+        ) : forbidden ? (
+          <p role="alert">このタスクを表示する権限がありません。</p>
+        ) : notFound ? (
+          <p role="alert">タスクが見つかりません。削除された可能性があります。</p>
+        ) : readError ? (
+          <div role="alert" className="space-y-3">
+            <p>
+              {taskDetail
+                ? '最新のタスク情報を取得できませんでした。前回の内容を表示しています。'
+                : 'タスク情報を取得できませんでした。'}
+            </p>
+            <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
+              {isFetching ? '再取得中...' : '再試行'}
+            </Button>
+          </div>
+        ) : !taskDetail ? (
+          <p role="status">タスク情報を読み込んでいます...</p>
+        ) : null}
 
         {taskDetail && (
           <div className="space-y-6">

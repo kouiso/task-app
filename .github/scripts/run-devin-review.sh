@@ -5,12 +5,7 @@ set -euo pipefail
 
 : "${DEVIN_PROMPT:?DEVIN_PROMPT is required}"
 OUTPUT_FILE="${DEVIN_OUTPUT_FILE:-devin-review.md}"
-# DEVIN_MODEL を設定するとそのモデルで起動（例: swe-2-max）。
-# 未設定なら --model を付けない。Devin 側（org/plan）のデフォルトが使われる。
-MODEL_ARGS=()
-if [ -n "${DEVIN_MODEL:-}" ]; then
-  MODEL_ARGS+=(--model "${DEVIN_MODEL}")
-fi
+MODEL="${DEVIN_MODEL:-swe-1-7}"
 
 if ! command -v devin >/dev/null 2>&1; then
   # curl の出力を直接 bash に流すと、取得したものが何か確認できないまま実行することになる。
@@ -51,7 +46,7 @@ export GH_CONFIG_DIR GH_TOKEN="" GITHUB_TOKEN=""
 # --permission-mode auto / smart は print モードで確認待ちのまま止まる。
 # --sandbox / autonomous は RITMO の org ポリシーで塞がれている。
 devin --respect-workspace-trust false \
-  "${MODEL_ARGS[@]}" \
+  --model "${MODEL}" \
   --permission-mode dangerous \
   --prompt-file "${PROMPT_FILE}" \
   -p | tee "${OUTPUT_FILE}"

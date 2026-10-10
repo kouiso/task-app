@@ -19,6 +19,7 @@ import contextlib
 import inspect
 import io
 import json
+import os
 import re
 import shutil
 import sys
@@ -77,6 +78,283 @@ def check_block_selection() -> list[str]:
         days = [b.day for b in by_file.get("src/app/page.tsx", [])]
         if days != [1, 2, 2]:
             fails.append(f"❌ 同じ書き込み先が day 順に集まっていない: {days}")
+    return fails
+
+
+def _write_reader_base(root: Path) -> None:
+    """実物の buyer base と同じ境界だけを持つ小さい fixture を置く。"""
+    files = {
+        ".node-version": "22.22.2\n",
+        ".mise.toml": '[tools]\nnode = "22.22.2"\n',
+        ".env.example": "DATABASE_URL=postgresql://reader.invalid/db\n",
+        "package.json": '{"name":"reader","version":"0.1.0","engines":{"node":">=22.12.0 <23"},"scripts":{"build":"next build"}}\n',
+        "package-lock.json": '{"name":"reader","version":"0.1.0","lockfileVersion":3,"packages":{"":{"name":"reader","version":"0.1.0","engines":{"node":">=22.12.0 <23"}}}}\n',
+        "tsconfig.json": '{"compilerOptions":{"strict":true},"include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],"exclude":["node_modules"]}\n',
+        "next.config.ts": (
+            'import type { NextConfig } from "next";\n\n'
+            "const nextConfig: NextConfig = {\n"
+            "  /* config options here */\n"
+            "};\n\n"
+            "export default nextConfig;\n"
+        ),
+        "postcss.config.mjs": (
+            "const config = { plugins: [\"@tailwindcss/postcss\"] };\n"
+            "export default config;\n"
+        ),
+        "next-env.d.ts": (
+            '/// <reference types="next" />\n'
+            '/// <reference types="next/image-types/global" />\n'
+            'import "./.next/types/routes.d.ts";\n'
+        ),
+    }
+    for relative, body in files.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+    for relative, source in target.scaffold_copies():
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    modules = root / "node_modules"
+    (modules / "typescript").mkdir(parents=True)
+    (modules / "typescript" / "package.json").write_text('{"name":"typescript","version":"5.9.3"}\n')
+    (modules / "@prisma" / "client").mkdir(parents=True)
+    (modules / "@prisma" / "client" / "package.json").write_text('{"name":"@prisma/client"}\n')
+    (modules / ".prisma" / "client").mkdir(parents=True)
+    (modules / ".prisma" / "client" / "schema.prisma").write_text("root-generated\n")
+    (modules / ".package-lock.json").write_text('{"lockfileVersion":3,"packages":{}}\n')
+
+
+NEXT_CONFIG_DAY30 = (
+    "```typescript\n"
+    "// filepath: next.config.ts\n"
+    "// 完成版: ヘッダー設定の開始部分\n"
+    "  async headers() {\n"
+    "    return [\n"
+    "      {\n"
+    "        source: '/(.*)',\n"
+    "        headers: [\n"
+    "          { key: 'X-Frame-Options', value: 'DENY' },\n"
+    "          { key: 'X-Content-Type-Options', value: 'nosniff' },\n"
+    "          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },\n"
+    "```\n"
+    "```typescript\n"
+    "// filepath: next.config.ts（同じファイルの続き）\n"
+    "// 完成版: 通信と権限のヘッダーと閉じかっこ\n"
+    "          { key: 'Strict-Transport-Security', value: 'max-age=63072000' },\n"
+    "          { key: 'Permissions-Policy', value: 'camera=()' },\n"
+    "          { key: 'X-DNS-Prefetch-Control', value: 'off' },\n"
+    "        ],\n"
+    "      },\n"
+    "    ];\n"
+    "  },\n"
+    "```\n"
+)
+
+
+def check_reader_baseline_provenance() -> list[str]:
+    """proof mode が実 reader base だけを複写・監視し、近似走行をPASSにしないこと。"""
+    fails = []
+    required = (
+        "configure_reader_base", "reader_baseline_receipt", "copy_reader_baseline",
+        "reconstruct_reader_next_config", "reader_proof_mode",
+    )
+    missing = [name for name in required if not hasattr(target, name)]
+    if missing:
+        return [f"❌ reader base API が無い: {', '.join(missing)}"]
+    original_base = getattr(target, "READER_BASE", None)
+    original_snapshot_root = target.SNAPSHOT_ROOT
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "buyer-base"
+            base.mkdir()
+            _write_reader_base(base)
+            target.configure_reader_base(base)
+            if not target.reader_proof_mode():
+                fails.append("❌ 明示 reader base が proof mode にならない")
+
+            first = target.reader_baseline_receipt()
+            if first["mode"] != "reader-base" or first["source"] != str(base.resolve()):
+                fails.append("❌ receipt に reader base の実体が無い")
+            if first["postcssConfig"] != "postcss.config.mjs":
+                fails.append("❌ PostCSS の実拡張子を記録していない")
+            if first["nodeModules"]["source"] != str((base / "node_modules").resolve()):
+                fails.append("❌ dependency source が reader base でない")
+
+            copied = root / "copied"
+            copied.mkdir()
+            target.copy_reader_baseline(copied)
+            for relative in (
+                ".node-version", ".mise.toml", ".env.example", "package.json",
+                "package-lock.json", "tsconfig.json", "next.config.ts",
+                "postcss.config.mjs", "next-env.d.ts",
+            ):
+                if (copied / relative).read_bytes() != (base / relative).read_bytes():
+                    fails.append(f"❌ reader config を正確に複写していない: {relative}")
+            if (copied / "postcss.config.js").exists() or (copied / "tailwind.config.js").exists():
+                fails.append("❌ reader に無い root 設定を持ち込んでいる")
+
+            before = first["digest"]
+            package = base / "package.json"
+            package.write_text(package.read_text() + " ", encoding="utf-8")
+            if target.reader_baseline_receipt()["digest"] == before:
+                fails.append("❌ baseline config の変更が receipt に出ない")
+            package.write_text('{"name":"reader","version":"0.1.0","engines":{"node":">=22.12.0 <23"},"scripts":{"build":"next build"}}\n')
+            before_modules = target.reader_baseline_receipt()["digest"]
+            (base / "node_modules" / "typescript" / "new-file.js").write_text("x\n")
+            if target.reader_baseline_receipt()["digest"] == before_modules:
+                fails.append("❌ node_modules inventory の変更が receipt に出ない")
+            scaffold_source = base / target.scaffold_copies()[0][0]
+            before_scaffold_metadata = target.reader_baseline_receipt()["digest"]
+            stat = scaffold_source.stat()
+            os.utime(scaffold_source, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1))
+            if target.reader_baseline_receipt()["digest"] == before_scaffold_metadata:
+                fails.append("❌ scaffold metadata の変更が receipt に出ない")
+
+            day29 = root / "day29.md"
+            day29.write_text("# no config change\n", encoding="utf-8")
+            day30 = root / "day30.md"
+            day30.write_text(NEXT_CONFIG_DAY30, encoding="utf-8")
+            untouched = target.reconstruct_reader_next_config([day29])
+            if untouched != (base / "next.config.ts").read_text(encoding="utf-8"):
+                fails.append("❌ Day29以前の next config が baseline と一致しない")
+            completed = target.reconstruct_reader_next_config([day29, day30])
+            keys = re.findall(r"key:\s*['\"]([^'\"]+)", completed)
+            if len(keys) != 6 or len(set(keys)) != 6:
+                fails.append(f"❌ Day30 が6ヘッダーでない: {keys}")
+            if "Content-Security-Policy" in completed:
+                fails.append("❌ 教材に無いCSPをDay30へ持ち込んでいる")
+            if "export default nextConfig" not in completed or completed.count("async headers()") != 1:
+                fails.append("❌ Day30 の fragment を完全な next.config.ts へ復元していない")
+            passing = target.DayResult(1, 1, True, "OK", "OK", (), generation="OK")
+            if target.result_status(passing, True) != "PASS":
+                fails.append("❌ 明示 reader base の成功がPASSにならない")
+
+            dep_dest = root / "deps"
+            dep_dest.mkdir()
+            target.link_node_modules(dep_dest)
+            local = dep_dest / "node_modules"
+            if (local / ".prisma").exists():
+                fails.append("❌ reader base の生成済み Prisma を再利用している")
+            if (local / "@prisma" / "client").is_symlink():
+                fails.append("❌ @prisma/client を reader base へ書き戻せる symlink にしている")
+            if not (local / "typescript").is_symlink() or (local / "typescript").resolve() != (base / "node_modules" / "typescript").resolve():
+                fails.append("❌ 一般依存のリンク元が reader base でない")
+
+            target.configure_reader_base(None)
+            if target.reader_proof_mode():
+                fails.append("❌ reader base 未指定が proof mode になっている")
+            if target.result_status(passing, True) == "PASS":
+                fails.append("❌ 近似モードが reader PASS を発行している")
+
+            # 不完全・root policy 混入・曖昧な PostCSS は fail closed。
+            bad = root / "bad-base"
+            shutil.copytree(base, bad)
+            (bad / "next-env.d.ts").unlink()
+            try:
+                target.configure_reader_base(bad)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ next-env.d.ts が無い base を受け入れている")
+            policy = root / "policy-base"
+            shutil.copytree(base, policy)
+            (policy / ".npmrc").write_text("engine-strict=true\n")
+            try:
+                target.configure_reader_base(policy)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ buyer に無い .npmrc policy を proof mode へ混ぜている")
+            ambiguous = root / "ambiguous-base"
+            shutil.copytree(base, ambiguous)
+            (ambiguous / "postcss.config.js").write_text("module.exports = {}\n")
+            try:
+                target.configure_reader_base(ambiguous)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ PostCSS config が2本ある base を受け入れている")
+            linked_base = root / "linked-base"
+            linked_base.symlink_to(base, target_is_directory=True)
+            try:
+                target.configure_reader_base(linked_base)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ symlink の reader base を受け入れている")
+            linked_postcss = root / "linked-postcss-base"
+            shutil.copytree(base, linked_postcss)
+            (linked_postcss / "postcss.config.mjs").unlink()
+            (linked_postcss / "postcss.config.mjs").symlink_to(
+                base / "postcss.config.mjs"
+            )
+            try:
+                target.configure_reader_base(linked_postcss)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ symlink の PostCSS config を受け入れている")
+            linked_dependency = root / "linked-dependency-base"
+            shutil.copytree(base, linked_dependency)
+            external_dependency = root / "external-dependency"
+            external_dependency.mkdir()
+            (linked_dependency / "node_modules" / "external-package").symlink_to(
+                external_dependency, target_is_directory=True
+            )
+            try:
+                target.configure_reader_base(linked_dependency)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ reader base 外の dependency symlink を受け入れている")
+            linked_scaffold = root / "linked-scaffold-base"
+            shutil.copytree(base, linked_scaffold)
+            scaffold_relative = target.scaffold_copies()[0][0]
+            scaffold_path = linked_scaffold / scaffold_relative
+            scaffold_path.unlink()
+            scaffold_path.symlink_to(base / scaffold_relative)
+            try:
+                target.configure_reader_base(linked_scaffold)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ reader base 外を指す scaffold symlink を受け入れている")
+            stale = root / "stale-lock-base"
+            shutil.copytree(base, stale)
+            (stale / "package.json").write_text(
+                '{"name":"final-name","version":"0.1.0","scripts":{"build":"next build"}}\n'
+            )
+            try:
+                target.configure_reader_base(stale)
+            except ValueError:
+                pass
+            else:
+                fails.append("❌ one-shot後に古いlock root metadataを受け入れている")
+            volatile = root / "volatile-base"
+            shutil.copytree(base, volatile)
+            target.configure_reader_base(volatile)
+            configured_digest = target.READER_BASE_INITIAL_RECEIPT["digest"]
+            (volatile / "postcss.config.mjs").unlink()
+            target.SNAPSHOT_ROOT = root / "volatile-records"
+            failed_result = target.DayResult(
+                1, 0, False, target.NOT_RUN, target.NOT_RUN,
+                ("reader base disappeared",), source_input_stable=False,
+                reader_baseline_hash=configured_digest,
+                reader_baseline_stable=False,
+            )
+            try:
+                record_path = target.write_run_record([failed_result], False)
+            except (OSError, ValueError) as error:
+                fails.append(f"❌ 走行中に消えた reader base の失敗記録を書けない: {error}")
+            else:
+                record = json.loads(record_path.read_text(encoding="utf-8"))
+                if record["readerEvidence"]["baseline"]["digest"] != configured_digest:
+                    fails.append("❌ 失敗記録が設定時の reader receipt を保持していない")
+    finally:
+        target.SNAPSHOT_ROOT = original_snapshot_root
+        target.configure_reader_base(original_base)
     return fails
 
 
@@ -422,346 +700,6 @@ def check_insertion() -> list[str]:
     return fails
 
 
-def expect_placement_error(label: str, run: object, wants: tuple[str, ...]) -> list[str]:
-    """run() が注記どおりに貼れんことを理由に止まり、その文に wants が全部出ることを確かめる。
-
-    ValueError で受ける。止まらん古い道具ではここへ来ず、else の側で落ちる。
-    """
-    assert callable(run)
-    try:
-        got = run()
-    except ValueError as error:
-        message = str(error)
-        return [f"❌ {label}: 止めた理由に {want} が無い: {message}" for want in wants if want not in message]
-    return [f"❌ {label}: 黙って飛ばした: {got!r}"]
-
-
-def check_placement_note_failure() -> list[str]:
-    """貼る位置の注記どおりに当てられんブロックを飛ばさず、本・見出し・注記を名指しして止まる。
-
-    飛ばすとツリーは前の日のコードのまま型検査と build を通る。写経の再現検査は緑のまま、
-    その日の変更を1行も見なくなる（day28 の見出し行とボタン4ブロックがこれで、
-    Day 28〜30 のツリーは Day 15 の見出しのまま通っとった）。
-    """
-    fails: list[str] = []
-    base = blk(15, "", "export const taskRouter = createTRPCRouter({", "  delete: x,", "});")
-    unreadable = blk(28, "（ボタンの並びの右端に追加）", "  bulkDelete: z,")
-    fails += expect_placement_error(
-        "読めない注記",
-        lambda: target.apply_insertions(target.render([base]), [base, unreadable], 15),
-        ("（ボタンの並びの右端に追加）", "day28_x.md"),
-    )
-    # 読める注記でも、指す場所が今のファイルに無ければ止まる。
-    missing = blk(28, "（notThere の直後に追加）", "  bulkDelete: z,")
-    fails += expect_placement_error(
-        "指す場所の無い注記",
-        lambda: target.apply_insertions(target.render([base]), [base, missing], 15),
-        ("（notThere の直後に追加）",),
-    )
-
-    # 続きの注記は先頭と一緒に当たる。写させん注記は当てずに通す。どちらでも止めない。
-    quiet = [
-        base,
-        blk(28, "（delete の直後に追加）", "  bulkComplete: protectedProcedure"),
-        blk(28, "（同じファイルの続き）", "    .mutation(async () => {}),"),
-        blk(28, "（一時的に足す行）", "console.log('確認用');"),
-    ]
-    try:
-        merged = target.apply_insertions(target.render([base]), quiet, 15)
-    except ValueError as error:
-        fails.append(f"❌ 続きの注記か写させん注記で止まっている: {error}")
-    else:
-        if ".mutation(async () => {})," not in merged:
-            fails.append(f"❌ 続きの注記が先頭と一緒に当たっていない: {merged!r}")
-        if "console.log" in merged:
-            fails.append(f"❌ 一時的な行まで当てている: {merged!r}")
-
-    with tempfile.TemporaryDirectory() as d:
-        root = Path(d) / "material"
-        root.mkdir()
-        (root / "day15_基準.md").write_text(
-            block("src/server/api/routers/task.ts", "\n".join(base.lines)), encoding="utf-8"
-        )
-        dest = Path(d) / "tree"
-        dest.mkdir()
-        # ツリーを組む経路では、本と直前の見出しまで名指しする。
-        day28 = root / "day28_一括操作.md"
-        day28.write_text(
-            "## 今日の流れ\n\n### Step 6: 一括完了を実装する\n\n"
-            + block("src/server/api/routers/task.ts（ボタンの並びの右端に追加）", "  bulkDelete: z,"),
-            encoding="utf-8",
-        )
-        fails += expect_placement_error(
-            "ツリーを組む経路",
-            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
-            ("day28_一括操作.md", "Step 6: 一括完了を実装する", "（ボタンの並びの右端に追加）"),
-        )
-        # 注記を書き込み先から切り離せんと、注記ごとの名前の別ファイルへ入って本来の
-        # ファイルには何も入らん。ASCII の括弧の中の `/` がこれになる。
-        day28.write_text(
-            "### Step 5: 見出しを書き直す\n\n"
-            + block("src/server/api/routers/task.ts(</Button> の前に追加)", "  bulkDelete: z,"),
-            encoding="utf-8",
-        )
-        fails += expect_placement_error(
-            "書き込み先に残った注記",
-            lambda: target.apply_blocks(dest, sorted(root.glob("day*.md"))),
-            ("day28_一括操作.md", "Step 5: 見出しを書き直す", "</Button> の前に追加"),
-        )
-        if any(p.name.endswith(")") for p in dest.rglob("*")):
-            fails.append("❌ 注記ごとの名前の別ファイルをツリーへ置いている")
-
-    fails += check_placement_failure_exits_nonzero()
-    return fails
-
-
-def check_placement_failure_exits_nonzero() -> list[str]:
-    """貼れんブロックのある日は、ツリー NG として exit 1 で終わり、理由を1行ずつ出す。"""
-    fails: list[str] = []
-    saved = {
-        name: getattr(target, name)
-        for name in (
-            "REPO_ROOT", "SNAPSHOT_ROOT", "RESULT_DOC",
-            "available_days", "build_tree", "source_input_hash",
-        )
-    }
-    problem_block = target.Block(28, "day28_x.md", 881, "src/app/task/page.tsx", "（右端に追加）", "tsx", ())
-    placement_error = getattr(target, "PlacementError", None)
-    if placement_error is None:
-        return ["❌ 貼れんブロックを知らせる PlacementError が無い"]
-
-    def fake_build(_day: int) -> tuple[Path, int]:
-        raise placement_error([target.PlacementProblem(problem_block, "読めません")])
-
-    try:
-        with tempfile.TemporaryDirectory() as directory:
-            target.REPO_ROOT = Path(directory)
-            target.SNAPSHOT_ROOT = target.REPO_ROOT / "dist" / "day-snapshots"
-            target.RESULT_DOC = target.REPO_ROOT / "doc" / "result.md"
-            target.available_days = lambda: [28]
-            target.build_tree = fake_build
-            target.source_input_hash = lambda _day: "hash"
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-                code = target.main(["build_day_snapshots.py", "--day", "28"])
-            if code != 1:
-                fails.append(f"❌ 貼れんブロックのある日で exit {code} を返した")
-            if "day28_x.md 881行目 src/app/task/page.tsx（右端に追加）: 読めません" not in out.getvalue():
-                fails.append(f"❌ 画面に本・行・注記・理由が出ていない:\n{out.getvalue()}")
-    finally:
-        for name, value in saved.items():
-            setattr(target, name, value)
-    return fails
-
-
-# Day 27 を終えた読者の一覧画面の見出しまわり。day15 の形のまま、見出しと新規タスクボタンが
-# 縦に並ぶ列の直下にある。ボタンの開始タグは3行に折り返してある。
-PAGE_BEFORE_HEADER = """export default function TaskPage() {
-  return (
-      <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold
-          tracking-tight">
-          タスク
-        </h1>
-        <Button size="sm"
-          className="w-full sm:w-auto"
-          onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          新規タスク
-        </Button>
-        <div className="flex gap-2 w-full">
-          <Button onClick={handleReset}>リセット</Button>
-        </div>
-      </div>
-  );
-}"""
-
-# day28 Step 5 の書き直し。見出しとボタンを1つの行へ包み、Step 6〜8 用の目印を置く。
-HEADER_REWRITE = (
-    '<div className="flex flex-col gap-3 lg:flex-row">',
-    '  <h1 className="text-3xl font-bold tracking-tight">タスク</h1>',
-    '  <div className="flex flex-col gap-2 sm:flex-row">',
-    "    {selectedTaskList.length > 0 && (",
-    "      <>",
-    "        {/* ここにStep 6〜8でボタンを追加していく */}",
-    "      </>",
-    "    )}",
-    '    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>',
-    '      <Plus className="mr-2 h-4 w-4" /> 新規タスク',
-    "    </Button>",
-    "  </div>",
-    "</div>",
-)
-SPAN_TO_CLOSING = "（<h1 className=\"text-3xl font-bold から「新規タスク」の </Button> までを書き直す）"
-AT_PLACEHOLDER = "（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加）"
-
-
-def check_quoted_note_forms() -> list[str]:
-    """day28 の2つの注記の形を読んで当てる。
-
-    どちらも読者が画面とコードで見つけられる目印を「」で名指しする。
-    - Step 5: `A から「新規タスク」の </Button> までを書き直す`。終わりを開始タグの行の
-      文字列（`onClick={handleCreate}>`）で指すと、読者はそこで切って `</Button>` を残す。
-    - Step 6〜8: `…「ここにStep 6〜8でボタンを追加していく」の位置に追加`。Step 5 が置いた
-      目印のコメントの位置へ足す。
-    """
-    fails: list[str] = []
-
-    # 注記の中の `</Button>` の `/` で、書き込み先から切り離せなくならない。
-    with tempfile.TemporaryDirectory() as d:
-        book = Path(d) / "day28_x.md"
-        book.write_text(block(f"src/app/task/page.tsx{SPAN_TO_CLOSING}", "<div />"), encoding="utf-8")
-        by_file = concat_by_file([book])
-        got = [(t, [b.note for b in bs]) for t, bs in by_file.items()]
-        if got != [("src/app/task/page.tsx", [SPAN_TO_CLOSING])]:
-            fails.append(f"❌ 全角の括弧の中の / で注記を切り離せていない: {got}")
-
-    span = target.REWRITE_SPAN_NOTE.match(SPAN_TO_CLOSING)
-    if span is None:
-        return fails + ["❌ 範囲の書き直しの注記として読めていない"]
-    out = target.rewrite_span(PAGE_BEFORE_HEADER, span.group(1), span.group(2), "\n".join(HEADER_REWRITE))
-    if out is None:
-        fails.append("❌ 「新規タスク」の </Button> までを書き直せていない")
-    else:
-        if "tracking-tight\">\n" in out or out.count("新規タスク") != 1:
-            fails.append(f"❌ 書き直す前の見出しかボタンが残っている: {out!r}")
-        if "handleReset" not in out or out.count("</Button>") != 2:
-            fails.append(f"❌ 書き直しが後ろの要素まで飲み込んでいる: {out!r}")
-    # 範囲の中に同じ文字が2つあると、どちらのボタンか決められないので触らない。
-    doubled = PAGE_BEFORE_HEADER.replace("リセット", "新規タスク")
-    if target.rewrite_span(doubled, span.group(1), span.group(2), "x") is not None:
-        fails.append("❌ 「」の文字が2つ当たるのに書き直している")
-
-    position_note = getattr(target, "POSITION_NOTE", None)
-    if position_note is None or position_note.match(AT_PLACEHOLDER) is None:
-        fails.append("❌ 目印の位置へ足す注記として読めていない")
-    elif position_note.match("（同じファイルの続き）"):
-        fails.append("❌ 続きの注記を目印の位置へ足す注記として読んでいる")
-
-    # Day 27 の版へ Step 5〜7 を順に当てる。ボタンは Step の順で目印の上へ積み、目印は残す。
-    blocks = [
-        blk(15, "", *PAGE_BEFORE_HEADER.split("\n")),
-        blk(28, SPAN_TO_CLOSING, *HEADER_REWRITE),
-        blk(28, AT_PLACEHOLDER, "{/* 完了にする */}", "<Button onClick={handleBulkComplete}>完了にする</Button>"),
-        blk(28, AT_PLACEHOLDER, "<Button onClick={handleBulkDelete}>削除</Button>"),
-    ]
-    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
-    try:
-        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
-    except ValueError as error:
-        return fails + [f"❌ day28 の注記の形で止まっている: {error}"]
-    order = [merged.find(s) for s in ("完了にする</Button>", "削除</Button>", "ここにStep 6〜8で", "新規タスク")]
-    if -1 in order or order != sorted(order):
-        fails.append(f"❌ ボタンが Step の順で目印の上に並んでいない: {merged!r}")
-
-    # 目印が無ければ（Step 5 を当てられんかった等）、足さずに止まる。
-    orphan = [blocks[0], blocks[2]]
-    fails += expect_placement_error(
-        "目印の無い位置へ足す注記",
-        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
-        (AT_PLACEHOLDER,),
-    )
-    return fails
-
-
-PAGE_BEFORE_SELECT_ALL = """export default function TaskPage() {
-const isAllSelected =
-  selectableTasks.length > 0
-  && selectedTaskList.length
-    === selectableTasks.length;
-  return (
-    <div>
-<div className="flex items-center space-x-2">
-  <Checkbox
-    id="select-all"
-    checked={isAllSelected}
-    onCheckedChange={(checked) =>
-      handleSelectAll(checked === true)
-    }
-  />
-</div>
-          <Checkbox
-            checked={selectedTasks.has(task.id)}
-          />
-        <DeleteConfirmDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          isPending={deleteMutation.isPending}
-        />
-    </div>
-  );
-}"""
-SELECT_ALL_STATE = (
-    "// isAllSelected を削除して、以下に置き換える",
-    "const selectAllState =",
-    "  selectedTaskList.length === 0 ? false : 'indeterminate';",
-)
-SELECT_ALL_CHECKBOX = (
-    "{/* Step 3 で書いた Checkbox の checked を差し替える */}",
-    "<Checkbox",
-    '  id="select-all"',
-    "  checked={selectAllState}",
-    "/>",
-)
-BULK_DIALOG = (
-    "{/* 確認ダイアログ（JSXの末尾に配置） */}",
-    "<DeleteConfirmDialog",
-    "  open={bulkDeleteDialogOpen}",
-    "  onOpenChange={setBulkDeleteDialogOpen}",
-    "/>",
-)
-DECL_REWRITE = "（isAllSelected の宣言を書き直す）"
-INNER_MARK_REWRITE = '（id="select-all" の要素を書き直す）'
-AFTER_ELEMENT = "（open={deleteDialogOpen} の要素の直後に追加）"
-
-
-def check_element_anchored_notes() -> list[str]:
-    """day28 Step 4 と Step 7 の3つの注記を読んで当てる。
-
-    どれも注記が無いと、組み立て側が別の物を書き換えるか黙って飛ばす。
-    - Step 4 の `selectAllState`: 名前が変わるので宣言の書き直しに当たらず、新しい宣言として
-      足されて `isAllSelected` が残る。Biome の noUnusedVariables で赤になる。
-    - Step 4 の全選択チェックボックス: `<Checkbox` が一覧の側にもあるので名前では決まらず、
-      黙って飛ばされて `checked={isAllSelected}` のまま残る。目印の `id="select-all"` は
-      開始タグの2行目にあるので、そこからタグの頭まで遡らんと要素を指せん。
-    - Step 7 の一括削除ダイアログ: `<DeleteConfirmDialog` が1つしか無いので、注記が無いと
-      Day 15 の1件削除のダイアログを書き換えてまう。1件削除のボタンを押しても何も開かん画面になる。
-    """
-    fails: list[str] = []
-    decl = getattr(target, "REWRITE_DECL_NOTE", None)
-    if decl is None or decl.match(DECL_REWRITE) is None:
-        fails.append("❌ 宣言の書き直しの注記として読めていない")
-    blocks = [
-        blk(15, "", *PAGE_BEFORE_SELECT_ALL.split("\n")),
-        blk(28, DECL_REWRITE, *SELECT_ALL_STATE),
-        blk(28, INNER_MARK_REWRITE, *SELECT_ALL_CHECKBOX),
-        blk(28, AFTER_ELEMENT, *BULK_DIALOG),
-        # `完成版` 側の同じダイアログ。ダイアログが2つになった後は名前で決まらんので当てない。
-        blk(28, "", "{/* 完成版: 削除確認ダイアログ */}", *BULK_DIALOG[1:]),
-    ]
-    blocks = [b._replace(lineno=n) for n, b in enumerate(blocks, 1)]
-    try:
-        merged = target.apply_insertions(target.render(blocks[:1]), blocks, 15)
-    except ValueError as error:
-        return fails + [f"❌ day28 Step 4・7 の注記で止まっている: {error}"]
-    if "const isAllSelected" in merged or merged.count("const selectAllState") != 1:
-        fails.append(f"❌ isAllSelected の宣言が selectAllState へ書き直されていない: {merged!r}")
-    if "checked={selectAllState}" not in merged or "checked={selectedTasks.has(task.id)}" not in merged:
-        fails.append(f"❌ 全選択のチェックボックスだけを書き直せていない: {merged!r}")
-    order = [merged.find(s) for s in ("open={deleteDialogOpen}", "open={bulkDeleteDialogOpen}", "    </div>\n  );")]
-    if -1 in order or order != sorted(order) or merged.count("<DeleteConfirmDialog") != 2:
-        fails.append(f"❌ 一括削除のダイアログが1件削除のダイアログの後ろに足されていない: {merged!r}")
-
-    # 目印が開始タグのどの行にも無ければ、足さずに止まる。
-    orphan = [blocks[0], blk(28, "（open={missing} の要素の直後に追加）", *BULK_DIALOG)._replace(lineno=9)]
-    fails += expect_placement_error(
-        "目印の無い要素の後ろへ足す注記",
-        lambda: target.apply_insertions(target.render(orphan[:1]), orphan, 15),
-        ("（open={missing} の要素の直後に追加）",),
-    )
-    return fails
-
-
 PAGE_WITH_DIALOG = """export default function TaskPage() {
   const canEditProject = () => true;
   return (
@@ -945,8 +883,10 @@ def check_provenance() -> list[str]:
         fails.append(f"❌ 通し走行に出どころが無い: {whole[:160]!r}")
     if "UTC" not in whole:
         fails.append("❌ いつ出したかが書かれていない")
-    if "⚠" in whole:
+    if "この結果は全" in whole:
         fails.append("❌ 通し走行なのに部分走行の警告が出ている")
+    if "APPROXIMATE" not in whole or "reader PASS" not in whole:
+        fails.append("❌ reader base 未指定の通し走行が近似だと明記していない")
     if "対象範囲: 全件実行" not in whole:
         fails.append("❌ 通し走行が全件実行と明記されていない")
     if "初心者が教材だけで完走できたことの証明ではない" not in whole:
@@ -1151,6 +1091,8 @@ def check_source_input_stability() -> list[str]:
             before_failure = target.snapshot_day(1, False)
             if target.result_status(before_failure, False) != "FAIL":
                 fails.append("❌ 事前ハッシュ失敗をFAILにしていない")
+            if before_failure.reader_baseline_stable or before_failure.reader_baseline_hash_after is not None:
+                fails.append("❌ 事前失敗で未検証baselineをstable扱いしている")
 
             calls = 0
 
@@ -1167,6 +1109,8 @@ def check_source_input_stability() -> list[str]:
                 fails.append("❌ 事後ハッシュ失敗をFAILにしていない")
             if after_failure.source_input_hash != "stable-before":
                 fails.append("❌ 事後ハッシュ失敗時に検査対象の事前ハッシュを失った")
+            if not after_failure.reader_baseline_stable or after_failure.reader_baseline_hash_after is None:
+                fails.append("❌ 事後ハッシュ失敗時に実測済みbaseline一致を失った")
 
             target.source_input_hash = original_hash
             target.build_tree = lambda _day: (_ for _ in ()).throw(OSError("build"))
@@ -1208,49 +1152,6 @@ def check_triage_section() -> list[str]:
 
     if not target.triage_section([target.DayResult(1, 70, True, "OK", "OK", ())]) == "":
         fails.append("❌ NG が無いのに切り分けの節を書いている")
-    return fails
-
-
-def check_result_doc_triage_sentence() -> list[str]:
-    """結果ドキュメントが、無い切り分けの表を指す文を出さないことを確かめる。"""
-    fails = []
-    days = target.available_days()
-    all_ok = [
-        target.DayResult(d, 80, True, "OK", "OK", (), generation="OK") for d in days
-    ]
-    one_ng = [
-        target.DayResult(
-            d, 80, True, "OK", "OK", (), generation="OK"
-        )
-        if d != days[0]
-        else target.DayResult(
-            d, 80, True, "NG", "NG", ("x.ts(1,1): error TS1005",), generation="OK"
-        )
-        for d in days
-    ]
-    original = target.RESULT_DOC
-    try:
-        with tempfile.TemporaryDirectory() as directory:
-            target.RESULT_DOC = Path(directory) / "out.md"
-            target.write_result_doc(all_ok, True, "python3 x --all --verify")
-            ok_doc = target.RESULT_DOC.read_text(encoding="utf-8")
-            target.write_result_doc(one_ng, True, "python3 x --all --verify")
-            ng_doc = target.RESULT_DOC.read_text(encoding="utf-8")
-    finally:
-        target.RESULT_DOC = original
-
-    if "下の切り分けの表を見ること" in ok_doc:
-        fails.append("❌ 全件 OK なのに無い切り分けの表を指している")
-    if "NG の日は無いため切り分けの表はありません。" not in ok_doc:
-        fails.append("❌ 全件 OK の代替文が出ていない")
-    if "## NG の日の切り分け" in ok_doc:
-        fails.append("❌ 全件 OK なのに切り分けの表が出ている")
-    if "下の切り分けの表を見ること" not in ng_doc:
-        fails.append("❌ NG があるのに切り分けの表を指す文が出ていない")
-    if "## NG の日の切り分け" not in ng_doc:
-        fails.append("❌ NG があるのに切り分けの表が無い")
-    if "NG の日は無いため切り分けの表はありません。" in ng_doc:
-        fails.append("❌ NG があるのに全件 OK の文が出ている")
     return fails
 
 
@@ -1846,8 +1747,8 @@ def check_verification_stage_provenance() -> list[str]:
                 target.write_run_record([day], True).read_text(encoding="utf-8")
             )
             recorded = record["days"][0]
-            if record["schemaVersion"] != 3 or recorded["status"] != "FAIL":
-                fails.append("❌ 生成失敗をschema v3のFAILとして保存していない")
+            if record["schemaVersion"] != 4 or recorded["status"] != "FAIL":
+                fails.append("❌ 生成失敗をschema v4のFAILとして保存していない")
             if recorded["generation"] != "NG":
                 fails.append("❌ JSONにPrisma生成の失敗状態が無い")
             evidence = recorded["evidence"]
@@ -2185,16 +2086,90 @@ def check_prisma_dependency_isolation() -> list[str]:
     return fails
 
 
+def reader_css_fixture(root: Path, first: str, later: str = "") -> list[Path]:
+    paths = [root / "day01_css.md"]
+    paths[0].write_text(first, encoding="utf-8")
+    if later:
+        paths.append(root / "day26_css.md")
+        paths[-1].write_text(later, encoding="utf-8")
+    return paths
+
+
+CSS_BASE = ('```css\n/* filepath: src/app/globals.css */\n'
+            '@import "tailwindcss" source("../");\n@theme inline {\n}\n```\n')
+CSS_THEME = ('<!-- reader-css: theme-inline -->\n```css\n'
+             '/* filepath: src/app/globals.css */\n--breakpoint-xxl: 84.375rem;\n```\n')
+
+
+def check_reader_css_chronology() -> list[str]:
+    fails = []
+    if "src/app/globals.css" in target.BORROWED_FILES:
+        fails.append("❌ 読者CSSへ完成版のスタイルを持ち込んでいる")
+    first = target.reconstruct_reader_css(target.day_sources(1))
+    earlier = target.reconstruct_reader_css(target.day_sources(25))
+    themed = target.reconstruct_reader_css(target.day_sources(26))
+    filtered = target.reconstruct_reader_css(target.day_sources(30))
+    if first != earlier or not first.startswith('@import "tailwindcss" source("../");'):
+        fails.append("❌ Day01の完全置換がDay25まで維持されていない")
+    if "--breakpoint-xxl:" in earlier or "--breakpoint-xxl: 84.375rem;" not in themed:
+        fails.append("❌ Day26の画面幅の指定が実装日と一致しない")
+    if ".task-filter-grid" in themed or filtered.count(".task-filter-grid") != 3:
+        fails.append("❌ Day28のフィルターCSSが実装日と一致しない")
+    return fails
+
+
+def check_reader_css_operations() -> list[str]:
+    fails = []
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        continuation = '```css\nbody { color: red; }\n```\n'
+        css = target.reconstruct_reader_css(reader_css_fixture(root, CSS_BASE + continuation))
+        if css != '@import "tailwindcss" source("../");\n@theme inline {\n}\n\nbody { color: red; }\n':
+            fails.append("❌ Day01の続きのCSSを順番どおりに連結していない")
+        append = '<!-- reader-css: append -->\n```css\n/* filepath: src/app/globals.css */\n.future { display:grid; }\n```\n'
+        css = target.reconstruct_reader_css(reader_css_fixture(root, CSS_BASE, CSS_THEME + append))
+        if '@theme inline {\n  --breakpoint-xxl: 84.375rem;' not in css or not css.endswith('.future { display:grid; }\n'):
+            fails.append("❌ テーマ挿入と末尾追記を区別していない")
+        if '.future' in target.reconstruct_reader_css([root / 'day01_css.md']):
+            fails.append("❌ 後日のCSSを前日の状態へ持ち込んでいる")
+    return fails
+
+
+def check_reader_css_fail_closed() -> list[str]:
+    fails = []
+    append = '<!-- reader-css: append -->\n```css\n/* filepath: src/app/globals.css */\nbody {}\n```\n'
+    cases = [
+        ('基準なし', '', ''),
+        ('書き込み先なし', '```css\n@import "tailwindcss";\n```\n', ''),
+        ('走査元を固定しない旧import', CSS_BASE.replace(' source("../")', ''), ''),
+        ('未知の操作', CSS_BASE, append.replace('<!-- reader-css: append -->', '')),
+        ('同章の次ブロックに書き込み先なし', CSS_BASE, CSS_THEME + append.replace('/* filepath: src/app/globals.css */\n', '')),
+        ('未知の書き込み先', CSS_BASE, append.replace('globals.css', 'other.css')),
+        ('テーマの場所なし', CSS_BASE.replace('@theme inline {', '@theme nope {'), CSS_THEME),
+        ('テーマ重複', CSS_BASE.replace('@theme inline {', '@theme inline {\n--breakpoint-xxl: 84.375rem;'), CSS_THEME),
+        ('宣言以外の挿入', CSS_BASE, CSS_THEME.replace('--breakpoint-xxl: 84.375rem;', 'body { color:red; }')),
+    ]
+    with tempfile.TemporaryDirectory() as temporary:
+        for name, first, later in cases:
+            try:
+                target.reconstruct_reader_css(reader_css_fixture(Path(temporary), first, later))
+            except ValueError:
+                continue
+            fails.append(f"❌ 再現できないCSSを成功扱い: {name}")
+    return fails
+
+
 CHECKS = (
+    ("読者baselineの出どころ", check_reader_baseline_provenance),
+    ("読者CSSの実装日", check_reader_css_chronology),
+    ("CSS完全置換と明示編集", check_reader_css_operations),
+    ("未再現CSSは失敗で止める", check_reader_css_fail_closed),
     ("Prisma生成物の隔離", check_prisma_dependency_isolation),
     ("写経対象の選び方", check_block_selection),
     ("ツリーへの書き出し", check_apply_blocks),
     ("置き換えと追記の境界", check_version_boundary),
     ("まるごとか抜粋か", check_complete_file),
     ("差し込みの適用", check_insertion),
-    ("注記どおりに貼れんブロックで止まる", check_placement_note_failure),
-    ("「」で目印を名指しする注記", check_quoted_note_forms),
-    ("宣言と要素の中の目印を名指しする注記", check_element_anchored_notes),
     ("要素の書き換え", check_element_replacement),
     ("import の足し合わせ", check_import_merge),
     ("配布物の置き換え", check_scaffold_replacement),
@@ -2204,7 +2179,6 @@ CHECKS = (
     ("上書きしない実行記録", check_immutable_run_records),
     ("検査中のソース入力固定", check_source_input_stability),
     ("NG の切り分け", check_triage_section),
-    ("結果文書の切り分け案内", check_result_doc_triage_sentence),
     ("tsconfig の exclude", check_tsconfig_excludes),
     ("まだ無い宣言を足す", check_new_declaration),
     ("自分で束ねる名前と欄名", check_local_binding_names),

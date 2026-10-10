@@ -131,7 +131,7 @@ def has_filepath_marker(code: str) -> bool:
 TRAILING_NOTE = re.compile(r"^(.*?)\s*([（(][^（()）]*[）)])\s*$")
 REAL_PREFIXES = ("src/", "prisma/", "scripts/")
 # 教材で作成するルート設定だけを許可し、説明用の名前を実ファイルにしない。
-REAL_ROOT_FILES = frozenset({"vitest.config.ts"})
+REAL_ROOT_FILES = frozenset({"next.config.ts", "vitest.config.ts"})
 # 写経対象として扱う言語。bash は同じ `# filepath:` の書式を使うが、
 # 波括弧の意味が違う（`${VAR}` や関数定義）ので構文の収支検査には載せない。
 CODE_LANGS = frozenset({"typescript", "ts", "tsx", "javascript", "js", "jsx"})
@@ -190,11 +190,7 @@ def _split_target(value: str) -> tuple[str, str]:
         head, note = m.group(1).strip(), m.group(2)
         # 括弧を剥がした残りがパスの途中で終わるなら、それは注記ではなく
         # ルートグループそのもの（`src/app/(auth)`）。剥がさずに置く。
-        # 半角の括弧の中に `/` があるときもパスの一部と見て剥がさない。全角の括弧はパスに
-        # 出てこないので、中に `/` があっても注記として剥がす。剥がさないと
-        # `（<h1 … から「新規タスク」の </Button> までを書き直す）` が注記ごと別の書き込み先になる。
-        slash_in_path = "/" in note and not note.startswith("（")
-        if slash_in_path or head.endswith("/") or not head:
+        if "/" in note or head.endswith("/") or not head:
             break
         base = head
         notes.insert(0, note)

@@ -4,17 +4,24 @@
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
+
+import check_scaffold_src_sync as sync_guard
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 from check_scaffold_src_sync import (  # noqa: E402
     EXPECTED_DIFFERENT,
     REPO_ROOT,
+    USER_ROUTER_DEST,
+    USER_ROUTER_NORMALIZATIONS,
+    USER_ROUTER_SOURCE,
+    UserRouterNormalizationError,
     classify,
+    normalize_product_user_router,
     observe,
     observe_excluded_routers,
 )
-from sale_package import excluded_routers  # noqa: E402
 
 passed = 0
 failed = 0
@@ -63,46 +70,113 @@ check(
     str({k: v for k, v in EXPECTED_DIFFERENT.items() if len(str(v).strip()) < 8}),
 )
 
+# 指定された5差分だけなら、認可条件を含む残りの全バイトが一致する
+approved_product = (REPO_ROOT / USER_ROUTER_DEST).read_bytes().decode("utf-8")
+approved_scaffold = USER_ROUTER_SOURCE.read_bytes().decode("utf-8")
+normalized_user = normalize_product_user_router(approved_product)
+check("user router の許可済み5差分を通す", normalized_user == approved_scaffold)
+
+# 正規化対象ではない認可条件が欠ければ、通常の差分として落ちる
+scaffold_without_membership = approved_scaffold.replace(
+    "                  some: { userId: ctx.session.userId },\n",
+    "",
+)
+check(
+    "assignedTasks のメンバー条件削除を落とす",
+    normalized_user != scaffold_without_membership,
+)
+
+scaffold_without_version = approved_scaffold.replace(
+    "          sessionVersion: ctx.session.version,\n",
+    "",
+    1,
+)
+check(
+    "sessionVersion 条件削除を落とす",
+    normalized_user != scaffold_without_version,
+)
+
+# 配布版 logger に秘密情報が足されても正規化済み本体とは一致しない
+scaffold_with_secret = approved_scaffold.replace(
+    "      userId: user.id,\n",
+    "      userId: user.id,\n      password: user.password,\n",
+)
+check("logger の秘密情報追加を落とす", normalized_user != scaffold_with_secret)
+
+
+def rejects_normalization(name: str, source: str) -> None:
+    try:
+        normalize_product_user_router(source)
+    except UserRouterNormalizationError:
+        check(name, True)
+    else:
+        check(name, False, "許可済み hunk の個数異常を受理した")
+
+
+for index, (hunk, _, _) in enumerate(USER_ROUTER_NORMALIZATIONS, start=1):
+    rejects_normalization(
+        f"許可済み hunk {index} の欠落を落とす",
+        approved_product.replace(hunk, ""),
+    )
+    rejects_normalization(
+        f"許可済み hunk {index} の重複を落とす",
+        hunk + approved_product,
+    )
+
+# 改行の変換で差分が消えず、logger import の移動も許可しない
+rejects_normalization("CRLF の本体を落とす", approved_product.replace("\n", "\r\n"))
+import_line = "import { writeStructuredLog } from '@/lib/observability';\n"
+rejects_normalization(
+    "logger import の位置変更を落とす",
+    approved_product.replace(import_line, "") + import_line,
+)
+
+
+def rejects_observation(name: str) -> None:
+    try:
+        observe()
+    except UserRouterNormalizationError:
+        check(name, True)
+    else:
+        check(name, False, "不正な例外または対応表を受理した")
+
+
+with patch.dict(EXPECTED_DIFFERENT, {USER_ROUTER_DEST: "誤った例外登録を拒否するテスト"}):
+    rejects_observation("user router の例外登録を拒否する")
+with patch.object(sync_guard, "scaffold_copies", return_value=((USER_ROUTER_DEST, REPO_ROOT / "wrong.ts"),)):
+    rejects_observation("user router の配布元変更を拒否する")
+with patch.object(sync_guard, "scaffold_copies", return_value=((USER_ROUTER_DEST, USER_ROUTER_SOURCE),) * 2):
+    rejects_observation("user router の対応重複を拒否する")
+
+# 配らない router は user の意図的なログ差分を除外し、ほかの写しの drift を落とす
+with tempfile.TemporaryDirectory() as scripts_tmp, tempfile.TemporaryDirectory() as routers_tmp:
+    scripts_dir = Path(scripts_tmp)
+    routers_dir = Path(routers_tmp)
+    for name in ("comment.ts", "project.ts", "report.ts", "search.ts", "task.ts", "user.ts"):
+        (scripts_dir / name).write_text("same\n", encoding="utf-8")
+        (routers_dir / name).write_text("same\n", encoding="utf-8")
+    (scripts_dir / "report.ts").write_text("stale\n", encoding="utf-8")
+    (scripts_dir / "user.ts").write_text("intentional scaffold logger\n", encoding="utf-8")
+    excluded = observe_excluded_routers(scripts_dir, routers_dir)
+check(
+    "excluded router の report drift だけを検出",
+    [Path(dest).name for dest, _label, same in excluded if not same] == ["report.ts"]
+    and all(Path(dest).name != "user.ts" for dest, _label, _same in excluded),
+    str(excluded),
+)
+
+
 # 現物を突き合わせられる（配布物の対応表が壊れていないこと）
 observations = observe()
 check("現物の突き合わせが取れる", len(observations) >= 60, f"{len(observations)} 件")
+check(
+    "user router は厳密比較を1回だけ使う",
+    sum(dest == USER_ROUTER_DEST for dest, _, _ in observations) == 1,
+)
 
 # 現物がいま通ること
 drifted, stale = classify(observations, EXPECTED_DIFFERENT)
 check("いまのリポジトリが通る", not drifted and not stale, f"{drifted} / {stale}")
-
-# 配らない写しの突き合わせ: scaffold_copies() が外す6本も見張る。
-# 一時フォルダで1本だけずらすと、classify() がズレを1件返す。
-with tempfile.TemporaryDirectory() as src_tmp, tempfile.TemporaryDirectory() as copy_tmp:
-    src_routers = Path(src_tmp)
-    copy_routers = Path(copy_tmp)
-    for name in sorted(excluded_routers()):
-        (src_routers / name).write_text("same\n", encoding="utf-8")
-        (copy_routers / name).write_text("same\n", encoding="utf-8")
-    (copy_routers / sorted(excluded_routers())[0]).write_text(
-        "drifted\n", encoding="utf-8"
-    )
-    excluded_obs = observe_excluded_routers(copy_routers, src_routers)
-check("配らない写しは6件", len(excluded_obs) == len(excluded_routers()), f"{len(excluded_obs)} 件")
-drifted, stale = classify(excluded_obs, {})
-check("配らない写しのズレを落とす", len(drifted) == 1 and not stale, f"{drifted} / {stale}")
-
-# 本物のリポジトリでは、組の1つ目は excluded_routers() の6名で、6件とも中身が同じ
-excluded_obs = observe_excluded_routers(
-    REPO_ROOT / "scripts" / "_server-routers",
-    REPO_ROOT / "src" / "server" / "api" / "routers",
-)
-check(
-    "除外6本の名前がそろう",
-    sorted(Path(dest).name for dest, _label, _same in excluded_obs)
-    == sorted(excluded_routers()),
-    str([dest for dest, _label, _same in excluded_obs]),
-)
-check(
-    "除外6本はすべて本体と一致",
-    all(same for _dest, _label, same in excluded_obs),
-    str([(dest, same) for dest, _label, same in excluded_obs]),
-)
 
 print(f"{'✅' if failed == 0 else '❌'} check_scaffold_src_sync 自己テスト {passed}/{passed + failed} 合格")
 sys.exit(1 if failed else 0)

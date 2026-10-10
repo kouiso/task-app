@@ -5,35 +5,18 @@ import { USER_ROLE } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
-import { getUserProjectIds } from './_helpers/permission';
 
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
-    const projectIds = await getUserProjectIds(ctx.session.userId);
-
-    if (projectIds.length === 0) {
-      return {
-        totalProjects: 0,
-        totalTasks: 0,
-        completedTasks: 0,
-        inProgressTasks: 0,
-        inReviewTasks: 0,
-        todoTasks: 0,
-        completionRate: 0,
-        totalTimeSpent: 0,
-        averageTimePerTask: 0,
-        recentTasks: [],
-        statusData: [],
-        priorityData: [],
-        projectStats: [],
-      };
-    }
+    const userId = ctx.session.userId;
 
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
-      projectId: { in: projectIds },
-      project: { isArchived: false },
+      project: {
+        isArchived: false,
+        members: { some: { userId } },
+      },
     } as const;
 
     // ダッシュボードの「アクティブな作業」を母数とするため、
@@ -60,7 +43,10 @@ export const reportRouter = createTRPCRouter({
       // アーカイブ済みプロジェクトは「アクティブな状況」の集計対象外とし、
       // プロジェクト数(totalProjects)とプロジェクト統計(projectStats)から除外する。
       prisma.project.findMany({
-        where: { id: { in: projectIds }, isArchived: false },
+        where: {
+          isArchived: false,
+          members: { some: { userId } },
+        },
         select: { id: true, name: true },
         orderBy: { createdAt: 'desc' },
       }),

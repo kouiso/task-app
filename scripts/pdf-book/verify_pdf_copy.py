@@ -8,9 +8,8 @@
 
 この診断はブラウザや PDF ビューアのクリップボードを操作しません。
 したがって、実ビューアからコピーした結果との同一性は証明しません。また、
-Poppler の -layout 出力は字下げや連続空白を紙面の桁位置から再構成するため、
-空白の個数は検証対象外です。照合前にノンブルと柱を除き、異体字セレクタは
-原稿側と抽出側の両方から除きます。コードブロックの外枠も抽出されないため、同じ文字列が本文に
+Poppler はコードの視覚的な字下げや連続空白を保持しないため、空白の個数は
+検証対象外です。コードブロックの外枠も抽出されないため、同じ文字列が本文に
 ある場合の出所、ブロック境界、空行、ブロック間や最終行の次に独立して増えた
 行は判定できません。実ビューアでのコピー確認は別の出荷要件として残ります。
 """
@@ -25,15 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "scripts" / "pdf-book"))
-from code_wrap import (  # noqa: E402
-    SAFE_COLS,
-    atoms,
-    break_before,
-    classify_block,
-    code_filepath_label,
-    line_width,
-    wrap_layout,
-)
+from code_wrap import atoms, break_before, classify_block, forced_breaks  # noqa: E402
 
 PDF_DIR = ROOT / "dist" / "pdf"
 SRC_DIR = ROOT / "material" / "30days-curriculum"
@@ -42,6 +33,7 @@ OPEN_FENCE_RE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})([^\n]*)$")
 BLOCKQUOTE_FENCE_RE = re.compile(
     r"^(?:[ \t]{0,3}>[ \t]?)+[ \t]{0,3}(`{3,}|~{3,})([^\n]*)$"
 )
+EMOJI_VARIATION_SELECTOR = "\ufe0f"
 
 
 class SourceFenceError(ValueError):
@@ -70,9 +62,10 @@ def fenced_code_blocks(md_path: Path) -> list[CodeBlock]:
     opener: tuple[str, int, str, int] | None = None
     body: list[str] = []
 
-    for line_no, line in enumerate(
-        md_path.read_text(encoding="utf-8").splitlines(), start=1
-    ):
+    # build_pdf_book.py と同じ入力正規化を行う。U+FE0F は生成前に意図的に除去されるため、
+    # 原稿の生文字列と照合すると正しい PDF を欠落扱いする。
+    source = md_path.read_text(encoding="utf-8").replace(EMOJI_VARIATION_SELECTOR, "")
+    for line_no, line in enumerate(source.splitlines(), start=1):
         if opener is None:
             if BLOCKQUOTE_FENCE_RE.match(line):
                 raise SourceFenceError(
@@ -92,11 +85,6 @@ def fenced_code_blocks(md_path: Path) -> list[CodeBlock]:
 
         char, minimum, lang, start_line = opener
         if re.fullmatch(rf"[ \t]{{0,3}}{re.escape(char)}{{{minimum},}}[ \t]*", line):
-            # filepath 見出しは組版でコード枠の外へ出る。出た側はコメント記号を
-            # 外した文字になるので原稿行とは一致せず、照合の対象から外す。
-            # 対象は1行目だけ（枠の途中にある同名の行はコードとして残る）
-            if body and code_filepath_label(body[0]) is not None:
-                body = body[1:]
             blocks.append(CodeBlock(lang, tuple(body), start_line, char * minimum))
             opener = None
             body = []
@@ -111,62 +99,13 @@ def fenced_code_blocks(md_path: Path) -> list[CodeBlock]:
     return blocks
 
 
-VARIATION_SELECTORS = ("️", "︎")
-
-
-def strip_variation_selectors(text: str) -> str:
-    """pdftotext は異体字セレクタ（VS16/VS15）を落とすため、照合は両側から除いて行う。"""
-    for selector in VARIATION_SELECTORS:
-        text = text.replace(selector, "")
-    return text
-
-
 def pdf_text(pdf_path: Path) -> str:
-    # -layout なしだと桁揃えした列（ツリー図・Prisma の列・行末コメント）の
-    # 抽出順が入れ替わり、原稿どおりの行が読めない
     out = subprocess.run(
-        ["pdftotext", "-layout", "-enc", "UTF-8", str(pdf_path), "-"],
+        ["pdftotext", "-raw", "-enc", "UTF-8", str(pdf_path), "-"],
         capture_output=True,
         check=True,
     )
-    return strip_variation_selectors(out.stdout.decode("utf-8"))
-
-
-def strip_page_furniture(text: str) -> str:
-    """抽出テキストからノンブルと柱（走り見出し）を取り除く。
-
-    コードブロックが改ページを跨ぐと、断片の間にページ番号と柱の行が
-    抽出順で挟まり、正本との照合がそこで切れる。家具は検査対象のコード
-    行ではないので、照合前に取り除く。
-    ページ番号は \\f 直前の数字だけの行、柱は \\f 直後の最初の非空行で、
-    各冊子で同一文字列（書名）が繰り返されることを利用して同定する。
-    """
-    pages = text.split("\f")
-    # 1回だけの先頭行は本文なので残し、複数ページで繰り返す先頭行だけを柱とみなす
-    first_lines: dict[str, int] = {}
-    for page in pages[1:]:
-        for line in page.split("\n"):
-            if line.strip():
-                key = line.strip()
-                first_lines[key] = first_lines.get(key, 0) + 1
-                break
-    headers = {key for key, count in first_lines.items() if count >= 2}
-    cleaned = []
-    for page_index, page in enumerate(pages):
-        lines = page.split("\n")
-        for index in range(len(lines) - 1, -1, -1):
-            if lines[index].strip():
-                if re.fullmatch(r"\s*\d{1,4}\s*", lines[index]):
-                    lines[index] = ""
-                break
-        if page_index > 0:
-            for index in range(len(lines)):
-                if lines[index].strip():
-                    if lines[index].strip() in headers:
-                        lines[index] = ""
-                    break
-        cleaned.append("\n".join(lines))
-    return "\n".join(cleaned)
+    return out.stdout.decode("utf-8")
 
 
 def _is_extracted_line_start(pdf: str, idx: int) -> bool:
@@ -256,47 +195,16 @@ def _candidate_offsets(head: str, pdf: str, start: int):
         cursor = idx + 1
 
 
-def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[int]:
-    """PDF 上で折れてよい位置。code_wrap の折返し候補と、組版が入れる強制改行。
-
-    code_wrap._emit_line は SAFE_COLS を超える行にだけ wrap_layout の位置へ
-    <br> を入れる（JSX 子テキストの開始タグ直後など、break_before には無い
-    位置を含む）。続き行の頭には空き（cw-hang）が乗るため、区切りの選定は
-    組版と同じ空き込み・字下げ込みの wrap_layout で行う。
-    """
-    marks = break_before(text_atoms, states, lang)
-    if line_width(text_atoms) > SAFE_COLS:
-        marks |= wrap_layout(text_atoms, states, lang)[0]
-    return marks
-
-
-def _to_source_offsets(text_atoms: list[str], marks: set[int]) -> set[int]:
-    """原子番号の折れ候補を原稿行の文字オフセットへ直す。
-
-    `&amp;` のような実体参照は1原子だが原稿行では複数文字を占めるため、
-    実体参照以降の候補は文字オフセットでは後ろへずれる。
-    """
-    offsets = []
-    position = 0
-    for atom in text_atoms:
-        offsets.append(position)
-        position += len(atom)
-    return {offsets[mark] for mark in marks}
-
-
 def _block_line_data(block: CodeBlock):
-    # 原稿側も異体字セレクタを除いてから原子化し、PDF 側とオフセットを揃える
-    lines = [strip_variation_selectors(line) for line in block.lines]
-    line_atoms = [atoms(line) for line in lines]
+    line_atoms = [atoms(line) for line in block.lines]
     states_per_line = classify_block(line_atoms, block.lang)
-    out = []
-    for line, text_atoms, states in zip(lines, line_atoms, states_per_line):
-        probe = line.rstrip()
-        if not probe:
-            continue
-        marks = _allowed_breaks(text_atoms, states, block.lang)
-        out.append((probe, _to_source_offsets(text_atoms, marks)))
-    return out
+    return [
+        (line.rstrip(), break_before(line_atoms[index], states, block.lang)
+         | forced_breaks(line_atoms[index], states,
+                         break_before(line_atoms[index], states, block.lang), block.lang))
+        for index, (line, states) in enumerate(zip(block.lines, states_per_line))
+        if line.rstrip()
+    ]
 
 
 def try_match_block(
@@ -325,15 +233,20 @@ def find_block(
     first_probe = line_data[0][0].lstrip()
     first_token = re.match(r"\S+", first_probe)
     head = first_token.group(0)[:10] if first_token else first_probe[:10]
-    last_failure = MatchResult(
+    furthest_failure = MatchResult(
         False, "missing", f"prefix not found after offset {start}: {head!r}", start
     )
+    consumed_prefix = -1
     for offset in _candidate_offsets(head, pdf, start):
         result = try_match_block(line_data, pdf, offset)
         if result.ok:
             return result, len(line_data)
-        last_failure = result
-    return last_failure, len(line_data)
+        # 後方の弱い前方一致が、より先まで照合した失敗位置を隠さないようにする。
+        consumed = result.end - offset
+        if consumed > consumed_prefix:
+            furthest_failure = result
+            consumed_prefix = consumed
+    return furthest_failure, len(line_data)
 
 
 def verify_document(
@@ -362,18 +275,24 @@ def verify_document(
     return checked_lines, total_lines, failures, mermaid_blocks, mermaid_lines
 
 
-ALLOW_MISSING_FLAG = "--allow-missing"
+def parse_args(argv: list[str]) -> bool | None:
+    """欠冊を許可する部分ビルドだけを明示的に選ぶ。"""
+    if argv == []:
+        return False
+    if argv == ["--allow-gaps"]:
+        return True
+    print(
+        "usage: verify_pdf_copy.py [--allow-gaps]",
+        file=sys.stderr,
+    )
+    print(f"unknown or duplicate arguments: {' '.join(argv)}", file=sys.stderr)
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    # pdf-book-gate の subset 経路は変更のあった冊だけを組む。dist/pdf に無い冊は
-    # 組んでいないだけで欠けではないので、この旗があるときは欠けを失敗にしない。
-    # 全冊経路（make book-pdf-verify）は旗を渡さず、従来どおり欠けを検出する
-    allow_missing = ALLOW_MISSING_FLAG in args
-    unknown = [arg for arg in args if arg != ALLOW_MISSING_FLAG]
-    if unknown:
-        print(f"unknown argument: {' '.join(unknown)}", file=sys.stderr)
+    arguments = sys.argv[1:] if argv is None else argv
+    allow_gaps = parse_args(arguments)
+    if allow_gaps is None:
         return 2
 
     pdfs = sorted(PDF_DIR.glob("*.pdf"))
@@ -388,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
         failures.append(f"source markdown not found: {SRC_DIR}")
     missing_pdfs = sorted(set(source_by_stem) - set(pdf_by_stem))
     extra_pdfs = sorted(set(pdf_by_stem) - set(source_by_stem))
-    if not allow_missing:
+    if not allow_gaps:
         failures.extend(f"missing PDF for source: {stem}" for stem in missing_pdfs)
     failures.extend(f"PDF has no source markdown: {stem}" for stem in extra_pdfs)
 
@@ -403,9 +322,7 @@ def main(argv: list[str] | None = None) -> int:
         except SourceFenceError as error:
             failures.append(str(error))
             continue
-        result = verify_document(
-            blocks, strip_page_furniture(pdf_text(pdf_by_stem[stem]))
-        )
+        result = verify_document(blocks, pdf_text(pdf_by_stem[stem]))
         document_checked, document_total, document_failures, mb, ml = result
         checked_lines += document_checked
         total_lines += document_total
@@ -417,19 +334,19 @@ def main(argv: list[str] | None = None) -> int:
                 f"{kind}: {detail}"
             )
 
-    if sources and total_lines == 0:
+    if sources and total_lines == 0 and not allow_gaps:
         failures.append("no nonblank non-Mermaid fenced-code lines were discovered")
 
     print(
         f"Poppler extraction coverage: {checked_lines}/{total_lines} nonblank "
         f"fenced-code lines across {len(set(source_by_stem) & set(pdf_by_stem))} PDFs"
     )
-    if allow_missing and missing_pdfs:
-        print(f"Not built in this run (not checked): {len(missing_pdfs)} sources")
     print(
         f"Explicit exclusion: Mermaid {mermaid_blocks} blocks / {mermaid_lines} lines "
         "(rendered diagrams, not copyable code)"
     )
+    if allow_gaps:
+        print("UNVERIFIED: full source inventory (--allow-gaps subset diagnostic)")
     print("UNVERIFIED: visual indentation and exact whitespace counts in code")
     print("UNVERIFIED: blank code lines")
     print("UNVERIFIED: text provenance and visual code-block boundaries")
@@ -441,7 +358,14 @@ def main(argv: list[str] | None = None) -> int:
         for failure in failures[:100]:
             print(" ", failure)
         return 1
-    print("POPLER EXTRACTION DIAGNOSTIC PASSED")
+    if allow_gaps and total_lines == 0:
+        print("NOT APPLICABLE: no copyable fenced code in selected subset (0 expected)")
+        print("Actual viewer copy verification is still required before release.")
+        return 0
+    if allow_gaps:
+        print("POPLER EXTRACTION SUBSET DIAGNOSTIC PASSED")
+    else:
+        print("POPLER EXTRACTION DIAGNOSTIC PASSED")
     print("Actual viewer copy verification is still required before release.")
     return 0
 

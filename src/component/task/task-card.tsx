@@ -54,8 +54,8 @@ export function TaskCard({
   onDelete,
   onClick,
   onTimeLogSuccess,
-  canEdit = true,
-  canDelete = true,
+  canEdit = false,
+  canDelete = false,
 }: TaskCardProps) {
   const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
   const overdue =

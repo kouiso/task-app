@@ -20,21 +20,21 @@ Day 27 では`/project?projectId=...` で
 
 ![2件のタスクを選び、見出しの右に「完了にする」「削除」「ステータス変更」が並んだ画面](./screenshots/day28/bulk-operations-complete.png)
 
-> **今日のゴールライン**: Setで選択中タスクを管理し、完了・削除・ステータス変更をまとめて動かせれば大丈夫です。
+> **今日のゴールライン**: Map で選択を管理し、完了・削除・ステータス変更の結果と失敗時の案内を確認できれば到達です。
 
 ---
 
 ## 始める前の前提
 
-- Day 27 のプロジェクト詳細とアーカイブ機能が動いている
-- `/task` に複数のタスクが表示されている
-- 一括削除を試すため消えてもよい練習用タスクを 7 件以上用意している
+- Day 27 のプロジェクト詳細とアーカイブ機能が動いています
+- `/task` に複数のタスクが表示されています
+- 自分が OWNER の練習用プロジェクトに、削除してもよいタスクを 7 件以上用意しています
 
 > 7 件という数には理由があります。Step 9 の動作確認は「3 件を完了」「2 件を削除」
 > 「5 件のステータスを変更」の順に進めます。削除で 2 件減ったあとに 5 件を選ぶので
 > 始める時点で 7 件が同じ画面に並んでいる必要があります。初期データは 3 件しか見えないので
 > `/task` から練習用のタスクを足してから始めてください。
-- `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できる
+- `src/server/api/routers/task.ts` と `src/app/task/page.tsx` を編集できます
 
 > Day 13〜16 で作った import、`TaskCard`、
 > `DeleteConfirmDialog`、時間記録機能は残します。
@@ -63,17 +63,18 @@ flowchart TD
     F -->|まとめて完了| G[bulkComplete API 呼び出し]
     F -->|ステータス変更| H[bulkUpdateStatus API 呼び出し]
     F -->|まとめて削除| I[確認ダイアログを表示]
-    I --> J[OK クリック → bulkDelete API 呼び出し]
+    I --> J[削除 クリック → bulkDelete API 呼び出し]
     G --> K[トランザクションで更新または削除]
     H --> K
     J --> K
     K --> L[一覧を再取得・画面更新]
-    L --> M[selectedTasks を空に戻す]
+    L --> M[送信時と同じ選択を解除]
+    K -->|失敗・応答不明| N[案内を表示して状態を再取得]
 ```
 
-この図で目を留めてほしいのはG・H・J の3本が K に合流するところです。どの操作も、トランザクションで選択したタスクを処理し、一覧を取り直して選択を空に戻します。更新には `updateMany`、削除には `deleteMany` を使います。ステータスを完了へ変える処理は、すでに完了したタスクの日時を保つため、対象を分けて2回更新します。だから Step 6 以降で操作を増やすときに新しく考えるのは呼ぶ API の名前だけになります。
+3つの API はトランザクションで対象全件を処理します。成功後は一覧と対象の詳細を再取得します。完了とステータス変更では送信後に選び直したチェックを残し、削除では実際に消えた ID のチェックを外します。
 
-逆に L と M を落とすと何が起きるかも押さえてください。削除したはずのタスクが画面に残り、チェックも入ったままになります。サーバー側は正しく変わっているのに画面だけが古い、という一番気付きにくいずれ方です。
+失敗や通信切断も扱います。応答が届かないと、サーバーで成功したかは分かりません。そこで再送を急がず、最新の状態を確認する案内を表示します。認証が切れた場合は保護されたデータを隠し、ログイン画面へのボタンを表示します。
 
 ---
 
@@ -93,42 +94,50 @@ flowchart TD
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| `Set<string>` | セット | 重複なし集合。チェック済み ID を管理 | 出席簿（同じ人は 2 回書かない） |
+| `Map<string, number>` | マップ | ID と選択番号の組を管理 | ID ごとに最新の選択番号を記録する表 |
+| `useRef` | ユーズレフ | 再描画を待たず値を保存 | 送信中の記録をクリック直後に更新 |
+| スナップショット | — | 確認時点の対象をコピーして保存 | 確認後の再取得で対象を変えないための記録 |
 | `indeterminate` | インデターミネイト | チェックボックスの「部分選択」状態 | 全部チェックでも空でもない、一部だけ選ばれた中間の状態 |
 | `updateMany` | アップデートメニー | 複数レコードを一度に更新 | 授業で「全員起立」と言うのと同じ |
 | `isTaskStatus` | イズタスクステータス | 型ガード。不明な値が `TaskStatus` か確認する | 身分証明書のチェック |
 | `completedAt` | コンプリーテッドアット | 完了した日時を記録するフィールド | タイムカードの退勤打刻 |
 
----
-
-## 実装ステップ一覧
-
-| ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
-|---------|---------|---------|-------------|---------|
-| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 20 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
-| Step 1 | 選択状態を管理する state を作る | 7 分 | `src/app/task/page.tsx` | state が正しく動作する |
-| Step 2 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
-| Step 3 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
-| Step 4 | 部分選択を `indeterminate` で表現する | 4 分 | `src/app/task/page.tsx` | 全選択・部分選択・全解除が切り替わる |
-| Step 5 | ヘッダーに一括操作ボタンを追加する | 7 分 | `src/app/task/page.tsx` | 選択時にボタンが現れる |
-| Step 6 | 一括完了を実装する | 5 分 | `src/app/task/page.tsx` | まとめて完了できる |
-| Step 7 | 確認ダイアログ付き一括削除を実装する | 7 分 | `src/app/task/page.tsx` | 確認後にまとめて削除できる |
-| Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
-| Step 9 | 動作確認と仕上げ | 4 分 | — | 一括操作が一通り動く |
-
-**合計時間**: 約 73 分です。
-
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
 開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
 
 ---
 
-### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（20 分）
+## 実装ステップ一覧
+
+| ステップ | 作業内容 | 読む時間の目安 | 触るファイル | 成功状態 |
+|---------|---------|---------|-------------|---------|
+| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 20 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
+| Step 1 | ID、選択番号、1件操作の送信記録を管理する | 30 分 | `src/app/task/page.tsx` | state が正しく動作する |
+| Step 2 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
+| Step 3 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
+| Step 4 | 部分選択を `indeterminate` で表現する | 4 分 | `src/app/task/page.tsx` | 全選択・部分選択・全解除が切り替わる |
+| Step 5 | ヘッダーに一括操作ボタンを追加する | 7 分 | `src/app/task/page.tsx` | 選択件数が表示される |
+| Step 6 | 4つの絞り込みと、成功・失敗・送信中の扱いを実装する | 32 分 | `src/app/task/page.tsx` | まとめて完了できる |
+| Step 7 | 確認ダイアログ付き一括削除を実装する | 7 分 | `src/app/task/page.tsx` | 確認後にまとめて削除できる |
+| Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
+| Step 9 | 動作確認と仕上げ | 10 分 | — | 一括操作が一通り動く |
+
+**読む時間の合計（仮）**: 約129分です。
+
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
+
+送信待ちの選択変更、失敗時の案内、ログイン切れへの対応も扱うため、今日は内容が多めです。
+
+Step 5 の確認が済んだら、保存して一度休憩できます。再開時は Step 6 から進めてください。関数や JSX の途中では区切らず、各 Step の確認を終えてから休みましょう。
+
+---
+
+### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（読む目安: 20分）
 
 **ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つはこのあと Step 6〜8 で画面のボタンから呼び出します。
 
 Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてきました。今日はそこへ、複数のタスクを一度に処理する3つの手続きを足します。骨組みはこれまでと同じ入力・処理・戻り値の3部品です。ちがうのは入力が「タスク id の配列」になり、処理が「まとめて更新する」`updateMany` や「まとめて削除する」`deleteMany` になるところです。
+
+一括操作では、最初の権限確認が終わった直後に管理者が自分のロールを変更する場合も考えます。Day 14 で作った `lockTaskProjects` を使い、対象プロジェクトを ID 順にロックしてから、現在のロールを含む書き込みを始めます。入口で権限があっても、書き込み時に権限がなくなっていれば1件も確定させません。
 
 #### 0-1. import に一括操作で使う道具を足す
 
@@ -136,8 +145,7 @@ Day 13〜16 で `task.ts` に、1件ずつ扱う手続きを積み上げてき�
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// （permission の import に
-// findTasksWithPermission を足した完成形）
+// （permission の import に findTasksWithPermission を足した完成形）
 import {
   assertMemberPermission,
   findTasksWithPermission,
@@ -194,11 +202,12 @@ const TASK_DELETE_ROLES =
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 const buildBulkPermissionWhere = (
-  ids: string[],
+  tasks: { id: string; projectId: string }[],
   userId: string,
   roles: ProjectMemberRole[],
 ): Prisma.TaskWhereInput => ({
-  id: { in: ids },
+  // ロックしたプロジェクトから移動した行を、別プロジェクトの権限で更新しない。
+  OR: tasks.map(({ id, projectId }) => ({ id, projectId })),
   project: {
     members: {
       some: { userId, role: { in: roles } },
@@ -207,9 +216,9 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-この関数が返すのは`updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`id: { in: ids }` で対象のタスクを選び、`project.members.some` で「そのプロジェクトに、必要なロールを持った自分が入っていること」も同時に要求します。
+この関数が返すのは `updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`OR` の各要素には、入口で読んだタスクの `id` と `projectId` を組にして入れます。ロックを待っている間にタスクが別のプロジェクトへ移動した場合、そのタスクは同じ ID でも条件に一致しません。
 
-2つの条件を1つの `where` にまとめるのが肝心なところです。id だけで絞ると他人のプロジェクトのタスク id を混ぜて送りつけられたときそのまま書き換わってしまいます。条件をこの関数1か所に置いておけばこれから書く3つの手続きが同じ守り方を共有できます。
+`project.members.some` は、書き込みを始める時点でも必要なロールを持つ自分がプロジェクトにいることを要求します。対象の組と現在のメンバー権限を1つの `where` に入れるため、ロックしたプロジェクトの古い権限を、移動後のタスクへ使い回せません。3つの手続きがこの条件を共有します。
 
 最後に書き込めた件数が入力件数と違った場合に処理を止める部品を追加します。
 
@@ -243,10 +252,18 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
-        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
+        const where = buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_EDIT_ROLES);
 ```
 
-入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。
+入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。入口で全件の編集権限を確認したあと、トランザクション内で対象プロジェクトを ID 順にロックします。並びをそろえるのは、2つの一括操作が複数プロジェクトを逆順に選んでも互いに1件目のロックを持ったまま待ち続けないようにするためです。
+
+ロックを取り終えてから、タスクとプロジェクトの組と現在の編集権限を含む `where` で更新します。先にロールが変わっていれば新しいロールを見て拒否します。一括操作が先なら、ロール変更は完了を待ちます。
 
 続けて完了済みと未完了のタスクを分けて更新します。
 
@@ -289,8 +306,14 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 
       return await prisma.$transaction(async (tx) => {
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
         const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
+          where: buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_DELETE_ROLES),
         });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
@@ -298,7 +321,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-流れは `bulkComplete` とよく似ていますが権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
+削除でも、対象プロジェクトを ID 順にロックしてから `deleteMany` を始めます。`TASK_DELETE_ROLES` を使うため、入口の確認後に MEMBER へ降格した人やプロジェクトから外れた人は書き込み時点で一致しません。1件でも対象から外れれば件数確認が例外を投げ、同じトランザクションで先に消した行も元へ戻ります。
 
 #### 0-5. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
@@ -347,7 +370,13 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
       return await prisma.$transaction(async (tx) => {
-        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
+        const where = buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_EDIT_ROLES);
         const unchanged =
           input.status === TASK_STATUS.DONE
             ? await tx.task.updateMany({
@@ -355,6 +384,12 @@ const assertBulkWriteCount = (count: number, expected: number) => {
                 data: { status: TASK_STATUS.DONE },
               })
             : { count: 0 };
+```
+
+`DONE` を選んだときだけ、すでに完了している行を先に更新します。この更新には `completedAt` を含めないため、以前の完了日時を保てます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
         const changed = await tx.task.updateMany({
           where:
             input.status === TASK_STATUS.DONE
@@ -369,179 +404,417 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-変更先が `DONE` の場合は完了済みの行を先に更新して日時を保ちます。その後、未完了の行だけに新しい完了日時を入れます。変更先が `DONE` 以外なら全対象を1回で更新し、完了日時を消します。どちらも書き込み件数で権限を再確認し、件数がずれた場合は全体を取り消します。
+対象プロジェクトのロックがそろってから、現在の編集権限と `id`・`projectId` の組を含む条件で更新します。変更先が `DONE` の場合は完了済みの行を先に更新して日時を保ち、未完了の行だけに新しい完了日時を入れます。変更先が `DONE` 以外なら全対象を1回で更新し、完了日時を消します。どちらも合計件数が入力件数とずれれば、先の更新を含めて全体を取り消します。
 
 **確認ポイント**:
-- `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` の3つを `addTime` の直後に順に足した
-- 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されている
-- `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいる
-- 書き込み側でも現在のロールを確認し、件数がずれたら全体を取り消している
-- `npx tsc --noEmit` で型エラーが出ていない
+- `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` の3つを `addTime` の直後に順に足しました
+- 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されています
+- `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいます
+- 対象プロジェクトを ID 順にロックしてから、現在のロールを含む書き込みを始めています
+- `id` と入口で読んだ `projectId` の組で対象を固定しています
+- 書き込み件数がずれたら、同じトランザクションの変更を全体ごと取り消しています
+- `npx tsc --noEmit` で型エラーが出ていません
 
 ---
 
-### Step 1: 選択状態を管理する state を作る（7 分）
+### Step 1: ID と選択番号を管理する（読む目安: 10分）
 
-**ゴール**: どのタスクにチェックが入っているかを `Set` で管理し、操作関数を定義します。
+**ゴール**: チェックした ID と、選んだ時点の番号を記録します。
 
-チェックボックスの状態管理には `Set`（セット）を使います。`Set` は「重複のない集合」で、「この ID はもう入ってるから追加しない」を自動でやってくれます。
+送信中に A のチェックを外して付け直した場合、古い成功通知で新しいチェックを消してはいけません。`Map`（マップ、キーと値の組を保存する型）に、タスク ID と選択番号を入れます。選択番号は照合用のトークン（同じ選択かを見分ける値）です。
 
-**なぜ `Set` を使うのか**
+Day 27 の React の import には `useRef` があるので、追加し直しません。`useRef` は、再描画を待たずに値を保存する React の関数です。`TaskPageContent` の直前へ次の型と定数を追加します。
 
-| 操作 | 配列の場合 | Set の場合 |
-|------|-----------|-----------|
-| 追加（重複チェックあり） | `if (!arr.includes(id)) arr.push(id)` | `set.add(id)` |
-| 削除 | `arr.filter(x => x !== id)` | `set.delete(id)` |
-| 含まれるか確認 | `arr.includes(id)` | `set.has(id)` |
-
-選択状態は `useState` で管理します。このあと表示対象の配列を求めるために `useMemo` も使うので、既存のReactのimportに両方が含まれていることを確認してください。
-
+<!-- day28-edit: types -->
 ```typescript
 // filepath: src/app/task/page.tsx
-// コンポーネント内に state を追加
-const [selectedTasks, setSelectedTasks] =
-  useState<Set<string>>(new Set());
-const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
-  useState(false);
+const MAX_BULK_TASKS = 100;
+type BulkSelection = Map<string, number>;
+type BulkSubmission = { selection: BulkSelection };
 ```
 
-`useState<Set<string>>(new Set())` の型注釈はこの箱にはタスク id の文字列しか入らないと宣言する意味です。空の `new Set()` から始めるので画面を開いた直後は1件も選ばれていない状態になります。
+`Map<string, number>` のキーは ID、値は選択番号です。上限はサーバーと同じ 100 件にします。
 
-`bulkDeleteDialogOpen` を同じ場所で作っておくのはStep 7 の削除確認ダイアログが開いているかどうかを覚える役目があるからです。削除だけは押し間違いを取り消せません。だから選択の中身とは別に「いま確認中かどうか」を覚えさせて選択と実行のあいだにワンクッションを置きます。
+`TaskPageContent` の先頭へ次の state と ref を追加します。既存の1件用 `deleteDialogOpen` と `deleteTargetId` は残してください。
 
-次に1 件のチェック状態を変える関数を定義します。
-
+<!-- day28-edit: state -->
 ```typescript
 // filepath: src/app/task/page.tsx
-const handleTaskSelect = (
-  taskId: string, checked: boolean
-) => {
-  setSelectedTasks((prev) => {
-    const next = new Set(prev);
-    checked ? next.add(taskId) : next.delete(taskId);
-    return next;
-  });
+const [selectedTasks, setSelectedTasks] = useState<BulkSelection>(new Map());
+const [bulkDeleteTarget, setBulkDeleteTarget] = useState<BulkSelection | null>(null);
+const selectionVersion = useRef(0);
+const bulkSubmission = useRef<BulkSubmission | null>(null);
+```
+
+`bulkDeleteTarget` は削除の確認時に写した対象です。`null` は確認を閉じた状態を表します。`bulkSubmission.current` は送信中の選択を保存し、続くクリックを同期的に止めます。画面を描き直してから変わる値だけに頼ると、同じ瞬間の2回目を防げません。
+
+ここで追加するのは `selectedTasks`、`bulkDeleteTarget`、`selectionVersion`、`bulkSubmission` の4つです。Day 15 で作った `singleSubmission` と `formGeneration`、ログイン切れを保持する `authExpiredRef` と `authExpired` の隣へ置き、既存の宣言は追加し直しません。`singleSubmission` は1件操作の2回送信を止め、`formGeneration` は送信後に別のフォームを開いたかを見分けるためです。
+
+Day 20 で作った `src/lib/task-filter-query.ts` は作り直しません。この日の前提は SHA-256 `c11f6395dd14435fffaa80edac6b64dead646e1071f9ec39adeb28143ad0e414` のhelperです。`parseTaskFiltersFromSearchParams` で初回のプロジェクト・ステータスを読み、`desiredUrlFilterContext` と2つのeffectで画面とURLを同期する処理も残します。
+
+このhelperはプロジェクトIDをサーバー入力と同じZodのCUID形式で検査します。形式が壊れた値は `'all'` へ戻しますが、有効な形のIDが現在の利用者に見えるかは決めません。所属と権限はサーバーが現在のDBを見て判定します。
+
+Day 20 の `dismissedDetailTaskId` も残します。詳細を閉じてからURL更新が届くまで古い `taskId` が一度見えても、同じ詳細を開き直さないためのrefです。URLを読むeffect、URLを書くeffectの順序は変えません。書くeffectでは閉じた `taskId` を消し、別ID・編集リンク・URL反映後にはrefを解除します。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存の宣言を確認）
+const dismissedDetailTaskId = useRef<string | null>(null);
+```
+
+このrefは閉じた詳細のIDだけをURL反映まで保持し、別IDへの移動や編集リンクへの切り替えを止めません。`handleDetailClose` は次の形を保ちます。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存関数を保持）
+const handleDetailClose = () => {
+  setDetailOpen(false);
+  setSelectedTask(null);
+  if (taskIdParam && !isEditLink) {
+    dismissedDetailTaskId.current = taskIdParam;
+    const params =
+      new URLSearchParams(searchParams.toString());
+    params.delete('taskId');
+    const nextQuery = params.toString();
+    router.replace(nextQuery
+      ? `${pathname}?${nextQuery}` : pathname,
+      { scroll: false });
+  }
 };
 ```
 
-`handleTaskSelect` は `(taskId, checked)` の 2 引数を受け取ります。`checked` が `true` なら追加、`false` なら削除という、シンプルな設計です。
+詳細を閉じてもプロジェクトとステータスの条件は残ります。Day 28 の4条件、ページ番号、選択状態を加えるときも、このURL寿命を削りません。
 
-**なぜ `new Set(prev)` でコピーするのか**
-
-React では state を直接変更してはいけません。`prev.add(id)` と書くと元の Set を変更してしまいます。
-
-`new Set(prev)` で新しい Set を作ってから変更することで、React が「状態が変わった」と検知して画面を更新してくれます。
-
-全選択の前に、操作できるタスクと
-現在表示中の選択タスクを求めます。
-閲覧専用タスクや、フィルターで消えたタスクを
-一括操作へ混ぜないためです。
+Day 20 の `leavePageContext` は、ページや絞り込みを変えたときに一括選択も破棄する形へ置き換えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-const selectableTasks = useMemo(
-  () => tasks?.filter(
-    (task) =>
-      canEditProject(task.projectId)
-      || canDeleteProject(task.projectId),
-  ) ?? [],
-  [tasks, canEditProject, canDeleteProject],
-);
-
-const selectedTaskList = useMemo(
-  () => tasks?.filter(
-    (task) => selectedTasks.has(task.id),
-  ) ?? [],
-  [tasks, selectedTasks],
-);
+const leavePageContext = useCallback(() => {
+  formGeneration.current++;
+  selectionVersion.current++;
+  setSelectedTasks(new Map());
+  setBulkDeleteTarget(null);
+  setDeleteDialogOpen(false);
+  setDeleteTargetId(null);
+  setSelectedTask(null);
+  setDetailOpen(false);
+  setDialogOpen(false);
+  setEditingTask(undefined);
+}, []);
 ```
 
-`selectableTasks` は編集か削除のどちらかができるタスクだけを残した一覧です。閲覧しかできないプロジェクトのタスクをここで外しておくとこのあと作る全選択がそれらを拾わなくなります。
+`selectionVersion` を進めて選択を空にするので、移動前に送った一括操作の応答は移動後のチェックを消しません。個別削除の `deleteTargetId` も空にし、前のページで選んだ対象を新しいページから削除しないようにします。Day 20 のURLから画面へ戻すeffectもこの関数を呼ぶため、ブラウザの「戻る」「進む」でも同じ境界が働きます。
 
-`selectedTaskList` のほうは`selectedTasks` に id が残っていてなおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが`Set` の中の id は消えません。ここで一覧と突き合わせておかないと目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは`tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
+`handleDetailClose` の定義の直後、`if (tasksLoading)` の前へ次の4ブロックを順番に追加します。
 
-```mermaid
-flowchart TB
-    subgraph T["tasks: 画面に並んでいるタスク"]
-      SE["selectableTasks<br/>編集か削除ができる"]
-      RO["閲覧しかできない"]
-      SL["selectedTaskList<br/>Set に id があり<br/>いまも並んでいる"]
-    end
-    ST["selectedTasks: id の Set<br/>消えた id も残る"]
-    ST -.->|"突き合わせる"| SL
-    SE -->|"全選択の分母"| CB["3つの状態を決める"]
+<!-- day28-edit: select-one -->
+```typescript
+// filepath: src/app/task/page.tsx
+const handleTaskSelect = (taskId: string, checked: boolean) => {
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) => {
+      const next = new Map(previous);
+      checked ? next.set(taskId, version) : next.delete(taskId);
+      return next;
+    });
+  };
 ```
 
-名前の似た3つは指しているものが別々です。`selectedTasks` だけ枠の外にあるのは画面に並んでいないタスクの id も持ち続けるからです。分母を `tasks` にすると閲覧専用のタスクまで数に入り、選べるものを全部選んでも全チェックになりません。
+選択番号はクリックのたびに増やします。`new Map(previous)` でコピーしてから変更するので、React が選択の変化を検知できます。
 
-選択中タスクすべてに必要な権限があるかも
-操作ごとに判定します。
+<!-- day28-edit: selection-lists -->
+```typescript
+// filepath: src/app/task/page.tsx
+// 編集も削除もできないタスク（閲覧のみ）は一括操作の対象から除外する
+  const selectableTasks = useMemo(
+    () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
+    [tasks, canEditProject, canDeleteProject],
+  );
 
+  const selectedTaskList = useMemo(
+    () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
+    [tasks, selectedTasks],
+  );
+```
+
+`selectableTasks` は編集か削除ができるタスクです。`selectedTaskList` は、現在の一覧に残っている選択済みタスクです。非表示になった ID を送らないため、一覧と照合します。
+
+<!-- day28-edit: permissions -->
 ```typescript
 // filepath: src/app/task/page.tsx
 const canCompleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canEditProject(task.projectId),
-  );
-const canDeleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canDeleteProject(task.projectId),
-  );
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
+  const canDeleteSelected =
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 ```
 
-`every`（配列の全要素が条件を満たしたときだけ `true` を返すメソッド）を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので「編集はできるが削除はできない」タスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+`every`（全要素が条件を満たすかの判定）で、選択した全件の権限を確かめます。サーバーも書き込み時の権限を再確認するため、画面の判定だけを認可には使いません。
 
-ただしこの2つの変数が守っているのはボタンを出すかどうかまでです。Step 0 で書いた通り、サーバー側は `findTasksWithPermission` と `assertMemberPermission` でもう一度権限を確かめ、書き込み時の `where` でも現在のロールを見ます。件数が入力とずれれば`$transaction` が書き込み全体をまとめて取り消します。
-
-画面の判定だけを門番にはできません。ブラウザから送る中身は手元で書き換えられるのでid の配列を直接投げつけられたら `canDeleteSelected` は一度も評価されません。画面側の条件は誤操作を減らすための入口で、最後に本当に守っているのはサーバー側です。
-
-全選択・全解除は操作できるタスクだけを対象に
-1 つの関数で処理します。
-
+<!-- day28-edit: select-all -->
 ```typescript
 // filepath: src/app/task/page.tsx
 const handleSelectAll = (checked: boolean) => {
-  setSelectedTasks(
-    checked
-      ? new Set(selectableTasks.map(
-          (task) => task.id
-        ))
-      : new Set()
-  );
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) =>
+      checked
+        ? new Map(selectableTasks.map((task) => [task.id, previous.get(task.id) ?? version]))
+        : new Map(),
+    );
+  };
+```
+
+全選択では既存の選択番号を維持し、新しく選ぶ ID だけに番号を付けます。送信済みの A に触らず B を追加した場合、A の成功で A だけを解除するためです。
+
+**確認ポイント**: `new Map()`、選択番号、2つの選択配列が定義されています。まだチェックボックスは無いので、画面操作は Step 2 で確認します。
+
+#### 1-1. Day 27 の1件操作を一括選択と共存させる
+
+Day 20 の `TaskSubmission` はフォーム世代、ページ番号、URLの対象を覚えています。Day 28 では一括送信の型と区別するため、同じフィールドを保ったまま `SingleSubmission` へ名前を変えます。送信した対象、現在のURL、選択中のIDは別々に照合します。
+
+まず `classifyTaskWriteError` の import を置き換え、操作名の型も読み込みます。
+
+<!-- day28-edit: single-operation-import -->
+```typescript
+// filepath: src/app/task/page.tsx（既存の import を置き換える）
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
+```
+
+TaskSubmission の型を次の `SingleSubmission` へ置き換えます。続いて `singleSubmission` の型名も同じ名前へ変えます。
+
+<!-- day28-edit: single-submission-type -->
+```typescript
+// filepath: src/app/task/page.tsx（TaskSubmission を置き換える）
+type SingleSubmission = {
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+  routeTaskId: string | null;
+  editLink: boolean;
 };
 ```
 
-`checked` が `true` なら操作可能なタスクの ID を
-Set に詰め、`false` なら空の Set で上書きします。
+フォーム世代、ページ番号、送信開始時の `taskId` と `edit` を保存します。ページを移動した場合や、あとから別のタスクを開いた場合に、古い応答が現在のフォームを閉じないようにするためです。
 
-**確認ポイント**:
-- `selectedTasks` が `Set<string>` 型で定義されている
-- `bulkDeleteDialogOpen` の state も一緒に追加されている
-- `handleTaskSelect(taskId, checked)` が 2 引数を受け取る
-- `handleSelectAll(checked)` の 1 つの関数で全選択・全解除ができる
-- `new Set(prev)` でコピーしてから変更している
-- 閲覧専用タスクが全選択に含まれない
+<!-- day28-edit: single-submission-ref -->
+```typescript
+// filepath: src/app/task/page.tsx（既存のrefを置き換える）
+const singleSubmission = useRef<SingleSubmission | null>(null);
+```
+
+routeTaskId は送信を始めたURLの対象です。保存待ちの間に別の詳細リンクを開いた場合、古い成功結果で新しい対象のフォームを閉じないために使います。一括選択の `BulkSubmission` とは用途が違うのでrefを分けます。
+
+Day 27 にすでにある `const [authExpired, setAuthExpired] = useState(false);` の直後へ、認証切れを親ページへ固定する関数を追加します。
+
+<!-- day28-edit: detail-auth -->
+```typescript
+// filepath: src/app/task/page.tsx（authExpired state の直後に追加）
+const handleDetailAuthExpired = useCallback(() => {
+  authExpiredRef.current = true;
+  setAuthExpired(true);
+}, []);
+```
+
+この関数は詳細取得と書き込みの401を同じ状態へ集めます。`handleCreate` と `handleEdit` の先頭にある `if (authExpiredRef.current) return;` は削除しません。認証切れが確定した同じ描画中に、古いボタンからフォームを開かないための同期ガードです。
+
+2つのハンドラーの先頭が次の形であることを確認します。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const handleCreate = () => {
+  if (authExpiredRef.current) return;
+  formGeneration.current++;
+  setEditingTask(undefined);
+  setDialogOpen(true);
+};
+const handleEdit = (taskId: string) => {
+  if (authExpiredRef.current) return;
+  const task = tasks?.find((item) => item.id === taskId);
+  if (!task) return;
+  formGeneration.current++;
+  setEditingTask(taskToFormData(task));
+  setDialogOpen(true);
+};
+```
+
+この2行は再描画を待たずに操作を止めます。フォームを開く直前に認証切れを確認するので、書き込みボタンの表示が切り替わる前の操作も止められます。
+
+`handleSubmit` の中にある `if (!data.id && !session?.user?.id)` を探します。その分岐内の `authExpiredRef.current = true;` と `setAuthExpired(true);` の2行を、次の1行へ置き換えます。直後の `return;` は残してください。
+
+<!-- day28-edit: submit-missing-session-auth -->
+```typescript
+// filepath: src/app/task/page.tsx（新規作成時のセッション確認分岐内）
+handleDetailAuthExpired();
+```
+
+新規作成の直前にセッションが無い場合も、詳細の取得や保存で認証が切れた場合と同じ関数へ集めます。先に認証切れを固定してから return するので、ユーザーIDの無い作成要求をサーバーへ送りません。
+
+`const utils = api.useUtils();` と Day 20 のURL同期effectはそのまま残します。Day 28 では時間記録の処理を書き換えません。一括操作とページ境界の追加に範囲を絞り、既存の1件操作を削らないでください。
+
+`closeTaskDialog` の直後へ、送信したフォーム世代とURLの対象を照合する関数を追加します。
+
+<!-- day28-edit: owns-single-lifetime -->
+```typescript
+// filepath: src/app/task/page.tsx（closeTaskDialog の直後に追加）
+const ownsSubmittedLifetime = (submitted: SingleSubmission | null) =>
+  !authExpiredRef.current &&
+  submitted?.generation === formGeneration.current &&
+  submitted.pageIndex === pageIndex &&
+  submitted.routeTaskId === taskIdParam &&
+  submitted.editLink === isEditLink;
+```
+
+この関数が `true` を返すのは、認証が有効で、フォーム世代、ページ番号、`taskId`、`edit` が送信開始時のままの場合だけです。続けて `finishSubmittedForm` の引数型と `canClose` の計算を次の形へ置き換えます。
+
+<!-- day28-edit: finish-single-lifetime -->
+```typescript
+// filepath: src/app/task/page.tsx（finishSubmittedForm の先頭を置き換える）
+const finishSubmittedForm = (
+  submitted: SingleSubmission | null,
+  operation: 'create' | 'update',
+  target: { id: string; title: string | undefined },
+) => {
+  const canClose =
+    ownsSubmittedLifetime(submitted) &&
+    submitted?.isCurrent();
+```
+
+世代、URL、フォーム内の入力revisionがすべて一致した送信だけがダイアログを閉じます。どれかが変わっていれば保存した対象名だけを通知し、いま開いている入力は残します。
+
+同じ関数にある未保存入力の2つの案内を、次の文へ置き換えます。
+
+<!-- day28-edit: unsaved-single-guidance -->
+```typescript
+// filepath: src/app/task/page.tsx（既存の2つのtoast文を置き換える）
+if (operation === 'create' && !editingTask?.id) {
+  toast(
+    ('送信後に入力を変えた場合、' +
+      'その変更は保存されていません。' +
+      'このまま作成すると' +
+      '別のタスクになります。'),
+  );
+} else if (operation === 'update' && editingTask?.id === target.id) {
+  toast(
+    ('送信後に入力した変更は保存されていません。' +
+      '入力内容を別の場所にコピーしてから、' +
+      'タスク編集画面を閉じて開き直し、もう一度保存してください。'),
+  );
+}
+```
+
+1つ目は作成後の追加入力、2つ目は同じタスクを編集し直した入力に対応します。保存済みの値と画面に残った値を混同せず、次の操作前に再取得する必要を伝えます。
+
+`handleSingleError` は操作名を共通型へ変え、認証エラーの分岐を先ほどの関数へ置き換えます。
+
+<!-- day28-edit: single-error-auth -->
+```typescript
+// filepath: src/app/task/page.tsx（handleSingleError を置き換える）
+const handleSingleError = async (
+  error: unknown,
+  operation: TaskWriteOperation,
+  ids: string[],
+) => {
+  const failure = classifyTaskWriteError(error, operation);
+  if (failure.kind === 'auth') {
+    handleDetailAuthExpired();
+    return;
+  }
+  toast.error(failure.message);
+  await refreshTaskTargets(ids, true, true);
+};
+```
+
+認証エラーでは一覧の再取得へ進まず、親ページをログイン切れ表示へ切り替えます。その他の失敗だけ対象を再取得し、保存結果が不明な画面を更新します。`singleMutationOptions` 内の `submitted` の型も次の形へ変えます。
+
+<!-- day28-edit: single-context-type -->
+```typescript
+// filepath: src/app/task/page.tsx（onSettled の第4引数の型を置き換える）
+submitted: SingleSubmission | null | undefined,
+```
+
+mutationが返したcontextを新しい型で受けないと、routeTaskId を後続処理で安全に読めません。`singleSubmission.current === submitted` の照合と、送信終了時に `null` へ戻す処理は残します。
+
+1件削除の `onSuccess` で `setSelectedTask` を更新した直後へ、削除したIDを一括選択から外す処理を追加します。
+
+<!-- day28-edit: single-delete-selection -->
+```typescript
+// filepath: src/app/task/page.tsx（deleteMutation.onSuccess に追加）
+setSelectedTasks((current) => {
+  const next = new Map(current);
+  next.delete(variables.id);
+  return next;
+});
+```
+
+1件削除したカードのIDが `selectedTasks` に残ると、画面から消えた対象を次の一括操作へ渡しかねません。削除成功時だけそのIDを外し、失敗時は選択を残します。
+
+`handleSubmit` が `singleSubmission.current` へ代入するオブジェクトを次の形へ置き換えます。直前の `!isCurrent()` は残してください。
+
+<!-- day28-edit: single-submit-context -->
+```typescript
+// filepath: src/app/task/page.tsx（singleSubmission.current の代入を置き換える）
+singleSubmission.current = {
+  generation: formGeneration.current,
+  pageIndex,
+  isCurrent,
+  routeTaskId: taskIdParam,
+  editLink: isEditLink,
+};
+```
+
+作成または更新を始めた瞬間のフォーム世代、ページ番号、入力revision、URLの対象を1組で保存します。送信後にどれかが変わると、完了処理は現在のフォームを閉じません。1件削除ダイアログの `onConfirm` でも、削除開始時のページとURLを同じcontextへ保存します。
+
+<!-- day28-edit: single-delete-context -->
+```typescript
+// filepath: src/app/task/page.tsx（1件削除のcontext代入を置き換える）
+singleSubmission.current = {
+  generation: formGeneration.current,
+  pageIndex,
+  isCurrent: () => false,
+  routeTaskId: taskIdParam,
+  editLink: isEditLink,
+};
+```
+
+削除には編集フォームが無いため `isCurrent` は常に `false` です。ページ、URL、世代は、削除待ちの間に移動した先や別の対象へ古い完了処理を作用させない照合に使います。
+
+最後に `TaskDetailDialog` を次の形へ置き換えます。
+
+<!-- day28-edit: detail-auth-props -->
+```tsx
+{/* filepath: src/app/task/page.tsx */}
+<TaskDetailDialog
+  open={detailOpen && selectedTask !== null}
+  onAuthExpired={handleDetailAuthExpired}
+  taskId={selectedTask}
+  onClose={handleDetailClose}
+/>
+```
+
+一括削除で表示中の対象が消えた場合は `selectedTask` が `null` になり、詳細を閉じます。詳細queryの401は `onAuthExpired` から親へ伝え、一覧を含む保護データを同じ画面から隠します。
 
 ---
 
-### Step 2: チェックボックス付きタスクカードを作る（8 分）
+### Step 2: チェックボックス付きタスクカードを作る（読む目安: 8分）
 
 **ゴール**: 各タスクの隣にチェックボックスを追加し、`TaskCard` と並べてグリッド表示します。
 
 スクリーンショット: チェックボックス付きタスクカードの表示を確認してください。
 
-![タスクカードの左端に付いたチェックボックス（赤枠）](./screenshots/day28/task-row-with-checkbox.png)
+![タスクカードの左側に表示されたチェックボックス](./screenshots/day28/task-row-with-checkbox.png)
 
 実際のコードでは `TaskCard` コンポーネントをグリッドで並べています。`TaskCard`・`handleEdit`・`handleDelete`・`handleTaskClick`・`handleCreate` は過去の Day で作成済みです。
 
-チェックボックスはカードの左側に配置します。
+まず、ファイル先頭の import 群へ `Checkbox` の import を追加します。すでに同じ行がある場合は追加しません。
 
 ```typescript
-// filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す）
+// filepath: src/app/task/page.tsx（ファイル先頭の import 群に追加）
 import { Checkbox } from '@/component/ui/checkbox';
+```
 
+この import を先頭へ置くと、これから追加する JSX で `Checkbox` を名前どおりに使えます。コンポーネントの途中へ貼ると構文エラーになるため、貼り先を分けています。
+
+次に、チェックボックスをカードの左側へ配置します。
+
+```typescript
+{/* filepath: src/app/task/page.tsx（className="grid gap-6 の要素を書き直す） */}
 {/* タスク一覧の grid レイアウト */}
 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
   {tasks && tasks.length > 0 ? (
@@ -567,7 +840,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 `aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶためです。名前が無いと読み上げでは「チェックボックス」が何個も続くだけになり、どのタスクを選んでいるのか分かりません。まとめて削除する操作なので取り違えると戻せません。
 
-上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合の表示は Day 15 で書いた2行のメッセージをそのまま残します。
+上のコードブロックの `</div>` 閉じタグは次のブロックに続きます。各タスクカードは `flex-1 min-w-0 h-full` のラッパーで囲み、`TaskCard` に props を渡します。タスクがない場合は空メッセージを表示します。
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -584,14 +857,13 @@ import { Checkbox } from '@/component/ui/checkbox';
             onEdit={handleEdit}
             onDelete={handleDelete}
             onClick={handleTaskClick}
-            onTimeLogSuccess={handleTimeLogSuccess}
             canEdit={taskCanEdit}
             canDelete={taskCanDelete}
           />
         </div>
 ```
 
-ここで `TaskCard` に渡している props はDay 13〜16 で1つずつ増やしてきたものをそのまま並べただけです。今日の一括操作のために新しく足した props は1つもありません。チェックボックスをカードの外側へ置く形にしたのでカード本体は一行も書き換えずに済んでいます。
+チェックボックスはカードの外側へ置くので、`TaskCard` 自体のファイルは変更しません。
 
 `canEdit` と `canDelete` はカードの中にある編集ボタンと削除ボタンを出し分けるための値です。1つ前のブロックでチェックボックスを出す条件に使ったのと同じ `taskCanEdit` / `taskCanDelete` を渡しています。同じ値を使い回すのでカードの中と外で操作できる範囲が食い違いません。
 
@@ -605,9 +877,7 @@ import { Checkbox } from '@/component/ui/checkbox';
   ) : (
     <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
       <p>タスクが見つかりません。</p>
-      {filterProject === 'all' && filterStatus === 'all' && (
-        <p>最初のタスクを作成しましょう！</p>
-      )}
+      <p>最初のタスクを作成しましょう!</p>
     </div>
   )}
 </div>
@@ -617,8 +887,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 > `taskCanEdit` / `taskCanDelete` は
 > `canEditProject` / `canDeleteProject` を
 > `task.projectId` に適用した結果です。
-> Day 16 の `timeSpentMinutes` と
-> `onTimeLogSuccess` も残してください。
+> `timeSpentMinutes` は残してください。
 
 **`onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}`**
 
@@ -637,14 +906,14 @@ import { Checkbox } from '@/component/ui/checkbox';
 | `h-full` | カードの高さを親要素に合わせる |
 
 **確認ポイント**:
-- 各タスクカードの左側にチェックボックスが表示される
-- チェックを入れると `selectedTasks` に ID が追加される
-- 再度クリックするとチェックが外れる
-- `npm run dev` でエラーが出ない
+- 各タスクカードの左側にチェックボックスが表示されます
+- チェックを入れると `selectedTasks` に ID が追加されます
+- 再度クリックするとチェックが外れます
+- `npm run dev` でエラーが出ません
 
 ---
 
-### Step 3: まず「全選択 / 全解除」チェックボックスを作る（4 分）
+### Step 3: まず「全選択 / 全解除」チェックボックスを作る（読む目安: 4分）
 
 **ゴール**: ヘッダーにチェックボックスを追加し、シンプルな全選択・全解除を実装します。
 
@@ -653,6 +922,8 @@ import { Checkbox } from '@/component/ui/checkbox';
 ![ヘッダーに全選択・全解除のチェックボックスが表示された画面](./screenshots/day28/select-all-checkbox.png)
 
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なのでまずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
+
+次の `isAllSelected` は、`TaskPageContent` の中にある `handleSelectAll` の直後、`if (tasksLoading)` の直前に追加してください。選択できるタスクと選択済みの一覧を使うため、それらの宣言より後に置きます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -663,24 +934,32 @@ const isAllSelected =
     === selectableTasks.length;
 ```
 
-`isAllSelected` は「タスクが存在し、全タスクの ID が `selectedTasks` に入っているか」を判定するだけのシンプルな `boolean` です。
+`isAllSelected` は、操作可能なタスクが1件以上あり、表示中の選択件数が操作可能な件数と一致すると `true` を返します。
 
-この値をチェックボックスに渡します。
+この値をチェックボックスに渡します。先に、ファイル先頭の import 群へ `Label` の import を追加します。すでに同じ行がある場合は追加しません。
 
 ```typescript
-// filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加）
+// filepath: src/app/task/page.tsx（ファイル先頭の import 群に追加）
 import { Label } from '@/component/ui/label';
+```
 
+この import を先頭へ置くと、これから追加する JSX で `Label` を使えます。フィルター行の途中へ貼ると構文エラーになるため、貼り先を分けています。
+
+次に、全選択チェックボックスをフィルター行の先頭へ追加します。
+
+```typescript
+{/* filepath: src/app/task/page.tsx（className="flex gap-2 w-full の前に追加） */}
 {/* フィルター行の先頭に配置 */}
 <div className="flex items-center space-x-2">
   <Checkbox
     id="select-all"
+  aria-label="表示中のタスクをすべて選択"
     checked={isAllSelected}
     onCheckedChange={(checked) =>
       handleSelectAll(checked === true)
     }
   />
-  <Label htmlFor="select-all">すべて選択</Label>
+  <Label htmlFor="select-all">表示中をすべて選択</Label>
 </div>
 ```
 
@@ -695,13 +974,13 @@ import { Label } from '@/component/ui/label';
 3 行目の「一部だけ手動で選択」のときヘッダーのチェックボックスが未チェックのままだといま何件選んでいるのかが見た目で分かりません。次の Step でこれを改善します。
 
 **確認ポイント**:
-- ヘッダーのチェックボックスをクリックすると全タスクが選択される
-- もう一度クリックすると全選択が解除される
-- `npm run dev` でエラーが出ない
+- ヘッダーのチェックボックスをクリックすると全タスクが選択されます
+- もう一度クリックすると全選択が解除されます
+- `npm run dev` でエラーが出ません
 
 ---
 
-### Step 4: 部分選択を `indeterminate` で表現する（4 分）
+### Step 4: 部分選択を `indeterminate` で表現する（読む目安: 4分）
 
 **ゴール**: 一部だけ選択されているときヘッダーのチェックボックスに「横棒（部分チェック）」を表示します。
 
@@ -716,7 +995,7 @@ import { Label } from '@/component/ui/label';
 Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectAllState` に置き換えます。
 
 ```typescript
-// filepath: src/app/task/page.tsx（isAllSelected の宣言を書き直す）
+// filepath: src/app/task/page.tsx
 // isAllSelected を削除して、以下に置き換える
 const selectAllState =
   selectableTasks.length > 0
@@ -742,10 +1021,11 @@ const selectAllState =
 JSX 側の `checked` に渡す値を差し替えます。
 
 ```typescript
-{/* filepath: src/app/task/page.tsx（id="select-all" の要素を書き直す） */}
+{/* filepath: src/app/task/page.tsx */}
 {/* Step 3 で書いた Checkbox の checked を差し替える */}
 <Checkbox
   id="select-all"
+  aria-label="表示中のタスクをすべて選択"
   checked={selectAllState}
   onCheckedChange={(checked) =>
     handleSelectAll(checked === true)
@@ -754,8 +1034,8 @@ JSX 側の `checked` に渡す値を差し替えます。
 ```
 
 **確認ポイント**:
-- `checked={isAllSelected}` を `checked={selectAllState}` に変更した
-- ファイルを保存して `npm run dev` でエラーが出ない
+- `checked={isAllSelected}` を `checked={selectAllState}` に変更しました
+- ファイルを保存して `npm run dev` でエラーが出ません
 
 **`indeterminate` が重要な理由**
 
@@ -763,19 +1043,19 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 **`checked === true` にする理由**
 
-`onCheckedChange` は `boolean | 'indeterminate'` を渡してきます。`indeterminate` のときに `handleSelectAll` を呼ぶと意図しない動作をするため明示的に `=== true` で絞り込みます。
+`onCheckedChange` は `boolean | 'indeterminate'` を渡してきます。`checked === true` で `boolean` に絞り込みます。部分選択の状態で押すと `true` が渡され、全選択に変わります。
 
 **確認ポイント**:
 - 全未選択のときヘッダーのチェックボックスが未チェック（□）
 - 一部選択のときヘッダーのチェックボックスが `indeterminate`（横棒）
 - 全選択のときヘッダーのチェックボックスがチェック（✓）
-- ヘッダーのチェックボックスをクリックして全選択・全解除が切り替わる
+- ヘッダーのチェックボックスをクリックして全選択・全解除が切り替わります
 
 ---
 
-### Step 5: ヘッダーに一括操作ボタンを追加する（7 分）
+### Step 5: ヘッダーに一括操作ボタンを追加する（読む目安: 7分）
 
-**ゴール**: 1 件以上選択されているときだけ、ページヘッダーに一括操作ボタンを表示します。
+**ゴール**: 選択件数を表示し、次の Step から一括操作ボタンを追加する場所を作ります。
 
 実際のコードでは一括操作ボタンは **画面下部の固定バーではなく、ページヘッダーの右側** に配置されています。
 
@@ -783,8 +1063,10 @@ JSX 側の `checked` に渡す値を差し替えます。
 
 ![Step 8 まで終えた状態。1件だけ選ぶと見出しに「(1件選択中)」が出て右側に一括操作ボタンが並ぶ](./screenshots/day28/bulk-operation-header.png)
 
+Day 27 の「タスク」の `<h1>` の開始タグから、その直後の「新規タスク」ボタンの `</Button>` までを次のコードで置き換えます。2つの要素を置き換え、周囲の `div` と直後のフィルター行は残してください。
+
 ```typescript
-{/* filepath: src/app/task/page.tsx（<h1 className="text-3xl font-bold から「新規タスク」の </Button> までを書き直す） */}
+{/* filepath: src/app/task/page.tsx（h1 と直後の新規タスクボタンを置き換える） */}
 {/* ページのタイトル行（h1 と操作ボタンが並ぶ行） */}
 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
   <div className="flex items-center gap-3">
@@ -803,18 +1085,14 @@ JSX 側の `checked` に渡す値を差し替えます。
         {/* ここにStep 6〜8でボタンを追加していく */}
       </>
     )}
-    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
+    <Button className="w-full sm:w-auto" onClick={handleCreate}>
       <Plus className="mr-2 h-4 w-4" /> 新規タスク
     </Button>
   </div>
 </div>
 ```
 
-**`flex-col` から始める理由**
-
-外側の `<div>` は `flex-col` で見出しとボタンの列を縦に積みます。横幅が 1024px 以上の画面では `lg:flex-row` が効いて横並びになります。ボタンが見出しの右側へ並ぶのはこのときです。ボタンの列にも `flex-col` と `sm:flex-row` を付けてあるので 640px 未満の画面ではボタン同士も縦に積まれます。Day 27 のプロジェクト一覧の見出し行と同じ考え方です。
-
-`Button` には `whitespace-nowrap` が入っているのでボタンの文字は折り返しません。1件以上選ぶとボタンは最大で4つに増えます。横1列のままでは4つの合計の幅がスマートフォンの画面に収まりません。はみ出した「新規タスク」ボタンは横へスクロールしないと押せなくなります。横1列の中では Day 14 で付けた `w-full` が効かないため「新規タスク」は文字の幅に縮んだままです。縦に積めば4つのボタンがどれもページの横幅いっぱいに広がります。
+外側の `flex-col` は狭い画面で見出しと操作ボタンを縦に並べ、`lg:flex-row` は広い画面で横並びへ戻します。ボタン側も `sm:flex-row` と `w-full sm:w-auto` を使うため、狭い画面ではボタンが縦に並び、押せる幅を確保できます。
 
 **なぜ固定バーではなくヘッダーに配置するのか**
 
@@ -834,324 +1112,717 @@ React で「条件が真のときだけ描画する」
 選択タスクが1件以上のときだけ JSX を描画します。
 
 **確認ポイント**:
-- タスクを 1 件も選択していないとき「新規タスク」ボタンだけが表示される
-- ブラウザの横幅を 640px より狭めると「新規タスク」ボタンが見出しの下で横幅いっぱいに広がる
-- タスクを 1 件以上選択すると「(N 件選択中)」の文字が現れる
-- 一括操作ボタンが追加される領域（`<>...</>` の中）が確保されている
-- `npm run dev` でエラーが出ない
+- タスクを 1 件も選択していないとき「新規タスク」ボタンだけが表示されます
+- タスクを 1 件以上選択すると「(N 件選択中)」の文字が現れます
+- 一括操作ボタンが追加される領域（`<>...</>` の中）が確保されています
+- `npm run dev` でエラーが出ません
 
 ---
 
-### Step 6: 一括完了を実装する（5 分）
+### Step 6: 4つの絞り込みと、成功・失敗・送信中の扱いを実装する（読む目安: 32分）
 
-**ゴール**: 「完了にする」ボタンを押すと選択したタスクの `status` と `completedAt` がまとめて更新されるようにします。
+**ゴール**: 優先度・担当者を含む4つの条件で一覧を絞り込み、3種類の一括操作では二重送信を止めて、成功と失敗を表示へ反映します。
 
-まず mutation を定義します。
+エラー文の分類は提供コードを使います。プロジェクトルートのターミナルで次を実行してください。
+
+```bash
+# filepath: プロジェクトルート
+cp scripts/_lib-base/task-bulk-error.ts src/lib/task-bulk-error.ts
+```
+
+コピー元は配布 ZIP の `scripts/_lib-base/task-bulk-error.ts` です。ここには HTTP の状態コードから固定メッセージを選ぶ処理が入っています。ブラウザへサーバーの内部メッセージを直接出さないためです。ファイルが無い場合は配布物を確認し、この Step を止めてください。
+
+既存の `lucide-react` の import を `import { CheckSquare, Plus, Trash2 } from 'lucide-react';` に置き換えます。続いて、次の import をファイル先頭へ追加します。
+
+<!-- day28-edit: bulk-imports -->
+```typescript
+// filepath: src/app/task/page.tsx
+import { classifyTaskBulkError, type TaskBulkOperation } from '@/lib/task-bulk-error';
+```
+
+手元の `src/app/task/page.tsx` には `useCallback`、`useRouter`、`isAuthError`、`shouldRetryQuery` の import もあります。これらは追加し直しません。`useCallback` は、再描画しても同じ関数を渡す React の関数です。
+
+Day 27ですでにある `const [authExpired, setAuthExpired] = useState(false);` の直後を確認します。Step 1-1で書いた `handleDetailAuthExpired` があるため、同じ関数は追加し直しません。
+
+Step 1-1の関数は、詳細の401と書き込みの401を親の認証切れ状態へ集めます。空の依存配列にしたため、子へ渡す通知関数は再描画のたびに変わりません。
+
+`const router = useRouter();` は Day 27 からあります。そのまま使い、同じ宣言を追加しないでください。ログイン画面へ移動する際に、後でこの `router` を使います。
+
+#### 6-1. 優先度と担当者の絞り込みを足す
+
+Day 20 で追加した `usePathname`、`parseTaskFiltersFromSearchParams`、`buildTaskFiltersQueryString`、`desiredUrlFilterContext` は残します。プロジェクトとステータスの初期値をURLから読み、画面からURLへ書く処理も削りません。
+
+ブラウザの「戻る」「進む」では1ページ目へ戻します。詳細を閉じたときは `taskId` だけを消し、編集を閉じたときは `taskId` と `edit` を消します。URLを読むeffectを先、書くeffectを後ろに置く順序も保ちます。
+
+Day 27 の一覧はプロジェクトとステータスの2条件で絞り込めます。今日の一括操作では表示中のタスクだけを対象にするため、完成版で使う優先度と担当者の条件もここで追加します。完成コードにだけ新しい絞り込みが現れないよう、state、取得条件、画面の順でつなぎます。
+
+ファイル先頭へ優先度の定数と型を追加します。`Label` は Step 3 で追加済みです。
+
+```typescript
+// filepath: src/app/task/page.tsx（import 群に追加）
+import {
+  isTaskPriority,
+  TASK_PRIORITY_LABELS,
+  type TaskPriority,
+} from '@/lib/constant/priority';
+```
+
+`filterStatus` の直後にある既存の `pageContext`、`pagination`、`pageIndex` の宣言群を、次の全文へ**置き換えます**。優先度と担当者のstateも同じ範囲へ加えます。古い2条件の宣言群を残したまま追加しません。`'all'` は条件を付けない選択です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-import { CheckSquare } from 'lucide-react';
+const [filterPriority, setFilterPriority] =
+  useState<TaskPriority | 'all'>('all');
+const [filterAssignee, setFilterAssignee] =
+  useState<string>('all');
+const pageContext =
+  `${filterProject}\u0000${filterStatus}` +
+  `\u0000${filterPriority}\u0000${filterAssignee}`;
+const [pagination, setPagination] =
+  useState({ context: pageContext, index: 0 });
+const pageIndex =
+  pagination.context === pageContext ? pagination.index : 0;
+```
 
-// 一括完了のミューテーション
-const bulkCompleteMutation =
-  api.task.bulkComplete.useMutation({
-    onSuccess: () => {
-      // キャッシュを無効化して一覧を再取得
-      utils.task.getAll.invalidate();
-      // 選択状態をリセット
-      setSelectedTasks(new Set());
-    },
-  });
+優先度は決められた値だけを受け取るため `TaskPriority` を使います。担当者はユーザー ID なので文字列で保持します。`pageContext` は4条件の組です。どれか1つでも変わった描画では `pageIndex` を0として扱い、前の条件の2ページ目を新しい条件へ持ち込みません。
 
-// 一括完了のハンドラー
-const handleBulkComplete = () => {
-  if (canCompleteSelected) {
-    bulkCompleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
+Day 27 では、セッション、タスク、プロジェクトの順に取得しています。セッション取得の `const {` から、`const queryAuthFailed =` に続く `useEffect` の `}, [queryAuthFailed]);` までを削除します。次の2ブロックをその位置へ順に入れてください。
+
+`const utils = api.useUtils();` とURLを読む `useEffect` は、この取得部分より前にあります。その前の宣言は残します。後ろの `const myRoleByProject = useMemo` から始まる処理も残してください。
+
+<!-- day28-edit: queries-core -->
+```typescript
+// filepath: src/app/task/page.tsx
+const {
+  data: tasks,
+  isLoading: tasksLoading,
+  isFetching: tasksFetching,
+  error: tasksError,
+  refetch: refetchTasks,
+} = api.task.getAll.useQuery(
+  {
+    projectId: filterProject === 'all' ? undefined : filterProject,
+    status: filterStatus === 'all' ? undefined : filterStatus,
+    priority: filterPriority === 'all' ? undefined : filterPriority,
+    assigneeId: filterAssignee === 'all' ? undefined : filterAssignee,
+    limit: PAGE_SIZE,
+    offset: pageIndex * PAGE_SIZE,
+  },
+  { enabled: !authExpired, retry: shouldRetryQuery,
+    refetchOnWindowFocus: false },
+);
+```
+
+タスク一覧は4つの絞り込み条件を送ります。取得失敗時の再試行に使う `refetchTasks` も残します。条件を変えた場合も、該当する先頭100件だけを取得します。
+
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+const {
+  data: projects, error: projectsError,
+  isFetching: projectsFetching,
+  refetch: refetchProjects,
+} = api.project.getAll.useQuery(undefined, {
+  enabled: !authExpired, retry: shouldRetryQuery,
+});
+const {
+  data: session, error: sessionError,
+  isSuccess: sessionLoaded,
+  isFetching: sessionFetching, refetch: refetchSession,
+} = api.auth.getSession.useQuery(undefined, {
+  enabled: !authExpired, retry: shouldRetryQuery,
+});
+```
+
+ログイン情報の再取得に使う `refetchSession` と、取得中を示す `sessionFetching` も残します。失敗時の再試行ボタンがこの2つを使うので、取得部分を置き換えても画面の案内を続けられます。
+
+直前のブロックに続けて、担当者候補の取得と新しい認証判定を書きます。古い `queryAuthFailed` と対応する `useEffect` は、前の手順で削除済みです。担当者候補だけが401になった場合も、一覧を隠してログイン切れ画面へ進めるために置き換えます。
+
+<!-- day28-edit: queries-members-auth -->
+```typescript
+// filepath: src/app/task/page.tsx（続き）
+const {
+  data: users, error: usersError,
+  isFetching: usersFetching,
+  refetch: refetchUsers,
+} = api.search.getProjectMembers.useQuery(undefined, {
+  enabled: !authExpired && !!session?.user,
+  retry: shouldRetryQuery,
+});
+const queryAuthFailed =
+  (sessionLoaded && session === null) ||
+  [sessionError, tasksError, projectsError,
+    usersError, linkedTaskError].some(isAuthError);
+const queryForbidden =
+  [sessionError, tasksError, projectsError,
+    usersError, linkedTaskError].some(isForbiddenError);
+useEffect(() => {
+  if (!queryAuthFailed) return;
+  authExpiredRef.current = true;
+  setAuthExpired(true);
+}, [queryAuthFailed]);
+```
+
+一覧は `limit: PAGE_SIZE` と `offset: pageIndex * PAGE_SIZE` で100件ずつ取得します。`isFetching` は通信中のページ移動と再試行ボタンを止めるために使います。`refetchTasks` と `refetchProjects` は Day 14 の取得失敗表示で使うため残します。5つの取得処理すべてで、401と403の再試行を止めます。編集リンクの `linkedTaskError` も判定に含めます。`getProjectMembers` は担当者候補を返す保護された手続きなので、セッションを確認できた後だけ動かします。セッションが `null` の場合や担当者取得が401になった場合も同じログイン切れ画面へ進みます。500などの失敗では、ログイン情報、担当者候補、編集対象を空扱いにしません。前回取得時の値があれば古い可能性を表示して残し、無ければ取得失敗と再試行を表示します。
+
+担当者候補の取得が失敗した場合も、候補が0人だった成功と区別します。`const myRoleByProject = useMemo(` の直前へ次の3つの変数を追加してください。前回取得した候補がある場合は、その候補を表示したまま古い可能性を伝えます。
+
+```typescript
+// filepath: src/app/task/page.tsx
+const usersReadFailed = !!usersError
+  && !isAuthError(usersError)
+  && !isForbiddenError(usersError);
+const usersReadFailedInitially =
+  usersReadFailed && users === undefined;
+const usersReadDataIsStale =
+  usersReadFailed && users !== undefined;
+```
+
+Day 20 の `{(linkedTaskReadFailedInitially || linkedTaskReadDataIsStale) && (` から始まる警告の直前へ、次の表示を追加します。担当者候補の取得だけを再試行するため、成功済みのタスク一覧は取得し直しません。再取得中はボタンを無効にして、同じ問い合わせの連打を防ぎます。
+
+```tsx
+{/* filepath: src/app/task/page.tsx */}
+{(usersReadFailedInitially || usersReadDataIsStale) && (
+  <div className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4"
+    role="alert">
+    <span>{usersReadDataIsStale
+      ? '最新の担当者候補を取得できませんでした。前回取得時の候補です。'
+      : '担当者候補を取得できませんでした。'}</span>
+    <Button type="button" variant="outline" size="sm"
+      onClick={() => void refetchUsers()}
+      disabled={usersFetching}>再試行</Button>
+  </div>
+)}
+```
+
+現在のページには、`if (tasksLoading)` の前に次の認証切れ分岐があります。追加するコードではなく、残っていることを確認するための抜粋です。同じ分岐をもう1つ追加しないでください。
+
+<!-- day28-edit: auth-gate -->
+```typescript
+// filepath: src/app/task/page.tsx
+if (authExpired || queryAuthFailed) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">ログインの有効期限が切れました。もう一度ログインしてください。</p>
+          <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>
+        </div>
+      </AppLayout>
+    );
   }
+```
+
+一覧だけでなく、ページ内の詳細や編集ダイアログも描画しないため、読み込み表示より前で戻ります。手元に残ったキャッシュのデータをログイン切れの画面へ出しません。
+
+Day 15 からある `moveToPage` と `resetPageForFilter` は既存位置のままです。`handleTaskSelect` より後ろに、次の形で1組だけ残っていることを確認します。`tasksFetching` の判定はDay 15からあるため、新しく足しません。
+
+```typescript
+// filepath: src/app/task/page.tsx（既存の2関数を確認）
+const moveToPage = (nextPage: number) => {
+  if (tasksFetching || nextPage < 0 || nextPage === pageIndex) return;
+  leavePageContext();
+  setPagination({ context: pageContext, index: nextPage });
+};
+const resetPageForFilter = () => {
+  leavePageContext();
+  setPagination({ context: '', index: 0 });
 };
 ```
 
-`useMutation` の形はDay 10 で新規プロジェクトを保存したときと変わりません。違うのは送るのが1件の id ではなく id の配列になった点だけです。Step 0 の `bulkComplete` が配列を受け取る作りになっているので画面側は `map` で id を並べて渡すだけで済みます。
+Day 28 で置き換えた `leavePageContext` を既存の2関数が呼ぶため、ページ移動と絞り込み変更のどちらでも選択、個別削除対象、一括削除の確認、フォームを先に閉じます。取得中の移動と同じページへの二重移動を止める判定も、そのまま保ちます。
 
-`onSuccess` に2つの後始末を書いているのは書き込みが本当に成功したという知らせをここでしか受け取れないからです。どちらか片方でも抜けると画面と DB の中身がずれたまま残ります。`handleBulkComplete` が `canCompleteSelected` を確かめてから `mutate` を呼ぶのはボタンが消えている状況で誤って呼ばれても通信を起こさないためです。
+Step 3・4で追加した全選択の `div` と、その直後にある既存のプロジェクト・ステータスのフィルター用 `div` を、まとめて置き換えます。削除する範囲は `{/* フィルター行の先頭に配置 */}` から、`{/* タスク一覧の grid レイアウト */}` の直前にあるフィルター用 `div` の閉じタグまでです。タスク一覧のコメントと、その後ろの一覧は残してください。
 
-ヘッダーの一括操作ボタン領域に追加します。
+次の5ブロックを順番につなげて、削除した場所へ貼ります。途中の開いたタグは後続のブロックで閉じるため、5つとも貼ってから保存します。優先度と担当者の欄もこの置き換えに含めます。
 
+<!-- day28-edit: combined-filter-1 -->
+```tsx
+{/* filepath: src/app/task/page.tsx（フィルター行の続き 1/5） */}
+<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-4">
+  {selectableTasks.length > 0 && (
+    <div className="flex items-center space-x-2 shrink-0">
+      <Checkbox
+        id="select-all"
+        checked={selectAllState}
+        onCheckedChange={(checked) => handleSelectAll(checked === true)}
+        aria-label="表示中のタスクをすべて選択"
+      />
+      <Label htmlFor="select-all" className="whitespace-nowrap">表示中をすべて選択</Label>
+    </div>
+  )}
+  <div className="task-filter-grid ml-auto">
+```
+
+全選択は操作できるタスクがあるときだけ表示します。外側の要素は狭い画面で縦に並べ、640px以上では横に並べます。選択欄を縮めないため shrink-0 を付け、ラベルの途中で改行しないようにします。
+
+<!-- day28-edit: combined-filter-2 -->
+```tsx
+{/* filepath: src/app/task/page.tsx（フィルター行の続き 2/5） */}
+    <div>
+      <Label htmlFor="task-project-filter" className="sr-only">プロジェクトで絞り込み</Label>
+      <Select value={filterProject} onValueChange={(value) => {
+        if (value === filterProject) return;
+        desiredUrlFilterContext.current =
+          `${value}\u0000${filterStatus}`;
+        resetPageForFilter();
+        setFilterProject(value);
+      }}>
+        <SelectTrigger id="task-project-filter" aria-label="プロジェクトで絞り込み">
+          <SelectValue placeholder="すべてのプロジェクト" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">すべてのプロジェクト</SelectItem>
+          {projects?.map((project) => (
+            <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+```
+
+プロジェクト欄に見えないラベルを付けます。ラベルの htmlFor と選択欄の id を一致させると、画面読み上げでも欄の用途が分かります。欄の横幅と列数は、この後で追加するCSSに任せます。
+
+<!-- day28-edit: combined-filter-3 -->
+```tsx
+{/* filepath: src/app/task/page.tsx（フィルター行の続き 3/5） */}
+    <div>
+      <Label htmlFor="task-status-filter" className="sr-only">ステータスで絞り込み</Label>
+      <Select value={filterStatus} onValueChange={(value) => {
+        if ((value === 'all' || isTaskStatus(value))
+          && value !== filterStatus) {
+          desiredUrlFilterContext.current =
+            `${filterProject}\u0000${value}`;
+          resetPageForFilter();
+          setFilterStatus(value);
+        }
+      }}>
+        <SelectTrigger id="task-status-filter" aria-label="ステータスで絞り込み">
+          <SelectValue placeholder="すべてのステータス" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">すべてのステータス</SelectItem>
+          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+```
+
+ステータス欄もラベルと id を組にします。選択値は isTaskStatus で検査してから state に保存します。サーバーへ送る条件の型を維持したまま、プロジェクト欄と同じグリッドの中に置きます。
+
+<!-- day28-edit: combined-filter-4 -->
+```tsx
+{/* filepath: src/app/task/page.tsx（フィルター行の続き 4/5） */}
+    <div>
+      <Label htmlFor="task-priority-filter" className="sr-only">優先度で絞り込み</Label>
+      <Select value={filterPriority} onValueChange={(value) => {
+        if ((value === 'all' || isTaskPriority(value))
+          && value !== filterPriority) {
+          resetPageForFilter();
+          setFilterPriority(value);
+        }
+      }}>
+        <SelectTrigger id="task-priority-filter" aria-label="優先度で絞り込み">
+          <SelectValue placeholder="すべての優先度" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">すべての優先度</SelectItem>
+          {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+```
+
+優先度欄は isTaskPriority で選択値を確かめます。未選択を示す all も受け付けるので、絞り込みを解除できます。優先度の日本語表示は既存の定数を使い、サーバーへ送る値とは分けます。
+
+<!-- day28-edit: combined-filter-5 -->
+```tsx
+{/* filepath: src/app/task/page.tsx（フィルター行の続き 5/5） */}
+    <div>
+      <Label htmlFor="task-assignee-filter" className="sr-only">担当者で絞り込み</Label>
+      <Select value={filterAssignee} onValueChange={(value) => {
+        if (value === filterAssignee) return;
+        resetPageForFilter();
+        setFilterAssignee(value);
+      }}>
+        <SelectTrigger id="task-assignee-filter" aria-label="担当者で絞り込み">
+          <SelectValue placeholder="すべての担当者" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">すべての担当者</SelectItem>
+          {users?.map((user) => (
+            <SelectItem key={user.id} value={user.id}>{user.name || user.email}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+</div>
+```
+
+担当者名が空ならメールアドレスを表示します。最後の2つの閉じタグは、4欄を囲むグリッドと、全選択も含めた外側の行を閉じます。ここまで貼ると4つの選択欄が1つの行としてまとまります。
+
+続けて `src/app/globals.css` を開き、末尾へ次のCSSを追加します。`.task-filter-grid` の定義がすでにある場合は、その定義と640px・1280pxのメディアクエリをこの内容へ置き換え、重複させません。メディアクエリは画面幅に応じてCSSを切り替える指定です。
+
+<!-- day28-edit: filter-grid-css -->
+```css
+/* filepath: src/app/globals.css */
+.task-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .task-filter-grid {
+    width: auto;
+    grid-template-columns: repeat(2, 180px);
+  }
+}
+@media (min-width: 1280px) {
+  .task-filter-grid {
+    grid-template-columns: repeat(4, 180px);
+  }
+}
+```
+
+狭い画面では1列、640px以上では180px幅の2列、1280px以上では4列にします。minmax の最小値を0にすると、選択欄の内容が長くても画面からはみ出しにくくなります。グリッドで列数を指定し、3欄と1欄に分かれる折り返しを防ぎます。
+
+最後に「最初のタスクを作成しましょう」を出す条件へ、2つの新しいフィルターも加えます。
+
+```tsx
+{/* filepath: src/app/task/page.tsx */}
+{filterProject === 'all' &&
+  filterStatus === 'all' &&
+  filterPriority === 'all' &&
+  filterAssignee === 'all' && <p>最初のタスクを作成しましょう！</p>}
+```
+
+条件が1つでも選ばれている場合、0件は「絞り込み結果が無い」状態です。そのとき作成案内を出さないよう4条件を確認します。
+
+一覧の空表示は、1ページ目と2ページ目以降を分けます。タスク一覧の末尾にある空表示の分岐を次の形へ置き換えます。
+
+```tsx
+// filepath: src/app/task/page.tsx
+) : pageIndex > 0 ? (
+  <div className="col-span-full py-12 text-center">
+    <p>このページにはタスクがありません。</p>
+    <p>前のページへ戻ってください。</p>
+  </div>
+) : (
+  <div className="col-span-full py-12 text-center">
+    <p>タスクが見つかりません。</p>
+    {filterProject === 'all' && filterStatus === 'all' &&
+      filterPriority === 'all' && filterAssignee === 'all' &&
+      <p>最初のタスクを作成しましょう！</p>}
+  </div>
+)}
+```
+
+100件ちょうどの次ページが空だった場合も、全体が0件の案内へ戻しません。続けて、タスク一覧の直後へページ移動を追加します。
+
+```tsx
+{/* filepath: src/app/task/page.tsx */}
+{(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+  <nav aria-label="タスク一覧のページ移動"
+    className="flex items-center justify-center gap-3">
+    <Button variant="outline"
+      disabled={tasksFetching || pageIndex === 0}
+      onClick={() => moveToPage(pageIndex - 1)}>前へ</Button>
+    <span className="text-sm text-muted-foreground">
+      {pageIndex + 1}ページ目
+    </span>
+    <Button variant="outline"
+      disabled={tasksFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+      onClick={() => moveToPage(pageIndex + 1)}>次へ</Button>
+  </nav>
+)}
+```
+
+次へは100件表示された場合だけ有効です。結果が100件ちょうどのときは、次ページに何も無い可能性があります。それでも、そのページで「前へ」を残せば行き止まりになりません。
+
+`TaskDetailDialog` は Step 1-1 で置き換え済みです。`open={detailOpen && selectedTask !== null}` と `onAuthExpired={handleDetailAuthExpired}` を残し、ここで変更し直したり同じ props を追加したりしません。
+
+`deleteMutation` の定義の直後、`handleCreate` の前へ、次のブロックを順番につなげて追加します。3種類の mutation（サーバーへ変更を送る処理）をここで用意し、ボタンは Step 6〜8 で1つずつつなぎます。
+
+この位置にある1件用の `createMutation`、`updateMutation`、`deleteMutation` と `refreshTaskTargets` は置き換えません。1件用の `handleSubmit` は、非同期バリデーション中にフォームが閉じられたり開き直されたりした場合、`isCurrent()` を mutation の前に確認して古い入力を送信しません。送信後もフォーム世代とタスクIDを保存し、その送信が所有するフォームだけを閉じます。一括用は選択番号を保存します。記録する対象が異なるため、どちらの ref も必要です。
+
+Day 15から残している `refreshTaskTargets` を一括操作でも使います。一覧、対象の詳細、必要な場合の権限を同じ関数で再取得するため、`refreshBulkTargets` という別の関数は作りません。
+
+<!-- day28-edit: bulk-common-2 -->
 ```typescript
-{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
-{/* 一括操作ボタン領域に「完了にする」ボタンを追加 */}
+// filepath: src/app/task/page.tsx
+const bulkMutationOptions = (operation: TaskBulkOperation) => ({
+  retry: false as const,
+  onMutate: () => bulkSubmission.current,
+  onSuccess: (_data: unknown, variables: { ids: string[] }, submitted: BulkSubmission | null) => {
+    void refreshTaskTargets(variables.ids, false);
+    if (authExpiredRef.current || !submitted) return;
+    setSelectedTasks((previous) => {
+      const next = new Map(previous);
+      for (const id of variables.ids) {
+        // 送信後に同じ項目を選び直した意思を古い応答で消さないためです。
+        if (operation === 'delete' || next.get(id) === submitted.selection.get(id))
+          next.delete(id);
+      }
+      return next;
+    });
+    if (operation === 'delete') {
+      setBulkDeleteTarget(null);
+      // 削除済みの内容を再取得失敗時のキャッシュから表示し続けないためです。
+      setSelectedTask((current) => (current && variables.ids.includes(current) ? null : current));
+    }
+  },
+  onError: (error: unknown, variables: { ids: string[] }) => {
+    const result = classifyTaskBulkError(error, operation);
+```
+
+成功時は送った選択番号と現在の番号を比較します。失敗時には選択を消さずに案内するため、書き始めた onError を次のブロックで完成させてください。
+
+<!-- day28-edit: bulk-common-3 -->
+```typescript
+// filepath: src/app/task/page.tsx
+    if (result.kind === 'auth') {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+      return;
+    }
+    toast.error(result.message);
+    void refreshTaskTargets(variables.ids, true);
+  },
+  onSettled: () => {
+    bulkSubmission.current = null;
+  },
+});
+
+const bulkCompleteMutation = api.task.bulkComplete.useMutation(bulkMutationOptions('complete'));
+const bulkDeleteMutation = api.task.bulkDelete.useMutation(bulkMutationOptions('delete'));
+const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation(
+  bulkMutationOptions('status'),
+);
+const bulkPending =
+  bulkCompleteMutation.isPending ||
+  bulkDeleteMutation.isPending ||
+  bulkUpdateStatusMutation.isPending;
+```
+
+`onMutate` は送信時の選択番号を保存します。完了とステータス変更の成功では、保存した番号と現在の番号が一致する ID だけを解除します。一括削除の成功では、実際に消えた ID を番号に関係なく解除します。
+
+失敗時は `onError` が固定メッセージを表示し、一覧・対象の詳細・権限を再取得します。応答が不明な場合はサーバーで成功した可能性もあるため、自動再送しません。表示の再取得だけが失敗した場合も、書き込みを失敗扱いへ変えません。`refreshTaskTargets` の第2引数へ渡す `true` は権限一覧も再取得する指定です。関数内部では一覧と権限の再取得へ `throwOnError: true` を渡し、失敗を `catch` へ届けます。再取得中の401も認証切れとして扱います。
+
+一括削除の成功では、今開いている詳細の ID が削除対象なら `selectedTask` を `null` にします。待っている間に別の B の詳細を開いた場合は、その B を閉じません。削除済みの詳細が404になるのは自然なので、詳細の再取得には `throwOnError: true` を付けません。
+
+`onSettled` は成功・失敗にかかわらず送信中の記録を外します。`bulkPending` は3種類のうちどれかが通信中であることを表し、ボタンを無効にします。
+
+`handleSelectAll` の直後、`selectAllState` の前へ次のブロックを順番に追加します。
+
+<!-- day28-edit: bulk-handlers-1 -->
+```typescript
+// filepath: src/app/task/page.tsx
+const currentBulkSelection = () =>
+    new Map(selectedTaskList.map((task) => [task.id, selectedTasks.get(task.id) ?? 0]));
+  const beginBulk = (selection: BulkSelection) => {
+    if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      selection.size === 0 ||
+      selection.size > MAX_BULK_TASKS
+    )
+      return false;
+    bulkSubmission.current = { selection };
+    return true;
+  };
+  const tooManySelected = selectedTaskList.length > MAX_BULK_TASKS;
+
+  // 非表示の選択を送信せず、確認画面では同意した対象を固定するためです。
+  const handleBulkComplete = () => {
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection)) bulkCompleteMutation.mutate({ ids: [...selection.keys()] });
+  };
+
+  const handleBulkDelete = () => {
+```
+
+beginBulk で送信中の記録を付けた場合だけ mutate を呼びます。ここから始まる削除用の関数は確認を開く役割なので、次のブロックを続けて対象を保存します。
+
+<!-- day28-edit: bulk-handlers-2 -->
+```typescript
+// filepath: src/app/task/page.tsx
+if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      !canDeleteSelected ||
+      tooManySelected
+    )
+      return;
+    setBulkDeleteTarget(currentBulkSelection());
+  };
+
+  const handleBulkUpdateStatus = (status: TaskStatus) => {
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection))
+      bulkUpdateStatusMutation.mutate({ ids: [...selection.keys()], status });
+  };
+```
+
+`beginBulk` は空選択・100件超・ログイン切れ・送信中を止めます。`bulkSubmission.current` を即座に更新するので、画面の無効表示が反映される前のクリックも止められます。
+
+削除ボタンは `currentBulkSelection()` の結果をコピーして保存します。このスナップショット（その時点の値のコピー）から実行対象を決めるため、確認中に一覧が再取得されても別の対象へ変わりません。
+
+Step 5 の一括操作用フラグメントへ、次のボタンを追加します。
+
+<!-- day28-edit: complete-button -->
+```typescript
+{/* filepath: src/app/task/page.tsx */}
 {canCompleteSelected && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={handleBulkComplete}
-  >
-    <CheckSquare className="mr-2 h-4 w-4" />
-    完了にする
+  <Button variant="outline" size="sm"
+    className="w-full sm:w-auto"
+    disabled={bulkPending || tooManySelected}
+    onClick={handleBulkComplete}>
+    <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
   </Button>
 )}
 ```
 
-**確認ポイント**:
-- Step 5 の `{/* ここにStep 6〜8で... */}` の位置にボタンを追加した
-- ファイルを保存してエラーが出ない
+`disabled` は送信中と100件超の操作を止めます。関数側の判定と合わせて使い、画面の更新前に届く連打も防ぎます。ボタンの下へ次の案内も追加してください。
 
-**`selectedTaskList.map()` を使う理由**
+<!-- day28-edit: limit-message -->
+```typescript
+{/* filepath: src/app/task/page.tsx */}
+{tooManySelected && (
+  <p role="alert">一括操作は100件までです。選択する件数を減らしてください。</p>
+)}
+```
 
-フィルター変更後も Set に残っている非表示 ID や、
-操作権限のない ID を API に送らないためです。
-現在表示中で編集可能な選択タスクだけを送ります。
+件数の案内は、ボタンが無効になった理由を伝えます。100件までに選択を減らしてから実行し、完了を確認して次の対象を選びます。サーバー側の上限も変えません。
 
-**`utils.task.getAll.invalidate()` の意味**
-
-tRPC は一度取得したデータをキャッシュ（記憶）しています。データが変わったら再取得します。
-
-`invalidate()` は「このキャッシュは古い、再取得して」と指示する関数です。
-
-`onSuccess` で呼ぶことで、API 成功後に自動で最新のタスク一覧が表示されます。
-
-**`setSelectedTasks(new Set())` で選択状態をリセットする理由**
-
-操作が完了したあとも選択状態が残っているとユーザーが「さっきの操作は終わったのか」と混乱します。`onSuccess` でリセットすることで、「操作完了 → 選択が消える」という明確なフィードバックになります。
-
-**確認ポイント**:
-- 複数のタスクを選択して「完了にする」を押すと対象タスクのステータスが「完了」に変わる
-- 操作後にタスク一覧が再取得される
-- 操作後、`selectedTasks` が空になりチェックも消える
+**確認ポイント**: 選んだタスクを完了にできます。通信中は一括操作の追加送信ができません。選択は変更できますが、古い成功で新しく選び直したタスクのチェックは消えません。
 
 ---
 
-### Step 7: 確認ダイアログ付き一括削除を実装する（7 分）
+### Step 7: 確認した対象を一括削除する（読む目安: 7分）
 
-**ゴール**: 「削除」ボタンを押すと確認ダイアログが開き、OK 後にまとめて削除します。
+**ゴール**: 確認で同意した ID を送り、失敗時にも確認内容を残します。
 
-削除は取り消せない操作のため必ず確認ダイアログを挟みます。
+Step 5 の一括操作用フラグメント内で、Step 6 の完了ボタンを囲む `{canCompleteSelected && ( ... )}` の直後へ、次の削除ボタンを追加します。表示順は完了、削除です。
 
+<!-- day28-edit: delete-button -->
 ```typescript
-// filepath: src/app/task/page.tsx
-// 一括削除のミューテーション
-const bulkDeleteMutation =
-  api.task.bulkDelete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-// 削除ボタンのハンドラー（ダイアログを開くだけ）
-const handleBulkDelete = () => {
-  if (canDeleteSelected) {
-    setBulkDeleteDialogOpen(true);
-  }
-};
-```
-
-`Trash2` はこのファイルにまだありません。Day 19 で `Trash2` を書いたのは
-`task-detail-dialog.tsx` で、別のファイルです。`page.tsx` にも取り込みます。
-
-```typescript
-// filepath: src/app/task/page.tsx
-// lucide-react の import を1行にまとめる
-// （Day 14 の Plus と Step 6 の CheckSquare の行は削除する）
-import { CheckSquare, Plus, Trash2 }
-  from 'lucide-react';
-```
-
-取り込みを忘れると一括削除ボタンを置いた瞬間に `Trash2 is not defined` が出て
-タスク一覧の画面ごと表示されなくなります。`DeleteConfirmDialog` は Day 15 でこのファイルへ import 済みなので追加は要りません。
-
-`handleBulkDelete` は **削除しない**点に注目してください。ダイアログを開くだけです。実際の削除はダイアログで OK を押したときに実行されます。
-
-ヘッダーにボタンとダイアログを追加します。
-
-```typescript
-{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
-{/* 削除ボタン（赤色のテキスト） */}
+{/* filepath: src/app/task/page.tsx */}
 {canDeleteSelected && (
-  <Button
-    variant="outline"
-    size="sm"
-    className="text-destructive hover:text-destructive"
-    onClick={handleBulkDelete}
-  >
+  <Button variant="outline" size="sm"
+    className="w-full text-destructive hover:text-destructive sm:w-auto"
+    disabled={bulkPending || tooManySelected}
+    onClick={handleBulkDelete}>
     <Trash2 className="mr-2 h-4 w-4" /> 削除
   </Button>
 )}
 ```
 
-`canDeleteSelected` で囲んでいるのは選んだタスクの中に削除権限の無いものが1つでもあればボタン自体を出さないためです。押してから半分だけ失敗するとどれが消えてどれが残ったのかを読者が追えません。
+赤い文字は取り消せない操作の目印です。このボタンは確認を開くだけで、削除は送信しません。
 
-色をクラスで指定して `variant="destructive"` にしていないのはこの操作が確認ダイアログを挟むためです。押した瞬間に実行される赤い塗りつぶしのボタンと、確認をはさむボタンは見た目で区別が付くようにしてあります。
+JSX 末尾の1件用 `DeleteConfirmDialog` の直後へ、次の一括用ダイアログを追加します。1件用は残してください。
 
-**確認ポイント**:
-- 「削除」ボタンが赤色で表示される
+1件用の `TaskDialog` では `onClose={closeTaskDialog}`、`onSubmit={handleSubmit}`、`isPending={singlePending}` を保ちます。1件用の削除確認も `singleSubmission.current` を記録し、`isPending={singlePending}` と `closeOnConfirm={false}` を使います。送信中に閉じて別のフォームを開いた場合、古い成功結果が新しい入力を閉じないためです。
 
-Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残します。一括削除用の2つ目はそのすぐ下に置きます。1つ目を書き換えるとカードの削除ボタンを押しても確認ダイアログが開かなくなります。2つのダイアログは開くかどうかを別々の state で持つので同じ画面に並べられます。
-
+<!-- day28-edit: bulk-dialog -->
 ```typescript
-{/* filepath: src/app/task/page.tsx（open={deleteDialogOpen} の要素の直後に追加） */}
-{/* 確認ダイアログ（JSXの末尾に配置） */}
+{/* filepath: src/app/task/page.tsx */}
 <DeleteConfirmDialog
-  open={bulkDeleteDialogOpen}
-  onOpenChange={setBulkDeleteDialogOpen}
-  onConfirm={() => {
-    // OKが押されたら実際に削除を実行
-    bulkDeleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
-  }}
-  isPending={bulkDeleteMutation.isPending}
-  title={`${selectedTaskList.length}件のタスクを削除しますか？`}
-/>
+        open={bulkDeleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (bulkDeleteTarget && beginBulk(bulkDeleteTarget)) {
+            bulkDeleteMutation.mutate({ ids: [...bulkDeleteTarget.keys()] });
+          }
+        }}
+        isPending={bulkPending}
+        closeOnConfirm={false}
+        title={`${bulkDeleteTarget?.size ?? 0}件のタスクを削除しますか？`}
+      />
 ```
 
-**なぜダイアログを挟むのか**
+`closeOnConfirm={false}` は、送信した瞬間に確認を閉じない指定です。成功したときだけ対象を `null` に戻します。404などの失敗では確認が残り、画面の案内を読めます。
 
-| 操作の種類 | ダイアログの有無 | 理由 |
-|-----------|---------------|------|
-| 完了にする | 不要 | 元に戻せる（ステータス変更で戻せる） |
-| ステータス変更 | 不要 | 元に戻せる |
-| 削除 | **必要** | 元に戻せない（DBから消える） |
+通信中もキャンセルで確認を閉じられます。ただし、送った削除は取り消されません。応答が返るまでは新しい一括操作や削除確認を開けません。キャンセル後に失敗しても確認は勝手に開き直しません。
 
-**確認ポイント**:
-- 「削除」ボタンをクリックすると確認ダイアログが開く
-- ダイアログをキャンセルするとタスクは削除されない
-- ダイアログで OK を押すと選択したタスクが削除される
-- 削除後にタスク一覧が再取得され、選択が解除される
+**確認ポイント**: 送信前のキャンセルなら削除されません。承諾すると保存済みの ID を削除し、成功後に確認が閉じます。通信中のキャンセルはサーバーの削除を取り消さないことも確認してください。
 
 ---
 
-### Step 8: DropdownMenu でステータス一括変更を実装する（7 分）
+### Step 8: ステータス変更をつなぐ（読む目安: 7分）
 
-**ゴール**: 「ステータス変更」ドロップダウンから選んで、選択したタスクのステータスをまとめて変更します。
+**ゴール**: メニューで選んだ状態へタスクをまとめて更新します。
 
-ステータス変更には `Select` コンポーネントではなく `DropdownMenu` を使います。
+ファイル先頭へ次の import を追加します。
 
+<!-- day28-edit: menu-import -->
 ```typescript
 // filepath: src/app/task/page.tsx
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
 ```
 
-`TASK_STATUS_LABELS` は過去の Day で import 済みです。
-同じ `@/lib/constant/status` の import 文に
-`isTaskStatus` と `type TaskStatus` が無い場合だけ
-加えてください。別の import 文を重複させません。
+Step 5 の一括操作用フラグメント内で、Step 7 の削除ボタンを囲む `{canDeleteSelected && ( ... )}` の直前へ、次の3ブロックを順番につなげて追加します。表示順は完了、ステータス変更、削除です。メニューを閉じるタグまで書いてから保存してください。
 
-`isTaskStatus` は型ガード関数で、文字列が `TaskStatus` 型であることを保証します。mutation と handler は以下のように定義します。
-
+<!-- day28-edit: status-menu-1 -->
 ```typescript
-// filepath: src/app/task/page.tsx
-// 一括ステータス変更のミューテーション
-const bulkUpdateStatusMutation =
-  api.task.bulkUpdateStatus.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-// ステータス変更のハンドラー
-const handleBulkUpdateStatus = (
-  status: TaskStatus
-) => {
-  if (canCompleteSelected) {
-    bulkUpdateStatusMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-      status,
-    });
-  }
-};
-```
-
-`bulkComplete` との違いは`mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので両者の中身はほとんど重なります。
-
-権限の判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えるとボタンは出るのにサーバーが断る、という食い違いが生まれます。
-
-ヘッダーの一括操作ボタン領域に追加します。
-
-```typescript
-{/* filepath: src/app/task/page.tsx（Step 5 のプレースホルダー「ここにStep 6〜8でボタンを追加していく」の位置に追加） */}
-{/* ステータス変更ドロップダウン */}
+{/* filepath: src/app/task/page.tsx */}
 {canCompleteSelected && (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline" size="sm">
+      <Button variant="outline" size="sm"
+        className="w-full sm:w-auto"
+        disabled={bulkPending || tooManySelected}>
         ステータス変更
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      {Object.entries(
-        TASK_STATUS_LABELS
-      ).map(([value, label]) => (
+```
+
+`DropdownMenu` は選択した直後に操作する部品です。入力値を保持する `Select` と使い分けます。ここでは選んだ状態へ変更する要求を、その場で送ります。
+
+<!-- day28-edit: status-menu-2 -->
+```typescript
+{/* filepath: src/app/task/page.tsx */}
+{Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
         <DropdownMenuItem key={value}
+          disabled={bulkPending || tooManySelected}
           onClick={() => {
-            if (isTaskStatus(value)) {
-              handleBulkUpdateStatus(value);
-            }
+            if (isTaskStatus(value)) handleBulkUpdateStatus(value);
           }}>
           {label}
         </DropdownMenuItem>
       ))}
-    </DropdownMenuContent>
+```
+
+配布済みの `isTaskStatus` は、文字列を有効なステータスへ絞る型ガードです。`src/lib/constant/status.ts` にある定義を追加し直す必要はありません。
+
+<!-- day28-edit: status-menu-3 -->
+```typescript
+{/* filepath: src/app/task/page.tsx */}
+</DropdownMenuContent>
   </DropdownMenu>
 )}
 ```
 
-**`isTaskStatus` 型ガードが必要な理由**
+メニュー項目にも `disabled` を付けるため、開いた状態で別の一括操作が始まっても追加送信できません。全項目の可否を同じ送信中の値で判定します。
 
-`Object.entries(TASK_STATUS_LABELS)` の `value` は TypeScript では `string` 型として推論されます。しかし `handleBulkUpdateStatus` は `TaskStatus`（`'TODO' | 'IN_PROGRESS' | ...`）を期待しています。`isTaskStatus(value)` で「この文字列は確かに有効なステータスか」を確認することで、型安全に呼び出せます。
-
-この関数は写経の土台に最初から入っています。置き場所は `src/lib/constant/status.ts` です。
-下は中身を確かめるための引用です。**書き写すと同じ名前の関数が2つ並び、
-`Duplicate function implementation` でビルドが止まります。** 読むだけにしてください。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: src/lib/constant/status.ts（配布済み・写経しません）
-export function isTaskStatus(
-  value: unknown
-): value is TaskStatus {
-  return typeof value === 'string'
-    && value in TASK_STATUS;
-}
-```
-
-**確認ポイント**: `src/lib/constant/status.ts` を開くと上と同じ `isTaskStatus` がすでにあります。
-
-この関数は `value in TASK_STATUS` で「`TASK_STATUS` オブジェクトにこのキーが存在するか」をチェックし、型ガードとして機能します。
-
-**`DropdownMenu` vs `Select` の違い**
-
-| コンポーネント | 適した場面 |
-|-------------|----------|
-| `Select` | フォーム内の入力欄（選択後に値を保持したい） |
-| `DropdownMenu` | 操作のトリガー（選択後に値は保持しない） |
-
-ステータス変更は「選択 → 即実行」の操作なので`DropdownMenu` が適しています。`Select` を使うと「選択した値を保持する」機能が邪魔になります。
-
-**確認ポイント**:
-- 「ステータス変更」をクリックするとドロップダウンが開く
-- ドロップダウンにすべてのステータスが表示される
-- ステータスを選ぶと選択中タスクのステータスがまとめて変わる
-- 変更後に一覧が再取得され、選択が解除される
+**確認ポイント**: 選んだタスクだけが指定した状態へ変わります。送信後に同じ ID を選び直した場合、その新しいチェックは成功後も残ります。
 
 ---
 
-### Step 9: 動作確認と仕上げ（4 分）
+### Step 9: 動作確認と仕上げ（読む目安: 10分）
 
 **ゴール**: 一括操作機能の全体が正常に動作することを最終確認します。
 
@@ -1165,18 +1836,37 @@ export function isTaskStatus(
 |-----------|------|---------|
 | 個別選択 | タスクカードのチェックボックスをクリック | チェックが入り、ヘッダーにボタンが現れる |
 | 個別解除 | 選択済みチェックボックスをクリック | チェックが外れる。0 件でボタンが消える |
-| 全選択 | 「すべて選択」チェックボックスをクリック | 全タスクが選択される（indeterminate は全選択に変わる） |
-| 全解除 | 全選択中に「すべて選択」をクリック | 全タスクの選択が解除される |
+| 全選択 | 「表示中をすべて選択」チェックボックスをクリック | 表示中で操作権限のあるタスクが選択される（indeterminate は全選択に変わる） |
+| 全解除 | 全選択中に「表示中をすべて選択」をクリック | 全タスクの選択が解除される |
 | 一部選択表示 | 一部だけチェックを入れる | ヘッダーのチェックボックスが indeterminate になる |
 | まとめて完了 | 3 件選択して「完了にする」をクリック | 3 件が「完了」ステータスに変わる |
 | 削除キャンセル | 2 件選択して「削除」→ ダイアログでキャンセル | タスクは削除されない |
-| まとめて削除 | 2 件選択して「削除」→ ダイアログで OK | 2 件がリストから消える |
+| まとめて削除 | 2 件選択して「削除」→ ダイアログで「削除」 | 2 件がリストから消える |
 | ステータス変更 | 5 件選択して「ステータス変更」→「進行中」 | 5 件が「進行中」に変わる |
+
+通信待ちの確認には、ブラウザの開発者ツールの Network（通信一覧）で速度を低速に設定します。練習用タスクの完了を送り、待っている間に別のタスクを選んでください。完了後も新しい選択が残り、一括ボタンは通信中だけ無効なら成功です。確認後は速度を元に戻します。
+
+エラーの確認では、削除する必要はありません。クリック前に Offline（通信できない状態）へ切り替えると、一括完了は送信待ちになります。Online へ戻すと待っていた要求が送られるため、エラーの確認には通信要求を遮断する機能を使います。
+
+Chrome の開発者ツールを開いたまま、次の手順で一括完了の通信だけを遮断してください。
+
+1. Network で Offline を解除し、速度を No throttling（速度制限なし）に戻します。
+2. Windows・Linux は `Ctrl + Shift + P`、Mac は `Command + Shift + P` を押します。開発者ツールの機能を検索するコマンドメニューが開きます。
+3. `Request conditions` と入力し、`Show Request conditions` を選んで Enter を押します。Request conditions（通信ごとの遮断や速度を設定する画面）が下部に開きます。旧版では `Network request blocking` を検索し、`Show Network request blocking` を選びます。
+4. `Add condition`（条件を追加）を押し、URL のパターンに `*task.bulkComplete*` を入力して保存します。旧版では「＋」でパターンを追加します。`*` は前後の文字に一致する指定なので、一括完了の URL だけが対象です。
+5. 追加した条件を遮断に設定し、`Enable blocking and throttling`（遮断と速度制限を有効にする）にチェックを入れます。旧版のチェック項目は `Enable network request blocking` です。
+6. 練習用タスクを選び、「完了にする」を一度クリックします。結果を確認する案内が出て、一括ボタンを再び使えることを確認してください。Network では要求が赤くなり、状態欄に `(blocked:devtools)` と表示されます。要求が自動で繰り返されないことも確認します。
+7. 追加した `*task.bulkComplete*` の条件をゴミ箱ボタンで削除し、ページを再読み込みします。最新の一覧で対象の状態を確認し、未完了なら対象を選び直し、必要な場合だけ一度「完了にする」を送ります。すでに完了していれば再送は不要です。
+
+遮断中は要求がサーバーへ届かないので、選んだタスクの状態は変わりません。実際の通信エラーでは、サーバーの更新後に応答だけを受け取れない場合もあります。そのため、遮断を解除したあとも先に最新の一覧を確認します。再取得に失敗したら結果は不明のままなので、再送せず通信状態を確認してください。
+
+401や403の全条件をこの手動確認だけで網羅したとは扱いません。実装では取得時の401と成功した `null` セッションでも保護データを隠し、403では権限と対象を再取得します。
 
 最後に TypeScript の型チェックとリントを確認します。
 
 ```bash
 # filepath: プロジェクトルート
+npx tsc --noEmit
 npm run lint
 ```
 
@@ -1186,9 +1876,10 @@ npm run lint
 そのあともう一度 `npm run lint` を走らせて今日書いたコードへの指摘が残っていないかを見てください。
 
 **確認ポイント**:
-- 上記のテスト項目がすべてパスする
-- `npm run fix` のあとの `npm run lint` で、今日書いたコードへの指摘が残っていない
-- `npm run dev` でブラウザにエラーが出ない
+- 上記のテスト項目がすべてパスします
+- `npm run fix` のあとの `npm run lint` で、今日書いたコードへの指摘が残っていません
+- `npm run dev` でブラウザにエラーが出ません
+- コードで確認: `isCurrent()` が `false` のときは、mutation を呼ぶ前に `return` します
 
 
 ---
@@ -1196,7 +1887,7 @@ npm run lint
 ### Pro パターンで書こう（一括操作のハンドラーは Map で選ぶ）
 
 一括操作は完了・削除・ステータス変更のように種類が増えやすいです。
-今日は Step 6 から Step 8 で、この3つをそれぞれ別のハンドラーとして書きました。
+今日は Step 6 で3つのハンドラーを用意し、Step 6〜8 で画面へ接続しました。
 種類が3つのうちはこの形がいちばん追いやすいです。
 
 増えてくると事情が変わります。呼び出し口を1つにまとめたくなり、操作名で分ける
@@ -1213,12 +1904,14 @@ npm run lint
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。どちらのファイルも Day 13 から Day 16 で書いた中身がそのまま残るため今日足した部分だけを載せます。
+今日は3つのファイルを編集し、提供されたエラー分類ファイルをコピーしました。サーバーは追加部分、画面は手順を反映した完全なファイルを載せています。貼り付け位置が分からなくなった場合に照合してください。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/task.ts` | 複数のタスクをまとめて処理する3つの手続き | Step 0 |
 | `src/app/task/page.tsx` | 選択状態の管理と一括操作のボタン | Step 1 から Step 8 |
+| `src/app/globals.css` | 画面幅に応じた絞り込み欄の列数 | Step 6 |
+| `src/lib/task-bulk-error.ts` | 失敗時の固定メッセージ | Step 6 の提供コードをコピー |
 
 ### `src/server/api/routers/task.ts`
 
@@ -1273,11 +1966,12 @@ const TASK_DELETE_ROLES =
 // filepath: src/server/api/routers/task.ts
 // 完成版: 書き込み条件を組み立てる関数
 const buildBulkPermissionWhere = (
-  ids: string[],
+  tasks: { id: string; projectId: string }[],
   userId: string,
   roles: ProjectMemberRole[],
 ): Prisma.TaskWhereInput => ({
-  id: { in: ids },
+  // ロックしたプロジェクトから移動した行を、別プロジェクトの権限で更新しない。
+  OR: tasks.map(({ id, projectId }) => ({ id, projectId })),
   project: {
     members: {
       some: { userId, role: { in: roles } },
@@ -1286,7 +1980,7 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-id の指定と権限の確認を1つの `where` にまとめてあるのが要点です。分けて書くと片方だけを使った手続きがいずれ紛れ込みます。id だけで絞る `where` を書いてしまうと他人のプロジェクトのタスク id を混ぜて送りつけられたときにそのまま書き換わります。この関数を通す形にしておけば3つの手続きが同じ守り方を共有します。
+入口で読んだ `id` と `projectId` の組、書き込み時点のメンバー権限を1つの `where` にまとめています。タスクがロック待ちの間に別プロジェクトへ移動すると、その行は `OR` の組に一致しません。ロックした元プロジェクトの権限で移動先のタスクを書き換える経路を、この条件で閉じます。
 
 **件数のずれを検出する関数**:
 
@@ -1320,16 +2014,22 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
-        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
+        const where = buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_EDIT_ROLES);
 ```
 
-書き込み直前にも同じ権限条件を使います。ここから完了済みと未完了を分けることで、完了済みタスクが持っている日時を新しい値で上書きしません。
+入口で読んだ全タスクのプロジェクトを ID 順にロックしてから、現在の権限を含む書き込みを始めます。ロック後の条件にはタスク ID だけでなく、その入口で読んだ `projectId` も入ります。待機中に別プロジェクトへ移動したタスクは更新対象になりません。ここから完了済みと未完了を分け、完了済みタスクの日時を新しい値で上書きしないようにします。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 // 完成版: bulkComplete の2段更新
-        // 完了済みの行を先に更新・ロックして
-        // 完了日時を保ったまま全対象の権限を再確認する。
+        // 完了日時を保ち、全対象の権限を再確認するため、
+        // 完了済みの行を先に更新・ロックする。
         const unchanged = await tx.task.updateMany({
           where: { ...where, status: TASK_STATUS.DONE },
           data: { status: TASK_STATUS.DONE },
@@ -1345,7 +2045,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-権限の確認が入口と書き込み時の2回入っているのは書き忘れではありません。入口の `assertMemberPermission` は権限のないタスクが混ざっていたら1件も書き込まずに止めるための門です。書き込み時の `where` はその門を通ったあとにロールが変わった場合を拾います。2回の件数を合計し、入力件数と違えばトランザクション全体を取り消します。
+入口の `assertMemberPermission` は、最初から権限のないタスクが混ざっていたら書き込み前に止めます。その後のプロジェクトロックは、権限変更と一括操作の順序を1本に決めます。最後の `where` はロック後の現在のロールと、入口で読んだ `id`・`projectId` の組を確認します。2回の更新件数を合計して入力件数と違えば、トランザクション全体を取り消します。
 
 **bulkDelete**:
 
@@ -1361,8 +2061,14 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 
       return await prisma.$transaction(async (tx) => {
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
         const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
+          where: buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_DELETE_ROLES),
         });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
@@ -1370,7 +2076,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-見比べるべき箇所は `'canDelete'` と `TASK_DELETE_ROLES` の2つです。ここを `'canEdit'` のままコピーすると編集はできても削除はできない MEMBER が他人のタスクを消せてしまいます。削除は元に戻せないので権限の取り違えが最も重い結果になる手続きです。写経したあとに、この2語だけを目で追い直してください。
+見比べる箇所は `'canDelete'` と `TASK_DELETE_ROLES` に加え、`lockTaskProjects` が `deleteMany` より前にあることです。ここを `'canEdit'` のままコピーすると、編集はできても削除はできない MEMBER が他人のタスクを消せます。ロックを後ろへ置くと、降格を待っていた削除文が古い権限のまま通る余地が戻ります。削除は元へ戻せないため、この3点をコード上で追ってください。
 
 **bulkUpdateStatus の入力と権限の判定**:
 
@@ -1407,9 +2113,21 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       } else {
         data.completedAt = null;
       }
+```
 
+変更先が完了なら新しい完了日時を用意し、それ以外なら日時を消します。ここではまだ DB へ書き込みません。対象プロジェクトをすべてロックしたあと、次のブロックで更新を始めます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: bulkUpdateStatus のプロジェクトロック
       return await prisma.$transaction(async (tx) => {
-        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        // 待機中の権限変更を古い文スナップショットで通さないよう、
+        // メンバー変更と同じプロジェクト行をID順に先にロックする。
+        await lockTaskProjects(
+          tx,
+          tasks.map((task) => task.projectId),
+        );
+        const where = buildBulkPermissionWhere(tasks, ctx.session.userId, TASK_EDIT_ROLES);
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE
@@ -1420,7 +2138,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
             : { count: 0 };
 ```
 
-変更先が `DONE` の場合だけ完了済みの行を先に更新します。`completedAt` を含めないため、すでに週次集計へ入っている完了日時は変わりません。
+対象プロジェクトをすべてロックしたあとで `where` を作ります。変更先が `DONE` の場合だけ完了済みの行を先に更新し、`completedAt` を含めません。すでに週次集計へ入っている完了日時を保ちながら、同じ書き込み条件で現在の編集権限も確認できます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1439,17 +2157,30 @@ const assertBulkWriteCount = (count: number, expected: number) => {
     }),
 ```
 
-`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。「`completedAt` に値があるのは `status` が `DONE` のときだけ」という約束をデータベースの中で守るためです。差し戻したタスクに古い日時が残ったとします。`completedAt` だけを見て完了を数える集計や画面を書くとその時点で完了していないタスクが完了扱いになります。Day 23 の週次レポートは念のため `status` も一緒に見ているので今は数えません。日時を消しておけば見る側がどちらを使っても同じ答えになります。
+`DONE` 以外へ動かす場合は `where` を分けず、全対象の `completedAt` を `null` へ戻します。完了から進行中へ差し戻したタスクに日時が残ると、Day 23 の週次レポートが未完了のタスクを完了件数に数え続けるためです。
 
 ### `src/app/task/page.tsx`
 
-**今日足した import**:
+以下は Step 0〜8 を順番に反映した完成ファイルです。Day 20 のURL初期値、`desiredUrlFilterContext`、ブラウザの「戻る」「進む」、編集リンクを閉じる処理を残し、Day 15 のページ番号とgenerationも1件操作の照合へ含めています。4条件のページ境界、一括選択番号、個別削除対象の初期化も段階説明と同じ形です。
 
-```typescript
+Day 27とこの日の手順で追加した、`handleCreate` と `handleEdit` の認証切れガードを完成ファイルにも残しています。認証切れを確認したあとに、新規作成や編集を始めないためです。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
 // filepath: src/app/task/page.tsx
-// 完成版: 今日足した import
+'use client';
+
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { Button } from '@/component/ui/button';
 import { Checkbox } from '@/component/ui/checkbox';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1457,454 +2188,1191 @@ import {
   DropdownMenuTrigger,
 } from '@/component/ui/dropdown-menu';
 import { Label } from '@/component/ui/label';
-```
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { isTaskPriority, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { classifyTaskBulkError, type TaskBulkOperation } from '@/lib/task-bulk-error';
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
+import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
+import { api } from '@/trpc/react';
 
-`lucide-react` の行は Day 14 の `Plus` に `CheckSquare` と `Trash2` を足した1行です。取り込みを2行に分けるとBiome が1行へまとめ直すか、重複した取り込みとしてエラーになります。`Trash2` は Day 19 で `task-detail-dialog.tsx` へ書いたものでこのファイルには入っていません。抜けたまま削除ボタンを置くとタスク一覧の画面ごと表示されなくなります。
-
-**選択状態の state**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 選択状態の state
-const [selectedTasks, setSelectedTasks] =
-  useState<Set<string>>(new Set());
-const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
-  useState(false);
-```
-
-チェックの有無を `Set` で持つのは同じ id を二重に覚える心配が無くなるからです。配列だと追加のたびに入っているかどうかを自分で調べる必要があります。ダイアログの開閉を別の state にしてあるのは削除だけが取り消せない操作だからです。選択の中身と「いま確認中かどうか」を分けておくと選択と実行の間にひと呼吸を置けます。
-
-**1件のチェックを切り替える関数**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 1件のチェックを切り替える関数
-const handleTaskSelect = (
-  taskId: string, checked: boolean
-) => {
-  setSelectedTasks((prev) => {
-    const next = new Set(prev);
-    checked ? next.add(taskId) : next.delete(taskId);
-    return next;
-  });
+const MAX_BULK_TASKS = 100;
+const PAGE_SIZE = 100;
+type BulkSelection = Map<string, number>;
+type BulkSubmission = { selection: BulkSelection };
+type SingleSubmission = {
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+  routeTaskId: string | null;
+  editLink: boolean;
 };
-```
 
-`new Set(prev)` で作り直しているのはReact が変更を見つける方法が「前の値と同じ入れ物かどうか」だからです。`prev.add(taskId)` と書くと中身は変わりますが入れ物は同じままなのでReact は変更が無かったと判断し、画面が描き直されません。チェックを押しても何も起きないという症状の正体はたいていこの1行です。
+function TaskPageContent() {
+  const searchParams = useSearchParams();
+  const urlFilters = parseTaskFiltersFromSearchParams(searchParams);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
+  const [filterProject, setFilterProject] = useState<string>(urlFilters.project);
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>(urlFilters.status);
+  const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
+  const [filterAssignee, setFilterAssignee] = useState<string>('all');
+  const pageContext = `${filterProject}\u0000${filterStatus}\u0000${filterPriority}\u0000${filterAssignee}`;
+  const [pagination, setPagination] = useState({ context: pageContext, index: 0 });
+  const pageIndex = pagination.context === pageContext ? pagination.index : 0;
+  const [selectedTasks, setSelectedTasks] = useState<BulkSelection>(new Map());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [bulkDeleteTarget, setBulkDeleteTarget] = useState<BulkSelection | null>(null);
+  const selectionVersion = useRef(0);
+  const bulkSubmission = useRef<BulkSubmission | null>(null);
+  const singleSubmission = useRef<SingleSubmission | null>(null);
+  const formGeneration = useRef(0);
+  const linkedFormTarget = useRef<string | null>(null);
+  const dismissedDetailTaskId = useRef<string | null>(null);
+  const authExpiredRef = useRef(false);
+  const [authExpired, setAuthExpired] = useState(false);
+  const handleDetailAuthExpired = useCallback(() => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, []);
+  const leavePageContext = useCallback(() => {
+    formGeneration.current++;
+    selectionVersion.current++;
+    setSelectedTasks(new Map());
+    setBulkDeleteTarget(null);
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+    setSelectedTask(null);
+    setDetailOpen(false);
+    setDialogOpen(false);
+    setEditingTask(undefined);
+  }, []);
+  const desiredUrlFilterContext = useRef(`${urlFilters.project}\u0000${urlFilters.status}`);
 
-**操作できるタスクと選択中タスクの絞り込み**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 操作できるタスクと選択中タスクの絞り込み
-const selectableTasks = useMemo(
-  () => tasks?.filter(
-    (task) =>
-      canEditProject(task.projectId)
-      || canDeleteProject(task.projectId),
-  ) ?? [],
-  [tasks, canEditProject, canDeleteProject],
-);
-
-const selectedTaskList = useMemo(
-  () => tasks?.filter(
-    (task) => selectedTasks.has(task.id),
-  ) ?? [],
-  [tasks, selectedTasks],
-);
-```
-
-`selectedTasks` の中身をそのまま操作の対象にしない理由はフィルターを切り替えても `Set` の中の id は消えないからです。画面から消えたタスクを一括削除の巻き添えにすると読者は自分が何を消したのか追えません。`selectedTaskList` はいま一覧に並んでいるタスクとだけ突き合わせた結果です。以降のボタンや件数の表示はすべてこちらを見ます。
-
-**操作ごとの権限の判定**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 操作ごとの権限の判定
-const canCompleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canEditProject(task.projectId),
+  const router = useRouter();
+  const pathname = usePathname();
+  const taskIdParam = searchParams.get('taskId');
+  const isEditLink = searchParams.get('edit') === 'true';
+  useEffect(() => {
+    formGeneration.current++;
+    linkedFormTarget.current = null;
+  }, [taskIdParam, isEditLink]);
+  const {
+    data: linkedTask,
+    error: linkedTaskError,
+    isFetching: linkedTaskFetching,
+    refetch: refetchLinkedTask,
+  } = api.task.getById.useQuery(
+    { id: taskIdParam ?? '' },
+    { enabled: !authExpired && !!taskIdParam && isEditLink, retry: shouldRetryQuery },
   );
-const canDeleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canDeleteProject(task.projectId),
-  );
-```
 
-`every` を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので削除できないタスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出て押した先でサーバーに断られます。この2つが守るのはボタンを出すかどうかまでで、最後に守るのは Step 0 のサーバー側です。
-
-**全選択・全解除の関数**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 全選択・全解除の関数
-const handleSelectAll = (checked: boolean) => {
-  setSelectedTasks(
-    checked
-      ? new Set(selectableTasks.map(
-          (task) => task.id
-        ))
-      : new Set()
-  );
-};
-```
-
-対象が `tasks` ではなく `selectableTasks` になっている点が要点です。全選択で閲覧しかできないタスクまで拾うとその直後に権限の判定が `false` へ倒れ、ボタンが1つも出なくなります。読者から見ると「全部選んだのに何もできない」という動きです。選べるものだけを選ぶ形にしておくとこの行き止まりが起きません。
-
-**全選択チェックボックスの3状態**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 全選択チェックボックスの3状態
-const selectAllState =
-  selectableTasks.length > 0
-    ? selectedTaskList.length === 0
-      ? false
-      : selectedTaskList.length
-          === selectableTasks.length
-        ? true
-        : 'indeterminate'
-    : false;
-```
-
-分母を `selectableTasks` にそろえてあるのは上の `handleSelectAll` が選ぶ範囲と一致させるためです。分母だけ `tasks` にすると全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので読者は自分の操作が効いたのかどうか判断できなくなります。
-
-**一括完了の mutation とハンドラー**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 一括完了の mutation とハンドラー
-const bulkCompleteMutation =
-  api.task.bulkComplete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-const handleBulkComplete = () => {
-  if (canCompleteSelected) {
-    bulkCompleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
-  }
-};
-```
-
-`onSuccess` の2行はどちらが欠けても画面と DB がずれます。`invalidate` を忘れると完了したはずのタスクが未完了のまま並び、選択のリセットを忘れると終わった操作のチェックが残ります。`mutate` へ渡すのが `selectedTaskList` なのはいま画面に並んでいるタスクだけを送るためです。
-
-**一括削除の mutation とハンドラー**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: 一括削除の mutation とハンドラー
-const bulkDeleteMutation =
-  api.task.bulkDelete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-const handleBulkDelete = () => {
-  if (canDeleteSelected) {
-    setBulkDeleteDialogOpen(true);
-  }
-};
-```
-
-`handleBulkDelete` が削除まで進まないところが完了処理との一番の違いです。この関数はダイアログを開くだけで、実際に消すのはダイアログで承諾を押したときです。押し間違いを取り消せない操作なのでボタンと削除の間に1つ画面を挟みます。
-
-**ステータス一括変更の mutation とハンドラー**:
-
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: ステータス一括変更の mutation とハンドラー
-const bulkUpdateStatusMutation =
-  api.task.bulkUpdateStatus.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-  });
-
-const handleBulkUpdateStatus = (
-  status: TaskStatus
-) => {
-  if (canCompleteSelected) {
-    bulkUpdateStatusMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-      status,
-    });
-  }
-};
-```
-
-判定に `canCompleteSelected` を使い回しているのはステータスの変更が編集にあたるからです。Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。ここだけ削除権限に変えるとボタンは出るのにサーバーが断るという食い違いが生まれます。画面側とサーバー側で、確かめる権限の名前をそろえてください。
-
-**ページ見出しと選択件数の表示**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: ページ見出しと選択件数の表示 */}
-<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-  <div className="flex items-center gap-3">
-    <h1 className="text-3xl font-bold tracking-tight">
-      タスク
-    </h1>
-    {selectedTaskList.length > 0 && (
-      <span className="text-sm text-muted-foreground">
-        ({selectedTaskList.length}件選択中)
-      </span>
-    )}
-  </div>
-  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-    {selectedTaskList.length > 0 && (
-      <>
-```
-
-見出しの隣へ件数を出しているのはこれから押すボタンの効く範囲を押す前に確かめられるからです。ボタンの近くで数字が見えないと選んだつもりの件数と実際の件数がずれていても気付けません。この `<>` の中に、次の3つのボタンが並びます。
-
-**「完了にする」ボタン**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: 「完了にする」ボタン */}
-{canCompleteSelected && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={handleBulkComplete}
-  >
-    <CheckSquare className="mr-2 h-4 w-4" />
-    完了にする
-  </Button>
-)}
-```
-
-権限が無いときにボタンを薄く表示するのではなく、丸ごと出さない形にしています。押せないボタンが並んでいると読者は自分の操作が失敗したのか、そもそも押せないのかを区別できません。表示されていなければこの選択では使えない操作だと一目で分かります。
-
-**ステータス変更のドロップダウン**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: ステータス変更のドロップダウン */}
-{canCompleteSelected && (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="outline" size="sm">
-        ステータス変更
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent>
-      {Object.entries(
-        TASK_STATUS_LABELS
-      ).map(([value, label]) => (
-        <DropdownMenuItem key={value}
-          onClick={() => {
-            if (isTaskStatus(value)) {
-              handleBulkUpdateStatus(value);
-            }
-          }}>
-          {label}
-        </DropdownMenuItem>
-      ))}
-    </DropdownMenuContent>
-  </DropdownMenu>
-)}
-```
-
-選択肢を `TASK_STATUS_LABELS` から作っているのでステータスを1つ増やしたときにこの画面を直す必要がありません。`isTaskStatus` で確かめてから渡しているのは`Object.entries` が返す `value` の型が `string` までしか絞られないためです。型を確かめずに渡すと `as` で無理やり通すことになり、綴りを間違えた文字列がそのままサーバーへ届きます。
-
-**「削除」ボタン**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: 「削除」ボタン */}
-{canDeleteSelected && (
-  <Button
-    variant="outline"
-    size="sm"
-    className="text-destructive hover:text-destructive"
-    onClick={handleBulkDelete}
-  >
-    <Trash2 className="mr-2 h-4 w-4" /> 削除
-  </Button>
-)}
-```
-
-赤い塗りつぶしの `variant="destructive"` を使わず、文字色だけを赤にしてあります。塗りつぶしのボタンはこのアプリでは押した瞬間に実行される操作へ使っています。確認を挟むボタンと挟まないボタンを見た目で描き分けておくと読者は押す前に身構えるかどうかを判断できます。
-
-**ヘッダー行の閉じ側**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: ヘッダー行の閉じ側 */}
-      </>
-    )}
-    <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
-      <Plus className="mr-2 h-4 w-4" /> 新規タスク
-    </Button>
-  </div>
-</div>
-```
-
-3つの一括操作を囲むフラグメントを閉じてから、選択件数に関係なく表示する新規タスクボタンを置きます。最後の2つの `</div>` は操作ボタンの列とページ見出しの行を順番に閉じます。
-
-**全選択チェックボックス**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: 全選択チェックボックス */}
-<div className="flex items-center space-x-2">
-  <Checkbox
-    id="select-all"
-    checked={selectAllState}
-    onCheckedChange={(checked) =>
-      handleSelectAll(checked === true)
+  useEffect(() => {
+    if (!taskIdParam || isEditLink || dismissedDetailTaskId.current !== taskIdParam) {
+      dismissedDetailTaskId.current = null;
     }
-  />
-  <Label htmlFor="select-all">すべて選択</Label>
-</div>
-```
+    if (taskIdParam && !isEditLink && dismissedDetailTaskId.current !== taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [isEditLink, taskIdParam]);
 
-`checked === true` と書いているのは`onCheckedChange` が `'indeterminate'` という文字列を渡してくる場合があるためです。この文字列は真として扱われるので比較を省くと部分選択の状態から全選択が走ります。`Label` に `htmlFor` を付けてあるのは文字の側を押しても切り替わるようにするためです。
+  useEffect(() => {
+    if (!isEditLink) {
+      linkedFormTarget.current = null;
+      return;
+    }
+    if (!linkedTask || linkedFormTarget.current === linkedTask.id) return;
+    linkedFormTarget.current = linkedTask.id;
+    formGeneration.current++;
+    setEditingTask(taskToFormData(linkedTask));
+    setDetailOpen(false);
+    setDialogOpen(true);
+  }, [isEditLink, linkedTask]);
 
-**タスク一覧のチェックボックス**:
+  useEffect(() => {
+    const nextUrlFilterContext = `${urlFilters.project}\u0000${urlFilters.status}`;
+    if (desiredUrlFilterContext.current !== nextUrlFilterContext) {
+      leavePageContext();
+      setPagination({ context: '', index: 0 });
+    }
+    desiredUrlFilterContext.current = nextUrlFilterContext;
+    setFilterProject(urlFilters.project);
+    setFilterStatus(urlFilters.status);
+  }, [leavePageContext, urlFilters.project, urlFilters.status]);
 
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: タスク一覧のチェックボックス部分 */}
-<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-  {tasks && tasks.length > 0 ? (
-    tasks.map((task) => {
-      const taskCanEdit = canEditProject(task.projectId);
-      const taskCanDelete = canDeleteProject(task.projectId);
-      return (
-      <div
-        key={task.id}
-        className="flex gap-2 items-start h-full"
-      >
-        {(taskCanEdit || taskCanDelete) && (
-          <Checkbox
-            checked={selectedTasks.has(task.id)}
-            onCheckedChange={(checked) =>
-              handleTaskSelect(task.id, checked === true)
-            }
-            className="mt-4"
-            aria-label={`${task.title}を選択`}
+  useEffect(() => {
+    const renderedUrlFilterContext = `${filterProject}\u0000${filterStatus}`;
+    if (renderedUrlFilterContext !== desiredUrlFilterContext.current) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('project');
+    params.delete('status');
+    if (dismissedDetailTaskId.current === taskIdParam && !isEditLink) {
+      params.delete('taskId');
+    }
+
+    const filterQuery = buildTaskFiltersQueryString({
+      project: filterProject,
+      status: filterStatus,
+    });
+
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery);
+      for (const [key, value] of filterParams.entries()) {
+        params.set(key, value);
+      }
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [filterProject, filterStatus, isEditLink, pathname, router, searchParams, taskIdParam]);
+
+  const utils = api.useUtils();
+
+  const {
+    data: session,
+    error: sessionError,
+    isSuccess: sessionLoaded,
+    isFetching: sessionFetching,
+    refetch: refetchSession,
+  } = api.auth.getSession.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isFetching: tasksFetching,
+    error: tasksError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      status: filterStatus === 'all' ? undefined : filterStatus,
+      priority: filterPriority === 'all' ? undefined : filterPriority,
+      assigneeId: filterAssignee === 'all' ? undefined : filterAssignee,
+      limit: PAGE_SIZE,
+      offset: pageIndex * PAGE_SIZE,
+    },
+    { enabled: !authExpired, retry: shouldRetryQuery, refetchOnWindowFocus: false },
+  );
+
+  const {
+    data: projects,
+    error: projectsError,
+    isFetching: projectsFetching,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  // getProjectMembers は protectedProcedure のため、セッション確定後にのみ実行する
+  const {
+    data: users,
+    error: usersError,
+    isFetching: usersFetching,
+    refetch: refetchUsers,
+  } = api.search.getProjectMembers.useQuery(undefined, {
+    enabled: !authExpired && !!session?.user,
+    retry: shouldRetryQuery,
+  });
+
+  const queryAuthFailed =
+    (sessionLoaded && session === null) ||
+    [sessionError, tasksError, projectsError, usersError, linkedTaskError].some(isAuthError);
+  const queryForbidden = [
+    sessionError,
+    tasksError,
+    projectsError,
+    usersError,
+    linkedTaskError,
+  ].some(isForbiddenError);
+  useEffect(() => {
+    if (!queryAuthFailed) return;
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  }, [queryAuthFailed]);
+
+  const taskReadFailed = !!tasksError && !isAuthError(tasksError) && !isForbiddenError(tasksError);
+  const projectReadFailed =
+    !!projectsError && !isAuthError(projectsError) && !isForbiddenError(projectsError);
+  const sessionReadFailed =
+    !!sessionError && !isAuthError(sessionError) && !isForbiddenError(sessionError);
+  const usersReadFailed = !!usersError && !isAuthError(usersError) && !isForbiddenError(usersError);
+  const linkedTaskReadFailed =
+    !!linkedTaskError && !isAuthError(linkedTaskError) && !isForbiddenError(linkedTaskError);
+  const taskReadFailedInitially = taskReadFailed && tasks === undefined;
+  const projectReadFailedInitially = projectReadFailed && projects === undefined;
+  const sessionReadFailedInitially = sessionReadFailed && session === undefined;
+  const sessionReadDataIsStale = sessionReadFailed && session !== undefined;
+  const usersReadFailedInitially = usersReadFailed && users === undefined;
+  const usersReadDataIsStale = usersReadFailed && users !== undefined;
+  const linkedTaskReadFailedInitially = linkedTaskReadFailed && linkedTask === undefined;
+  const linkedTaskReadDataIsStale = linkedTaskReadFailed && linkedTask !== undefined;
+  const requiredReadFailedInitially = taskReadFailedInitially || projectReadFailedInitially;
+  const requiredReadDataIsStale =
+    (taskReadFailed && tasks !== undefined) || (projectReadFailed && projects !== undefined);
+  const requiredReadRetrying =
+    (taskReadFailed && tasksFetching) || (projectReadFailed && projectsFetching);
+  const retryRequiredReads = () => {
+    const retries: Promise<unknown>[] = [];
+    if (taskReadFailed) retries.push(refetchTasks());
+    if (projectReadFailed) retries.push(refetchProjects());
+    void Promise.all(retries);
+  };
+  const initialReadErrorMessage =
+    taskReadFailedInitially && projectReadFailedInitially
+      ? 'タスクとプロジェクトを取得できませんでした。'
+      : taskReadFailedInitially
+        ? 'タスクを取得できませんでした。'
+        : 'プロジェクトを取得できませんでした。';
+  const staleReadErrorMessage =
+    taskReadFailed && projectReadFailed
+      ? '最新のタスクとプロジェクトを取得できませんでした。前回取得時の内容です。'
+      : taskReadFailed
+        ? '最新のタスクを取得できませんでした。前回取得時の内容です。'
+        : '最新のプロジェクトを取得できませんでした。前回取得時の内容です。';
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  // 作成可能なプロジェクト（canEdit）のみをタスク作成ダイアログに渡す
+  const editableProjects = useMemo(
+    () => projects?.filter((project) => canEditProject(project.id)) ?? [],
+    [projects, canEditProject],
+  );
+
+  const closeTaskDialog = useCallback(() => {
+    formGeneration.current++;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+
+    if (isEditLink) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      params.delete('edit');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [isEditLink, pathname, router, searchParams]);
+
+  const ownsSubmittedLifetime = (submitted: SingleSubmission | null) =>
+    !authExpiredRef.current &&
+    submitted?.generation === formGeneration.current &&
+    submitted.pageIndex === pageIndex &&
+    submitted.routeTaskId === taskIdParam &&
+    submitted.editLink === isEditLink;
+
+  const finishSubmittedForm = (
+    submitted: SingleSubmission | null,
+    operation: 'create' | 'update',
+    target: { id: string; title: string | undefined },
+  ) => {
+    const canClose = ownsSubmittedLifetime(submitted) && submitted?.isCurrent();
+    if (canClose) closeTaskDialog();
+    if (authExpiredRef.current) return;
+    const name = target.title ? `「${target.title}」` : '先ほど送信したタスク';
+    toast.success(`${name}を${operation === 'create' ? '作成' : '更新'}しました。`);
+    if (canClose || !dialogOpen) return;
+    // 別の対象へ保存案内を出さず、残った入力から再操作する際の注意を伝えるためです。
+    if (operation === 'create' && !editingTask?.id) {
+      toast(
+        '送信後に入力を変えた場合、' +
+          'その変更は保存されていません。' +
+          'このまま作成すると別のタスクになります。',
+      );
+    } else if (operation === 'update' && editingTask?.id === target.id) {
+      toast(
+        '送信後に入力した変更は保存されていません。' +
+          '入力内容を別の場所にコピーしてから、' +
+          'タスク編集画面を閉じて開き直し、' +
+          'もう一度保存してください。',
+      );
+    }
+  };
+  const handleSingleError = async (
+    error: unknown,
+    operation: TaskWriteOperation,
+    ids: string[],
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      handleDetailAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    await refreshTaskTargets(ids, true, true);
+  };
+  const singleMutationOptions = {
+    retry: false as const,
+    onMutate: () => singleSubmission.current,
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      _variables: unknown,
+      submitted: SingleSubmission | null | undefined,
+    ) => {
+      if (singleSubmission.current === submitted) singleSubmission.current = null;
+    },
+  };
+  const createMutation = api.task.create.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'create', { id: data.id, title: variables.title });
+      await refreshTaskTargets([data.id], false, true);
+    },
+    onError: (error) => handleSingleError(error, 'create', []),
+  });
+  const updateMutation = api.task.update.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables, submitted) => {
+      finishSubmittedForm(submitted, 'update', { id: variables.id, title: variables.title });
+      await refreshTaskTargets([variables.id], false, true);
+    },
+    onError: (error, variables) => handleSingleError(error, 'update', [variables.id]),
+  });
+  const deleteMutation = api.task.delete.useMutation({
+    ...singleMutationOptions,
+    onSuccess: async (_data, variables) => {
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+      setSelectedTask((current) => (current === variables.id ? null : current));
+      setSelectedTasks((current) => {
+        const next = new Map(current);
+        next.delete(variables.id);
+        return next;
+      });
+      await refreshTaskTargets([variables.id], false);
+    },
+    onError: (error, variables) => handleSingleError(error, 'delete', [variables.id]),
+  });
+  const singlePending =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+  const refreshTaskTargets = async (
+    ids: string[],
+    refreshPermissions: boolean,
+    reportDetailFailure = false,
+  ) => {
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
+    try {
+      const updates = [
+        utils.task.getAll.invalidate(undefined, filters, { throwOnError: true }),
+        ...ids.map((id) =>
+          utils.task.getById.invalidate({ id }, filters, { throwOnError: reportDetailFailure }),
+        ),
+      ];
+      if (refreshPermissions)
+        updates.push(utils.project.getAll.invalidate(undefined, filters, { throwOnError: true }));
+      await Promise.all(updates);
+    } catch (error) {
+      if (isAuthError(error)) {
+        authExpiredRef.current = true;
+        setAuthExpired(true);
+        return;
+      }
+      // 書き込み結果と表示更新の失敗を混同しないためです。
+      console.error('操作後の表示更新に失敗しました。', error);
+      if (!authExpiredRef.current)
+        toast.error(
+          '最新の表示を取得できませんでした。' +
+            '再表示して操作結果を確認してください。'
+        );
+    }
+  };
+
+  const bulkMutationOptions = (operation: TaskBulkOperation) => ({
+    retry: false as const,
+    onMutate: () => bulkSubmission.current,
+    onSuccess: (_data: unknown, variables: { ids: string[] }, submitted: BulkSubmission | null) => {
+      void refreshTaskTargets(variables.ids, false);
+      if (authExpiredRef.current || !submitted) return;
+      setSelectedTasks((previous) => {
+        const next = new Map(previous);
+        for (const id of variables.ids) {
+          // 送信後に同じ項目を選び直した意思を古い応答で消さないためです。
+          if (operation === 'delete' || next.get(id) === submitted.selection.get(id))
+            next.delete(id);
+        }
+        return next;
+      });
+      if (operation === 'delete') {
+        setBulkDeleteTarget(null);
+        // 削除済みの内容を再取得失敗時のキャッシュから表示し続けないためです。
+        setSelectedTask((current) => (current && variables.ids.includes(current) ? null : current));
+      }
+    },
+    onError: (error: unknown, variables: { ids: string[] }) => {
+      const result = classifyTaskBulkError(error, operation);
+      if (result.kind === 'auth') {
+        authExpiredRef.current = true;
+        setAuthExpired(true);
+        return;
+      }
+      toast.error(result.message);
+      void refreshTaskTargets(variables.ids, true);
+    },
+    onSettled: () => {
+      bulkSubmission.current = null;
+    },
+  });
+
+  const bulkCompleteMutation = api.task.bulkComplete.useMutation(bulkMutationOptions('complete'));
+  const bulkDeleteMutation = api.task.bulkDelete.useMutation(bulkMutationOptions('delete'));
+  const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation(
+    bulkMutationOptions('status'),
+  );
+  const bulkPending =
+    bulkCompleteMutation.isPending ||
+    bulkDeleteMutation.isPending ||
+    bulkUpdateStatusMutation.isPending;
+
+  const handleCreate = () => {
+    if (authExpiredRef.current) return;
+    formGeneration.current++;
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (taskId: string) => {
+    if (authExpiredRef.current) return;
+    const task = tasks?.find((t) => t.id === taskId);
+    if (task) {
+      formGeneration.current++;
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    if (singleSubmission.current || singlePending || authExpiredRef.current) return;
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit = (data: TaskFormData, isCurrent: () => boolean = () => true) => {
+    if (
+      singleSubmission.current ||
+      singlePending ||
+      authExpiredRef.current ||
+      !dialogOpen ||
+      !isCurrent()
+    )
+      return;
+    if (!data.id && !session?.user?.id) {
+      handleDetailAuthExpired();
+      return;
+    }
+    singleSubmission.current = {
+      generation: formGeneration.current,
+      pageIndex,
+      isCurrent,
+      routeTaskId: taskIdParam,
+      editLink: isEditLink,
+    };
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        title: data.title,
+        description: data.description || null,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
+        estimatedHours: data.estimatedHours ?? null,
+        projectId: data.projectId,
+        assigneeId: data.assigneeId || null,
+        ...(data.expectedUpdatedAt !== undefined && {
+          expectedUpdatedAt: data.expectedUpdatedAt,
+        }),
+      });
+    } else {
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : undefined,
+        estimatedHours: data.estimatedHours,
+        projectId: data.projectId,
+        assigneeId: data.assigneeId || undefined,
+      });
+    }
+  };
+
+  const handleTaskClick = (taskId: string) => {
+    setSelectedTask(taskId);
+    setDetailOpen(true);
+  };
+
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+    if (taskIdParam && !isEditLink) {
+      dismissedDetailTaskId.current = taskIdParam;
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  };
+
+  const handleTaskSelect = (taskId: string, checked: boolean) => {
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) => {
+      const next = new Map(previous);
+      checked ? next.set(taskId, version) : next.delete(taskId);
+      return next;
+    });
+  };
+
+  const moveToPage = (nextPage: number) => {
+    if (tasksFetching || nextPage < 0 || nextPage === pageIndex) return;
+    leavePageContext();
+    setPagination({ context: pageContext, index: nextPage });
+  };
+
+  const resetPageForFilter = () => {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
+  };
+
+  // 編集も削除もできないタスク（閲覧のみ）は一括操作の対象から除外する
+  const selectableTasks = useMemo(
+    () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
+    [tasks, canEditProject, canDeleteProject],
+  );
+
+  const selectedTaskList = useMemo(
+    () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
+    [tasks, selectedTasks],
+  );
+
+  const canCompleteSelected =
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
+  const canDeleteSelected =
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
+
+  const handleSelectAll = (checked: boolean) => {
+    const version = ++selectionVersion.current;
+    setSelectedTasks((previous) =>
+      checked
+        ? new Map(selectableTasks.map((task) => [task.id, previous.get(task.id) ?? version]))
+        : new Map(),
+    );
+  };
+
+  const currentBulkSelection = () =>
+    new Map(selectedTaskList.map((task) => [task.id, selectedTasks.get(task.id) ?? 0]));
+  const beginBulk = (selection: BulkSelection) => {
+    if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      selection.size === 0 ||
+      selection.size > MAX_BULK_TASKS
+    )
+      return false;
+    bulkSubmission.current = { selection };
+    return true;
+  };
+  const tooManySelected = selectedTaskList.length > MAX_BULK_TASKS;
+
+  // 非表示の選択を送信せず、確認画面では同意した対象を固定するためです。
+  const handleBulkComplete = () => {
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection)) bulkCompleteMutation.mutate({ ids: [...selection.keys()] });
+  };
+
+  const handleBulkDelete = () => {
+    if (
+      authExpiredRef.current ||
+      bulkPending ||
+      bulkSubmission.current ||
+      !canDeleteSelected ||
+      tooManySelected
+    )
+      return;
+    setBulkDeleteTarget(currentBulkSelection());
+  };
+
+  const handleBulkUpdateStatus = (status: TaskStatus) => {
+    if (!canCompleteSelected) return;
+    const selection = currentBulkSelection();
+    if (beginBulk(selection))
+      bulkUpdateStatusMutation.mutate({ ids: [...selection.keys()], status });
+  };
+
+  const selectAllState =
+    selectableTasks.length > 0
+      ? selectedTaskList.length === 0
+        ? false
+        : selectedTaskList.length === selectableTasks.length
+          ? true
+          : 'indeterminate'
+      : false;
+
+  if (authExpired || queryAuthFailed) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">ログインの有効期限が切れました。もう一度ログインしてください。</p>
+          <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (queryForbidden) {
+    return (
+      <AppLayout>
+        <div className="py-24 text-center">
+          <p role="alert">タスク情報を表示する権限がありません。</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (sessionReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">ログイン情報を取得できませんでした。</p>
+          <Button type="button" onClick={() => void refetchSession()} disabled={sessionFetching}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (requiredReadFailedInitially) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <p role="alert">{initialReadErrorMessage}</p>
+          <Button type="button" onClick={retryRequiredReads} disabled={requiredReadRetrying}>
+            再試行
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      {tasksLoading ? (
+        <PageLoadingSpinner />
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
+              {selectedTaskList.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({selectedTaskList.length}件選択中)
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {canCompleteSelected && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled={bulkPending || tooManySelected}
+                    onClick={handleBulkComplete}
+                  >
+                    <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        disabled={bulkPending || tooManySelected}
+                      >
+                        ステータス変更
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                        <DropdownMenuItem
+                          key={value}
+                          disabled={bulkPending || tooManySelected}
+                          onClick={() => {
+                            if (isTaskStatus(value)) handleBulkUpdateStatus(value);
+                          }}
+                        >
+                          {label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
+              {canDeleteSelected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-destructive hover:text-destructive sm:w-auto"
+                  disabled={bulkPending || tooManySelected}
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> 削除
+                </Button>
+              )}
+              {editableProjects.length > 0 && (
+                <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" /> 新規タスク
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {requiredReadDataIsStale && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>{staleReadErrorMessage}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={retryRequiredReads}
+                disabled={requiredReadRetrying}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {sessionReadDataIsStale && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                最新のログイン情報を取得できませんでした。前回取得時の権限で表示しています。
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchSession()}
+                disabled={sessionFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {(usersReadFailedInitially || usersReadDataIsStale) && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                {usersReadDataIsStale
+                  ? '最新の担当者候補を取得できませんでした。前回取得時の候補です。'
+                  : '担当者候補を取得できませんでした。'}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchUsers()}
+                disabled={usersFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {(linkedTaskReadFailedInitially || linkedTaskReadDataIsStale) && (
+            <div
+              className="flex flex-col gap-3 rounded-md border border-destructive/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              role="alert"
+            >
+              <span>
+                {linkedTaskReadDataIsStale
+                  ? '最新の編集対象タスクを取得できませんでした。前回取得時の内容です。'
+                  : '編集するタスクを取得できませんでした。'}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void refetchLinkedTask()}
+                disabled={linkedTaskFetching}
+              >
+                再試行
+              </Button>
+            </div>
+          )}
+
+          {tooManySelected && (
+            <p role="alert">一括操作は100件までです。選択する件数を減らしてください。</p>
+          )}
+          {bulkPending && (
+            <p role="status">一括操作の結果を待っています。別の一括操作は完了後に実行できます。</p>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-4">
+            {selectableTasks.length > 0 && (
+              <div className="flex items-center space-x-2 shrink-0">
+                <Checkbox
+                  id="select-all"
+                  checked={selectAllState}
+                  onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                  aria-label="表示中のタスクをすべて選択"
+                />
+                <Label htmlFor="select-all" className="whitespace-nowrap">
+                  表示中をすべて選択
+                </Label>
+              </div>
+            )}
+
+            <div className="task-filter-grid ml-auto">
+              <div>
+                <Label htmlFor="task-project-filter" className="sr-only">
+                  プロジェクトで絞り込み
+                </Label>
+                <Select
+                  value={filterProject}
+                  onValueChange={(value) => {
+                    if (value === filterProject) return;
+                    desiredUrlFilterContext.current = `${value}\u0000${filterStatus}`;
+                    resetPageForFilter();
+                    setFilterProject(value);
+                  }}
+                >
+                  <SelectTrigger id="task-project-filter" aria-label="プロジェクトで絞り込み">
+                    <SelectValue placeholder="すべてのプロジェクト" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="task-status-filter" className="sr-only">
+                  ステータスで絞り込み
+                </Label>
+                <Select
+                  value={filterStatus}
+                  onValueChange={(value) => {
+                    if ((value === 'all' || isTaskStatus(value)) && value !== filterStatus) {
+                      desiredUrlFilterContext.current = `${filterProject}\u0000${value}`;
+                      resetPageForFilter();
+                      setFilterStatus(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="task-status-filter" aria-label="ステータスで絞り込み">
+                    <SelectValue placeholder="すべてのステータス" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべてのステータス</SelectItem>
+                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="task-priority-filter" className="sr-only">
+                  優先度で絞り込み
+                </Label>
+                <Select
+                  value={filterPriority}
+                  onValueChange={(value) => {
+                    if ((value === 'all' || isTaskPriority(value)) && value !== filterPriority) {
+                      resetPageForFilter();
+                      setFilterPriority(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="task-priority-filter" aria-label="優先度で絞り込み">
+                    <SelectValue placeholder="すべての優先度" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべての優先度</SelectItem>
+                    {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="task-assignee-filter" className="sr-only">
+                  担当者で絞り込み
+                </Label>
+                <Select
+                  value={filterAssignee}
+                  onValueChange={(value) => {
+                    if (value === filterAssignee) return;
+                    resetPageForFilter();
+                    setFilterAssignee(value);
+                  }}
+                >
+                  <SelectTrigger id="task-assignee-filter" aria-label="担当者で絞り込み">
+                    <SelectValue placeholder="すべての担当者" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべての担当者</SelectItem>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {tasks && tasks.length > 0 ? (
+              tasks.map((task) => {
+                const taskCanEdit = canEditProject(task.projectId);
+                const taskCanDelete = canDeleteProject(task.projectId);
+                return (
+                  <div key={task.id} className="flex gap-2 items-start h-full">
+                    {(taskCanEdit || taskCanDelete) && (
+                      <Checkbox
+                        checked={selectedTasks.has(task.id)}
+                        onCheckedChange={(checked) => handleTaskSelect(task.id, checked === true)}
+                        className="mt-4"
+                        aria-label={`${task.title}を選択`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0 h-full">
+                      <TaskCard
+                        id={task.id}
+                        title={task.title}
+                        description={task.description}
+                        status={task.status}
+                        priority={task.priority}
+                        dueDate={task.dueDate}
+                        assignee={task.assignee}
+                        timeSpentMinutes={task.timeSpentMinutes}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleTaskClick}
+                        canEdit={taskCanEdit}
+                        canDelete={taskCanDelete}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : pageIndex > 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <p>このページにはタスクがありません。</p>
+                <p>前のページへ戻ってください。</p>
+              </div>
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <p>タスクが見つかりません。</p>
+                {filterProject === 'all' &&
+                  filterStatus === 'all' &&
+                  filterPriority === 'all' &&
+                  filterAssignee === 'all' && <p>最初のタスクを作成しましょう！</p>}
+              </div>
+            )}
+          </div>
+
+          {(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="タスク一覧のページ移動"
+            >
+              <Button
+                variant="outline"
+                disabled={tasksFetching || pageIndex === 0}
+                onClick={() => moveToPage(pageIndex - 1)}
+              >
+                前へ
+              </Button>
+              <span className="text-sm text-muted-foreground">{pageIndex + 1}ページ目</span>
+              <Button
+                variant="outline"
+                disabled={tasksFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+                onClick={() => moveToPage(pageIndex + 1)}
+              >
+                次へ
+              </Button>
+            </nav>
+          )}
+
+          <TaskDialog
+            open={dialogOpen}
+            onClose={closeTaskDialog}
+            onSubmit={handleSubmit}
+            isPending={singlePending}
+            initialData={editingTask}
+            projects={editableProjects}
           />
-        )}
-```
 
-`aria-label` にタスク名を入れているのは同じ形のチェックボックスがカードの数だけ並ぶからです。名前が無いと読み上げでは「チェックボックス」が続くだけで、どれを選んでいるのか分かりません。まとめて削除できる画面では取り違えると元へ戻せません。チェックボックスをカードの外側へ置いた形なので`TaskCard` 本体は1行も書き換わりません。
-
-**タスクカード本体**:
-
-```typescript
-        {/* filepath: src/app/task/page.tsx */}
-        {/* 完成版: タスクカード本体 */}
-        <div className="flex-1 min-w-0 h-full">
-          <TaskCard
-            id={task.id}
-            title={task.title}
-            description={task.description}
-            status={task.status}
-            priority={task.priority}
-            dueDate={task.dueDate}
-            assignee={task.assignee}
-            timeSpentMinutes={task.timeSpentMinutes}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onClick={handleTaskClick}
-            onTimeLogSuccess={handleTimeLogSuccess}
-            canEdit={taskCanEdit}
-            canDelete={taskCanDelete}
+          <TaskDetailDialog
+            open={detailOpen && selectedTask !== null}
+            taskId={selectedTask}
+            onClose={handleDetailClose}
+            onAuthExpired={handleDetailAuthExpired}
           />
         </div>
-```
-
-`canEdit` と `canDelete` へ渡しているのは1つ前のブロックでチェックボックスを出すかどうかに使った変数そのものです。値を共有しているのでカードの中にある編集ボタンと、カードの外にあるチェックボックスの出方が食い違いません。`min-w-0` を付けてあるのは長いタスク名がカードの幅を押し広げてグリッドを崩さないようにするためです。
-
-**タスク一覧の閉じタグと空メッセージ**:
-
-```typescript
-      {/* filepath: src/app/task/page.tsx */}
-      {/* 完成版: タスク一覧の閉じタグと空メッセージ */}
-      </div>
-      );
-    })
-  ) : (
-    <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-      <p>タスクが見つかりません。</p>
-      {filterProject === 'all' && filterStatus === 'all' && (
-        <p>最初のタスクを作成しましょう！</p>
       )}
-    </div>
-  )}
-</div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (
+            deleteTargetId &&
+            !singleSubmission.current &&
+            !singlePending &&
+            !authExpiredRef.current
+          ) {
+            singleSubmission.current = {
+              generation: formGeneration.current,
+              pageIndex,
+              isCurrent: () => false,
+              routeTaskId: taskIdParam,
+              editLink: isEditLink,
+            };
+            deleteMutation.mutate({ id: deleteTargetId });
+          }
+        }}
+        isPending={singlePending}
+        closeOnConfirm={false}
+      />
+
+      <DeleteConfirmDialog
+        open={bulkDeleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (bulkDeleteTarget && beginBulk(bulkDeleteTarget)) {
+            bulkDeleteMutation.mutate({ ids: [...bulkDeleteTarget.keys()] });
+          }
+        }}
+        isPending={bulkPending}
+        closeOnConfirm={false}
+        title={`${bulkDeleteTarget?.size ?? 0}件のタスクを削除しますか？`}
+      />
+    </AppLayout>
+  );
+}
+
+export default function TaskPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
 ```
 
-閉じタグが5段も続くのはグリッドの箱・`map` の返り値・三項演算子の3つを同じ場所でたたんでいるからです。ここで数を1つ間違えるとエラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときはこの段の数だけを先に数え直してください。`<p>` の空メッセージはタスクが0件のときに画面が真っ白にならないための受け皿です。`最初のタスクを作成しましょう！` はフィルターが両方とも `all` のときだけ出る Day 13 の案内で、ここでも残しています。
-
-**削除確認ダイアログ**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* 完成版: 削除確認ダイアログ */}
-<DeleteConfirmDialog
-  open={bulkDeleteDialogOpen}
-  onOpenChange={setBulkDeleteDialogOpen}
-  onConfirm={() => {
-    bulkDeleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
-  }}
-  isPending={bulkDeleteMutation.isPending}
-  title={`${selectedTaskList.length}件のタスクを削除しますか？`}
-/>
-```
-
-`title` に件数を差し込んでいるのは承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
+`singleSubmission` は送信したフォームの世代、ページ番号、URL対象を固定し、`bulkSubmission` は送信した選択番号を固定します。1件操作では古い結果から新しい入力を守り、一括操作では送信後に選び直したチェックを守ります。2つは役割が異なるため、完成ファイルでも片方へまとめません。
 
 ## 今日のまとめ
 
-- [ ] `Set<string>` で選択中のタスク ID を管理できた
-- [ ] 全選択・全解除・部分選択（`indeterminate`）の3状態を作れた
-- [ ] 一括完了・一括削除・一括ステータス変更の3つを動かせた
-- [ ] 削除だけ確認ダイアログをはさむ理由を説明できる
-- [ ] `updateMany` でタスクごとにループを回さずまとめて更新できた
+- [ ] Map に ID と選択番号を保存できました
+- [ ] 全選択・部分選択・全解除を切り替えられました
+- [ ] 100件までのタスクを完了・削除・ステータス変更できました
+- [ ] 送信中は一括操作を止め、選び直したチェックを保護できました
+- [ ] 削除確認の対象を固定し、失敗時の案内を表示できました
+- [ ] ログイン切れでは一覧とページ内のダイアログを隠せました
+- [ ] コードで、古い送信結果が新しいフォームを閉じない条件を確認しました
+- [ ] コードで、保存成功と再取得失敗を分けて案内する条件を確認しました
 
 ---
 
 ## つまずきポイント
 
-| エラー/問題 | 原因 | 解決方法 |
-|------------|------|---------|
-| チェックボックスをクリックしても反応しない | `onCheckedChange`ハンドラーで`Set`を正しく更新していない（`Checkbox`は`onChange`ではなく`onCheckedChange`を受け取る） | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
-| `indeterminate`状態が表示されない | `checked`propに`true`/`false`しか渡していない | shadcn/uiの`Checkbox`は`checked`に文字列`'indeterminate'`を渡すと部分選択状態になる |
-| 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
-| `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
-| 全選択の表示が選択件数と合わない | 比較対象に一覧全体の `tasks` を使っている | `selectedTaskList.length` と操作可能な `selectableTasks.length` を比較する |
+| 状況 | 確認する箇所 |
+|------|--------------|
+| チェックが反応しない | `onCheckedChange` から `handleTaskSelect` を呼び、コピーした Map を更新しているか |
+| 全選択の表示が合わない | `selectedTaskList.length` と `selectableTasks.length` を比べているか |
+| 送信後に選び直したチェックが消える | 完了とステータス変更の `onSuccess` で選択番号を比較しているか |
+| 削除した ID のチェックが残る | 一括削除の成功では、送った ID を番号に関係なく解除しているか |
+| 同時に2つの操作が送られる | `beginBulk` の同期判定と全ボタンの `disabled` があるか |
+| 失敗した削除の確認が閉じる | `closeOnConfirm={false}` を渡しているか |
+| 確認した件数が再取得で変わる | 件数と送信 ID を `bulkDeleteTarget` から読んでいるか |
+| 100件を超えて操作できない | サーバーも100件上限なので、選択を100件以下に減らす |
+| 結果を確認できない案内が出る | 再送前に一覧を再表示し、対象の状態を確認する |
+| 1件の保存後に開き直したフォームが閉じる | `singleSubmission`、`formGeneration`、`isCurrent` と `singlePending` を Day 15 のまま残しているか |
+| 権限と対象の状態を確認する案内が出る | 一覧と権限の再取得後に対象を確認する。403は対象削除との競合でも返るため、権限不足だけとは限らない |
+| 表示の取得に失敗した案内が出る | 書き込み成功を取り消した意味ではないので、再表示して結果を確認する |
+| ログイン画面への案内が出る | ログインし直してから、対象の状態を確認する |
 
-### 詰まりやすいポイントまとめ
-
-| 症状 | 原因 | 解決策 |
-|------|------|--------|
-| `selectedIds` という変数名でエラーになる | 実際のコードは `selectedTasks` を使う | 変数名を `selectedTasks` / `setSelectedTasks` に統一する |
-| 型エラー: `string` is not assignable to `TaskStatus` | `isTaskStatus` 型ガードがない | `if (isTaskStatus(value))` で囲んでから呼ぶ |
-| 削除が確認なしで即実行される | `setBulkDeleteDialogOpen(true)` を呼んでいない | `handleBulkDelete` でダイアログを開く流れに修正 |
-| 操作後に画面が更新されない | `invalidate()` を呼んでいない | `onSuccess` の中で `utils.task.getAll.invalidate()` を追加 |
-| チェックが入ったまま残る | `setSelectedTasks(new Set())` を呼んでいない | `onSuccess` で空の Set にリセットする |
-| 操作できないタスクまで全選択される | `handleSelectAll` が `tasks` からIDを集めている | `selectableTasks.map` で操作可能なタスクのIDを集める |
+送信中に確認を閉じても、送った削除は取り消されません。新しい操作を始める前に結果を確認してください。選択が残っているだけでは結果を判断できません。
 
 ---
 
@@ -1912,38 +3380,36 @@ const handleBulkUpdateStatus = (
 
 | 用語 | 意味 |
 |------|------|
-| `Set<string>` | 重複しない集合。チェックボックスで選んだ ID の置き場に使う |
-| `indeterminate` | チェックボックスの「一部だけ選んでいる」状態 |
-| `updateMany` | 複数レコードを1回の DB アクセスでまとめて更新する Prisma のメソッド |
-| `isTaskStatus` | 文字列が `TaskStatus` かを実行時に確かめる型ガード |
-| `completedAt` | 完了した日時。完了操作で `status` と一緒に記録する |
-| `DropdownMenu` | 選んだ瞬間に処理を走らせる操作用の部品。`Select` は入力欄なので用途が違う |
-| `selectedTaskList.map(task => task.id)` | 表示中の選択タスクから、APIへ渡すID配列を作る |
-| `invalidate()` | tRPC のキャッシュを捨てて取り直させる。一括操作のあとの画面更新に使う |
+| `Map<string, number>` | タスク ID と選択番号を対応付ける型 |
+| 選択番号（トークン） | 古い送信と新しい選択を区別するために保存する番号 |
+| スナップショット | 削除確認時にコピーした ID と選択番号 |
+| `useRef` | 再描画を待たずに送信中などの値を保存する React の関数 |
+| `indeterminate` | 一部だけ選択したチェックボックスの状態 |
+| `updateMany` | 条件に合う複数レコードをまとめて更新する Prisma のメソッド |
+| `isTaskStatus` | 文字列が有効なステータスかを確かめる型ガード |
+| `invalidate()` | キャッシュを古い状態として扱い、必要に応じて再取得する処理 |
 
 ---
 
 ## 理解チェック
 
-今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
+今日のコードを見ながら、選択と送信の違いを確認してください。
 
-**Q1. 権限の確認に `every` を使い、`some` を使わないのはなぜですか。**
+**Q1. A を送信してから A を選び直したとき、完了と削除でチェックの扱いが違うのはなぜですか。**
 
-A. 権限の無いタスクが1件でも混ざったら操作そのものを止めたいためです。選択は複数のプロジェクトをまたげます。そのため「編集はできても削除はできない」タスクが紛れる場面も実際に起きます。`some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
+A. 完了は選択番号が変わった新しい選択を尊重します。削除が成功した A は実際に存在しなくなるため、選び直していても解除します。
 
-**Q2. 全選択チェックボックスの分母を `tasks` ではなく `selectableTasks` にしているのはなぜですか。**
+**Q2. 確認中に一覧が変わったとき、削除する ID を作り直してよいですか。**
 
-A. 閲覧しかできないタスクまで分母に入れると選べるものを全部選んでも数が足りず、部分選択のままになるためです。読者からは「全部選んだのに全チェックにならない」という不可解な動きに見えます。
+A. 作り直しません。同意した対象を変えないため、確認を開いた時点の `bulkDeleteTarget` から全 ID を送ります。サーバーは送信された全件の存在と権限を確認します。
 
-**Q3. 一括完了とステータス変更には確認ダイアログが無く、一括削除にだけあるのはなぜですか。**
+**Q3. 通信が切れたら自動でもう一度送ってよいですか。**
 
-A. 完了とステータス変更は元に戻せるのに対し、削除は DB から消えて元に戻せないためです。ボタンの見た目も、押した瞬間に走る赤い塗りつぶしと、確認をはさむボタンで区別してあります。
-
----
+A. サーバーで成功した可能性があるため、自動では再送しません。最新の一覧で結果を確認してから、必要な場合だけ操作します。
 
 ## 追加課題：選択した2件だけをステータス変更する
 
-選択集合が操作対象を決めることを確かめます。理解チェック Q2 の全選択と、1件ずつの選択を区別しましょう。
+選択集合が操作対象を決めることを確かめます。全選択と、1件ずつの選択を区別しましょう。
 
 前提は今日の一括操作が使えることです。自分が管理するプロジェクトに「課題28-A」「課題28-B」「課題28-C」を未対応で作成します。
 

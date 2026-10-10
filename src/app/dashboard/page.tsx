@@ -19,7 +19,8 @@ import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  // ダッシュボードはアクティブな状況の概要のため、アーカイブ済みプロジェクトは除外する
+  // アクティブな状況の概要だけを表示するため、
+  // アーカイブ済みプロジェクトは除外する。
   const {
     data: projects,
     isLoading: projectsLoading,
@@ -121,7 +122,7 @@ export default function DashboardPage() {
             <span>
               {authFailed
                 ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
-                : '最新の情報を取得できませんでした。表示は前回取得時の内容です。'}
+                : '最新の情報を取得できませんでした。' + '表示は前回取得時の内容です。'}
             </span>
             <button
               type="button"

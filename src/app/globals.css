@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss" source("../");
 
 @plugin "tailwindcss-animate";
 
@@ -27,8 +27,8 @@
 }
 
 @theme inline {
-  /* ダッシュボードの統計カードを 1350px 以上で 5 列にするためのカスタムブレークポイント。 */
-  --breakpoint-xxl: 1350px;
+  /* 既存の境目と単位をそろえ、標準文字サイズ16pxでは1350pxから統計カードを5列にするため。 */
+  --breakpoint-xxl: 84.375rem;
 
   --font-sans:
     var(--font-inter), var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans",

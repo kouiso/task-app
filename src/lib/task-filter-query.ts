@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { isTaskStatus, type TaskStatus } from '@/lib/constant/status';
 
 export type TaskFilters = {
@@ -10,8 +11,17 @@ export const DEFAULT_TASK_FILTERS: TaskFilters = {
   status: 'all',
 };
 
+const cuidSchema = z.string().cuid();
+
+const normalizeProjectFilter = (value: string): string =>
+  value === DEFAULT_TASK_FILTERS.project || cuidSchema.safeParse(value).success
+    ? value
+    : DEFAULT_TASK_FILTERS.project;
+
 export const parseTaskFiltersFromSearchParams = (searchParams: URLSearchParams): TaskFilters => {
-  const project = searchParams.get('project') ?? DEFAULT_TASK_FILTERS.project;
+  const project = normalizeProjectFilter(
+    searchParams.get('project') ?? DEFAULT_TASK_FILTERS.project,
+  );
   const rawStatus = searchParams.get('status') ?? DEFAULT_TASK_FILTERS.status;
 
   return {
@@ -23,9 +33,10 @@ export const parseTaskFiltersFromSearchParams = (searchParams: URLSearchParams):
 
 export const buildTaskFiltersQueryString = (filters: TaskFilters): string => {
   const params = new URLSearchParams();
+  const project = normalizeProjectFilter(filters.project);
 
-  if (filters.project !== DEFAULT_TASK_FILTERS.project) {
-    params.set('project', filters.project);
+  if (project !== DEFAULT_TASK_FILTERS.project) {
+    params.set('project', project);
   }
 
   if (filters.status !== DEFAULT_TASK_FILTERS.status) {

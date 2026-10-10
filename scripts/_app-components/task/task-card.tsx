@@ -27,9 +27,7 @@ interface TaskCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onClick?: (id: string) => void;
-  // 権限はサーバー側 (assertMemberPermission) が最終判定する。この props は
-  // 「権限が無いと分かっているボタンを出さない」ための表示制御で、
-  // 権限を扱わない序盤の教材 (Day13〜16) がそのまま動くように未指定時は表示する。
+  // 権限が確認できるまで編集・削除を表示しないため、未指定時は許可しない。
   canEdit?: boolean;
   canDelete?: boolean;
 }
@@ -45,8 +43,8 @@ export function TaskCard({
   onEdit,
   onDelete,
   onClick,
-  canEdit = true,
-  canDelete = true,
+  canEdit = false,
+  canDelete = false,
 }: TaskCardProps) {
   const overdue =
     isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;

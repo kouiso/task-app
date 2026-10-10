@@ -1,6 +1,6 @@
 import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import type { UserRole } from './constant/roles';
+import { USER_ROLE, type UserRole } from './constant/roles';
 import { env } from './env';
 
 function getKey(): Uint8Array {
@@ -14,6 +14,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   role: UserRole;
+  version: number;
   exp: number;
 }
 
@@ -21,21 +22,39 @@ export interface SessionUser {
   id: string;
   email: string;
   role: UserRole;
+  version: number;
 }
 
 const COOKIE_NAME = 'session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 
-/**
- * SessionPayloadの型ガード
- */
-function isSessionPayload(payload: JWTPayload): payload is JWTPayload & SessionPayload {
-  return (
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+
+function readSessionPayload(payload: JWTPayload): SessionPayload | null {
+  if (
     typeof payload['userId'] === 'string' &&
     typeof payload['email'] === 'string' &&
-    typeof payload['role'] === 'string' &&
+    (payload['role'] === USER_ROLE.USER || payload['role'] === USER_ROLE.ADMIN) &&
     typeof payload['exp'] === 'number'
-  );
+  ) {
+    const version = Object.hasOwn(payload, 'version') ? payload['version'] : 0;
+    if (
+      typeof version === 'number' &&
+      Number.isInteger(version) &&
+      version >= 0 &&
+      version <= POSTGRES_INTEGER_MAX
+    ) {
+      return {
+        userId: payload['userId'],
+        email: payload['email'],
+        role: payload['role'],
+        version,
+        exp: payload['exp'],
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function signSessionToken(payload: SessionPayload): Promise<string> {
@@ -44,6 +63,7 @@ export async function signSessionToken(payload: SessionPayload): Promise<string>
     userId: payload.userId,
     email: payload.email,
     role: payload.role,
+    version: payload.version,
     exp: payload.exp,
   };
 
@@ -60,12 +80,13 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       algorithms: ['HS256'],
     });
 
-    if (!isSessionPayload(payload)) {
+    const session = readSessionPayload(payload);
+    if (!session) {
       console.error('Invalid session payload structure');
       return null;
     }
 
-    return payload;
+    return session;
   } catch {
     console.error('Failed to verify session token');
     return null;
@@ -78,6 +99,7 @@ export async function createSession(user: SessionUser): Promise<string> {
     userId: user.id,
     email: user.email,
     role: user.role,
+    version: user.version,
     exp: expiresAt,
   };
 
@@ -122,5 +144,6 @@ export async function verifySession(): Promise<SessionUser | null> {
     id: session.userId,
     email: session.email,
     role: session.role,
+    version: session.version,
   };
 }

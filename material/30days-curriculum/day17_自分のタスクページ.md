@@ -28,11 +28,13 @@ Day 16 ではタスクのステータス変更機能と、作業時間を手動�
 flowchart TD
     A[マイタスクページ] --> B[ステータスTabs]
     A --> C[プロジェクトフィルター]
-    A --> D[期限別グループ]
+    A --> D[状態と期限で分類したグループ]
     D --> E[期限切れ]
     D --> F[今日が期限]
     D --> G[今後の予定]
     D --> H[期限なし]
+    D --> K[完了済み]
+    D --> L[キャンセル済み]
 
     B --> I["api.task.getAll({ assigneeId })"]
     C --> I
@@ -65,11 +67,13 @@ flowchart TD
 | date-only helper | — | 日付だけの値を時刻と切り分けて扱う | 「4/17」という日付札だけを比べる |
 | `useMemo` | ユーズ・メモ | 計算結果をキャッシュして再利用 | メモ帳に書いておいて変わった時だけ書き直す |
 
+開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+
 ## 実装ステップ一覧
 
-| ステップ | 作業内容 | 所要時間 |
+| ステップ | 作業内容 | 読む時間の目安 |
 |---------|---------|---------|
-| Step 1 | ページの最小構造を作る | 3分 |
+| Step 1 | ページの最小構造とサイドバー導線を作る | 5分 |
 | Step 2 | 自分のIDを取得してローディング処理 | 5分 |
 | Step 3 | 自分のタスクを取得する | 5分 |
 | Step 4 | ステータスTabsを作る | 5分 |
@@ -77,20 +81,19 @@ flowchart TD
 | Step 6 | TaskGroupSectionコンポーネントを作る | 7分 |
 | Step 7 | 期限別グループに分類する | 7分 |
 | Step 8 | グループごとにカード表示 | 5分 |
-| Step 9 | 編集ハンドラーを実装する | 5分 |
-| Step 10 | 削除ハンドラーを実装する | 5分 |
-| Step 11 | ダイアログを配置する | 3分 |
-| Step 12 | 動作確認 | 3分 |
+| Step 9 | 編集の送信対象を固定する | 45分 |
+| Step 10 | 削除を同じ書込lockへ入れる | 10分 |
+| Step 11 | 送信入口とダイアログを接続する | 12分 |
+| Step 11.5 | 100件ずつページを移動できるようにする | 20分（仮） |
+| Step 12 | テストを準備し、基本操作と競合時の回復を確認する | 20分（仮） |
 
-**合計時間**: 約58分です。
+**読む時間の合計（仮）**: 約151分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
-
-開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
+表と各 Step に記した時間は、説明とコードを読む時間の仮の目安です。実測した値ではありません。コードの入力、動作確認、ダウンロードや起動の待ち時間、調べものには別に時間を取ってください。
 
 ---
 
-### Step 1 : ページの最小構造を作る（3分）
+### Step 1 : ページの最小構造を作る（読む目安: 3分）
 
 **ゴール**: マイタスクページの最小完成版を作ります。このファイルに以降のステップでコードを追加していきます。
 
@@ -119,13 +122,62 @@ export default function MyTasksPage() {
 > Day 08 で学んだ `AppLayout` でページをラップします。サイドバーと認証ガードが自動的に適用されます。この時点で使う import だけに絞っているので未使用の警告も出ません。
 
 **確認ポイント**:
-- ファイルを保存した
-- `/my-task` にアクセスして「マイタスク」と表示される
-- サイドバーが表示されている
+- ファイルを保存しました
+- `/my-task` にアクセスして「マイタスク」と表示されます
+- サイドバーが表示されています
+
+`/my-task` のページが表示できたので、サイドバーにも入口を追加します。`src/component/layout/app-layout.tsx` の `lucide-react` の import を次の形にしてください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+```
+
+`ListTodo` だけが今日の追加です。ほかの4つは既存のメニューとログアウトボタンが使っています。すべて同じ import に残すことで、アイコンを足したために前の項目が表示できなくなる事故を防ぎます。
+
+続けて `menuItems` を次の4項目に置き換えます。「マイタスク」は関連する「タスク」の直前へ置きます。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+];
+```
+
+`ListTodo` はマイタスク項目のアイコンです。リンク先を `/my-task` にすると、今作った `src/app/my-task/page.tsx` が開きます。
+
+**確認ポイント**:
+- サイドバーに「マイタスク」が追加されました
+- 「マイタスク」を押すと `/my-task` が開きます
 
 ---
 
-### Step 2 : 自分のIDを取得してローディング処理（5分）
+### Step 2 : 自分のIDを取得してローディング処理（読む目安: 5分）
 
 **ゴール**: ログイン中のユーザー情報を取得し、ローディング中はスピナーを表示します。
 
@@ -161,7 +213,7 @@ const { data: currentUser, isLoading: isCurrentUserLoading } =
   api.auth.getCurrentUser.useQuery();
 ```
 
-`api.auth.getCurrentUser` はいま誰がログインしているかをサーバーへ聞き直す手続きです。ブラウザが持っている情報をそのまま信じず、毎回サーバーに確かめます。ここで得た `currentUser.id` がこのあと「自分のタスクだけを取る」ための鍵になります。返り値に `currentUser` と `isCurrentUserLoading` という別名を付けているのはStep 3 でタスク側の読み込み状態も受け取るからです。同じ名前が2つ並ぶとどちらの読み込み状態なのか見分けられません。
+`api.auth.getCurrentUser` はサーバーでログイン情報を確認し、現在の利用者を返す手続きです。このアプリでは取得後30秒間、キャッシュ（取得してブラウザに保持した結果）を再利用するため、表示のたびに必ず通信するわけではありません。ここで得た `currentUser.id` がこのあと「自分のタスクだけを取る」ための鍵になります。返り値に `currentUser` と `isCurrentUserLoading` という別名を付けているのはStep 3 でタスク側の読み込み状態も受け取るからです。同じ名前が2つ並ぶとどちらの読み込み状態なのか見分けられません。
 
 ローディング中はスピナーを表示します。`return` の**前に**以下を追加してください。
 
@@ -180,9 +232,9 @@ if (isCurrentUserLoading) {
 この分岐が無いと`currentUser` がまだ届いていない一瞬のあいだに本文が描かれます。そのときタスクの取得は Step 3 の `enabled` で止まっているため画面には「タスクが0件」のときとまったく同じ見た目が出ます。読者にはどちらか区別できず、自分のタスクが消えたと誤解させます。スピナーを `AppLayout` の中に置くのはヘッダーやサイドバーを出したまま中身だけを差し替えるためです。外に置くと読み込みのたびに画面全体が消え、位置がずれたように見えます。
 
 **確認ポイント**:
-- ファイルを保存した
-- ブラウザのDevTools（F12 → Networkタブ）で `getCurrentUser` リクエストが飛んでいる
-- ページアクセス時に一瞬スピナーが表示された後、「マイタスク」が表示される
+- ファイルを保存し、「マイタスク」が表示されます
+- 読み込みが発生した場合はスピナーが表示され、DevTools（F12 → Networkタブ）で `getCurrentUser` のResponseを確認できます
+- 30秒以内の再表示では、新しい通信やスピナーが出ず、キャッシュされた利用者情報からすぐ「マイタスク」が表示される場合も成功
 
 #### 認証情報の取得方法
 
@@ -196,7 +248,7 @@ if (isCurrentUserLoading) {
 
 ---
 
-### Step 3 : 自分のタスクを取得する（5分）
+### Step 3 : 自分のタスクを取得する（読む目安: 5分）
 
 **ゴール**: `assigneeId` でフィルターして自分のタスクだけを取得します。
 
@@ -214,9 +266,11 @@ const { data: tasks, isLoading } =
   );
 ```
 
-このページの主役は `assigneeId: currentUser?.id` という1行です。Day 13 のタスク一覧では全員分を取っていました。今回は担当者を自分に固定して取り直します。新しい API を作らずに済むのは`getAll` がすでに担当者での絞り込みを受け付けるからです。第2引数の `enabled: !!currentUser` は`currentUser` が届くまでこの通信を止めておく指定です。これを外すと `assigneeId` は `undefined` のまま送られ、他人のタスクまで混ざった一覧が一瞬表示されます。
+このページの主役は `assigneeId: currentUser?.id` という1行です。Day 13 のタスク一覧では、閲覧できるプロジェクト内で担当者を限定せず取得していました。今回は担当者を自分に固定します。新しい API を作らずに済むのは`getAll` がすでに担当者での絞り込みを受け付けるからです。第2引数の `enabled: !!currentUser` は`currentUser` が届くまでこの通信を止めておく指定です。これを外すと `assigneeId` が `undefined` のまま要求を送り、閲覧できるプロジェクト内で他の担当者のタスクも取得する可能性があります。サーバー側のプロジェクト閲覧制限は残ります。
 
-この書き方には弱点もあります。`currentUser` の取得そのものが失敗したときも `undefined` のままなのでタスクの通信は止まり続けます。画面には「タスクが0件」と同じ見た目が出ます。実務ではこちらの `error` も受け取って失敗したときだけ別の案内を出す形にします。
+この書き方には弱点もあります。`currentUser` の取得そのものが失敗したときも `undefined` のままなのでタスクの通信は止まり続けます。画面には「タスクが0件」と同じ見た目が出ます。Step 9でこちらの `error` も受け取り、読取失敗と0件を区別する案内を追加します。
+
+この教材で使う `getAll` は1回に最大100件を返します。Step 11.5 で「前へ」「次へ」を追加するまでは、期限別グループや件数も最初に取得した100件の範囲です。
 
 タスクキャッシュ操作用のユーティリティを追加します。tasks の取得の**下に**以下を追加します。
 
@@ -244,11 +298,11 @@ if (isCurrentUserLoading || isLoading) {
 ```
 
 **確認ポイント**:
-- ブラウザのDevTools（F12 → Networkタブ）で `getAll` リクエストに `assigneeId` パラメータが含まれている
-- 自分に割り当てられたタスクだけが返る
-- `npm run dev` でエラーが出ていない
+- ブラウザのDevTools（F12 → Networkタブ）で `getAll` リクエストに `assigneeId` パラメータが含まれています
+- 自分に割り当てられたタスクだけが返ります
+- `npm run dev` でエラーが出ていません
 
-> `enabled: !!currentUser` は「currentUserが取得できてからAPIを呼ぶ」という設定です。Day 12 で学んだパターンです。currentUser未取得のまま呼ぶと全タスクが返ってしまいます。
+> `enabled: !!currentUser` は「currentUserが取得できてからAPIを呼ぶ」という設定です。Day 12 で学んだパターンです。currentUser未取得のまま呼ぶと担当者で絞り込めず、閲覧できるプロジェクト内で他の担当者のタスクも取得する可能性があります。
 
 #### getAll パラメータの活用
 
@@ -260,7 +314,7 @@ if (isCurrentUserLoading || isLoading) {
 
 ---
 
-### Step 4 : ステータスTabsを作る（5分）
+### Step 4 : ステータスTabsを作る（読む目安: 5分）
 
 **ゴール**: ステータスで絞り込むタブUIを追加します。
 
@@ -321,7 +375,7 @@ const [activeTab, setActiveTab] =
   useState<TaskStatus | 'all'>('all');
 ```
 
-選んでいるタブを `useState` で覚えます。初期値は `'all'` なのでページを開いた直後は全ステータスのタスクが並びます。この state は次のブロックで `useQuery` の引数につなぎます。だからタブを押すだけで絞り込み条件が変わり、tRPC がタスクを取り直します。押されたタブの中身を自分で数える処理は要りません。
+選んでいるタブを `useState` で覚えます。初期値は `'all'` なのでページを開いた直後は全ステータスのタスクが並びます。この state は次のブロックで `useQuery` の引数につなぎます。だからタブを押すだけで絞り込み条件が変わり、その条件のqueryへ切り替わります。直近に取得した同じ条件の結果があれば再利用します。押されたタブの中身を自分で数える処理は要りません。
 
 Step 3 の `useQuery` を以下に**置き換えて**ください。ステータスフィルターを追加します。
 
@@ -339,7 +393,7 @@ const { data: tasks, isLoading } =
   );
 ```
 
-`status: activeTab === 'all' ? undefined : activeTab` は「すべて」タブのときだけ条件そのものを外す書き方です。ここで `'all'` をそのままサーバーへ送るとリクエストが失敗します。`task.getAll` の `status` は `TODO` や `DONE` といった決まった値しか受け取らないので`'all'` は入力チェックの段階で弾かれるからです。0件が返るのではなく、エラーになります。絞り込みを外したいときは値を空にするのではなく項目ごと `undefined` にする、と覚えてください。そして `useQuery` の引数に `activeTab` が入ったのでタブを押すたびにこの query は新しい条件で走り直します。取り直しの処理を自分で書く場所はありません。
+`status: activeTab === 'all' ? undefined : activeTab` は「すべて」タブのときだけ条件そのものを外す書き方です。ここで `'all'` をそのままサーバーへ送るとリクエストが失敗します。`task.getAll` の `status` は `TODO` や `DONE` といった決まった値しか受け取らないので`'all'` は入力チェックの段階で弾かれるからです。0件が返るのではなく、エラーになります。絞り込みを外したいときは値を空にするのではなく項目ごと `undefined` にする、と覚えてください。そして `useQuery` の引数に `activeTab` が入ったので、タブを押すと選んだ条件のqueryへ切り替わります。毎回通信するとは限りません。結果の再利用と必要な取得はqueryが管理するため、自分で取得処理を書き足す必要はありません。
 
 JSXの `<h1>` タグの**下に**タブUIを追加します。
 
@@ -355,7 +409,7 @@ JSXの `<h1>` タグの**下に**タブUIを追加します。
     }}
     className="w-full sm:w-auto"
   >
-    <TabsList>
+    <TabsList aria-label="ステータスフィルター">
       {STATUS_TABS.map((tab) => (
         <TabsTrigger
           key={tab.label}
@@ -368,20 +422,20 @@ JSXの `<h1>` タグの**下に**タブUIを追加します。
 </div>
 ```
 
-> `onValueChange` が渡してくる値は `string` なので`isTaskStatus(v)` 型ガードで `TaskStatus` 型かを判定してから `setActiveTab` に渡します。`as TaskStatus` のような型アサーションは使わず、実行時に値を検証します。
+> `onValueChange` が渡してくる値は `string` なので`isTaskStatus(v)` 型ガードで `TaskStatus` 型かを判定してから `setActiveTab` に渡します。`as TaskStatus` のような型アサーションは使わず、実行時に値を検証します。`TabsList` の `aria-label` は、画面を読み上げる支援技術へ5つのボタンがステータスを選ぶまとまりだと伝えます。
 
 **確認ポイント**:
-- タブが横並びで表示される
-- タブ切り替え後、DevTools の Network タブで `getAll` の入力と Response が選んだステータスに変わることを確認する。カードの表示は Step 8 の後に確認する
-- `npm run dev` でエラーが出ていない
+- タブが横並びで表示されます
+- 選んだタブが選択表示になります。通信が発生したときは、DevTools の Network タブで `getAll` の入力と Response を確認します。同じ条件の結果を再利用して通信しない場合もあります。カードの表示は Step 8 の後に確認します
+- `npm run dev` でエラーが出ていません
 
-スクリーンショット: 下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で足したタブです。いまの自分の画面には右上のプロジェクト絞り込みも、下のカードもまだ出ていません。絞り込みは Step 5、期限別の見出しとカードは Step 7 と Step 8 で足します。
+スクリーンショット: 下の画像は Step 8 まで書き終えたマイタスクページの、タブとプロジェクト絞り込みの部分です。赤枠の中がこの Step で足したタブです。いまの自分の画面には右上のプロジェクト絞り込みも、下のカードもまだ出ていません。絞り込みは Step 5、期限別の見出しとカードは Step 7 と Step 8 で足します。
 
-![完成後のマイタスクページ。赤枠の中に「すべて」「未対応」「進行中」「レビュー中」「完了」の5つのタブが横並びになっている](./screenshots/day17/status-tabs.png)
+![完成後のマイタスクページのタブ部分。赤枠の中に「すべて」「未対応」「進行中」「レビュー中」「完了」の5つのタブが横並びになっている](./screenshots/day17/status-tabs.png)
 
 ---
 
-### Step 5 : プロジェクトフィルターを追加（5分）
+### Step 5 : プロジェクトフィルターを追加（読む目安: 5分）
 
 **ゴール**: プロジェクトでも絞り込めるようにします。
 
@@ -400,31 +454,19 @@ import {
 
 `Select` は Day 13 のタスク一覧でも使った shadcn/ui のドロップダウンです。5つの名前を一度に取り込むのはこの部品が入れ物・引き金・中身・項目・表示文字と、役割ごとに分かれているためです。ブラウザ標準の `<select>` タグ1つで済ませない代わりに、開いたときの見た目や項目の並びを細かく作り込めます。
 
-選んだプロジェクトを覚える state を追加します。置き場所は Step 4 で追加した `activeTab` の `useState` の**すぐ下**です。`currentUser` の取得よりも上になります。
+`MyTasksPage` 内にstateとクエリを追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// activeTab の useState のすぐ下に追加
 // プロジェクトフィルターの状態管理
 const [filterProject, setFilterProject] =
   useState<string>('all');
-```
-
-ここまで上に置くのはこの Step の後半で書き換える tasks の `useQuery` が `filterProject` を読むからです。`const` で作った名前は宣言した行より上では使えません。この state を hooks の最後（`utils` の下）に置いたとします。書き換えた `useQuery` の行はそれより上にあるので `Block-scoped variable 'filterProject' used before its declaration` という型エラーが出ます。ブラウザで開くと `Cannot access 'filterProject' before initialization` というエラーが出てページが表示されません。
-
-プロジェクト一覧の取得は Step 2 で追加した `currentUser` の取得の**すぐ下**に追加します。tasks の取得よりも上です。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// currentUser の取得のすぐ下に追加
 // プロジェクト一覧を取得
 const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
-`projects` はドロップダウンの選択肢と次に作るロールの対応表の両方で使います。サーバーから取るものを上にまとめておくと下の計算がどのデータを使っているかを追いやすくなります。
-
-TaskCardの編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。置き場所は `const utils = api.useUtils();` の**下**です。ローディング判定の `if` よりは上になります。中で `currentUser` と `projects` の両方を読むのでこの2つより下に置きます。
+TaskCardの編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -449,7 +491,7 @@ const myRoleByProject = useMemo(() => {
 
 ここで作っているのはプロジェクトIDを渡すと自分のロールが返ってくる対応表です。マイタスクは複数のプロジェクトのタスクが混ざりうる画面です。初期データでは1プロジェクト分しか並びませんがプロジェクトを増やすとこの対応表が効いてきます。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きます。先に `Map` へ入れておけばあとは1件ずつ引くだけで済みます。`useMemo` で包んであるのはこの対応表を再描画のたびに作り直させないためです。第2引数の `[projects, currentUser?.id]` に挙げた2つが変わったときだけ、中の処理がもう一度走ります。`isProjectMemberRole(me.role)` を通してから `Map` へ入れているのはデータベースから来た文字列を `as` で型に押し込まず、実行時に確かめてから使うためです。
 
-続けてそのロールから編集・削除の権限を判定する関数を `myRoleByProject` の**下に**追加します。
+続けてそのロールから編集・削除の権限を判定する関数を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -469,15 +511,22 @@ const canDeleteProject = useCallback(
   },
   [myRoleByProject],
 );
+
+const editableProjects = useMemo(
+  () => (projects ?? []).filter((project) => canEditProject(project.id)),
+  [projects, canEditProject],
+);
 ```
 
 > Day 13 のタスク一覧ページと同じパターンです。`myRoleByProject` でプロジェクトIDからロールを引き、`canEditProject` / `canDeleteProject` でそのロールに編集・削除の権限があるかを判定します。閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になります。
 
-**確認ポイント**:
-- `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
-- `npm run dev` でエラーが出ていない
+`editableProjects` は編集できるプロジェクトだけを残した配列です。閲覧者のプロジェクトを先に除くため、選んだ後で権限エラーになる選択肢を表示しません。
 
-Step 4 の `useQuery` を以下に**置き換えて**ください。場所はそのままで中身だけを入れ替えます。プロジェクトフィルターを追加します。
+**確認ポイント**:
+- `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できました
+- `npm run dev` でエラーが出ていません
+
+Step 4 の `useQuery` を以下に**置き換えて**ください。プロジェクトフィルターを追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -495,7 +544,7 @@ const { data: tasks, isLoading } =
   );
 ```
 
-`projectId` の行が増えても形は `status` のときとまったく同じです。「`'all'` なら `undefined`」という同じ判断を、条件ごとに1行ずつ並べています。絞り込みが3つ4つに増えてもこの形のまま足していけます。`useQuery` の第1引数に並んだ値のどれか1つでも変わればtRPC はその組み合わせで取り直します。だからタブとドロップダウンを同時に使った絞り込みも、追加の処理なしで動きます。
+`projectId` の行が増えても形は `status` のときとまったく同じです。「`'all'` なら `undefined`」という同じ判断を、条件ごとに1行ずつ並べています。絞り込みが3つ4つに増えてもこの形のまま足していけます。`useQuery` の第1引数に並んだ値のどれか1つでも変われば、その組み合わせのqueryへ切り替わります。直近の結果を再利用できない場合は取得します。だからタブとドロップダウンを同時に使った絞り込みも、追加の処理なしで動きます。
 
 Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を追加します。
 
@@ -506,7 +555,9 @@ Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を
   <Select
     value={filterProject}
     onValueChange={setFilterProject}>
-    <SelectTrigger>
+    <SelectTrigger
+      id="project-filter"
+      aria-label="プロジェクトフィルター">
       <SelectValue
         placeholder="すべてのプロジェクト" />
     </SelectTrigger>
@@ -524,16 +575,16 @@ Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を
 </div>
 ```
 
-> Day 13 のタスク一覧と同じフィルターパターンです。Tabs（ステータス）と Select（プロジェクト）を組み合わせて複数条件で絞り込みます。
+> Day 13 のタスク一覧と同じフィルターパターンです。Tabs（ステータス）と Select（プロジェクト）を組み合わせて複数条件で絞り込みます。`id` はこの部品をブラウザ上で一意に識別する値です。`aria-label` は、画面を読み上げる支援技術へこのドロップダウンの用途を伝えます。
 
 **確認ポイント**:
-- プロジェクト選択ドロップダウンがタブの右側に表示される
-- 選択後、DevTools の Network タブで `getAll` の入力に選んだ `projectId` が入り、Response がそのプロジェクトのタスクだけになることを確認する。カードの表示は Step 8 の後に確認する
-- `npm run dev` でエラーが出ていない
+- プロジェクト選択ドロップダウンがタブの右側に表示され、選ぶと表示名が切り替わります
+- 通信が発生した場合は、DevTools の Network タブで `getAll` の入力に選んだ `projectId` が入り、Response がそのプロジェクトのタスクだけになることを確認します。新しい条件の結果がキャッシュに残っていて通信しない場合もあります。カードの絞り込みは Step 8 の後に確認します
+- `npm run dev` でエラーが出ていません
 
 ---
 
-### Step 6 : TaskGroupSectionコンポーネントを作る（7分）
+### Step 6 : TaskGroupSectionコンポーネントを作る（読む目安: 7分）
 
 **ゴール**: タスクをグループごとに表示する共通コンポーネントを作ります。このコンポーネントは同じファイル内に定義します。
 
@@ -576,14 +627,15 @@ interface TaskGroupSectionProps {
 ```
 
 残りは親から受け取る関数と判定です。`onEdit` と `onDelete` はボタンを押したときの処理、
-`onTimeLogSuccess` は時間を記録できたときの合図です。
+`onTimeLogSuccess` は、呼び出し元が別の検索結果なども更新したい場合に使える任意の合図です。
+マイタスク画面では時間記録ダイアログ自身がタスク一覧と詳細を取り直すため、この合図は渡しません。
 `canEditProject` と `canDeleteProject` はそのプロジェクトで編集や削除をしてよいかを返します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onTimeLogSuccess: () => void;
+  onTimeLogSuccess?: (() => void) | undefined;
   canEditProject: (projectId: string) => boolean;
   canDeleteProject: (projectId: string) => boolean;
 }
@@ -600,26 +652,9 @@ interface TaskGroupSectionProps {
 | `tasks` | `Array<...>` | 表示するタスクの配列 |
 | `onEdit` | `(id: string) => void` | 編集ボタン押下時のコールバック |
 | `onDelete` | `(id: string) => void` | 削除ボタン押下時のコールバック |
-| `onTimeLogSuccess` | `() => void` | 作業時間の記録に成功したときの合図 |
+| `onTimeLogSuccess` | `(() => void) \| undefined` | 呼び出し元が追加の再取得をするときの任意の合図 |
 | `canEditProject` | `(projectId: string) => boolean` | プロジェクトIDから編集可否を判定する関数 |
 | `canDeleteProject` | `(projectId: string) => boolean` | プロジェクトIDから削除可否を判定する関数 |
-
-先に作業時間を記録したあとに一覧を取り直すための関数を用意します。
-これは `MyTasksPage` の中で使うので**Step 5 で書いた `canDeleteProject` の下**へ追加してください。
-このあと作る `TaskGroupSection` の中ではありません。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// MyTasksPage 内: canDeleteProject の下に追加
-const handleTimeLogSuccess =
-  useCallback(() => {
-    utils.task.getAll.invalidate();
-  }, [utils.task.getAll]);
-```
-
-この関数が無いとマイタスク画面で作業時間を記録しても表示が変わりません。
-`TaskCard` は記録に成功したことを親へ伝えるだけなので取り直しは親側で行います。
-`utils` は Step 3 で書いた `const utils = api.useUtils();` をそのまま使います。
 
 Props型の**下に**コンポーネント本体を追加します。
 
@@ -644,7 +679,7 @@ const TaskGroupSection = ({
       </h2>
 ```
 
-最初の `if (tasks.length === 0) return null;` がこのコンポーネントで一番効いている1行です。`null` を返すとそのグループは見出しごと画面から消えます。期限切れのタスクが1件もない人の画面に「期限切れ (0)」という見出しだけ残ると読む人はそこで一瞬とまどいます。この判断をコンポーネントの中に置いたので呼び出す側は4つのグループをただ並べるだけで済みます。見出しに `({tasks.length})` と件数を添えているのは開かなくても量が分かるようにするためです。
+最初の `if (tasks.length === 0) return null;` がこのコンポーネントで一番効いている1行です。`null` を返すとそのグループは見出しごと画面から消えます。期限切れのタスクが1件もない人の画面に「期限切れ (0)」という見出しだけ残ると読む人はそこで一瞬とまどいます。この判断をコンポーネントの中に置いたので呼び出す側は6つのグループを順に並べるだけで済みます。見出しに `({tasks.length})` と件数を添えているのは開かなくても量が分かるようにするためです。
 
 続けてタスクカードのグリッド表示部分です。上のコードブロックの `</h2>` の**直後に**追加してください。
 
@@ -683,16 +718,16 @@ const TaskGroupSection = ({
 };
 ```
 
-> `canEditProject` / `canDeleteProject` は `MyTasksPage` から渡された関数です。`TaskGroupSection` 自身はロールを判定せず、渡された関数をそのまま `task.projectId` に適用するだけにすることで、権限ロジックが1か所（`MyTasksPage`）にまとまります。渡し忘れると `TaskCard` のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが表示されてしまいます。
+> `canEditProject` / `canDeleteProject` は `MyTasksPage` から渡された関数です。`TaskGroupSection` 自身はロールを判定せず、渡された関数をそのまま `task.projectId` に適用するだけにすることで、権限ロジックが1か所（`MyTasksPage`）にまとまります。渡し忘れると既定値の `false` が使われ、編集・削除ボタンは表示されません。編集できる利用者に表示するため、判定した値を毎回渡します。
 
 > `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
 
-> `timeSpentMinutes` を渡しているのはカードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。「時間記録」ボタンで記録すると`onTimeLogSuccess` が `MyTasksPage` の `handleTimeLogSuccess` を呼び、一覧を取り直すので数字はその場で変わります。
+> `timeSpentMinutes` を渡しているのはカードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。「時間記録」ボタンで保存すると、時間記録ダイアログがタスク一覧と詳細を取り直すので数字はその場で変わります。親ページから同じ一覧をもう一度取り直す関数は渡しません。
 
 **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- まだ画面に変化はない（次のStepで使う）
+- ファイルを保存しました
+- `npm run dev` でエラーが出ていません
+- まだ画面に変化はありません（次のStepで使います）
 
 ---
 
@@ -715,12 +750,12 @@ const TaskGroupSection = ({
 | `@/lib/utils` | `cn` | Step 6 |
 
 **確認ポイント**:
-- 上記のインポートがすべて揃っている
-- `npm run dev` でインポートエラーが出ていない
+- 上記のインポートがすべて揃っています
+- `npm run dev` でインポートエラーが出ていません
 
 ---
 
-### Step 7 : 期限別グループに分類する（7分）
+### Step 7 : 期限別グループに分類する（読む目安: 7分）
 
 **ゴール**: タスクを期限で4つのグループに分類します。完成版のコードと同じ `dateOnlyFromValue()` / `localDateOnly()` を使い、日付だけを比較します。
 
@@ -738,23 +773,37 @@ import {
 } from '@/lib/date';
 ```
 
-Step 5 で置き換えた tasks の `useQuery` の**下に**以下を追加します。`useMemo` の中の処理も最後に書く依存配列 `[tasks]` も `tasks` を読むからです。Step 5 の `filterProject` と同じで `tasks` も宣言した行より上では使えません。tasks の取得より上に置くと `Block-scoped variable 'tasks' used before its declaration` という型エラーが出ます。`currentUser` や `projects` の取得のすぐ下もこの範囲に入ります。
+`MyTasksPage` 内の `useQuery` の**下に**以下を追加します。この日のまとめに載せる完成コードでは同じ `groupedTasks` がハンドラーより後ろに置かれています。`useMemo` はコンポーネントの本体にあれば順番を問わないのでどちらの位置でも動きは変わりません。並びが違っても写し間違いではありません。
 
-この日のまとめに載せる完成コードでは同じ `groupedTasks` がハンドラーより後ろに置かれています。置いてよいのは tasks の `useQuery` より下でローディング判定の `if` より上の範囲です。`if` より下に置けないのは Step 3 で見た hooks のルールがあるためです。この範囲の中なら位置が違っても動きは変わりません。並びが違っても写し間違いではありません。
-
-`useMemo` で4グループに分類するロジックを追加します。比較に使う「今日」のキーも、この中で作ります。
+`useMemo` で完了済み・キャンセル済みと、未完了のタスクの期限別4グループに分類します。比較に使う「今日」のキーも、この中で作ります。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// タスクを期限別に4グループへ振り分ける前半
+// 終了したタスクを期限の比較から除くため、状態を先に判定する
 const groupedTasks = useMemo(() => {
   const overdue: typeof tasks = [];
   const today: typeof tasks = [];
   const upcoming: typeof tasks = [];
   const noDueDate: typeof tasks = [];
+  const completed: typeof tasks = [];
+  const cancelled: typeof tasks = [];
   const todayKey = localDateOnly(new Date());
 
   for (const t of tasks ?? []) {
+    if (t.status === TASK_STATUS.DONE) {
+      completed.push(t);
+      continue;
+    }
+    if (t.status === TASK_STATUS.CANCELLED) {
+      cancelled.push(t);
+      continue;
+    }
+```
+
+完了済みとキャンセル済みは、期限を比べる前に別の配列へ入れます。`continue` で次のタスクへ進むため、終了したタスクが期限切れの配列にも入ることはありません。続けて、まだ終了していないタスクを期限で分けます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
     if (!t.dueDate) {
       noDueDate.push(t);
       continue;
@@ -776,11 +825,14 @@ const groupedTasks = useMemo(() => {
 
 `todayKey` は振り分けを計算するときの日付です。依存配列は `[tasks]` なので日付が変わっただけでは再計算されません。日をまたいで開いたままにした場合はページを再読み込みしてください。
 
-振り分けの順番には意味があります。先に `!t.dueDate` を見て期限なしを抜き、そのあとで期限ありのタスクだけを3つに分けます。こうすると以降の比較では `dueDate` が必ず存在するので値が無い場合を毎回確かめずに済みます。`continue` は「この1件はここまで次のタスクへ」という合図です。比較そのものは `dateOnlyFromValue()` で `YYYY-MM-DD` にそろえてから行うため時刻やタイムゾーンの違いに振り回されません。等しければ今日、小さければ期限切れ、それ以外が今後の予定になります。
+振り分けの順番には意味があります。先に完了済みとキャンセル済みを分けます。残ったタスクは `!t.dueDate` で期限なしを抜き、そのあとで期限ありのタスクを3つに分けます。こうすると以降の比較では `dueDate` が必ず存在するので値が無い場合を毎回確かめずに済みます。`continue` は「この1件はここまで次のタスクへ」という合図です。比較そのものは `dateOnlyFromValue()` で `YYYY-MM-DD` にそろえてから行うため時刻やタイムゾーンの違いに振り回されません。等しければ今日、小さければ期限切れ、それ以外が今後の予定になります。
 
 ```mermaid
 flowchart TB
-    T["tasks: 1本の配列"] --> Q1{"dueDate はあるか"}
+    T["tasks: 1本の配列"] --> S{"status は終了状態か"}
+    S -->|"DONE"| C["completed"]
+    S -->|"CANCELLED"| X["cancelled"]
+    S -->|"どちらでもない"| Q1{"dueDate はあるか"}
     Q1 -->|"無い"| N["noDueDate"]
     Q1 -->|"有る"| Q2{"todayKey と比べる"}
     Q2 -->|"同じ"| TD["today"]
@@ -788,23 +840,23 @@ flowchart TB
     Q2 -->|"大きい"| UP["upcoming"]
 ```
 
-1本の配列が4つの箱へ割れます。上の分岐を先に置くのはここから下では `dueDate` が必ず存在すると決まるからです。順番を入れ替えると期限なしのタスクを日付として比べることになります。
+1本の配列を6つのグループに分けます。上の分岐を先に置くのはここから下では `dueDate` が必ず存在すると決まるからです。順番を入れ替えると期限なしのタスクを日付として比べることになります。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // 同じ useMemo の続き
-  return { overdue, today, upcoming, noDueDate };
+  return { overdue, today, upcoming, noDueDate, completed, cancelled };
 }, [tasks]);
 ```
 
-`return` を `useMemo` の中に置いたので4つの配列は `tasks` が変わったときだけ作り直されます。その条件を決めているのが最後の依存配列 `[tasks]` です。ここを `[]` にするとまだ何も届いていない空の状態で結果が固定され、タスクが届いても画面は空のままになります。逆に `useMemo` を外すと描き直しのたびに全件の振り分けをやり直します。ここで省けるのはその計算です。`React.memo` を使っていない今の構成では描き直しの回数そのものは変わりません。
+`return` を `useMemo` の中に置いたので6つの配列は `tasks` が変わったときだけ作り直されます。その条件を決めているのが最後の依存配列 `[tasks]` です。ここを `[]` にするとまだ何も届いていない空の状態で結果が固定され、タスクが届いても画面は空のままになります。逆に `useMemo` を外すと描き直しのたびに全件の振り分けをやり直します。ここで省けるのはその計算です。`React.memo` を使っていない今の構成では描き直しの回数そのものは変わりません。
 
 **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- `MyTasksPage` の中で、`groupedTasks` の `useMemo` を閉じた直後に `console.log(groupedTasks);` を一時的に追加する
-- ページを再読み込みし、DevTools（F12キー → Consoleタブ）で4つの配列を確認する
-- 確認が終わったらその `console.log` は必ず削除する
+- ファイルを保存しました
+- `npm run dev` でエラーが出ていません
+- `MyTasksPage` の中で、`groupedTasks` の `useMemo` を閉じた直後に `console.log(groupedTasks);` を一時的に追加します
+- ページを再読み込みし、DevTools（F12キー → Consoleタブ）で6つの配列を確認します
+- 確認が終わったらその `console.log` は必ず削除します
 
 #### なぜ date-only helper を使うのか
 
@@ -832,7 +884,7 @@ flowchart TB
 
 ---
 
-### Step 8 : グループごとにカード表示（5分）
+### Step 8 : グループごとにカード表示（読む目安: 5分）
 
 **ゴール**: Step 6 で作った `TaskGroupSection` を使い、各グループのタスクを表示します。
 
@@ -842,8 +894,7 @@ Step 9・10 でハンドラーを本実装しますが先にJSXを書くため�
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 仮実装（Step 9 で handleEdit、
-// Step 10 で handleDelete を本実装に置換する）
+// 仮実装（Step 9 で handleEdit、Step 10 で handleDelete を本実装に置換する）
 const handleEdit = (taskId: string) => {
   void taskId;
 };
@@ -854,7 +905,7 @@ const handleDelete = (_taskId: string) => {};
 
 **確認ポイント**: `npm run dev` でTypeScript エラーが出ていないことを確認します。
 
-Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
+Step 4 で追加したフィルターエリアの `</div>` の**下に**、6つのグループを順番に追加します。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
@@ -865,7 +916,6 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.overdue ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
-  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
@@ -877,13 +927,12 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.today ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
-  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
 ```
 
-`titleClassName` に渡している色がこの2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのはStep 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。4つの配列は `[]` で初期化されるので実際には必ず配列です。末尾の `?? []` は値が無い場合にも空配列を渡す防御的な指定ですが、このコードでは無くても型検査を通ります。
+`titleClassName` に渡している色がこの2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのはStep 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。6つの配列は `[]` で初期化されるので実際には必ず配列です。末尾の `?? []` は値が無い場合にも空配列を渡す防御的な指定ですが、このコードでは無くても型検査を通ります。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
@@ -893,7 +942,6 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.upcoming ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
-  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
@@ -904,13 +952,34 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
   tasks={groupedTasks.noDueDate ?? []}
   onEdit={handleEdit}
   onDelete={handleDelete}
-  onTimeLogSuccess={handleTimeLogSuccess}
   canEditProject={canEditProject}
   canDeleteProject={canDeleteProject}
 />
 ```
 
-今後の予定と期限なしには `titleClassName` を渡していません。色を付けないのは、急ぎではないからです。4つ全部を目立たせるとどれから手を付ければよいか分からなくなります。色で急かすのは赤とオレンジの2つだけにとどめます。並べる順番も上から「期限切れ・今日・今後・期限なし」と、締め切りが近い順にしてあります。画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。
+終了したタスクも消さずに表示します。完了済みとキャンセル済みを分けると、作業を終えたものと取り消したものを見分けられます。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx */}
+<TaskGroupSection
+  title="完了済み"
+  tasks={groupedTasks.completed ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  canEditProject={canEditProject}
+  canDeleteProject={canDeleteProject}
+/>
+<TaskGroupSection
+  title="キャンセル済み"
+  tasks={groupedTasks.cancelled ?? []}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  canEditProject={canEditProject}
+  canDeleteProject={canDeleteProject}
+/>
+```
+
+今後の予定と期限なしには `titleClassName` を渡していません。色を付けないのは、急ぎではないからです。すべてのグループを目立たせるとどれから手を付ければよいか分からなくなります。色で急かすのは赤とオレンジの2つだけにとどめます。未完了のタスクは「期限切れ・今日・今後・期限なし」の順で、その下に完了済みとキャンセル済みを表示します。画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。
 
 タスクが0件の場合のメッセージも追加します。
 
@@ -929,11 +998,11 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 > `TaskGroupSection` はタスク配列が空なら `null` を返すので空のグループは自動的に非表示になります。全グループが空の場合だけ「タスクはありません」メッセージが表示されます。
 
 **確認ポイント**:
-- 初期データのままなら「期限切れ」グループにカードが1枚だけ並ぶ
-- 残り3グループは中身が無いので非表示になる
+- 初期データのままなら「期限切れ」グループにカードが1枚だけ並びます
+- 残り5グループは中身が無いので非表示になります
 
 この「1枚」は初期データを触っていない場合の数です。Day 14 で自分を担当者にしたタスクを作っていれば増え、Day 15 で「デザインモックアップ作成」を消していれば0枚になります。枚数が違っても実装の誤りではありません。グループの見出しが期限に応じて出ることだけを確かめてください。
-- タスクが0件の場合は「条件に合うタスクはありません」と表示される
+- タスクが0件の場合は「条件に合うタスクはありません」と表示されます
 
 スクリーンショット: グループ別タスク表示（期限切れ・今日・今後・期限なし）
 
@@ -941,234 +1010,881 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 
 ---
 
-### Step 9 : 編集ハンドラーを実装する（5分）
+### Step 9 : 編集の送信対象を固定する（読む目安: 45分）
 
-**ゴール**: タスクカードの編集ボタンでダイアログを開く機能を実装します。Day 15 で学んだ編集パターンと同じです。
+**ゴール**: 編集を送信したあとに入力を変えたり、ダイアログを閉じて別のタスクを開いたりしても、古い成功結果が現在のフォームを閉じないようにします。
 
-**実装**:
+Day 15 で作った `TaskDialog` を使います。ただし、一覧の再取得とダイアログを閉じる処理を `onSuccess` に直接並べるだけでは足りません。送信したタスク、フォームを開いた世代、送信後も入力が同じかを送信時点で控えます。
 
-インポートを追加します。
+インポートを更新します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// インポートに追加
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
-  TaskDialog, type TaskFormData,
-} from '@/component/task/task-dialog';
-import { taskToFormData }
-  from '@/lib/task-form';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
 ```
 
-編集ダイアログは Day 14 で作り Day 15 で編集に対応させた `TaskDialog` をそのまま使い、マイタスク専用の編集画面は作りません。同じ形のダイアログが画面の数だけ増えると入力欄を1つ足すたびに全部を直す作業が発生します。`taskToFormData` はサーバーから来たタスクを `TaskDialog` が受け取れる形へ変える関数です。期限は `Date` 型のままでは入力欄に入らないのでその詰め替えをこの関数へ任せます。
+最初のブロックは画面部品までを読み込みます。続くブロックで、絞り込み、日付、読取エラー、書込エラーに使う定数とhelperをそろえます。
 
-`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
+import type { TaskPriority } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { dateOnlyFromValue, dateOnlyToUtcStartIso, localDateOnly } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+```
+
+
+`TaskDialog` と `TaskFormData` は編集フォーム、`DeleteConfirmDialog` は削除確認、`taskToFormData` は一覧のタスクをフォーム値へ変えるために使います。`useRef` は送信中の値を再描画に左右されず保持します。`shouldRetryQuery` は読取だけに再試行を許し、書込は後で `retry: false` にします。書込を自動再試行すると、結果が届かなかっただけなのに同じ更新をもう一度送るおそれがあるためです。
+
+`STATUS_TABS` の下へ送信内容の型を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 編集ダイアログの状態管理
-// （early return より前のhook定義ブロックに追加）
-const [dialogOpen, setDialogOpen] =
-  useState(false);
-const [editingTask, setEditingTask] =
-  useState<TaskFormData | undefined>(undefined);
+// STATUS_TABS の下へ追加
+type UpdateSubmission = {
+  kind: 'update';
+  targetId: string;
+  title: string;
+  generation: number;
+  isCurrent: () => boolean;
+};
+type DeleteSubmission = {
+  kind: 'delete';
+  targetId: string;
+};
+type WriteSubmission =
+  UpdateSubmission | DeleteSubmission;
 ```
 
-状態を2つに分けているのは役割が違うからです。`dialogOpen` はダイアログが開いているかどうかだけを持ち、`editingTask` は「いまどのタスクを編集中か」を持ちます。1つにまとめて「中身があれば開く」としても動きはしますが閉じる途中で中身が消え、ダイアログが一瞬空になります。`editingTask` の初期値が `undefined` なのは`TaskDialog` が `initialData` の有無で新規と編集を見分けるためです。
+更新では対象、表示名、フォーム世代、入力が現在も同じかを保持します。削除にはフォームが無いため対象IDだけで足ります。2種類を1つの ref に入れ、更新と削除が重ならないようにします。
+
+`MyTasksPage` 冒頭の state 群を更新します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 更新ミューテーション（utils は Step 3 で追加済み）
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setDialogOpen(false);
-    },
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [authExpired, setAuthExpired] = useState(false);
+  const authExpiredRef = useRef(false);
+  const formGeneration = useRef(0);
+  const writeSubmission = useRef<WriteSubmission | null>(null);
+
+```
+
+
+`authExpiredRef` は401を受け取った瞬間から後続の callback（通信の開始・完了などに応じて呼ばれる処理）を止めます。state の更新を待っている間に別の成功処理が走る隙を作らないため、ref と画面用 state の両方を持ちます。
+
+3つの読取 query は `error` と `refetch` を受け取り、認証切れ後は止めます。元の query 定義を置き換えてください。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    error: currentUserQueryError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  const {
+    data: projects,
+    isLoading: isProjectsLoading,
+    isError: isProjectsError,
+    error: projectsQueryError,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
   });
 ```
 
-Step 8 で書いた `const handleEdit = (taskId: string) => {` から `};` までの3行を**削除して**、以下で**置き換えて**ください。
+利用者とプロジェクトの読取失敗と再取得関数を別々に保持します。認証失効後は `enabled: !authExpired` で新しい読取要求を止めます。次のブロックでタスクqueryにも同じ条件を付けます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  const {
+    data: tasks,
+    isLoading,
+    isError: isTasksError,
+    error: tasksQueryError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
+    {
+      assigneeId: currentUser?.id,
+      status: activeTab === 'all' ? undefined : activeTab,
+      projectId: filterProject === 'all' ? undefined : filterProject,
+    },
+    { enabled: !!currentUser && !authExpired, retry: shouldRetryQuery },
+  );
+```
+
+
+タスクの取得はログイン利用者が取れた後だけ始めます。`retry` は読取に限定し、失敗時に使う `refetchTasks` も受け取ります。
+
+Step 3 で追加した古いローディング用の `if (isCurrentUserLoading || isLoading)` は削除します。3つのqueryを呼び終えた場所へ、読取結果の判定を追加してください。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  const queryErrors = [
+    isCurrentUserError ? currentUserQueryError : null,
+    isTasksError ? tasksQueryError : null,
+    isProjectsError ? projectsQueryError : null,
+  ];
+  const hasFetchError = isCurrentUserError || isTasksError || isProjectsError;
+  // React Query は再取得に失敗しても前回のデータを保持する。
+  // 失敗したクエリ自身に前回値が残っている時だけバナーに留め、
+  // 一度も取れていないクエリがある場合は全面エラーにする。
+  const hasData =
+    (!isCurrentUserError || currentUser != null) &&
+    (!isTasksError || tasks != null) &&
+    (!isProjectsError || projects != null);
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (queryAuthFailed) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+    }
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
+  const forbidden = queryErrors.some(isForbiddenError);
+```
+
+
+queryから401が返った時もrefを先に立てます。`hasData` は再取得失敗で前回値が残っている場合だけ、一覧を残した警告へ進むための判定です。
+
+Step 8 の `return (` から `<div className="flex flex-col gap-6">` の直前までを、次の2ブロックへ置き換えます。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+  return (
+    <AppLayout>
+      {(isCurrentUserLoading || isProjectsLoading || isLoading) && !authFailed && !forbidden ? (
+        <PageLoadingSpinner />
+      ) : authFailed || forbidden || (hasFetchError && !hasData) ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このデータを見る権限がありません'
+                : 'タスクを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <button
+            type="button"
+            className="rounded-lg border border-border/50 bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+```
+
+
+読取中はスピナー、401はログイン案内、403は権限案内、初回通信失敗は再読込案内に分けます。前回データが無い失敗だけを全画面表示にします。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetchCurrentUser();
+              void refetchTasks();
+              void refetchProjects();
+            }}
+          >
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </button>
+        </div>
+      ) : (
+```
+
+
+ボタンは失敗の種類に応じて移動先を変えます。通信失敗のときだけ3つのqueryを取り直し、権限不足で同じ通信を繰り返しません。
+
+Step 8 の `<div className="flex flex-col gap-6">` の直後、`<h1>` の前へ警告を追加します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          {hasFetchError ? (
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+              <span>
+                {authFailed
+                  ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
+                  : '最新の情報を取得できませんでした。' + '表示は前回取得時の内容です。'}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-amber-400/60 px-3 py-1 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                onClick={() => {
+                  if (authFailed) {
+                    router.push('/login');
+                    return;
+                  }
+                  void refetchCurrentUser();
+                  void refetchTasks();
+                  void refetchProjects();
+                }}
+              >
+                {authFailed ? 'ログイン画面へ' : '再試行'}
+              </button>
+            </div>
+          ) : null}
+```
+
+
+再取得だけ失敗した場合は前回のカードを残し、古い表示だと明記します。この警告はデータを消さずに再試行する入口です。
+
+Step 8 から残っている成功表示の `</div>` と `</AppLayout>` の間へ、次の1行を追加します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      )}
+```
+
+この行は、Step 9 の先頭で開いた読取結果の条件分岐を閉じます。ここで閉じるため、Step 9 を保存した時点でもTypeScriptが通り、Step 10の削除処理も動かして確認できます。Step 11では同じ行をもう一度追加しません。
+
+`utils` を定義した場所の下へ、認証失効と再取得を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 編集ハンドラー（taskToFormDataで変換）
+const markAuthExpired = () => {
+  authExpiredRef.current = true;
+  setAuthExpired(true);
+};
+
+const refreshAfterWrite = async (
+  targetId: string,
+  refreshPermissions: boolean,
+) => {
+  const filters = {
+    refetchType: authExpiredRef.current
+      ? ('none' as const) : ('active' as const),
+  };
+  try {
+    const updates = [
+      utils.task.getAll.invalidate(
+        undefined, filters, { throwOnError: true }),
+```
+
+先にrefへ認証失効を記録します。再取得は送信したタスクIDへ結び付け、401後は新しい通信を出さない `refetchType` を選びます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+      utils.task.getById.invalidate(
+        { id: targetId }, filters,
+        { throwOnError: true }),
+    ];
+    if (refreshPermissions) {
+      updates.push(utils.project.getAll.invalidate(
+        undefined, filters, { throwOnError: true }));
+    }
+    await Promise.all(updates);
+  } catch (error) {
+    if (isAuthError(error)) {
+      markAuthExpired();
+      return;
+    }
+    console.error(
+      `タスク ${targetId} の表示更新に失敗しました。`,
+      error,
+    );
+    toast.error(
+      '最新の表示を取得できませんでした。再表示して操作結果を確認してください。',
+    );
+  }
+};
+```
+
+書込成功と表示更新失敗を混ぜません。保存済みなのに再取得だけ失敗した場合は、もう一度保存させず、再表示して結果を確かめるよう案内します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const handleWriteError = async (
+  error: unknown,
+  operation: TaskWriteOperation,
+  targetId: string,
+) => {
+  const failure = classifyTaskWriteError(
+    error, operation);
+  if (failure.kind === 'auth') {
+    markAuthExpired();
+    return;
+  }
+  toast.error(failure.message);
+  await refreshAfterWrite(targetId, true);
+};
+
+const mutationLifecycle = {
+  retry: false as const,
+  onMutate: () => writeSubmission.current,
+```
+
+エラー分類は409、403、通信不明を利用者向けの行動へ変えます。失敗時は権限も取り直します。`onMutate` は送信開始時の ref を callback の context（その送信にひも付けた控え）として固定します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  onSettled: (
+    _data: unknown,
+    _error: unknown,
+    _variables: unknown,
+    submitted: WriteSubmission | null | undefined,
+  ) => {
+    if (writeSubmission.current === submitted) {
+      writeSubmission.current = null;
+    }
+  },
+};
+```
+
+終了時は自分が取得した送信だけを解放します。古い callback が後から終わっても、新しい送信の lock（別の書込を始めないための印）を `null` にしません。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const finishSubmittedUpdate = (
+  submitted: WriteSubmission | null | undefined,
+  target: { id: string; title: string | undefined },
+) => {
+  const ownsSubmittedLifetime =
+    !authExpiredRef.current &&
+    submitted?.kind === 'update' &&
+    submitted.targetId === target.id &&
+    submitted.generation === formGeneration.current;
+  const canClose =
+    ownsSubmittedLifetime && submitted.isCurrent();
+  if (canClose) closeTaskDialog();
+  if (authExpiredRef.current) return;
+```
+
+対象ID、フォーム世代、現在入力の3つが送信時と一致した成功だけがフォームを閉じます。別のタスクを開いた場合や、送信後に入力した場合は現在のフォームを残します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  const submittedTitle =
+    submitted?.kind === 'update' &&
+    submitted.targetId === target.id
+      ? submitted.title : target.title;
+  const name = submittedTitle
+    ? `「${submittedTitle}」`
+    : '先ほど送信したタスク';
+  toast.success(`${name}を更新しました。`);
+  if (canClose || !dialogOpen) return;
+
+  if (editingTask?.id === target.id) {
+    toast(
+      ('送信後に入力した変更は保存されていません。' +
+        '入力内容を別の場所にコピーしてから、' +
+        'タスク編集画面を閉じて開き直し、もう一度保存してください。'),
+    );
+  }
+};
+```
+
+成功通知は保存した送信のタイトルを使います。同じフォームに新しい下書きが残る場合は、古い `expectedUpdatedAt` で続けて送らず、開き直す必要も伝えます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const updateMutation = api.task.update.useMutation({
+  ...mutationLifecycle,
+  onSuccess: async (_data, variables, submitted) => {
+    finishSubmittedUpdate(submitted, {
+      id: variables.id,
+      title: variables.title,
+    });
+    await refreshAfterWrite(variables.id, false);
+  },
+  onError: (error, variables) =>
+    handleWriteError(error, 'update', variables.id),
+});
+```
+
+保存成功の通知とダイアログ処理を先に行い、その後で送信対象を再取得します。再取得が失敗しても保存成功は消えません。
+
+`handleEdit` はフォームを開くたび世代を進めます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const closeTaskDialog = () => {
+  formGeneration.current += 1;
+  setDialogOpen(false);
+  setEditingTask(undefined);
+};
+
 const handleEdit = (taskId: string) => {
-  const task =
-    tasks?.find((t) => t.id === taskId);
+  const task = tasks?.find((t) => t.id === taskId);
   if (task) {
+    formGeneration.current += 1;
     setEditingTask(taskToFormData(task));
     setDialogOpen(true);
   }
 };
 ```
 
-> `taskToFormData` はDay 15で学んだユーティリティ関数です。日付のフォーマット変換などを共通化しているため各ページで手動変換する必要がありません。
+閉じる時と別の編集を始める時に世代を変えます。これで閉じる前のcallbackは、再び開いたフォームを自分の送信先だと扱えません。
 
 **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
-- まだダイアログは配置していないのでStep 11で動作確認する
+- queryの再試行とmutationの再試行を分けました
+- 送信対象、フォーム世代、現在入力を送信時に固定する準備ができました
+- 保存成功と表示更新失敗を別々に案内しました
 
 ---
 
-### Step 10 : 削除ハンドラーを実装する（5分）
+### Step 10 : 削除を同じ書込lockへ入れる（読む目安: 10分）
 
-**ゴール**: タスクカードの削除ボタンで確認ダイアログを表示し、削除する機能を実装します。
+**ゴール**: 更新中に削除を始めず、削除中に別の更新を始めないようにします。
 
-**実装**:
-
-インポートを追加します。
+削除mutationとpending判定を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// インポートに追加
-import { DeleteConfirmDialog }
-  from '@/component/ui/delete-confirm-dialog';
-import toast from 'react-hot-toast';
-```
-
-削除の確認を `window.confirm()` で済ませないのには理由があります。ブラウザが出すあの小さな窓は見た目を変えられず、表示している間はページの他の操作も止まります。`DeleteConfirmDialog` は Day 01 の scaffold で配布済みの共通部品です。Day 11 のプロジェクト削除で初めて呼び出し、Day 15 のタスク削除でも同じものを使いました。中身を自分で書いたことは一度もありません。アプリの他の画面と同じ見た目で確認を出せます。通信中は確認ボタンを押せなくする仕組みも入っているため同じタスクを2回消しに行く事故を防げます。
-
-`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// 削除ダイアログの状態管理（early return より前に追加）
-const [deleteDialogOpen, setDeleteDialogOpen] =
-  useState(false);
-const [deleteTargetId, setDeleteTargetId] =
-  useState<string | null>(null);
-```
-
-`deleteTargetId` は確認ダイアログで「はい」が押されるまで消す相手を覚えておく置き場です。削除ボタンを押した時点ではまだ消さず、IDを控えてダイアログを開くだけにします。この2段構えは Day 15 の削除と同じ形です。取り消せない操作では必ず「対象を覚える」と「実行する」を分けます。初期値を `null` にしておくとまだ相手が決まっていない状態と、決まった状態を区別できます。
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// 削除ミューテーション（utils は Step 3 で追加済み）
-const deleteMutation =
-  api.task.delete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
+const deleteMutation = api.task.delete.useMutation({
+  ...mutationLifecycle,
+  onSuccess: async (_data, variables, submitted) => {
+    if (
+      submitted?.kind === 'delete' &&
+      submitted.targetId === variables.id
+    ) {
       setDeleteDialogOpen(false);
       setDeleteTargetId(null);
-    },
-    onError: (error) => {
-      toast.error(error.message
-        || 'タスクの削除に失敗しました');
-    },
-  });
+    }
+    await refreshAfterWrite(variables.id, false);
+  },
+  onError: (error, variables) =>
+    handleWriteError(error, 'delete', variables.id),
+});
+const writePending =
+  updateMutation.isPending || deleteMutation.isPending;
 ```
 
-削除に失敗したときは確認画面が閉じてもカードが一覧に残ります。`onError` でも理由を表示し、押した操作が無視されたように見える状態を防ぎます。通信後の結果を断定できない場合の扱いは Day 26 で追加します。
+削除成功は送信時の対象と一致する場合だけ確認画面を閉じます。通信が終わっただけでは成功と見なさず、`onSuccess` だけで閉じます。
 
-Step 8 の `const handleDelete = (_taskId: string) => {}` を**削除して**、以下で**置き換えて**ください。
+Step 8 の仮 `handleDelete` を置き換えます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 削除ハンドラー（確認ダイアログを表示）
 const handleDelete = (taskId: string) => {
+  if (
+    writeSubmission.current ||
+    writePending ||
+    authExpiredRef.current
+  ) return;
   setDeleteTargetId(taskId);
   setDeleteDialogOpen(true);
 };
 ```
 
-> `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と同じパターンで、UIの統一性と `isPending` 中の二重クリック防止を実現します。
+書込中や認証失効後は新しい削除確認を開きません。対象IDは確認を押すまでstateに保持し、別のカードを押して送信対象が入れ替わるのを防ぎます。
 
 **確認ポイント**:
-- ファイルを保存した
-- `npm run dev` でエラーが出ていない
+- 更新と削除が1つの `writeSubmission` を共有しました
+- 削除失敗では確認画面と対象が残ります
+- 削除成功と一覧の再取得失敗を区別しました
 
 ---
 
-### Step 11 : ダイアログを配置する（3分）
+### Step 11 : 送信入口とダイアログを接続する（読む目安: 12分）
 
-**ゴール**: 編集ダイアログと削除確認ダイアログをJSXに配置します。
+**ゴール**: Enterキーと保存ボタンを同じ入口へ通し、送信後の新しい入力を古い成功から守ります。
 
-**実装**:
-
-まずフォーム送信ハンドラーを追加します。Step 9 で定義した `updateMutation` を使います。
+`handleSubmit` を追加します。第2引数の `isCurrent` は `TaskDialog` が送信時の入力版を確かめるために渡します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// フォーム送信ハンドラー（Step 9 の updateMutation に依存）
-const handleSubmit = (data: TaskFormData) => {
-  if (data.id) {
-    updateMutation.mutate({
-      id: data.id,
-      title: data.title,
-      description: data.description ?? null,
-      status: data.status,
-      priority: data.priority,
-      dueDate: data.dueDate
-        ? dateOnlyToUtcStartIso(
-            data.dueDate
-          )
-        : null,
-      estimatedHours:
-        data.estimatedHours ?? null,
-      projectId: data.projectId,
-      assigneeId: data.assigneeId ?? null,
-      expectedUpdatedAt:
-        data.expectedUpdatedAt,
-    });
-  }
+const handleSubmit = (
+  data: TaskFormData,
+  isCurrent: () => boolean = () => true,
+) => {
+  if (
+    !data.id ||
+    !dialogOpen ||
+    writeSubmission.current ||
+    writePending ||
+    authExpiredRef.current ||
+    !isCurrent()
+  ) return;
+  writeSubmission.current = {
+    kind: 'update',
+    targetId: data.id,
+    title: data.title,
+    generation: formGeneration.current,
+    isCurrent,
+  };
+```
+
+検証を待つ間にダイアログを閉じたり入力を変えたりすると、`isCurrent()` は `false` になります。その場合は送信前に止め、古い入力を保存しません。
+
+同期的にrefへ書いてからmutationを呼びます。ボタンとEnterが同じ瞬間に走っても、2つ目は `writeSubmission.current` で止まります。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  updateMutation.mutate({
+    id: data.id,
+    title: data.title,
+    description: data.description || null,
+    status: data.status,
+    priority: data.priority,
+    dueDate: data.dueDate
+      ? dateOnlyToUtcStartIso(data.dueDate) : null,
+    estimatedHours: data.estimatedHours ?? null,
+    projectId: data.projectId,
+    assigneeId: data.assigneeId || null,
+    ...(data.expectedUpdatedAt !== undefined && {
+      expectedUpdatedAt: data.expectedUpdatedAt,
+    }),
+  });
 };
 ```
 
-> `expectedUpdatedAt` は Day 15 と同じ楽観ロック用の値です。編集画面を開いてから保存するまでの間に、他の人が同じタスクを更新していたらサーバーが CONFLICT エラーで知らせてくれます。
+`expectedUpdatedAt` はフォームを開いた時点の更新日時です。送信後に入力が残った場合、この値を勝手に新しい時刻へ変えず、閉じて開き直す案内で回復します。
 
-`projectId` も一緒に送るのはダイアログでプロジェクトを選び直せるからです。ここに含めないと画面上では移動できたように見えても保存後の一覧では元のプロジェクトのままになります。
-
-JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
+タスク一覧の下へ `TaskDialog` を置きます。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
-{/* 編集ダイアログの配置 */}
 <TaskDialog
   open={dialogOpen}
-  onClose={() => setDialogOpen(false)}
+  onClose={closeTaskDialog}
   onSubmit={handleSubmit}
   initialData={editingTask}
-  projects={projects ?? []}
+  projects={editableProjects}
+  isPending={writePending}
 />
 ```
 
-`TaskDialog` は選択中のプロジェクトに合わせて
-`search.getMembersByProject` を内部で呼びます。
-このページからメンバー一覧を渡す必要はありません。
+`onClose` も世代を進める関数へ通します。`isPending` は現在の書込中表示に使いますが、二重送信を止める本体は同期refです。
 
-`TaskDialog` の**下に** `DeleteConfirmDialog` を配置します。
+Step 9 で追加した `)}` の直後、`AppLayout` の閉じタグの前へ削除確認を置きます。条件分岐はすでに閉じているため、ここでは `)}` を追加しません。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (
+            !open &&
+            !deleteMutation.isPending
+          )
+            setDeleteTargetId(null);
+        }}
+        onConfirm={() => {
+          if (
+            !deleteTargetId ||
+            writeSubmission.current ||
+            writePending ||
+            authExpiredRef.current
+          )
+            return;
+          writeSubmission.current = {
+            kind: 'delete',
+            targetId: deleteTargetId
+          };
+```
+
+
+pending中に利用者が確認画面を閉じても、対象IDはcallbackが使う送信contextに残ります。閉じた画面を古い成功が再び操作しないよう、送信時の対象を照合します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          deleteMutation.mutate({ id: deleteTargetId });
+        }}
+        isPending={deleteMutation.isPending}
+        closeOnConfirm={false}
+      />
+```
+
+
+Confirmを押した瞬間には閉じません。開いたままなら成功callbackが閉じ、失敗なら対象とエラー表示を残します。pending中のキャンセルもできます。
+
+**確認ポイント**:
+- 保存ボタンとEnterが同じ `handleSubmit` を通ります
+- 送信後に入力を変えても古い成功が現在のフォームを閉じません
+- 削除失敗では確認画面が残り、成功時だけ閉じます
+- 更新成功と再取得失敗を別々に確認できます
+
+---
+### Step 11.5 : 100件ずつページを移動できるようにする（読む目安: 20分・仮）
+
+**ゴール**: 101件目以降の担当タスクへ移動でき、ページや絞り込みを変えた後に古い編集結果が現在の画面を閉じないようにします。
+
+`getAll` は1回に最大100件を返します。`limit` は1回に取る件数、`offset` は先頭から飛ばす件数です。1ページ目は `offset: 0`、2ページ目は `offset: 100` になります。
+
+ページ番号だけを増やすと、ステータスやプロジェクトを変えた後も2ページ目のまま取得してしまいます。そこで、現在の2つの絞り込みを `pageContext` という文字列にまとめます。絞り込みが変わったときは1ページ目として扱います。
+
+`ACTIVE_STATUSES` の下へ、1ページの件数を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const PAGE_SIZE = 100;
+```
+
+`UpdateSubmission` と `DeleteSubmission` に、送信を始めたページ番号を持たせます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+type UpdateSubmission = {
+  kind: 'update';
+  targetId: string;
+  title: string;
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+};
+type DeleteSubmission = { kind: 'delete'; targetId: string; pageIndex: number };
+```
+
+通信を待つ間に別のページへ移った場合、古い成功処理は新しいページのダイアログを閉じてはいけません。送信時の `pageIndex` を控えておけば、成功時に現在のページと照合できます。
+
+`activeTab` と `filterProject` の state の下へ、ページ用の state を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const pageContext = `${activeTab}\u0000${filterProject}`;
+const [pagination, setPagination] = useState({
+  context: pageContext,
+  index: 0,
+});
+const pageIndex =
+  pagination.context === pageContext ? pagination.index : 0;
+```
+
+区切りの `\u0000` は、2つの値が偶然つながって同じ文字列になるのを防ぎます。`pagination.context` が現在の絞り込みと違う描画では、state の更新を待たずに `pageIndex` を0として扱います。
+
+タスクqueryを次の形へ置き換えます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const {
+  data: tasks,
+  isLoading,
+  isFetching,
+  isError: isTasksError,
+  error: tasksQueryError,
+  refetch: refetchTasks,
+} = api.task.getAll.useQuery(
+  {
+    assigneeId: currentUser?.id,
+    status: activeTab === 'all' ? undefined : activeTab,
+    projectId: filterProject === 'all' ? undefined : filterProject,
+    limit: PAGE_SIZE,
+    offset: pageIndex * PAGE_SIZE,
+  },
+  { enabled: !!currentUser && !authExpired, retry: shouldRetryQuery },
+);
+```
+
+`isLoading` は最初の読取を表します。`isFetching` はページ移動で次の100件を読んでいる間も `true` になります。通信中に連打して要求順が入れ替わらないよう、後でページ移動ボタンを無効にします。
+
+`finishSubmittedUpdate` の `ownsSubmittedLifetime` へ、ページ番号の照合を1行追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const ownsSubmittedLifetime =
+  !authExpiredRef.current &&
+  submitted?.kind === 'update' &&
+  submitted.targetId === target.id &&
+  submitted.generation === formGeneration.current &&
+  submitted.pageIndex === pageIndex;
+```
+
+`handleSubmit` で `writeSubmission.current` を作る箇所にも `pageIndex` を追加します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+writeSubmission.current = {
+  kind: 'update',
+  targetId: data.id,
+  title: data.title,
+  generation: formGeneration.current,
+  pageIndex,
+  isCurrent,
+};
+```
+
+送信contextにページ番号を保存しました。続いて、`handleSubmit` の下へページを離れる処理を追加し、表示から消えたタスクのダイアログを残さないようにします。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+const leavePageContext = () => {
+  formGeneration.current += 1;
+  setDialogOpen(false);
+  setEditingTask(undefined);
+  setDeleteDialogOpen(false);
+  setDeleteTargetId(null);
+};
+
+const moveToPage = (nextPage: number) => {
+  if (isFetching || nextPage < 0 || nextPage === pageIndex) return;
+  leavePageContext();
+  setPagination({ context: pageContext, index: nextPage });
+};
+
+const resetPageForFilter = () => {
+  leavePageContext();
+  setPagination({ context: '', index: 0 });
+};
+```
+
+ページを変えると、表示中のカードも入れ替わります。編集と削除の対象を残すと、画面にないタスクへ操作を続けることになります。`leavePageContext` はフォーム世代を進め、2つのダイアログと対象IDを閉じます。
+
+ステータスタブの `onValueChange` を置き換えます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+onValueChange={(value) => {
+  if (
+    (value === 'all' || isTaskStatus(value)) &&
+    value !== activeTab
+  ) {
+    resetPageForFilter();
+    setActiveTab(value);
+  }
+}}
+```
+
+ステータスが変わると1ページ目へ戻り、開いていたダイアログも閉じます。プロジェクトの `Select` も、値が変わるときだけ同じ処理を通します。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
-{/* 削除確認ダイアログの配置 */}
-<DeleteConfirmDialog
-  open={deleteDialogOpen}
-  onOpenChange={setDeleteDialogOpen}
-  onConfirm={() => {
-    if (deleteTargetId) {
-      deleteMutation.mutate({
-        id: deleteTargetId,
-      });
-    }
+<Select
+  value={filterProject}
+  onValueChange={(value) => {
+    if (value === filterProject) return;
+    resetPageForFilter();
+    setFilterProject(value);
   }}
-  isPending={deleteMutation.isPending}
-/>
+>
 ```
 
-> タスク一覧ページ（Day 15）とまったく同じパターンです。`TaskDialog` と `DeleteConfirmDialog` を再利用することで、どのページからでも同じUIで編集・削除できます。
+同じ値を選び直しただけなら、現在のページや入力中のフォームを閉じません。値が変わる場合は、古い絞り込みの2ページ目を新しい絞り込みへ持ち越さず、1ページ目から取得します。
+
+既存の0件表示を、次の2つへ置き換えます。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx */}
+{tasks && tasks.length === 0 && pageIndex > 0 && (
+  <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+    <p>このページにはタスクがありません。</p>
+    <p>前のページへ戻ってください。</p>
+  </div>
+)}
+
+{tasks && tasks.length === 0 && pageIndex === 0 && (
+  <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+    <p>条件に合うタスクはありません</p>
+  </div>
+)}
+```
+
+1ページ目の0件と、2ページ目以降の0件は意味が違います。ちょうど100件ある場合は「次へ」を押した先が空になるため、タスクが1件もないとは案内せず、前へ戻るよう伝えます。
+
+0件表示の下へ、ページ移動を追加します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx */}
+{(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+  <nav
+    className="flex items-center justify-center gap-3"
+    aria-label="マイタスクのページ移動"
+  >
+    <button
+      type="button"
+      className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      disabled={isFetching || pageIndex === 0}
+      onClick={() => moveToPage(pageIndex - 1)}
+    >
+      前へ
+    </button>
+    <span className="text-sm text-muted-foreground">
+      {pageIndex + 1}ページ目
+    </span>
+```
+
+「前へ」は1ページ目では押せず、どちらのボタンも取得中は押せません。次の断片で「次へ」と `nav` の閉じタグを追加します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+    <button
+      type="button"
+      className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      disabled={isFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+      onClick={() => moveToPage(pageIndex + 1)}
+    >
+      次へ
+    </button>
+  </nav>
+)}
+```
+
+100件返ったときだけ、続きがある可能性を示す「次へ」を出します。総件数を別に取得していないため、ちょうど100件でもボタンは出ます。その先が空なら、先ほど追加した案内と「前へ」で戻れます。
+
+最後に、削除確認の `writeSubmission.current` へもページ番号を保存します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx
+writeSubmission.current = {
+  kind: 'delete',
+  targetId: deleteTargetId,
+  pageIndex,
+};
+```
+
+期限切れ・今日・今後・期限なし・完了済み・キャンセル済みの6グループは削りません。各ページで取得した最大100件を、これまでと同じ順番で6つに分けます。
 
 **確認ポイント**:
-- 編集ボタンをクリックするとダイアログが開く
-- 削除ボタンをクリックすると確認ダイアログが表示される
-- 編集を保存すると一覧が自動で更新される
-- 削除を確認すると一覧が自動で更新される
+
+- `limit` と `offset` で100件ずつ取得します
+- 読取中は「前へ」「次へ」を押せません
+- 絞り込みを変えると1ページ目へ戻ります
+- ページを離れると編集・削除ダイアログを閉じます
+- ちょうど100件の次が空でも、全体が0件とは表示しません
+- 更新と削除の送信時に `pageIndex` を控えます
 
 ---
+### Step 12 : テストを準備し、基本操作と競合時の回復を確認する（読む目安: 20分・仮）
 
-### Step 12 : 動作確認（3分）
-
-**ゴール**: マイタスクページの全機能を確認します。
+**ゴール**: ブラウザで基本操作と失敗時の案内を確認し、タイミングが難しい競合は自動テストで再現します。
 
 開発サーバーが動いていればそのまま使います。止めてあるときだけ次のコマンドで起動します。
 
@@ -1178,31 +1894,100 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
 npm run dev
 ```
 
-`http://localhost:3000/my-task` を開きます。
+3000番で起動中なら止めず、`http://localhost:3000/my-task` を開いて構いません。
 
-以下の項目を順番に確認してください。
+まずブラウザで通常の操作を確認します。
 
-1. `/my-task` にアクセスする
-2. ローディングスピナーが一瞬表示された後、タスクが表示される
-3. 自分のタスクだけが表示される
-4. ステータスタブで絞り込みできる
-5. プロジェクトフィルターで絞り込みできる
-6. 期限切れグループに赤い見出しが出る（枚数は自分の作ったタスク次第）
-7. 編集ボタンでダイアログが開く
-8. 削除ボタンで確認→削除される
+1. `/my-task` を開き、自分のタスクだけが表示されることを確認します
+2. ステータスタブとプロジェクトフィルターを1回ずつ切り替えます
+3. 絞り込みを変えた後、表示が「1ページ目」へ戻ることを確認します
+4. 期限切れ・今日・今後・期限なし・完了済み・キャンセル済みの分類を確認します
+5. タスクAを編集して保存し、Aの名前を含む成功通知と一覧の更新を確認します
+6. 削除してよい確認用タスクを作り、削除確認から削除します
+
+通常成功では編集ダイアログと削除確認が成功後に閉じます。表示が更新されない場合はページを再読み込みし、保存結果を確認してから再操作してください。同じ保存をすぐ繰り返すと、すでに成功した書込を重ねるおそれがあります。
+
+次に、ブラウザのDevToolsでオフライン時の送信保留と認証切れを確認します。通常確認で使ったタスクとは別に、この確認で削除するタスクを1件作ってください。
+
+1. 確認用タスクの削除確認を開き、Networkタブを `Offline` にしてから「削除」を押します
+2. ボタンが「削除中...」になり、削除確認が開いたままで、すぐには失敗通知が出ないことを確認します
+3. `No throttling` に戻し、削除ボタンを押し直さずに待ちます
+4. 保留されていた削除が自動で送信され、削除確認が閉じます。再取得も成功すると一覧から対象が消えることを確認します
+5. 別タブでログアウトし、マイタスク側を再読み込みします
+6. ログイン画面へ移動することを確認し、ログインし直します。ログイン後に `/my-task` へ戻ることも確認してください
+
+再読み込みでは、ページを表示する前に認証を確認するため、ログイン画面へ移動します。通信の途中で401を受けた場合の案内は、続く自動テストで確認します。
+
+このアプリの設定では、Offline中に押した削除は接続が戻るまで保留されます。`No throttling` に戻すと同じ削除が自動で送信されるため、削除ボタンをもう一度押さないでください。送信中にキャンセルしても確認画面が閉じるだけで、保留中の削除は取り消されません。401では一覧を操作せず、「ログイン画面へ」からログインし直してください。
+
+同じ瞬間の二重送信や、古い送信Aを待つ間にフォームBを開く競合は、手操作では発生時刻をそろえにくいケースです。ページ移動の100件境界も、確認用タスクを大量に作る方法では再現しません。販売ZIPに同梱したテストで決まった順序と件数を作ります。
+
+テストを実行する前に、販売ZIPの `scripts/day17-test` から設定と2本のテストをコピーします。
+
+GitHub から別のパソコンへ取り出したプロジェクトには、Day 03 で Git に加えなかった `scripts/` がありません。VS Code のエクスプローラーで `scripts/day17-test` が見つからない場合は、次の手順で戻します。
+
+1. Day 01 で使った販売 ZIP を、いまのプロジェクトとは別の場所に展開します。
+2. いまのプロジェクトの `task-app` フォルダを開いているターミナルで、`mkdir -p scripts` を実行します。`scripts` がなければ作成され、すでにある場合は中のファイルが残ります。
+3. 展開先の `task-app/scripts/day17-test` フォルダだけを、いまのプロジェクトの `scripts` フォルダへコピーします。展開先の `task-app` 全体は重ねません。
+4. コピー先に `vitest.config.ts`、`setup.ts`、`page-single-write.test.tsx.template`、`page-pagination.test.tsx.template` の4ファイルがあることを確認します。
+
+`task-app` フォルダを開いているターミナルで、次を実行してください。
+
+配布元のテスト2本は、末尾が `.template`（コピーして使うファイルの印）です。コピー先ではこの末尾を外します。配布元とコピー先の両方を、Vitestが重複して実行しないためです。
+
+```bash
+# filepath: ターミナル
+mkdir -p src/test src/app/my-task
+cp scripts/day17-test/vitest.config.ts vitest.config.ts
+cp scripts/day17-test/setup.ts src/test/setup.ts
+cp scripts/day17-test/page-single-write.test.tsx.template \
+  src/app/my-task/page-single-write.test.tsx
+cp scripts/day17-test/page-pagination.test.tsx.template \
+  src/app/my-task/page-pagination.test.tsx
+```
+
+`vitest.config.ts` は、`@/` を `src/` として読み替え、TSX（TypeScriptで画面部品を書くファイル形式）をテストで扱うための設定です。`setup.ts` は `toBeInTheDocument()` など、画面の状態を読む検査を使えるようにします。
+
+Day 01 で入れた3つの道具を使います。Vitestはテスト実行ツール、jsdomはNode.js上でHTMLを扱う実行環境、Testing Libraryは画面を操作して表示を確かめる道具です。新しいパッケージの追加はありません。Day 26でも同じ設定を掲載するので、その日に内容を見直して上書きして構いません。
+
+コピーした2本は完成コードです。中身を写経せず、そのまま使います。1本目は送信の開始と完了の順序を変え、2本目は100件と101件の取得結果をAPIの代わりに返します。PostgreSQLへ接続せず、いま作った画面だけを検査します。
+
+準備できたら、次の2本を実行します。
+
+```bash
+# filepath: ターミナル
+npx vitest run src/app/my-task/page-single-write.test.tsx
+npx vitest run src/app/my-task/page-pagination.test.tsx
+```
+
+1つ目は書込競合の12件、2つ目はページ移動の5件がすべて成功することを確認してください。ページ移動のテストは、用意した101件のデータで2ページ目と往復し、100件ちょうどで次が空になる場合も確認します。実際の担当タスクを100件作る必要はありません。
+
+2つのテストは次の順序を再現します。
+
+- フォーム送信が同じ描画中に2回重なっても更新は1回だけ送られます
+- 遅れて完了したAが、新しく開いたBやAの新しい入力を閉じません
+- Aを閉じて開き直した場合は、保存済みのAと未保存の入力を別々に案内します
+- pending中に削除確認をキャンセルでき、削除失敗なら確認画面が残ります
+- queryまたは成功後の再取得が401なら、古い成功通知を止めてログイン案内へ移ります
+- 保存成功後の再取得だけ失敗しても、保存成功と再取得失敗を別々に通知します
+- 101件目へ進んだ後に「前へ」で1ページ目へ戻れます
+- 100件ちょうどの次が空でも「条件に合うタスクはありません」と誤表示しません
+- 絞り込みを変えると `offset: 0` で取り直します
+- 取得中はページ移動ボタンを押せません
+
+ここで確認した競合は自動テストの結果です。ブラウザで同じ通信順序を毎回再現したという意味ではありません。テストが失敗した場合は、最初に表示された失敗名を確認し、Step 9〜11の該当する処理と見比べてください。
 
 **確認ポイント**:
-- 他の人のタスクは表示されない
-- フィルタリングが正しく動作する
-- 期限別グループが正しく分類される
-- 編集・削除が正常に動作する
+- 通常の絞り込み・編集・削除をブラウザで確認しました
+- Offline中は削除が保留され、通信回復後に押し直さず、削除確認が閉じて再取得後の一覧から対象が消えました
+- ログアウト後の再読み込みでログイン画面へ移り、ログインし直すとマイタスクへ戻りました
+- 競合と再取得失敗の12テストが成功しました
 
-スクリーンショット: 動作確認が終わったあとのマイタスクページを確認してください。
+スクリーンショット: ステータスで絞り込んだ通常表示です。競合テストの結果画面ではありません。
 
 ![ステータスタブで「進行中」を選び、その状態のタスクだけに絞り込んだマイタスクページ](./screenshots/day17/my-task-in-progress.png)
 
 ---
-
 ### Pro パターンで書こう（自分のタスクをステータス別にまとめる）
 
 並び順の定義を1か所に集約すると順序を変更するときに修正箇所が1点に絞られます。
@@ -1310,8 +2095,8 @@ function buildStatusSections(tasks: MyTask[]) {
 
 **このコードの問題点**:
 
-- `switch` と `return` の配列で、同じステータス順を2回管理している
-- `CANCELLED` など別のグループを足すと型・初期値・分岐・表示配列を全部直す必要がある
+- `switch` と `return` の配列で、同じステータス順を2回管理しています
+- `CANCELLED` など別のグループを足すと型・初期値・分岐・表示配列を全部直す必要があります
 - グループ対象のステータスがコード全体に散らばり、並び順の意図が見えにくい
 
 #### After（プロが書くコード）
@@ -1374,9 +2159,9 @@ function buildStatusSections(
 
 **このコードの強み**:
 
-- ステータスの並び順が `MY_TASK_STATUS_ORDER` に集約される
-- `Map` によって「ステータス → 表示セクション」の対応をそのまま表現できる
-- 新しい表示グループを追加するときは並び順の配列にステータスを足すだけで済む
+- ステータスの並び順が `MY_TASK_STATUS_ORDER` に集約されます
+- `Map` によって「ステータス → 表示セクション」の対応をそのまま表現できます
+- 新しい表示グループを追加するときは並び順の配列にステータスを足すだけで済みます
 
 #### 覚えておきたいエッセンス
 
@@ -1385,103 +2170,152 @@ function buildStatusSections(
 
 ## 完成コード全体
 
-今日触ったファイルは `src/app/my-task/page.tsx` の1つだけです。このリポジトリの `src/` は ZIP に入っていません。見比べる相手は自分が書いたファイルです。12個の Step で同じファイルへ書き足し続けたので途中でどこへ貼ったか分からなくなった場合は以下のコードと見比べてください。上から順に並べてあり、これが Day 17 終了時点の全文です。
+今日は `src/app/my-task/page.tsx` と `src/component/layout/app-layout.tsx` の2つを触りました。このリポジトリの `src/` は ZIP に入っていません。見比べる相手は自分が書いたファイルです。13個の Step で同じファイルへ書き足し続けたので途中でどこへ貼ったか分からなくなった場合は以下のコードと見比べてください。上から順に並べてあり、これが Day 17 終了時点の全文です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
-| `src/app/my-task/page.tsx` | 自分のタスクを絞り込み、期限別に並べる画面 | Step 1 から Step 11 |
+| `src/app/my-task/page.tsx` | 自分のタスクを絞り込み、期限別に並べる画面 | Step 1 から Step 11.5 |
+| `src/component/layout/app-layout.tsx` | サイドバーのマイタスク導線 | Step 1 |
+
+
+### `src/component/layout/app-layout.tsx`
+
+ここは Step 1 で変更した2か所だけを掲載します。ほかの行は Day 13 までに書いた状態を残してください。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: アイコンのインポート
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+```
+
+`ListTodo` が今日追加した名前です。既存の `ClipboardList`、`FolderOpen`、`LayoutDashboard`、`LogOut` もそれぞれ別の表示で使うため、そのまま残します。
+
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: サイドバーのメニュー項目
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+];
+```
+
+4つのリンクは、それぞれのページを作った Day で追加されています。Day 17 終了時点では、見えている項目をすべて開けます。
 
 ### `src/app/my-task/page.tsx`
 
-**画面部品のインポート**:
-
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: 画面部品のインポート
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
 import { TaskCard } from '@/component/task/task-card';
+import { TaskDialog, type TaskFormData } from '@/component/task/task-dialog';
+import { DeleteConfirmDialog } from '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 import {
-  TaskDialog, type TaskFormData,
-} from '@/component/task/task-dialog';
-import { DeleteConfirmDialog }
-  from '@/component/ui/delete-confirm-dialog';
-import {
-  PageLoadingSpinner,
-} from '@/component/ui/loading-spinner';
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/component/ui/select';
-import {
-  Tabs, TabsList, TabsTrigger,
-} from '@/component/ui/tabs';
 ```
 
-`TaskCard` は scaffold が配布した部品（Day 13 で使ってから Day 16 で時間記録のボタンを足したもの）です。`TaskDialog` は Day 14 で作り Day 15 で編集に対応させた部品です。どちらもそのまま呼んでいます。`DeleteConfirmDialog` は scaffold で配布された共通部品です。マイタスク専用のカードや編集画面を新しく作らないのは入力欄を1つ足すたびに画面の数だけ直す作業が生まれるためです。並び順が手元と違っていても `npm run fix` が並べ替えます。
 
-**判定と変換のインポート**:
+最初の断片はクライアント画面の宣言と画面部品を読み込みます。router は認証切れと権限不足の移動先に使い、React の ref は送信中の値を再描画の外で保持します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 判定と変換のインポート
-import type { TaskPriority }
-  from '@/lib/constant/priority';
+import { Tabs, TabsList, TabsTrigger } from '@/component/ui/tabs';
+import type { TaskPriority } from '@/lib/constant/priority';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
 import {
-  hasPermission, isProjectMemberRole,
-  type ProjectMemberRole,
-} from '@/lib/constant/roles';
-import {
-  isTaskStatus, TASK_STATUS,
-  TASK_STATUS_LABELS, type TaskStatus,
+  isTaskStatus,
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
 } from '@/lib/constant/status';
-import {
-  dateOnlyFromValue,
-  dateOnlyToUtcStartIso,
-  localDateOnly,
-} from '@/lib/date';
-import { taskToFormData }
-  from '@/lib/task-form';
+import { dateOnlyFromValue, dateOnlyToUtcStartIso, localDateOnly } from '@/lib/date';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { taskToFormData } from '@/lib/task-form';
+import { classifyTaskWriteError, type TaskWriteOperation } from '@/lib/task-write-error';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
+
+const ACTIVE_STATUSES: TaskStatus[] = [
 ```
 
-`isTaskStatus` と `isProjectMemberRole` は型ガードです。サーバーやタブから来た文字列を `as` で型へ押し込まず実行時に確かめてから使います。`localDateOnly` と `dateOnlyFromValue` は日付を `YYYY-MM-DD` へそろえる関数です。期限の比較が時刻の違いで狂わなくなります。
 
-**タブの定義**:
+絞り込みに使う定数、日付変換、読取エラー分類、書込エラー分類を読み込みます。query と mutation で再試行方針を分けるため、2種類のhelperを混ぜません。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 完成版: タブの定義
-const ACTIVE_STATUSES: TaskStatus[] = [
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
   TASK_STATUS.TODO,
   TASK_STATUS.IN_PROGRESS,
   TASK_STATUS.IN_REVIEW,
   TASK_STATUS.DONE,
 ];
-const STATUS_TABS: {
-  label: string;
-  value: TaskStatus | 'all';
-}[] = [
+const PAGE_SIZE = 100;
+const STATUS_TABS: { label: string; value: TaskStatus | 'all' }[] = [
   { label: 'すべて', value: 'all' },
   ...ACTIVE_STATUSES.map((status) => ({
     label: TASK_STATUS_LABELS[status],
     value: status,
   })),
 ];
+
+type UpdateSubmission = {
+  kind: 'update';
+  targetId: string;
+  title: string;
+  generation: number;
+  pageIndex: number;
+  isCurrent: () => boolean;
+};
 ```
 
-2つとも `MyTasksPage` の外に置きます。中に置くと画面が描き直されるたびに同じ配列を作り直すためです。`STATUS_TABS` を手で書き並べず `ACTIVE_STATUSES` から組み立てているので表示する日本語を変えたいときは `TASK_STATUS_LABELS` だけを直せば済みます。
-
-**グループ表示に渡す値の型**:
+タブの並びと1ページの件数を定義しました。`PAGE_SIZE` はqueryの `limit` とボタンの表示判定で共用します。次は送信contextの型へ進みます。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 完成版: グループ表示に渡す値の型
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+type DeleteSubmission = { kind: 'delete'; targetId: string; pageIndex: number };
+type WriteSubmission = UpdateSubmission | DeleteSubmission;
+
 interface TaskGroupSectionProps {
+```
+
+
+表示する4状態とタブを作り、1ページを100件に決めます。更新と削除は、どのページから送ったかを送信contextへ保存します。更新ではフォーム世代と入力版も保存します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
   title: string;
   titleClassName?: string;
   tasks: Array<{
@@ -1491,67 +2325,51 @@ interface TaskGroupSectionProps {
     status: TaskStatus;
     priority: TaskPriority;
     dueDate: Date | null;
-    assignee: {
-      name: string | null;
-      email: string;
-      avatar: string | null;
-    } | null;
-    projectId: string;
+    assignee: { name: string | null; email: string; avatar: string | null } | null;
     timeSpentMinutes: number;
+    projectId: string;
   }>;
-```
-
-`tasks` の中身を `api.task.getAll` が返す形にそろえてあります。ここが1項目でもずれると取得した配列をそのまま渡せず、詰め替える処理を書く必要が出ます。`projectId` を含めているのは次のブロックの権限判定がプロジェクト単位で行われるためです。
-
-**グループ表示が受け取る関数**:
-
-```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示が受け取る関数
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onTimeLogSuccess: () => void;
+  onTimeLogSuccess?: (() => void) | undefined;
   canEditProject: (projectId: string) => boolean;
   canDeleteProject: (projectId: string) => boolean;
 }
+
+const TaskGroupSection = ({
 ```
 
-権限を判定する関数を親から受け取る形にしてあります。`TaskGroupSection` の中でロールを調べる作りにすると判定が画面の中に2か所できて片方だけ直したときに食い違います。渡し忘れると `TaskCard` の既定値が使われ、閲覧者にも編集ボタンが出ます。
 
-**グループ表示の見出し**:
+グループ部品が受け取るタスク項目と操作関数を型にします。projectId はカードごとの編集・削除権限を引く鍵で、別projectのroleを誤って使わないため各タスクに残します。
 
 ```typescript
-// filepath: src/app/my-task/page.tsx
-// 完成版: グループ表示の見出し
-const TaskGroupSection = ({
-  title, titleClassName,
-  tasks, onEdit, onDelete,
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+  title,
+  titleClassName,
+  tasks,
+  onEdit,
+  onDelete,
   onTimeLogSuccess,
-  canEditProject, canDeleteProject,
+  canEditProject,
+  canDeleteProject,
 }: TaskGroupSectionProps) => {
   if (tasks.length === 0) return null;
 
   return (
     <div className="space-y-4">
-      <h2 className={cn(
-        'text-xl font-semibold flex items-center gap-2',
-        titleClassName,
-      )}>
+      <h2 className={cn('text-xl font-semibold flex items-center gap-2', titleClassName)}>
         {title} ({tasks.length})
       </h2>
-```
-
-`if (tasks.length === 0) return null;` がこの部品で一番効いている1行です。`null` を返すと見出しごと画面から消えるので呼び出す側は4つのグループをただ並べるだけで済みます。件数を見出しに添えているのは開かずに量を判断できるようにするためです。
-
-**グループ表示のカード生成**:
-
-```typescript
-      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: グループ表示のカード生成 */}
-      <div className="grid gap-6 sm:grid-cols-2
-        lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
           <TaskCard
+```
+
+
+空のグループは見出しごと隠し、見出しと件数を表示した後でカードを並べ始めます。0件の見出しを6つ並べず、利用者が今見るべき期限のまとまりだけを残します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
             key={task.id}
             id={task.id}
             title={task.title}
@@ -1560,84 +2378,107 @@ const TaskGroupSection = ({
             priority={task.priority}
             dueDate={task.dueDate}
             assignee={task.assignee}
+            timeSpentMinutes={task.timeSpentMinutes}
             onEdit={onEdit}
             onDelete={onDelete}
             onTimeLogSuccess={onTimeLogSuccess}
             canEdit={canEditProject(task.projectId)}
             canDelete={canDeleteProject(task.projectId)}
-            timeSpentMinutes={task.timeSpentMinutes}
           />
         ))}
-```
-
-`canEdit` と `canDelete` に、受け取った関数へ `task.projectId` を渡した結果を入れています。マイタスクには複数のプロジェクトのタスクが混ざるので判定は画面単位ではなくカード1枚ごとに行う必要があります。`timeSpentMinutes` を渡さないと記録済みのタスクでも `0m` と表示されます。
-
-**グループ表示の閉じタグ**:
-
-```typescript
-      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: グループ表示の閉じタグ */}
       </div>
     </div>
   );
 };
-```
 
-開いた順と逆に閉じます。`map` を `))}` で閉じ、グリッドと外枠の `</div>` を順に閉じ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。閉じる数が合わないとこの行より下すべてが構文エラーとして報告されます。
-
-**画面の状態**:
-
-```typescript
-// filepath: src/app/my-task/page.tsx
-// 完成版: 画面の状態
 export default function MyTasksPage() {
-  const [activeTab, setActiveTab] =
-    useState<TaskStatus | 'all'>('all');
-  const [filterProject, setFilterProject] =
-    useState<string>('all');
-  const [dialogOpen, setDialogOpen] =
-    useState(false);
-  const [editingTask, setEditingTask] =
-    useState<TaskFormData | undefined>(undefined);
-  const [deleteDialogOpen, setDeleteDialogOpen] =
-    useState(false);
-  const [deleteTargetId, setDeleteTargetId] =
-    useState<string | null>(null);
 ```
 
-6つの状態を先頭にまとめてあります。hooks は呼び出す順番が毎回同じでなければならないので`if` や `return` より前に置く必要があるからです。`dialogOpen` と `editingTask` を分けているのは1つにまとめると閉じる途中で中身が消え、ダイアログが一瞬空になるためです。
 
-**サーバーからの取得**:
+各カードへ表示値、時間記録callback、現在のproject roleから求めた編集・削除可否を渡します。画面部品はここで閉じます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: サーバーからの取得
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    api.auth.getCurrentUser.useQuery();
-  const { data: projects } =
-    api.project.getAll.useQuery();
-  const { data: tasks, isLoading } =
-    api.task.getAll.useQuery(
-      {
-        assigneeId: currentUser?.id,
-        status: activeTab === 'all'
-          ? undefined : activeTab,
-        projectId: filterProject === 'all'
-          ? undefined : filterProject,
-      },
-      { enabled: !!currentUser },
-    );
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TaskStatus | 'all'>('all');
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const pageContext = `${activeTab}\u0000${filterProject}`;
+  const [pagination, setPagination] = useState({ context: pageContext, index: 0 });
+  const pageIndex = pagination.context === pageContext ? pagination.index : 0;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskFormData | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [authExpired, setAuthExpired] = useState(false);
+  const authExpiredRef = useRef(false);
+  const formGeneration = useRef(0);
+  const writeSubmission = useRef<WriteSubmission | null>(null);
 
-  const utils = api.useUtils();
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    error: currentUserQueryError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, {
 ```
 
-`'all'` を選んだ場合に項目ごと `undefined` へ変えるのが絞り込みを外す書き方です。`'all'` をそのまま送ると`status` は決まった値しか受け取らないため入力チェックで弾かれ、0件ではなくエラーが返ります。`enabled: !!currentUser` は自分のIDが届く前に他人のタスクまで取ってしまうのを防ぎます。
-
-**プロジェクトごとの自分のロール**:
+絞り込みから `pageContext` を作り、ページ番号とダイアログのstateを用意しました。絞り込みが変わった描画では、古いページ番号を使いません。次は利用者queryを定義します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトごとの自分のロール
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  const {
+    data: projects,
+```
+
+
+ページのフィルターとページ番号、2つのダイアログ、認証失効、フォーム世代、単一書込lockを初期化します。利用者queryを認証失効後に止め、末尾ではproject queryの分割代入を始めます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    isLoading: isProjectsLoading,
+    isError: isProjectsError,
+    error: projectsQueryError,
+    refetch: refetchProjects,
+  } = api.project.getAll.useQuery(undefined, {
+    enabled: !authExpired,
+    retry: shouldRetryQuery,
+  });
+  const {
+    data: tasks,
+    isLoading,
+    isFetching,
+    isError: isTasksError,
+    error: tasksQueryError,
+    refetch: refetchTasks,
+  } = api.task.getAll.useQuery(
+    {
+      assigneeId: currentUser?.id,
+      status: activeTab === 'all' ? undefined : activeTab,
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      limit: PAGE_SIZE,
+      offset: pageIndex * PAGE_SIZE,
+```
+
+project queryを定義し、認証失効後の通信を止めました。次は `limit` と `offset` を渡し、現在のページを100件ずつ取得するtask queryを続けます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    },
+    { enabled: !!currentUser && !authExpired, retry: shouldRetryQuery },
+  );
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+```
+
+
+projectとtaskのqueryはそれぞれerrorとrefetchを保持します。taskは利用者IDが取れた後だけ動き、100件ずつ取得します。`isFetching` はページ移動中のボタンを止めるために使います。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = currentUser?.id;
@@ -1645,389 +2486,789 @@ export default function MyTasksPage() {
       return map;
     }
     for (const project of projects) {
-      const me = project.members?.find(
-        (member) => member.userId === userId,
-      );
+      const me = project.members?.find((member) => member.userId === userId);
       if (me && isProjectMemberRole(me.role)) {
         map.set(project.id, me.role);
       }
     }
     return map;
   }, [projects, currentUser?.id]);
-```
 
-プロジェクトIDから自分のロールを引ける対応表を先に作っています。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きるためです。`useMemo` の依存に挙げた2つが変わったときだけ作り直され、それ以外の描き直しでは前の対応表を使い回します。
-
-**編集と削除の可否**:
-
-```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 編集と削除の可否
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
-      return role
-        ? hasPermission(role, 'canEdit') : false;
+      return role ? hasPermission(role, 'canEdit') : false;
     },
     [myRoleByProject],
   );
 
   const canDeleteProject = useCallback(
+```
+
+
+取得したproject memberから現在利用者のrole表を作り、project IDごとの編集可否を返します。文字列roleは型ガードを通し、末尾では削除可否のcallback宣言を始めます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
-      return role
-        ? hasPermission(role, 'canDelete') : false;
+      return role ? hasPermission(role, 'canDelete') : false;
     },
     [myRoleByProject],
   );
+
+  const editableProjects = useMemo(
+    () => (projects ?? []).filter((project) => canEditProject(project.id)),
+    [projects, canEditProject],
+  );
+
+  const utils = api.useUtils();
+
+  const markAuthExpired = () => {
+    authExpiredRef.current = true;
+    setAuthExpired(true);
+  };
+
+  const refreshAfterWrite = async (targetId: string, refreshPermissions: boolean) => {
+    const filters = {
+      refetchType: authExpiredRef.current ? ('none' as const) : ('active' as const),
+    };
 ```
 
-ロールが引けなかったときに `false` を返すのが要点です。メンバーではないプロジェクトのタスクが混ざった場合に、判定が抜けて編集できてしまう事故を防げます。権限の中身は `hasPermission` が持っているのでこの画面はロールと操作名を渡すだけで済みます。
 
-**記録の成功と保存の通信**:
+削除可否を定義した後、編集できるプロジェクトだけを `editableProjects` に残します。認証失効はrefへ先に記録します。時間記録の一覧更新はダイアログが所有するため、親ページに同じ再取得関数を重ねません。書込後の再取得は認証状態に応じてactive queryだけを対象にします。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 記録の成功と保存の通信
-  const handleTimeLogSuccess =
-    useCallback(() => {
-      utils.task.getAll.invalidate();
-    }, [utils.task.getAll]);
+    try {
+      const updates = [
+        utils.task.getAll.invalidate(undefined, filters, { throwOnError: true }),
+        utils.task.getById.invalidate({ id: targetId }, filters, { throwOnError: true }),
+      ];
+      if (refreshPermissions) {
+        updates.push(utils.project.getAll.invalidate(undefined, filters, { throwOnError: true }));
+      }
+      await Promise.all(updates);
+    } catch (error) {
+      if (isAuthError(error)) {
+        markAuthExpired();
+        return;
+      }
+      console.error(`タスク ${targetId} の表示更新に失敗しました。`, error);
+      toast.error(('最新の表示を取得できませんでした。' +
+        '再表示して' +
+        '操作結果を確認してください。'));
+    }
+  };
 
-  const updateMutation =
-    api.task.update.useMutation({
-      onSuccess: () => {
-        utils.task.getAll.invalidate();
-        setDialogOpen(false);
-      },
-    });
+  const handleWriteError = async (
 ```
 
-記録と編集は成功後に一覧を取り直します。サーバーで更新された値をもう一度取得し、画面に古いタスクを残さないためです。削除の通信は続きとして次のブロックへ置きます。
+
+一覧と送信対象の詳細を並行で無効化し、必要な失敗時だけproject権限も取り直します。保存済みの書込と、その後の表示更新を別の結果として扱い、再取得失敗を保存失敗へ読み替えません。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 削除の通信
-  const deleteMutation =
-    api.task.delete.useMutation({
-      onSuccess: () => {
-        utils.task.getAll.invalidate();
+    error: unknown,
+    operation: TaskWriteOperation,
+    targetId: string,
+  ) => {
+    const failure = classifyTaskWriteError(error, operation);
+    if (failure.kind === 'auth') {
+      markAuthExpired();
+      return;
+    }
+    toast.error(failure.message);
+    await refreshAfterWrite(targetId, true);
+  };
+
+  const mutationLifecycle = {
+```
+
+
+書込失敗を分類し、401なら後続処理を止めます。401以外は操作別メッセージを出し、送信対象とproject権限を取り直して、古い権限表示のまま再操作させません。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    retry: false as const,
+    onMutate: () => writeSubmission.current,
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      _variables: unknown,
+      submitted: WriteSubmission | null | undefined,
+    ) => {
+      if (writeSubmission.current === submitted) writeSubmission.current = null;
+    },
+  };
+
+  const finishSubmittedUpdate = (
+```
+
+
+mutationは自動再試行せず、送信開始時のcontextをcallbackへ渡します。終了したcontextが現在のlockと一致する場合だけ解放します。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    submitted: WriteSubmission | null | undefined,
+    target: { id: string; title: string | undefined },
+  ) => {
+    const ownsSubmittedLifetime =
+      !authExpiredRef.current &&
+      submitted?.kind === 'update' &&
+      submitted.targetId === target.id &&
+      submitted.generation === formGeneration.current &&
+      submitted.pageIndex === pageIndex;
+    const canClose = ownsSubmittedLifetime && submitted.isCurrent();
+    if (canClose) closeTaskDialog();
+    if (authExpiredRef.current) return;
+
+    const submittedTitle =
+      submitted?.kind === 'update' && submitted.targetId === target.id
+        ? submitted.title
+        : target.title;
+    const name = submittedTitle ? `「${submittedTitle}」` : '先ほど送信したタスク';
+    toast.success(`${name}を更新しました。`);
+    if (canClose || !dialogOpen) return;
+
+    // 同じタスクの古い楽観ロック値で再送信しないため、再取得を明示します。
+```
+
+
+更新成功が現在のダイアログを所有するかを対象、世代、入力版で判定します。3条件がそろった時だけ現在のフォームを閉じます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    if (editingTask?.id === target.id) {
+      toast(
+        ('送信後に入力した変更は保存されていません。' +
+          '入力内容を別の場所にコピーしてから、' +
+          'タスク編集画面を閉じて開き直し、もう一度保存してください。'),
+      );
+    }
+  };
+
+  const updateMutation = api.task.update.useMutation({
+    ...mutationLifecycle,
+    onSuccess: async (_data, variables, submitted) => {
+      finishSubmittedUpdate(submitted, { id: variables.id, title: variables.title });
+      await refreshAfterWrite(variables.id, false);
+    },
+    onError: (error, variables) => handleWriteError(error, 'update', variables.id),
+  });
+
+  const deleteMutation = api.task.delete.useMutation({
+```
+
+
+同じタスクに未保存入力が残る場合の回復案内を閉じ、更新mutationを定義した後で削除mutationを開始します。更新成功は送信対象を再取得し、保存結果と表示更新を別々に扱います。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    ...mutationLifecycle,
+    onSuccess: async (_data, variables, submitted) => {
+      if (submitted?.kind === 'delete' && submitted.targetId === variables.id) {
         setDeleteDialogOpen(false);
         setDeleteTargetId(null);
-      },
-      onError: (error) => {
-        toast.error(error.message
-          || 'タスクの削除に失敗しました');
-      },
-    });
+      }
+      await refreshAfterWrite(variables.id, false);
+    },
+    onError: (error, variables) => handleWriteError(error, 'delete', variables.id),
+  });
+  const writePending = updateMutation.isPending || deleteMutation.isPending;
+
+  const closeTaskDialog = () => {
+    formGeneration.current += 1;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+  };
+
+  const handleEdit = (taskId: string) => {
 ```
 
-3つとも成功したら `invalidate` を呼びます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。削除のあとに `setDeleteTargetId(null)` まで戻しているのは消した相手のIDを残したままだと次の削除で前の対象が使われる余地も残るためです。失敗時は `onError` が理由を表示するので、カードが残った理由も分かります。
 
-**編集と削除のハンドラー**:
+削除成功は送信対象が一致する確認画面だけを閉じます。続いて2つのmutationから共通pendingを作り、フォームを閉じる関数を定義して、編集対象を探す処理を開始します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 編集と削除のハンドラー
-  const handleEdit = (taskId: string) => {
-    const task =
-      tasks?.find((t) => t.id === taskId);
+    const task = tasks?.find((t) => t.id === taskId);
     if (task) {
+      formGeneration.current += 1;
       setEditingTask(taskToFormData(task));
       setDialogOpen(true);
     }
   };
 
   const handleDelete = (taskId: string) => {
+    if (writeSubmission.current || writePending || authExpiredRef.current) return;
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
   };
+
+  const handleSubmit = (data: TaskFormData, isCurrent: () => boolean = () => true) => {
+    if (
+      !data.id ||
+      !dialogOpen ||
+      writeSubmission.current ||
+      writePending ||
+      authExpiredRef.current ||
+      !isCurrent()
+    )
+      return;
 ```
 
-削除は押した時点では消さず、IDを控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は`Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で使ったもの（scaffold が配布済みの `src/lib/task-form.ts`）を使い回しています。
 
-**保存の中身**:
+ダイアログを閉じる時と編集対象を開く時に世代を進めます。削除確認は書込中または認証失効後に新しく開かず、送信入口でも対象と同期lockを再確認します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 保存の中身
-  const handleSubmit = (data: TaskFormData) => {
-    if (data.id) {
-      updateMutation.mutate({
-        id: data.id,
-        title: data.title,
-        description: data.description ?? null,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate
-          ? dateOnlyToUtcStartIso(
-              data.dueDate
-            )
-          : null,
-        estimatedHours:
-          data.estimatedHours ?? null,
-        projectId: data.projectId,
-        assigneeId: data.assigneeId ?? null,
-        expectedUpdatedAt:
-          data.expectedUpdatedAt,
-      });
-    }
+    writeSubmission.current = {
+      kind: 'update',
+      targetId: data.id,
+      title: data.title,
+      generation: formGeneration.current,
+      pageIndex,
+      isCurrent,
+    };
+```
+
+送信情報をrefへ保存してから更新を呼びます。返事が来たときは、この情報で送信元のフォームを確かめます。別のタスクを開き直していても、返事を現在のフォームの成功として扱わないためです。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+    updateMutation.mutate({
+      id: data.id,
+      title: data.title,
+      description: data.description || null,
+      status: data.status,
+      priority: data.priority,
+      dueDate: data.dueDate ? dateOnlyToUtcStartIso(data.dueDate) : null,
+      estimatedHours: data.estimatedHours ?? null,
+      projectId: data.projectId,
+      assigneeId: data.assigneeId || null,
+      ...(data.expectedUpdatedAt !== undefined && {
+        expectedUpdatedAt: data.expectedUpdatedAt,
+      }),
+    });
   };
+
+  const leavePageContext = () => {
+    formGeneration.current += 1;
+    setDialogOpen(false);
+    setEditingTask(undefined);
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
 ```
 
-`if (data.id)` で囲ってあるのはこの画面が編集だけを扱うためです。IDの無いデータは新規作成なのでここでは何もしません。`expectedUpdatedAt` を渡すと編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合サーバーが競合として知らせます。
-
-**期限別の振り分け**:
+更新mutationへ、送信時点で固定した入力を渡しました。次はページを離れるときの後片付けを定義し、古いフォーム世代や削除対象を残さないようにします。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 期限別の振り分け
+  };
+
+  const moveToPage = (nextPage: number) => {
+    if (isFetching || nextPage < 0 || nextPage === pageIndex) return;
+    leavePageContext();
+    setPagination({ context: pageContext, index: nextPage });
+  };
+
+  const resetPageForFilter = () => {
+    leavePageContext();
+    setPagination({ context: '', index: 0 });
+  };
+
   const groupedTasks = useMemo(() => {
     const overdue: typeof tasks = [];
+```
+
+
+固定した送信contextを完成させてupdate入力へ移します。続いて、ページを離れるときにフォーム世代と2つのダイアログを初期化する関数を定義します。その後で期限別グループの入れ物を作り始めます。
+
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
     const today: typeof tasks = [];
     const upcoming: typeof tasks = [];
     const noDueDate: typeof tasks = [];
+    const completed: typeof tasks = [];
+    const cancelled: typeof tasks = [];
     const todayKey = localDateOnly(new Date());
 
     for (const t of tasks ?? []) {
-      if (!t.dueDate) {
-        noDueDate.push(t);
+      if (t.status === TASK_STATUS.DONE) {
+        completed.push(t);
         continue;
       }
+      if (t.status === TASK_STATUS.CANCELLED) {
+        cancelled.push(t);
+        continue;
+      }
+```
 
-      const dueDateKey = dateOnlyFromValue(t.dueDate);
+完了済みとキャンセル済みは、期限を比べる前に別の配列へ入れます。`continue` で次のタスクへ進むため、終了したタスクが期限切れの配列にも入ることはありません。続けて、まだ終了していないタスクを期限で分けます。
 
-      if (dueDateKey === todayKey) {
-        today.push(t);
-      } else if (dueDateKey < todayKey) {
-        overdue.push(t);
+```typescript
+// filepath: src/app/my-task/page.tsx（同じファイルの続き）
+      if (!t.dueDate) {
+        noDueDate.push(t);
       } else {
-        upcoming.push(t);
+        const dueDateKey = dateOnlyFromValue(t.dueDate);
+        if (dueDateKey === todayKey) {
+          today.push(t);
+        } else if (dueDateKey < todayKey) {
+          overdue.push(t);
+        } else {
+          upcoming.push(t);
+        }
       }
     }
-```
 
-先に期限なしを抜いてから3つに分けているので後の比較では `dueDate` が必ず存在します。日付を `YYYY-MM-DD` の文字列にそろえてあるため比較は文字列の大小で足ります。`new Date()` のまま比べると同じ日でも時刻が違えば別物として扱われ、今日が期限のタスクが1件も一致しません。`todayKey` はこの計算時点の日付です。依存配列が `[tasks]` なので、日付が変わっただけでは再計算されません。日をまたいだ場合はページを再読み込みしてください。
-
-**振り分けの結果とローディング**:
-
-```typescript
-// filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 振り分けの結果とローディング
-    return { overdue, today, upcoming, noDueDate };
+    return { overdue, today, upcoming, noDueDate, completed, cancelled };
   }, [tasks]);
 
-  if (isCurrentUserLoading || isLoading) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
+  const queryErrors = [
 ```
 
-`return` を `useMemo` の中に置いたので4つの配列は `tasks` が変わったときだけ作り直されます。ローディングの分岐をここまで下げてあるのはhooks より前で処理を打ち切ると呼び出しの順番が変わり、React がエラーを出すからです。スピナーを `AppLayout` の中に置くとサイドバーを残したまま中身だけが差し替わります。
 
-**画面の外枠と見出し**:
+完了済みとキャンセル済みを先に分け、未完了のタスクを期限切れ、今日、今後、期限なしへ分けます。日付だけの文字列へそろえて時刻差を持ち込まず、次の読取エラー配列の宣言まで進みます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 画面の外枠と見出し
+    isCurrentUserError ? currentUserQueryError : null,
+    isTasksError ? tasksQueryError : null,
+    isProjectsError ? projectsQueryError : null,
+  ];
+  const hasFetchError = isCurrentUserError || isTasksError || isProjectsError;
+  // React Query は再取得に失敗しても前回のデータを保持する。
+  // 失敗したクエリ自身に前回値が残っている時だけバナーに留め、
+  // 一度も取れていないクエリがある場合は全面エラーにする。
+  const hasData =
+    (!isCurrentUserError || currentUser != null) &&
+    (!isTasksError || tasks != null) &&
+    (!isProjectsError || projects != null);
+  const queryAuthFailed = queryErrors.some(isAuthError);
+  useEffect(() => {
+    if (queryAuthFailed) {
+      authExpiredRef.current = true;
+      setAuthExpired(true);
+    }
+  }, [queryAuthFailed]);
+  const authFailed = authExpired || queryAuthFailed;
+  const forbidden = queryErrors.some(isForbiddenError);
+
   return (
+```
+
+
+3つのqueryエラーを集め、前回データの有無、401、403を分けます。queryの401はeffectでrefとstateへ記録し、判定をそろえてから表示のreturnへ進みます。
+
+```typescript
     <AppLayout>
-      <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold tracking-tight">
-          マイタスク
-        </h1>
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+      {(isCurrentUserLoading || isProjectsLoading || isLoading) && !authFailed && !forbidden ? (
+        <PageLoadingSpinner />
+      ) : authFailed || forbidden || (hasFetchError && !hasData) ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-base font-semibold text-foreground mb-2">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このデータを見る権限がありません'
+                : 'タスクを取得できませんでした'}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '権限が必要です。管理者に確認してください。'
+                : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <button
+            type="button"
+            className="rounded-lg border border-border/50 bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
 ```
 
-`AppLayout` で包むとサイドバーとログイン確認が自動で付きます。Day 08 で作った枠をここでも使うのでこの画面には見出しから下だけを書けば済みます。`flex flex-col gap-6` は中に並べる要素の間隔をまとめて決めるための指定です。
 
-**ステータスタブ**:
+読取中はスピナーを出し、401、403、初回取得失敗の見出しと説明を分けます。この断片の末尾では、失敗ごとの行動を選ぶボタンを開始します。
 
 ```typescript
-        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: ステータスタブ */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => {
-              if (v === 'all' || isTaskStatus(v))
-                setActiveTab(v);
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/project');
+                return;
+              }
+              void refetchCurrentUser();
+              void refetchTasks();
+              void refetchProjects();
             }}
-            className="w-full sm:w-auto"
           >
-            <TabsList>
-              {STATUS_TABS.map((tab) => (
-                <TabsTrigger
-                  key={tab.label}
-                  value={tab.value}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-```
-
-`onValueChange` が渡してくるのは `string` なので`isTaskStatus(v)` を通してから `setActiveTab` に渡します。`as TaskStatus` で押し込むと想定外の文字列がそのまま state に入り、次の取得でサーバーから弾かれます。`sm:flex-row` があるので幅の狭い画面ではタブとドロップダウンが縦に並びます。
-
-**プロジェクトの絞り込み**:
-
-```typescript
-          {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-          {/* 完成版: プロジェクトの絞り込み */}
-          <div className="ml-auto w-full sm:w-[200px]">
-            <Select
-              value={filterProject}
-              onValueChange={setFilterProject}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder="すべてのプロジェクト" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  すべてのプロジェクト
-                </SelectItem>
-                {projects?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+            {authFailed ? 'ログイン画面へ' : forbidden ? 'プロジェクト一覧へ' : '再読み込み'}
+          </button>
         </div>
+      ) : (
 ```
 
-`value="all"` の項目を自分で先頭へ置いています。絞り込みを外す選択肢は取得したプロジェクトの一覧には含まれないためです。`onValueChange={setFilterProject}` と直に渡せるのは`filterProject` が文字列で、`'all'` とプロジェクトIDが同じ型に収まるからです。
 
-**期限が近い2グループ**:
+前の断片で開いたボタンへ処理を付けます。認証切れはログイン、権限不足はproject一覧へ移動し、通信失敗だけ3つのqueryを取り直して、全画面エラーの分岐を閉じます。
 
 ```typescript
-        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 期限が近い2グループ */}
-        <TaskGroupSection
-          title="期限切れ"
-          titleClassName="text-destructive"
-          tasks={groupedTasks.overdue ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onTimeLogSuccess={handleTimeLogSuccess}
-          canEditProject={canEditProject}
-          canDeleteProject={canDeleteProject}
-        />
-
-        <TaskGroupSection
-          title="今日が期限"
-          titleClassName="text-orange-500"
-          tasks={groupedTasks.today ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onTimeLogSuccess={handleTimeLogSuccess}
-          canEditProject={canEditProject}
-          canDeleteProject={canDeleteProject}
-        />
+        <div className="flex flex-col gap-6">
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          {hasFetchError ? (
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+              <span>
+                {authFailed
+                  ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
+                  : '最新の情報を取得できませんでした。' + '表示は前回取得時の内容です。'}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-amber-400/60 px-3 py-1 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                onClick={() => {
+                  if (authFailed) {
 ```
 
-色を渡しているのはこの2つだけです。4つ全部を目立たせるとどれから手を付ければよいか判断できなくなるためです。4つの配列は `[]` で初期化されるので、末尾の `?? []` を外しても型検査を通ります。ここでは値が無い場合にも空配列を渡す防御的な指定として残しています。
 
-**急がない2グループ**:
+前回データが残る再取得失敗では、一覧を消さず警告バナーを表示します。保存済みカードを残したまま、ログイン移動か3queryの再取得を選ぶボタンを開始します。
 
 ```typescript
-        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 急がない2グループ */}
-        <TaskGroupSection
-          title="今後の予定"
-          tasks={groupedTasks.upcoming ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onTimeLogSuccess={handleTimeLogSuccess}
-          canEditProject={canEditProject}
-          canDeleteProject={canDeleteProject}
-        />
-
-        <TaskGroupSection
-          title="期限なし"
-          tasks={groupedTasks.noDueDate ?? []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onTimeLogSuccess={handleTimeLogSuccess}
-          canEditProject={canEditProject}
-          canDeleteProject={canDeleteProject}
-        />
+                    router.push('/login');
+                    return;
+                  }
+                  void refetchCurrentUser();
+                  void refetchTasks();
+                  void refetchProjects();
+                }}
+              >
+                {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+                {authFailed ? 'ログイン画面へ' : '再試行'}
+              </button>
+            </div>
+          ) : null}
 ```
 
-`titleClassName` を渡していないので見出しは通常の色になります。並べる順番を「期限切れ・今日・今後・期限なし」にしてあるのは画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。順番は呼び出す側が決めるので入れ替えたいときはこの4つの位置を動かします。
 
-**1件も無いときの案内**:
+警告のボタンでも401ならログインへ移動し、それ以外は3つのqueryを取り直します。この断片で警告バナーを閉じ、古い表示のまま操作を続ける前に更新を試せるようにします。
 
 ```typescript
-        {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 1件も無いときの案内 */}
-        {tasks && tasks.length === 0 && (
-          <div className="flex flex-col
-            items-center justify-center py-12
-            text-center text-muted-foreground">
-            <p>条件に合うタスクはありません</p>
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          <h1 className="text-3xl font-bold tracking-tight">マイタスク</h1>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => {
+                if ((v === 'all' || isTaskStatus(v)) && v !== activeTab) {
+                  resetPageForFilter();
+                  setActiveTab(v);
+                }
+              }}
+              className="w-full sm:w-auto"
+            >
+              <TabsList aria-label="ステータスフィルター">
+                {STATUS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.label} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+```
+
+ステータスタブを現在のページ寿命へつなぎました。値が変わる場合だけフォームを閉じて1ページ目へ戻します。次はプロジェクトの絞り込みを続けます。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+            <div className="ml-auto w-full sm:w-[200px]">
+              <Select
+                value={filterProject}
+                onValueChange={(value) => {
+                  if (value === filterProject) return;
+                  resetPageForFilter();
+                  setFilterProject(value);
+                }}
+              >
+                <SelectTrigger id="project-filter" aria-label="プロジェクトフィルター">
+                  <SelectValue placeholder="すべてのプロジェクト" />
+                </SelectTrigger>
+```
+
+
+タブの値は型ガードを通し、projectのSelectは現在値と候補を表示します。任意の文字列をTaskStatusへ押し込みません。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+                <SelectContent>
+                  <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        )}
-      </div>
+
+          <TaskGroupSection
+            title="期限切れ"
+            titleClassName="text-destructive"
+            tasks={groupedTasks.overdue ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+
+          <TaskGroupSection
 ```
 
-条件の先頭が `tasks &&` になっているのが要点です。`tasks` が `undefined` の間に件数を見るとまだ届いていないだけなのに0件の案内が出ます。4つのグループは空なら自分で消えるので全部が空のときだけこの案内が残ります。
 
-**2つのダイアログ**:
+project候補を閉じ、期限切れグループへ編集・削除とproject別権限を渡し、今日のグループを開始します。時間記録後の一覧更新はダイアログが所有するため、親の重複callbackは渡しません。
 
 ```typescript
-      {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: 2つのダイアログ */}
-      <TaskDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={handleSubmit}
-        initialData={editingTask}
-        projects={projects ?? []}
-      />
+            title="今日が期限"
+            titleClassName="text-orange-500"
+            tasks={groupedTasks.today ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+
+          <TaskGroupSection
+            title="今後の予定"
+            tasks={groupedTasks.upcoming ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+
+          <TaskGroupSection
+```
+
+
+今日と今後のグループへproject別権限を渡し、期限なしのグループを開始します。カード自身のprojectIdを使うので、フィルターで表示が変わっても権限判定はずれません。
+
+```typescript
+            title="期限なし"
+            tasks={groupedTasks.noDueDate ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+```
+
+終了したタスクも消さずに表示します。完了済みとキャンセル済みを分けると、作業を終えたものと取り消したものを見分けられます。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          <TaskGroupSection
+            title="完了済み"
+            tasks={groupedTasks.completed ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+          <TaskGroupSection
+            title="キャンセル済み"
+            tasks={groupedTasks.cancelled ?? []}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
+          />
+```
+
+完了済みとキャンセル済みは、期限別の4グループの後に置きます。未完了の作業を先に確認でき、終了したタスクも振り返れます。各グループが空なら `TaskGroupSection` が見出しごと非表示にします。続けて、タスクが0件のときの表示と編集ダイアログを配置します。
+
+```typescript
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          {tasks && tasks.length === 0 && pageIndex > 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>このページにはタスクがありません。</p>
+              <p>前のページへ戻ってください。</p>
+            </div>
+          )}
+
+          {tasks && tasks.length === 0 && pageIndex === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>条件に合うタスクはありません</p>
+            </div>
+          )}
+
+          {(pageIndex > 0 || (tasks?.length ?? 0) === PAGE_SIZE) && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="マイタスクのページ移動"
+            >
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isFetching || pageIndex === 0}
+```
+
+1ページ目の0件と、2ページ目以降の空ページを分けました。空の2ページ目で全体が0件だと誤解させません。次は「前へ」「次へ」を配置します。
+
+```typescript
+                onClick={() => moveToPage(pageIndex - 1)}
+              >
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+                前へ
+              </button>
+              <span className="text-sm text-muted-foreground">{pageIndex + 1}ページ目</span>
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isFetching || (tasks?.length ?? 0) < PAGE_SIZE}
+                onClick={() => moveToPage(pageIndex + 1)}
+              >
+                次へ
+              </button>
+            </nav>
+          )}
+
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+          <TaskDialog
+            open={dialogOpen}
+            onClose={closeTaskDialog}
+            onSubmit={handleSubmit}
+            initialData={editingTask}
+            projects={editableProjects}
+```
+
+「前へ」、現在のページ番号、「次へ」を配置しました。取得中は両方のボタンを無効にし、短いページでは先へ進ませません。次は編集ダイアログを続けます。
+
+```typescript
+            isPending={writePending}
+```
+
+
+1ページ目の0件と、2ページ目以降の空ページを分けます。取得中は「前へ」「次へ」を無効にします。その下へ編集ダイアログを置きます。
+
+```typescript
+          />
+{/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
+        </div>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (
+            !open &&
+            !deleteMutation.isPending
+          )
+            setDeleteTargetId(null);
+        }}
         onConfirm={() => {
-          if (deleteTargetId) {
-            deleteMutation.mutate({
-              id: deleteTargetId,
-            });
-          }
+```
+
+閉じたときの対象解除を先に終え、次の貼り付けで削除送信を続けます。条件式を短い行に分けておくと、紙面でも4つの停止条件を順番に追えます。どれか1つでも当てはまる間は送信しません。
+
+```typescript
+        // filepath: src/app/my-task/page.tsx（同じファイルの続き）
+          if (
+            !deleteTargetId ||
+            writeSubmission.current ||
+            writePending ||
+            authExpiredRef.current
+          )
+            return;
+          writeSubmission.current = {
+            kind: 'delete',
+            targetId: deleteTargetId,
+            pageIndex
+          };
+          deleteMutation.mutate({ id: deleteTargetId });
         }}
         isPending={deleteMutation.isPending}
+        closeOnConfirm={false}
       />
     </AppLayout>
   );
 }
 ```
 
-2つとも、タスクを並べる `</div>` の外側に置いてあります。カードの並びの中に入れるとグリッドの1マスとして扱われて位置が崩れるためです。`isPending` を渡しているので削除の返事を待つ間は確認ボタンが押せなくなり、同じタスクを2回消しに行く事故を防げます。
+
+取得表示の分岐を閉じ、削除確認を配置します。Confirmでは同期lockを取得し、成功callbackだけが開いた確認画面を閉じます。
 
 ## 今日のまとめ
 
 Day 17 おつかれさまでした。これで自分専用のタスクダッシュボードが完成しました。プロジェクトマネージャーが使うような機能を自分で作れるようになりました。
 
-- [ ] `getCurrentUser` で自分のIDを取得できた
+- [ ] `getCurrentUser` で自分のIDを取得できました
 - [ ] `getAll({ assigneeId })` で自分のタスク取得
-- [ ] `PageLoadingSpinner` でローディング表示を実装した
-- [ ] Tabs でステータスフィルターを実装できた
-- [ ] `dateOnlyFromValue()` / `localDateOnly()` で期限別グループ表示を実装できた
-- [ ] TaskDialog を使って編集・削除できた
+- [ ] `PageLoadingSpinner` でローディング表示を実装しました
+- [ ] Tabs でステータスフィルターを実装できました
+- [ ] 100件ずつ「前へ」「次へ」で移動できました
+- [ ] `dateOnlyFromValue()` / `localDateOnly()` で期限別グループ表示を実装できました
+- [ ] TaskDialog を使って編集・削除できました
 
 ## つまずきポイント
 
-| エラー / 問題 | 原因 | 解決方法 |
-|--------------|------|---------|
-| 全タスクが表示される | `assigneeId` 未設定 | `currentUser?.id` を渡す |
-| タスクが表示されない | `enabled` 未設定 | `{ enabled: !!currentUser }` で制御 |
-| 今日のタスクが正しく判定されない | `Date` の時刻・タイムゾーンまで比較している | `dateOnlyFromValue()` / `localDateOnly()` で `YYYY-MM-DD` にそろえる |
-| 編集が動かない | Step 8 の仮 `handleEdit` が残っている | Step 9 の手順で本実装に置き換える |
-| 読み込み中に0件の案内が出る | `isCurrentUserLoading` または `isLoading` の判定漏れ | `isCurrentUserLoading \|\| isLoading` の両方を確認 |
+#### 全タスクが表示される
+
+**原因**
+
+`assigneeId` が設定されていないためです。
+
+**解決方法**
+
+`currentUser?.id` を渡してください。
+
+#### タスクの取得が始まらない
+
+**原因**
+
+`enabled` の条件が `false` のままだからです。`currentUser` がまだ無い場合と、認証切れを記録した場合は `task.getAll` を呼びません。`enabled` を省くと `currentUser` を待たずに取得できるため、`assigneeId` が `undefined` の間は閲覧できるプロジェクト内で担当者を限定しない条件になります。
+
+**解決方法**
+
+DevTools の Network タブで `getCurrentUser` が成功しているか確認してください。
+`task.getAll.useQuery` の第2引数は `{ enabled: !!currentUser && !authExpired, retry: shouldRetryQuery }` にします。ユーザー情報の取得後に `task.getAll` が始まり、認証切れ後は止まります。
+通信が成功して0件の場合は、担当者がログイン中の自分か、ステータスとプロジェクトの絞り込みが残っていないかも確認します。
+
+#### 今日のタスクが正しく判定されない
+
+**原因**
+
+`Date` の時刻・タイムゾーンまで比較しているためです。
+
+**解決方法**
+
+`dateOnlyFromValue()` / `localDateOnly()` で `YYYY-MM-DD` にそろえてください。
+
+#### 編集が動かない
+
+**原因**
+
+Step 8 の仮 `handleEdit` が残っているためです。
+
+**解決方法**
+
+Step 9 の手順で本実装に置き換えてください。
+
+#### 読み込み中に0件の案内が出る
+
+**原因**
+
+利用者、プロジェクト、タスクのいずれかの読取中判定が抜けているためです。
+
+**解決方法**
+
+`isCurrentUserLoading || isProjectsLoading || isLoading` の3つを確認してください。認証切れや権限不足のときはスピナーより案内を優先するため、完成コードの `!authFailed && !forbidden` も残します。
 
 ## 今日学んだ用語
 
@@ -2045,9 +3286,11 @@ Day 17 おつかれさまでした。これで自分専用のタスクダッシ�
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. `api.task.getAll.useQuery` の第2引数に書いた `{ enabled: !!currentUser }` は何を止めていますか。**
+**Q1. `api.task.getAll.useQuery` の第2引数に書いた `enabled` は何を止めていますか。**
 
-A. `currentUser` がサーバーから届くまでタスクを取りに行く通信そのものを送らせません。止めないと `assigneeId` は `undefined` のまま送られ、担当者の絞り込みが外れた一覧を一瞬だけ表示します。自分のタスクを見に来た画面へ、他人のタスクが混ざって見えることになります。
+A. `currentUser` が届く前と、認証切れを記録した後の通信を止めます。
+利用者が届く前に送ると `assigneeId` が `undefined` になり、担当者の絞り込みが外れます。
+401の後も送り続けると、ログイン案内へ切り替えた画面で不要な通信を重ねます。
 
 **Q2. `groupedTasks` の `useMemo` の依存配列を `[tasks]` から `[]` に変えると画面はどうなりますか。**
 

@@ -186,7 +186,7 @@ export default function WeeklyReportPage() {
           </Card>
           <Card>
             <CardContent className="pt-6 sm:pt-6">
-              <p className="text-sm text-muted-foreground mb-1">対象期間（UTC）</p>
+              <p className="text-sm text-muted-foreground mb-1">集計期間（UTC基準）</p>
               <p className="text-lg font-semibold">
                 {reportData?.startDate && reportData?.endDate
                   ? `${formatDateOnly(reportData.startDate)} - ${formatDateOnly(reportData.endDate)}`
