@@ -13,8 +13,8 @@
  },
  "verdicts": {
   "must": 0,
-  "suggest": 6,
-  "ok": 79
+  "suggest": 13,
+  "ok": 72
  },
  "pages": [
   {
@@ -228,9 +228,9 @@
   },
   {
    "page": 32,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
-    "下部約70%余白"
+    "下部約70%余白(改頁不可ブロック後送り)"
    ]
   },
   {
@@ -282,7 +282,7 @@
   },
   {
    "page": 40,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約70%余白"
    ]
@@ -343,7 +343,7 @@
   },
   {
    "page": 49,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約75%余白"
    ]
@@ -407,7 +407,7 @@
   },
   {
    "page": 59,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約75%余白"
    ]
@@ -435,7 +435,7 @@
   },
   {
    "page": 63,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約70%余白"
    ]
@@ -485,7 +485,7 @@
   },
   {
    "page": 71,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約80%余白"
    ]
@@ -520,7 +520,7 @@
   },
   {
    "page": 76,
-   "verdict": "ok",
+   "verdict": "suggest",
    "findings": [
     "下部約80%余白"
    ]
