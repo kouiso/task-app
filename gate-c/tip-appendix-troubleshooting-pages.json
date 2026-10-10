@@ -1,0 +1,50 @@
+{
+ "book": "appendix_トラブルシューティング.pdf",
+ "pdf_sha256_head12": "4cf1350761c8",
+ "pages_total": 21,
+ "pages_inspected": 21,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全21頁を100dpi PNG化→1頁ずつ実画像を目視(21頁×1チャンク)。疑義箇所は原稿mdと照合。",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-fc85e1e5e2e749e2a7aaa1c0f4dbc94a",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 初回目視検査(旧build e39a1ce9 では非day冊は未検査だったためtip初検査)"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 3,
+  "ok": 18
+ },
+ "pages": [
+  {"page": 1, "verdict": "ok", "findings": []},
+  {"page": 2, "verdict": "ok", "findings": []},
+  {"page": 3, "verdict": "ok", "findings": []},
+  {"page": 4, "verdict": "ok", "findings": []},
+  {"page": 5, "verdict": "ok", "findings": []},
+  {"page": 6, "verdict": "ok", "findings": []},
+  {"page": 7, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注1が裸URLのみ(code.visualstudio.com/download)。endnote式組版共通問題"}
+  ]},
+  {"page": 8, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注2が裸URLのみ(code.visualstudio.com/docs/remote/wsl・同型)"}
+  ]},
+  {"page": 9, "verdict": "ok", "findings": []},
+  {"page": 10, "verdict": "ok", "findings": []},
+  {"page": 11, "verdict": "ok", "findings": []},
+  {"page": 12, "verdict": "ok", "findings": []},
+  {"page": 13, "verdict": "ok", "findings": []},
+  {"page": 14, "verdict": "ok", "findings": []},
+  {"page": 15, "verdict": "ok", "findings": []},
+  {"page": 16, "verdict": "ok", "findings": []},
+  {"page": 17, "verdict": "ok", "findings": []},
+  {"page": 18, "verdict": "ok", "findings": []},
+  {"page": 19, "verdict": "ok", "findings": []},
+  {"page": 20, "verdict": "ok", "findings": [
+   {"severity": "info", "detail": "「戻る」節の脚注参照*3/*4の注記が次頁(p21奥付)下部に配置されるendnote式配置(注文は欠落なし・p21側をsuggest判定)"}
+  ]},
+  {"page": 21, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注3-4が裸URLのみ(Google Drive・`vie`/`w?usp=drivesdk`語途中改行)。参照元はp20「戻る」節"}
+  ]}
+ ]
+}
