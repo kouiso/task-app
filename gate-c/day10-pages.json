@@ -1,0 +1,1094 @@
+{
+  "book": "day10_プロジェクト新規作成",
+  "pdf_sha256": "30a069f0d86a02098023430ed12e0425bff8ef3efcabe3ac3392e7b6562cc3ec",
+  "pdf_sha256_head12": "30a069f0d86a",
+  "pages_total": 120,
+  "pages_inspected": 120,
+  "inspection": {
+    "method": "pdftoppm -r 120 PNG full-page visual inspection, every page opened individually",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-772a3657897443cbab48d3ea9d2f6cd8",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 0,
+    "suggest": 62,
+    "ok": 58
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "figure",
+          "detail": "図1 プロジェクト作成ダイアログ実UI 完全描画"
+        }
+      ]
+    },
+    {
+      "page": 5,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "例え話box 1つだけで下部約75%白紙（次節が改ページ後送り）"
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "figure",
+          "detail": "図2 Mermaidフローチャート完全描画（ラベル切れなし・右端OK）"
+        }
+      ]
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 8,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "ファイルツリー注釈 `← Step 1〜6 / で中身を書き直す`・`← Step 0 で create / を追加` がブロック左端へ折返し（ツリー構造崩れ）"
+        }
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "table-wrap",
+          "detail": "概念表の zodResolver がセル内で zodResolve|r に分断（読みは追える）"
+        }
+      ]
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約50%白紙"
+        }
+      ]
+    },
+    {
+      "page": 12,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "import `'@/lib/constant/project';`・`'@/lib/constant/roles';` が `from` 後に行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 14,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約70%白紙（コードブロックが次頁へ後送り）"
+        }
+      ]
+    },
+    {
+      "page": 15,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`input(`→`projectCreateSchema)`、`new Date(`→`input.startDate)`、`new Date(`→`input.endDate)` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 16,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約65%白紙"
+        }
+      ]
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "code-style",
+          "detail": "import文がインデント付き2行分割（リポジトリの整形スタイル・一貫）"
+        }
+      ]
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約60%白紙"
+        }
+      ]
+    },
+    {
+      "page": 22,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`=> void |`→`Promise<void>;` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`data.startDate`→`> data.endDate) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "表が頁跨ぎ（次頁でヘッダー再掲・許容）+ 下部約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 28,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`},`→`}: ProjectDialogProps) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 30,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメント `...tsx(続`→`き) */` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "box-split",
+          "detail": "要点boxが頁跨ぎで文中分割（枠は両頁で閉じており読める）"
+        }
+      ]
+    },
+    {
+      "page": 32,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約65%白紙"
+        }
+      ]
+    },
+    {
+      "page": 33,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`async (data:`→`ProjectFormValues) => {`、`{ description:`→`data.description }),` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 36,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメント `{/* filepath:`→`src/... */}` が行頭へ割れる + 下部約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 37,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメント割れ + `{errors.name ?`→`'name-error' : undefined}` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 39,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメント `{/* filepath:`→`src/...` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 41,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメントが行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 42,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメントが行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメント割れ + `{errors.endDate ?`→`'end-date-error' : undefined}`、`className=\"text-sm`→`text-destructive\">` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "figure",
+          "detail": "図3 プロジェクト作成ダイアログ完成形 完全描画"
+        }
+      ]
+    },
+    {
+      "page": 46,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメントが行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 49,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "import `} from`→`'react';` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 50,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "import `} from`→`'@/lib/project-write-error';`・`'@/lib/query-error';` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 51,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{ generation: 0, target:`→`null as string | null });`、`{ generation:`→`formSession.current.generation + 1,` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 53,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`('none' as`→`const) :`、`.invalidate(`→`undefined, filters]);`、console.error引数 `error);` が行頭へ割れる + 文字列連結の `+` が孤立(4箇所)"
+        }
+      ]
+    },
+    {
+      "page": 54,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`classifyProjectWriteError(error,`→`'create');` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 55,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{ generation:`→`formSession...`、`formSubmitting.current)`→`return;`、`dateOnlyToUtcStartIso(`→`data.startDate)`・`data.endDate)` が行頭へ割れる(4箇所)"
+        }
+      ]
+    },
+    {
+      "page": 56,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`.delete(error))`→`throw error;`、`generation ===`→`session.generation &&` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 57,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "Button子要素 `ログイン画面へ</Button>` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "figure",
+          "detail": "図4 新カード追加の一覧画面 完全描画"
+        }
+      ]
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約45%白紙"
+        }
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "figure",
+          "detail": "図5 バリデーションエラー表示ダイアログ 完全描画"
+        }
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 63,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "Proパターン導入文のみで下部約75%白紙（Beforeコードが次頁後送り）"
+        }
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`useCreateProjectSubmit(onClose: () =>`→`void) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 66,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約80%白紙"
+        }
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`(onClose: () =>`→`void) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "見出し「import と作成用スキーマ:」後 約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 72,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`(startDate: Date | null,`→`endDate: Date | null) => {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 73,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`input.userId !==`→`ctx.session.userId) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約50%白紙"
+        }
+      ]
+    },
+    {
+      "page": 75,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約75%白紙（getAllが返すデータ節が次頁後送り）"
+        }
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 77,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`.input(`→`projectCreateSchema).mutation(...`、`new Date(`→`input.startDate)`・`input.endDate)` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 79,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約75%白紙"
+        }
+      ]
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 81,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`=> void |`→`Promise<void>;` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約50%白紙"
+        }
+      ]
+    },
+    {
+      "page": 83,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`&& data.startDate`→`> data.endDate) {` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 85,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 86,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "本文3行のみで下部約85%白紙"
+        }
+      ]
+    },
+    {
+      "page": 87,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`async (data:`→`ProjectFormValues) => {`、`{ description:`→`data.description }),` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 88,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "本文2行のみで下部約85%白紙"
+        }
+      ]
+    },
+    {
+      "page": 89,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`aria-hidden=...`→`className=\"text-destructive\">`、`id=\"name\"`→`placeholder=...` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 90,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "本文3行のみで下部約85%白紙"
+        }
+      ]
+    },
+    {
+      "page": 91,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{errors.name ?`→`'name-error' : undefined}` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 92,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約85%白紙"
+        }
+      ]
+    },
+    {
+      "page": 93,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 94,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{errors.endDate ?`→`'end-date-error' : undefined}`、`id=\"end-date-error\"`→`className=...` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 95,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "filepathコメントが語中(同|じファイル)で行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 96,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約75%白紙"
+        }
+      ]
+    },
+    {
+      "page": 97,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`} from`→`'react';`・`'@/component/project/project-dialog';` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 98,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`} from`→2箇所 + `{ generation: 0, target:`→`null as string | null });` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 99,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{ generation:`→`formSession...`、`projectsLoading,`→`error: projectsError }` が行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 100,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`('none' as`→`const) :` が行頭へ割れる + 下部約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 101,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`.invalidate(`→`undefined, filters]);`、console.error→`error);`、文字列連結の `+` が行頭に孤立(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 102,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`classifyProjectWriteError(error,`→`'create');` が行頭へ割れる + 下部約50%白紙"
+        }
+      ]
+    },
+    {
+      "page": 103,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`{ generation:`→`formSession.current.generation + 1,...` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 104,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`formSubmitting.current)`→`return;`、`dateOnlyToUtcStartIso(`→2箇所、`.delete(error))`→`throw error;` が行頭へ割れる(4箇所)"
+        }
+      ]
+    },
+    {
+      "page": 105,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`generation ===`→`session.generation &&` が行頭へ割れる"
+        },
+        {
+          "severity": "suggest",
+          "category": "layout",
+          "detail": "下部約70%白紙"
+        }
+      ]
+    },
+    {
+      "page": 106,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "Button子要素 `ログイン画面へ</Button>` が行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 107,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 108,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 109,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "`(const task of`→`project.tasks ?? [])) {`、`task.status ===`→`TASK_STATUS.CANCELLED)`・`TASK_STATUS.DONE)` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 110,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 111,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "category": "layout",
+          "detail": "下部約55%白紙"
+        }
+      ]
+    },
+    {
+      "page": 112,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "code-wrap",
+          "detail": "三項演算子両側 `'アーカイブ済み...'`・`'進行中...'`・`:` が行頭へ割れる(3箇所)"
+        }
+      ]
+    },
+    {
+      "page": 113,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 114,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 115,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 116,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 117,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 118,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 119,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "bare-url-footnote",
+          "detail": "Drive裸URL脚注×6が語中で改行折返し（day09 p85/86と同じ既知パターン）"
+        }
+      ]
+    },
+    {
+      "page": 120,
+      "verdict": "ok",
+      "findings": []
+    }
+  ]
+}
