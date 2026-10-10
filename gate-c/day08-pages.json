@@ -1,0 +1,726 @@
+{
+  "book": "day08_サイドバー付きのアプリレイアウトを作ろう.pdf",
+  "pdf_sha256": "6f834c97a3d600f1c391770ee5e0a00704e8b1ee02c20fdbab4070a174fd3dc5",
+  "pdf_sha256_head12": "6f834c97a3d6",
+  "pages_total": 85,
+  "pages_inspected": 85,
+  "inspection": {
+    "method": "poppler(pdftoppm)で全85頁を100dpi PNG化→1頁ずつ実画像を目視(25頁×3+10頁の4チャンクで生成→目視→削除)。疑義箇所は原稿mdのMermaid原文とラベル照合。抽出テキスト確認は不使用",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-5e46fa7b625f4154a5eff435b71fda1d",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 4,
+    "suggest": 3,
+    "ok": 78
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 5,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図2『今日作る構造』(flowchart TD)ノード4箇所クリップ:『layout.t』(layout.tsx→sx欠落)『Provide』(Providers→rs欠落)『dashboard/pa』(page.tsx→ge.tsx欠落)『AppLayo』(AppLayout→ut欠落)。ファイルパス識別子が変化・組版共通問題"
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 7,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "概念表『useMutatio/n』+実装ステップ表『provide/rs.tsx』『Provide/r が囲ん/でいるか読む』が語途中折返し。day07 p8-10同型"
+        }
+      ]
+    },
+    {
+      "page": 8,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "同表続行『AppLay/out を作/る』『ダッシュ/ボードに/AppLay/out を適/用する』『ログインし/て全体の/動作を確/認する』語途中折返し。同型"
+        }
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図3(flowchart LR)ラベル4箇所クリップ:エッジ『api.auth.login.m』(mutate→utate欠落)『HTTP POST /api』(/api/trpc→/trpc欠落)ノード『TRPCReactProv』(Provider→ider欠落)エッジ『dat』(data→a欠落)。API識別子・パスが変化・同型"
+        }
+      ]
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(children: 続き React.ReactNode }) { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 12,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('next/font/google'; が行頭)。下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(className=${...} テンプレート続行2行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙"
+        }
+      ]
+    },
+    {
+      "page": 15,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図4(flowchart TD)ラベルクリップ:『AppLayout マウン』(マウント→ト欠落)エッジ『Ye』×2(Yes→s欠落)『Nc』×2(No→o欠落でc化け)。同型"
+        }
+      ]
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(useState<string | / null>(null); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(logoutMutation.isPending) return; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 22,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し((open: boolean) => {、logoutMutation.isPending)) return; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(justify-center\"> が行頭・className文字列途中)"
+        }
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(bg-sidebar md:flex\">、p-4\">、text-sidebar-foreground\"> が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント分断+className文字列続行複数が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント分断+className文字列複数が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 32,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙"
+        }
+      ]
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(className文字列続行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(logoutError}</p>、logoutMutation.isPending}>等が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割白紙"
+        }
+      ]
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント */} が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割白紙"
+        }
+      ]
+    },
+    {
+      "page": 38,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図6(flowchart TD)ノード5箇所クリップ:『src/app/layout.tsx (P』((Providers)→roviders)欠落)『dashboard/pa』(page.tsx→ge.tsx欠落)『login/page』(page.tsx→.tsx欠落)『register/pac』(page.tsx→ge.tsx欠落)『AppLayo』(AppLayout→ut欠落)。同型"
+        }
+      ]
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(text-foreground\"> が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(React.ReactNode }) { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(description文字列連結+classNameテンプレート続行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(useState(false);、useState<string | / null>(null); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(logoutMutation.isPending) return; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し({、logoutMutation.isPending)) return; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 57,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(justify-center\"> が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(className文字列続行3行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント分断+三項演算子・文字列連結の続行複数が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント分断が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行4行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行2行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+ログアウトしますか?</AlertDialogTitle>、logoutError}</p>、logoutMutation.isPending}>が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepathコメント続行2行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(number): string {、テンプレート続行、currentHour); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(className文字列続行2行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙"
+        }
+      ]
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行6行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行7行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行4行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 75,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行5行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行6行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(filepath分断+className文字列続行4行が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 79,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 81,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 84,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注1-6が裸URLのみ(Google Drive・vie/w?usp=drivesdk語途中改行)。endnote式同型"
+        }
+      ]
+    },
+    {
+      "page": 85,
+      "verdict": "ok",
+      "findings": []
+    }
+  ]
+}
