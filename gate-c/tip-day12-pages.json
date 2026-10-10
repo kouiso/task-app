@@ -1,0 +1,1364 @@
+{
+ "book": "day12",
+ "pdf_file": "day12_メンバー追加.pdf",
+ "pdf_sha256_head12": "55c0f815ce90",
+ "pdf_pages_total": 169,
+ "pages_inspected": 169,
+ "inspection": {
+  "method": "pdftoppm -r 100 full-page PNG, every page visually inspected; 200dpi crops for Mermaid",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-8fcefb2b353645f4a4411adc9e263f8a",
+  "inspected_at": "2026-10-10",
+  "note": "Fresh re-inspection at tip 5881e2f7 (post font-measure rebuild); prior e39a1ce9 verdicts are stale."
+ },
+ "verdicts": {
+  "must": [],
+  "suggest": [
+   40,
+   58,
+   68,
+   96,
+   99,
+   134,
+   137,
+   146,
+   148,
+   149,
+   157,
+   158,
+   165,
+   168
+  ],
+  "ok": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53,
+   54,
+   55,
+   56,
+   57,
+   59,
+   60,
+   61,
+   62,
+   63,
+   64,
+   65,
+   66,
+   67,
+   69,
+   70,
+   71,
+   72,
+   73,
+   74,
+   75,
+   76,
+   77,
+   78,
+   79,
+   80,
+   81,
+   82,
+   83,
+   84,
+   85,
+   86,
+   87,
+   88,
+   89,
+   90,
+   91,
+   92,
+   93,
+   94,
+   95,
+   97,
+   98,
+   100,
+   101,
+   102,
+   103,
+   104,
+   105,
+   106,
+   107,
+   108,
+   109,
+   110,
+   111,
+   112,
+   113,
+   114,
+   115,
+   116,
+   117,
+   118,
+   119,
+   120,
+   121,
+   122,
+   123,
+   124,
+   125,
+   126,
+   127,
+   128,
+   129,
+   130,
+   131,
+   132,
+   133,
+   135,
+   136,
+   138,
+   139,
+   140,
+   141,
+   142,
+   143,
+   144,
+   145,
+   147,
+   150,
+   151,
+   152,
+   153,
+   154,
+   155,
+   156,
+   159,
+   160,
+   161,
+   162,
+   163,
+   164,
+   166,
+   167,
+   169
+  ]
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": [
+    "cover"
+   ]
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": [
+    "目次"
+   ]
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": [
+    "前回の振り返り/今日のゴール"
+   ]
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": [
+    "図1メンバーカード完全"
+   ]
+  },
+  {
+   "page": 5,
+   "verdict": "ok",
+   "findings": [
+    "★図2Mermaid全ラベル完全(page.tsx props→ProjectDetailView/メンバー追加ボタン→onAddMemberClick→page.tsx callback→メンバー追加ダイアログ→api.project.addMember・削除ボタン→onRemoveMember→DeleteConfirmDialog→api.project.removeMember)旧must解消"
+   ]
+  },
+  {
+   "page": 6,
+   "verdict": "ok",
+   "findings": [
+    "やること表+概念表完全"
+   ]
+  },
+  {
+   "page": 7,
+   "verdict": "ok",
+   "findings": [
+    "概念表+ファイルツリー完全"
+   ]
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": [
+    "roles.ts表+権限表完全(Record<ProjectMemberRole,string>収まる)"
+   ]
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": [
+    "権限表+ステップ一覧完全"
+   ]
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": [
+    "ステップ表続き"
+   ]
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": [
+    "Step0説明"
+   ]
+  },
+  {
+   "page": 12,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(userMember?[userMember]:→[],'canManageMembers');)"
+   ]
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": [
+    "下部約50%余白"
+   ]
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": [
+    "図3登録ユーザー構成完全"
+   ]
+  },
+  {
+   "page": 15,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(USER_SELECT}from→'./_helpers/select';)"
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(.default(→PROJECT_MEMBER_ROLE.MEMBER),)+下部約55%余白"
+   ]
+  },
+  {
+   "page": 17,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(.input(→projectMemberSchema).mutation(・id:→string}>>(・${→input.projectId}FOR UPDATE`・[userMember]:→[],'canManageMembers'))"
+   ]
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(message:→'オーナー権限の付与は…')"
+   ]
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(message:→'このユーザーは既に…')"
+   ]
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": [
+    "下部約50%余白"
+   ]
+  },
+  {
+   "page": 21,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(Prisma.sql`SELECT…${・input.projectId}FOR UPDATE`行頭・=>→{)"
+   ]
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap([userMember]→: [],'canManageMembers');)"
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": [
+    "下部約35%余白"
+   ]
+  },
+  {
+   "page": 24,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(message:→'オーナーの削除は…')+下部約50%余白"
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(await→tx.projectMember.count(・message:→'プロジェクト唯一のオーナー…')"
+   ]
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": [
+    "下部約37%余白"
+   ]
+  },
+  {
+   "page": 27,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(Prisma.sql`…${・input.projectId}FOR UPDATE`行頭)"
+   ]
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap([userMember]→: [],'canManageMembers');)+下部約50%余白"
+   ]
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": [
+    "下部約45%余白"
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(targetMember.role===→PROJECT_MEMBER_ROLE.OWNER)&&・message:→'オーナー権限の変更は…')"
+   ]
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(targetMember.role===→OWNER行頭・&&孤立・await→tx.projectMember.count(・message:→'プロジェクト唯一のオーナーの権限は…')"
+   ]
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 34,
+   "verdict": "ok",
+   "findings": [
+    "下部約42%余白"
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": [
+    "下部約28%余白"
+   ]
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": [
+    "図4詳細ページスクショ完全"
+   ]
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": [
+    "props表完全"
+   ]
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 40,
+   "verdict": "suggest",
+   "findings": [
+    "2段落のみ・下部約73%白紙"
+   ]
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": [
+    "props JSX完全"
+   ]
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(enabled:…&&→canManageMembers,行頭)"
+   ]
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": [
+    "下部約25%余白"
+   ]
+  },
+  {
+   "page": 49,
+   "verdict": "ok",
+   "findings": [
+    "Dialog JSX完全"
+   ]
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": [
+    "下部約57%余白"
+   ]
+  },
+  {
+   "page": 51,
+   "verdict": "ok",
+   "findings": [
+    "Select JSX完全"
+   ]
+  },
+  {
+   "page": 52,
+   "verdict": "ok",
+   "findings": [
+    "SelectContent JSX完全"
+   ]
+  },
+  {
+   "page": 53,
+   "verdict": "ok",
+   "findings": [
+    "role Select JSX完全"
+   ]
+  },
+  {
+   "page": 54,
+   "verdict": "ok",
+   "findings": [
+    "下部約62%余白"
+   ]
+  },
+  {
+   "page": 55,
+   "verdict": "ok",
+   "findings": [
+    "SelectContent map JSX完全"
+   ]
+  },
+  {
+   "page": 56,
+   "verdict": "ok",
+   "findings": [
+    "DialogFooter完全"
+   ]
+  },
+  {
+   "page": 57,
+   "verdict": "ok",
+   "findings": [
+    "図5メンバー追加ダイアログ完全"
+   ]
+  },
+  {
+   "page": 58,
+   "verdict": "suggest",
+   "findings": [
+    "2段落のみ・下部約80%白紙"
+   ]
+  },
+  {
+   "page": 59,
+   "verdict": "ok",
+   "findings": [
+    "addMemberMutation完全"
+   ]
+  },
+  {
+   "page": 60,
+   "verdict": "ok",
+   "findings": [
+    "handleAddMember完全"
+   ]
+  },
+  {
+   "page": 61,
+   "verdict": "ok",
+   "findings": [
+    "Step6冒頭"
+   ]
+  },
+  {
+   "page": 62,
+   "verdict": "ok",
+   "findings": [
+    "removeMemberMutation完全"
+   ]
+  },
+  {
+   "page": 63,
+   "verdict": "ok",
+   "findings": [
+    "handleRemoveMember+props差し替え指示"
+   ]
+  },
+  {
+   "page": 64,
+   "verdict": "ok",
+   "findings": [
+    "下部約64%余白"
+   ]
+  },
+  {
+   "page": 65,
+   "verdict": "ok",
+   "findings": [
+    "DeleteConfirmDialog JSX完全"
+   ]
+  },
+  {
+   "page": 66,
+   "verdict": "ok",
+   "findings": [
+    "window.confirm比較表+図6スクショ完全"
+   ]
+  },
+  {
+   "page": 67,
+   "verdict": "ok",
+   "findings": [
+    "権限表完全"
+   ]
+  },
+  {
+   "page": 68,
+   "verdict": "suggest",
+   "findings": [
+    "図7sequence右端ラベル切れ(assertMemberPermission(canManageMembers が')欠け・200dpi確認)"
+   ]
+  },
+  {
+   "page": 69,
+   "verdict": "ok",
+   "findings": [
+    "フロント/バック比較表完全"
+   ]
+  },
+  {
+   "page": 70,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 71,
+   "verdict": "ok",
+   "findings": [
+    "テストシナリオ表×2完全"
+   ]
+  },
+  {
+   "page": 72,
+   "verdict": "ok",
+   "findings": [
+    "図8メンバーカード完全"
+   ]
+  },
+  {
+   "page": 73,
+   "verdict": "ok",
+   "findings": [
+    "表+本文完全"
+   ]
+  },
+  {
+   "page": 74,
+   "verdict": "ok",
+   "findings": [
+    "図9+図10スクショ完全"
+   ]
+  },
+  {
+   "page": 75,
+   "verdict": "ok",
+   "findings": [
+    "Proパターン表+下部約50%余白"
+   ]
+  },
+  {
+   "page": 76,
+   "verdict": "ok",
+   "findings": [
+    "Step9本文完全+下部約30%余白"
+   ]
+  },
+  {
+   "page": 77,
+   "verdict": "ok",
+   "findings": [
+    "Step9手順+ターミナルblock完全"
+   ]
+  },
+  {
+   "page": 78,
+   "verdict": "ok",
+   "findings": [
+    "完成コード対応表+下部約35%余白"
+   ]
+  },
+  {
+   "page": 79,
+   "verdict": "ok",
+   "findings": [
+    "import行頭割れ×5(DEFAULT_PROJECT_COLOR→'@/lib/constant/project'等)"
+   ]
+  },
+  {
+   "page": 80,
+   "verdict": "ok",
+   "findings": [
+    "schema完全+下部約35%余白"
+   ]
+  },
+  {
+   "page": 81,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(.default(→PROJECT_MEMBER_ROLE.MEMBER),)+下部約55%余白"
+   ]
+  },
+  {
+   "page": 82,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(userId:string,→projectId…=>{・Prisma.sql`行頭・projectId}FOR UPDATE`・[userMember]:→[],'canArchive'))"
+   ]
+  },
+  {
+   "page": 83,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(input.userId!==→ctx.session.userId){)+下部約30%余白"
+   ]
+  },
+  {
+   "page": 84,
+   "verdict": "ok",
+   "findings": [
+    "getAllクエリ完全+下部約35%余白"
+   ]
+  },
+  {
+   "page": 85,
+   "verdict": "ok",
+   "findings": [
+    "findMany完全+下部約35%余白"
+   ]
+  },
+  {
+   "page": 86,
+   "verdict": "ok",
+   "findings": [
+    "getById完全+下部約30%余白"
+   ]
+  },
+  {
+   "page": 87,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(createdAt:→'desc'}],・m.userId===→ctx.session.userId),)+下部約35%余白"
+   ]
+  },
+  {
+   "page": 88,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(await→prisma.projectMember.findUnique({・[userMember]:→[],'canManageMembers'))+下部約35%余白"
+   ]
+  },
+  {
+   "page": 89,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(.input(→projectCreateSchema).mutation(・?new Date(→input.startDate)・?new Date(→input.endDate))"
+   ]
+  },
+  {
+   "page": 90,
+   "verdict": "ok",
+   "findings": [
+    "create完了+下部約30%余白"
+   ]
+  },
+  {
+   "page": 91,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(.input(→projectUpdateSchema).mutation(・Prisma.sql`…${・id}FOR UPDATE`行頭)"
+   ]
+  },
+  {
+   "page": 92,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(project.members,→'canManageMembers'/'canArchive')"
+   ]
+  },
+  {
+   "page": 93,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(project.endDate:→data.endDate?…・||→data.endDate!==)"
+   ]
+  },
+  {
+   "page": 94,
+   "verdict": "ok",
+   "findings": [
+    "update完了+下部約40%余白"
+   ]
+  },
+  {
+   "page": 95,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(id:→string}>>(・Prisma.sql`…${・input.id}FOR UPDATE`行頭)"
+   ]
+  },
+  {
+   "page": 96,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約85%白紙"
+   ]
+  },
+  {
+   "page": 97,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(userId:→ctx.session.userId,projectId:input.id}・!==→PROJECT_MEMBER_ROLE.OWNER){・input.id}→});・.input(→projectMemberSchema).mutation()"
+   ]
+  },
+  {
+   "page": 98,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(Prisma.sql`…${・input.projectId}FOR UPDATE`・await→tx.projectMember.findUnique(・[userMember]:→[],'canManageMembers'))"
+   ]
+  },
+  {
+   "page": 99,
+   "verdict": "suggest",
+   "findings": [
+    "コード3行+1段落・下部約78%白紙"
+   ]
+  },
+  {
+   "page": 100,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(){・message:→'オーナー権限の付与は…')+下部約35%余白"
+   ]
+  },
+  {
+   "page": 101,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(message:→'このユーザーは既に…'・.input(行頭)"
+   ]
+  },
+  {
+   "page": 102,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(Prisma.sql`…${・input.projectId}FOR UPDATE`行頭)"
+   ]
+  },
+  {
+   "page": 103,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap([userMember]→: [],'canManageMembers');)"
+   ]
+  },
+  {
+   "page": 104,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(){・message:→'オーナーの削除は…'・await→tx.projectMember.count("
+   ]
+  },
+  {
+   "page": 105,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(message:→'プロジェクト唯一のオーナーは削除できません')"
+   ]
+  },
+  {
+   "page": 106,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(Prisma.sql`…${・input.projectId}FOR UPDATE`行頭)"
+   ]
+  },
+  {
+   "page": 107,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap([userMember]→: [],'canManageMembers');)"
+   ]
+  },
+  {
+   "page": 108,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(OWNER)&&行頭・) {・message:→'オーナー権限の変更は…')"
+   ]
+  },
+  {
+   "page": 109,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(===→OWNER行頭・await→tx.projectMember.count(・message:→'プロジェクト唯一のオーナーの権限は…')"
+   ]
+  },
+  {
+   "page": 110,
+   "verdict": "ok",
+   "findings": [
+    "archive入口+本文完全"
+   ]
+  },
+  {
+   "page": 111,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(ctx.session.userId,→input.id,true/false);)"
+   ]
+  },
+  {
+   "page": 112,
+   "verdict": "ok",
+   "findings": [
+    "import行頭割れ×6('next/navigation'・'react'・project-card・detail-view・project-dialog・delete-confirm-dialog)"
+   ]
+  },
+  {
+   "page": 113,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4('@/lib/date';・ProjectWriteOperation}from・shouldRetryQuery}from・error:unknown)=>行頭)"
+   ]
+  },
+  {
+   "page": 114,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×6(=useState<…>(null)・useState<…>(undefined)・=useState('')・useState<…>(MEMBER)・useState(false)・setRemoveMember…useState<…>(行頭)"
+   ]
+  },
+  {
+   "page": 115,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(target:→null as string|null});)"
+   ]
+  },
+  {
+   "page": 116,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(===→selectedProject;×2・generation+1×2)"
+   ]
+  },
+  {
+   "page": 117,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(===selectedProject)→return;・generation+1×3)"
+   ]
+  },
+  {
+   "page": 118,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(string,→membershipChanged=false)=>{・?('none'as→const):('active'asconst),・invalidate(→undefined,filters)]・{→id:projectId},filters));)"
+   ]
+  },
+  {
+   "page": 119,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(push(→invalidate行頭・filters));・失敗',→error);・+孤立×2)"
+   ]
+  },
+  {
+   "page": 120,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3('removeMember'].includes(→operation)){・WriteError(error,→operation);)"
+   ]
+  },
+  {
+   "page": 121,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(!==→projectId)return;・失敗',→error);)"
+   ]
+  },
+  {
+   "page": 122,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(useQuery(→{・retry:→shouldRetryProjectQuery}×2)"
+   ]
+  },
+  {
+   "page": 123,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(find((→m)=>m.userId===currentUser?.id);)+下部約55%余白"
+   ]
+  },
+  {
+   "page": 124,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(getAvailableUsers.useQuery(行頭・canManageMembers,行頭)"
+   ]
+  },
+  {
+   "page": 125,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(reportWriteError(→error,'update'/'delete',variables.id)・=→api.project.addMember…)"
+   ]
+  },
+  {
+   "page": 126,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(reportWriteError(→error,'addMember'…・error,'removeMember',→variables.projectId,true)・=→api.project.removeMember…・=→api.project.updateMemberRole…)"
+   ]
+  },
+  {
+   "page": 127,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(reportWriteError(→error,'updateMemberRole'…・=→api.project.archive…・error,'archive',variables.id)・=→api.project.unarchive…)"
+   ]
+  },
+  {
+   "page": 128,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×6(error,'unarchive',variables.id)・generation+1×2・p.id===→projectId);・?→dateOnlyFromValue(…startDate)・FromValue(→project.endDate))"
+   ]
+  },
+  {
+   "page": 129,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(generation+1・||formSubmitting.current)→return;)"
+   ]
+  },
+  {
+   "page": 130,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(Iso(→data.startDate)・Iso(→data.endDate))+下部約40%余白"
+   ]
+  },
+  {
+   "page": 131,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(delete(error))→throw error;・===→session.generation&&)+下部約30%余白"
+   ]
+  },
+  {
+   "page": 132,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(||authExpiredRef.current)→return;)"
+   ]
+  },
+  {
+   "page": 133,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(||memberSubmitting…selectedProject行頭・||!newMemberUserId)・||!memberDialogOpen)return;・delete(error))→throw error;)"
+   ]
+  },
+  {
+   "page": 134,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約85%白紙"
+   ]
+  },
+  {
+   "page": 135,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(||authExpiredRef.current)→return;・if条件wrapは維持)"
+   ]
+  },
+  {
+   "page": 136,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2()行頭・delete(error))→throw error;)"
+   ]
+  },
+  {
+   "page": 137,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾4行+1段落・下部約75%白紙"
+   ]
+  },
+  {
+   "page": 138,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(||deleteSubmitting…target)return;・id:→session.target});・delete(error))→throw・===→session.generation&&)"
+   ]
+  },
+  {
+   "page": 139,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(role:→ProjectMemberRole)=>{・isArchived:→boolean)=>{・:→archiveMutation;)"
+   ]
+  },
+  {
+   "page": 140,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(:→null,・projectsQueryError:null]);・(→projectDetailQueryError)===404;)"
+   ]
+  },
+  {
+   "page": 141,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(?(viewingDetail→projectDetailFetching:projectsFetching);・&&→!notFound){)"
+   ]
+  },
+  {
+   "page": 142,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(className×2:{justify-center…\">・text-foreground\"・filepathコメントwrap)・三項文字列×4行頭"
+   ]
+  },
+  {
+   "page": 143,
+   "verdict": "ok",
+   "findings": [
+    "JSX文字列hardwrap×5(className\">・'もう一度ログイン…'・'権限が必要です…'・'削除されたか…'・'通信状況…'})"
+   ]
+  },
+  {
+   "page": 144,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(?(→<div行頭)"
+   ]
+  },
+  {
+   "page": 145,
+   "verdict": "ok",
+   "findings": [
+    "className hardwrap×4(rounded-lg…・py-3…・dark:bg-…\"・span文字列行頭・filepath wrap)"
+   ]
+  },
+  {
+   "page": 146,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約82%白紙"
+   ]
+  },
+  {
+   "page": 147,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(filepath wrap・DialogDescription文字列行頭・placeholder…\"/>行頭)"
+   ]
+  },
+  {
+   "page": 148,
+   "verdict": "suggest",
+   "findings": [
+    "□ール tofu(ロール)コード内文字列+hardwrap(onValueChange…>・placeholder…\" />・user.id}>)"
+   ]
+  },
+  {
+   "page": 149,
+   "verdict": "suggest",
+   "findings": [
+    "□ールを選択 tofu(ロール)+hardwrap×3(PROJECT_MEMBER_ROLE_LABELS)・OWNER)・value}>行頭)"
+   ]
+  },
+  {
+   "page": 150,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(filepath wrap・closeMemberDialog}>・isPending}行頭)+DeleteConfirmDialog完全"
+   ]
+  },
+  {
+   "page": 151,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(sm:items-center…\">・text-3xl…\">・filepath wrap・gap-4\">行頭)"
+   ]
+  },
+  {
+   "page": 152,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×6(showArchived}…setShowArchived} />・whitespace-nowrap\">・/>新規プロジェクト・lg:grid…\">・コメント×2行頭)"
+   ]
+  },
+  {
+   "page": 153,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(continue;・doneCount++;・members?.find(・currentUser?.id,・'canManageMembers');行頭)"
+   ]
+  },
+  {
+   "page": 154,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(OWNER;行頭・0}・doneCount}}・handleEdit}}:{}}・handleDelete}}:{}})+下部約45%余白"
+   ]
+  },
+  {
+   "page": 155,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(className×2・文字列×2・:行頭)+下部約62%余白"
+   ]
+  },
+  {
+   "page": 156,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(filepath wrap・updateMutation.isPending}・Description文字列行頭)"
+   ]
+  },
+  {
+   "page": 157,
+   "verdict": "suggest",
+   "findings": [
+    "□ール tofu(ロール)Label内+hardwrap×3(onValueChange…>・placeholder…\" />・user.id}>)"
+   ]
+  },
+  {
+   "page": 158,
+   "verdict": "suggest",
+   "findings": [
+    "□ールを選択 tofu+hardwrap×4(setNewMemberRole(value);・OWNER_LABELS)・OWNER)・value}>行頭)"
+   ]
+  },
+  {
+   "page": 159,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(closeMemberDialog}>・addMemberMutation.isPending}行頭)+下部約55%余白"
+   ]
+  },
+  {
+   "page": 160,
+   "verdict": "ok",
+   "findings": [
+    "DeleteConfirmDialog完+下部約30%余白"
+   ]
+  },
+  {
+   "page": 161,
+   "verdict": "ok",
+   "findings": [
+    "ProjectPage完結+下部約30%余白"
+   ]
+  },
+  {
+   "page": 162,
+   "verdict": "ok",
+   "findings": [
+    "最終確認・今日のまとめ・チェック項目完全"
+   ]
+  },
+  {
+   "page": 163,
+   "verdict": "ok",
+   "findings": [
+    "つまずきポイント「CONFLICT/オーナー削除」原因・解決完全"
+   ]
+  },
+  {
+   "page": 164,
+   "verdict": "ok",
+   "findings": [
+    "つまずき続き・import文インライン1行で収まり完全"
+   ]
+  },
+  {
+   "page": 165,
+   "verdict": "suggest",
+   "findings": [
+    "用語表セル語中分割(MEMBER/VIE→WER)"
+   ]
+  },
+  {
+   "page": 166,
+   "verdict": "ok",
+   "findings": [
+    "Q&A Q1-Q3完全"
+   ]
+  },
+  {
+   "page": 167,
+   "verdict": "ok",
+   "findings": [
+    "追加課題・次回予告完全(末尾hrはセクション終了規則線)"
+   ]
+  },
+  {
+   "page": 168,
+   "verdict": "suggest",
+   "findings": [
+    "脚注URL×6が裸URL(drive.google.com/…)"
+   ]
+  },
+  {
+   "page": 169,
+   "verdict": "ok",
+   "findings": [
+    "著作権ページ(最少構成・意図的)"
+   ]
+  }
+ ]
+}
