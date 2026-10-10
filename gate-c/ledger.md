@@ -180,6 +180,23 @@ suggest/note（採否理由つき）: p9/p45/p54 の7割超空白=suggest→**�
 | S37-38 | day29 前/後半 | 88+88 | 〃 | 同上 | キュー待ち |
 | S39 | day30 | 68 | 〃 | 同上 | キュー待ち |
 
+## tip再検証トラック（artifacts tip @5881e2f7・font-measure fix後rebuild — 共通組版変更で全冊hash変化・全冊再検査対象）
+
+検査方式: 各ワーカーが tip版PDFを 100dpi 全頁PNG化→1頁ずつ目視。結果は `gate-c/tip-dayNN-ledger.md` + `tip-dayNN-pages.json`（day19-23は `gate-c/dayNN-*` 命名＋`worker-report-day19-23.md`）。
+
+| 区分 | 冊 | tip検査状態 |
+|---|---|---|
+| day01-18, day24-30 | 24冊 | ✅ tip-ledger + pages.json あり（本ブランチ） |
+| day19-23 | 5冊 | ✅ dayNN-ledger + pages.json + worker-report（本ブランチ） |
+| **00-1_学びのロードマップ (7p, tip sha12 5576d7683a8c)** | 1 | ❌ **tip検査未実施 — 要投入** |
+| **00_カリキュラム目次 (20p, 41b6d9b19931)** | 1 | ❌ 同上 |
+| **appendix_トラブルシューティング (21p, 4cf1350761c8)** | 1 | ❌ 同上 |
+| **appendix_参考資料 (10p, 2cda346ce990)** | 1 | ❌ 同上 |
+| **appendix_次のステップ (16p, 7bae1ff876f4)** | 1 | ❌ 同上 |
+| **appendix_用語集 (16p, 2a0947c60ad4)** | 1 | ❌ 同上 |
+
+注: S01が e39a1ce9 で行った付録6冊90頁の検査はcandidate版の記録として有効だが、tipでhash変化したため**最終版の検査としては未完了**。tip版付録6冊（計90頁）の全頁目視を誰かへ投入する必要あり。
+
 ## カバレッジ証明表（PDF名×sha256×頁範囲をキー管理 — manifest集合比較で重複・欠落なしを証明）
 集合検証: manifest 36冊・全頁を (PDF名,sha256,頁範囲) のユニットに展開すると45ユニット・合計3743頁・重複0・欠落0（自前スクリプトで実測）。150頁超の冊のみ前後半に分割、それ以外は全頁1ユニット。hashが変わった冊はhash不一致で検出→再検査対象、共通組版変更時は全冊再検査条件を維持する。
 | PDF | sha256(12) | 頁範囲 | 状態 |
