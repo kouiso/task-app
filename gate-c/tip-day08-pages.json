@@ -1,0 +1,586 @@
+{
+ "book": "day08_サイドバーを完成させよう.pdf",
+ "pdf_sha256_head12": "581d4e00346e",
+ "pages_total": 85,
+ "pages_inspected": 85,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全85頁を100dpi PNG化→1頁ずつ実画像を目視(28+28+29頁の3チャンク)。トフ疑い箇所は200dpiで再描画確認。Mermaid判定はmaterial/30days-curriculum/day08原稿と照合",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-8fcefb2b353645f4a4411adc9e263f8a",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 再検証（旧build e39a1ce9 では must4/suggest3/ok78）"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 6,
+  "ok": 79
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": [
+    "cover"
+   ]
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": [
+    "目次"
+   ]
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": [
+    "図1サイドバースクリーンショット完全描画"
+   ]
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 5,
+   "verdict": "ok",
+   "findings": [
+    "図2 Mermaid「今日作る構造」全ラベル完全(layout.tsx/Providers/dashboard/page.tsx/AppLayout) — 旧must p5解消"
+   ]
+  },
+  {
+   "page": 6,
+   "verdict": "suggest",
+   "findings": [
+    "概念表 useMutatio/n 語途中折返し(旧p7同型)"
+   ]
+  },
+  {
+   "page": 7,
+   "verdict": "suggest",
+   "findings": [
+    "ステップ表 provide/rs.tsx・Provide/r が囲ん/でいるか読む 語途中折返し"
+   ]
+  },
+  {
+   "page": 8,
+   "verdict": "suggest",
+   "findings": [
+    "同表続行 AppLay/out・ダッシュ/ボードに/AppLay/out・ログインし/て 語途中折返し"
+   ]
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": [
+    "図3 Mermaid LR全ラベル完全(api.auth.login.mutate/HTTP POST /api/trpc/TRPCReactProvider/data/JSON) — 旧must p9解消・下部約4割余白"
+   ]
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": [
+    "コードブロック継続行React.ReactNodeが行頭割れ(hardwrap既知)・表ok"
+   ]
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 12,
+   "verdict": "ok",
+   "findings": [
+    "import from→'next/font/google'行頭割れ(hardwrap)・下部約5割余白"
+   ]
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": [
+    "classNameテンプレート継続行が行頭割れ(hardwrap)・表・注box ok"
+   ]
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 15,
+   "verdict": "ok",
+   "findings": [
+    "図4 Mermaid TD全ラベル完全(AppLayout マウント/Yes/No×2) — 旧must p15解消"
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": [
+    "import群完全"
+   ]
+  },
+  {
+   "page": 17,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": [
+    "表ok・下部約55%余白"
+   ]
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(useState<string|/null>・useQuery継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 21,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(logoutMutation.isPending行頭割れ等)"
+   ]
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3({/isPending))行頭割れ)"
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 24,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(justify-center行頭割れ)"
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "ok",
+   "findings": [
+    "表+注box"
+   ]
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": [
+    "図5 sequenceDiagram全ラベル完全"
+   ]
+  },
+  {
+   "page": 27,
+   "verdict": "suggest",
+   "findings": [
+    "コードコメント{/* ロゴ */}が{/* □ゴ */}とロ字欠落トフ(200dpi確認)＋hardwrap×3(bg-sidebar/p-4/text-sidebar-foreground行頭割れ)"
+   ]
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap多数(filepathコメント・文字列連結3箇所が行頭割れ)"
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": [
+    "先頭>孤立行・filepathコメント折返し(hardwrap)"
+   ]
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(className継続行頭割れ)・{/* ユーザー情報+ログアウト */}正常描画"
+   ]
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": [
+    "下部約70%余白"
+   ]
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(className継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 34,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(ログアウトしますか?・isPending行頭割れ)"
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": [
+    "日本語コメント折返し(書かない行頭割れ=hardwrap)・表ok"
+   ]
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": [
+    "図6 Mermaid全ラベル完全(src/app/layout.tsx(Providers)/dashboard/page.tsx/login/page.tsx/register/page.tsx/AppLayout) — 旧must p38解消(図がp37に移動)"
+   ]
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(text-foreground行頭割れ)・{/* Day02残す */}コメント正常"
+   ]
+  },
+  {
+   "page": 40,
+   "verdict": "ok",
+   "findings": [
+    "下部約70%余白"
+   ]
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": [
+    "図7ログイン画面スクショ完全"
+   ]
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": [
+    "図8ダッシュボードスクショ完全"
+   ]
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": [
+    "図9ログアウトダイアログスクショ完全"
+   ]
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": [
+    "表・注box"
+   ]
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": [
+    "役割列の日本語折返し(CJK自然改行で許容)・英字トークン切れなし"
+   ]
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(React.ReactNode行頭割れ)"
+   ]
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap('next/font/google'行頭割れ)"
+   ]
+  },
+  {
+   "page": 49,
+   "verdict": "ok",
+   "findings": [
+    "下部約75%余白"
+   ]
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(文字列連結+孤立・children:React.ReactNode・variable行頭割れ)"
+   ]
+  },
+  {
+   "page": 51,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 52,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 53,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 54,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(useState(false)/null>(null)行頭割れ)"
+   ]
+  },
+  {
+   "page": 55,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(isPending)行頭割れ)"
+   ]
+  },
+  {
+   "page": 56,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2({/isPending))行頭割れ)"
+   ]
+  },
+  {
+   "page": 57,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(justify-center行頭割れ)"
+   ]
+  },
+  {
+   "page": 58,
+   "verdict": "suggest",
+   "findings": [
+    "{/* ロゴ */}→{/* □ゴ */}ロ字欠落トフ(2箇所目・p27同型)＋hardwrap×3"
+   ]
+  },
+  {
+   "page": 59,
+   "verdict": "ok",
+   "findings": [
+    "下部約75%余白"
+   ]
+  },
+  {
+   "page": 60,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(cn引数継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 61,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 62,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(className継続行頭割れ)・{/* ユーザー情報+ログアウト */}正常"
+   ]
+  },
+  {
+   "page": 63,
+   "verdict": "ok",
+   "findings": [
+    "下部約70%余白"
+   ]
+  },
+  {
+   "page": 64,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(className継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 65,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(ログアウトしますか?/logoutError/isPending行頭割れ)"
+   ]
+  },
+  {
+   "page": 66,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 67,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 68,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 69,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(owner.todayFocus/currentHour行頭割れ)"
+   ]
+  },
+  {
+   "page": 70,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(className継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 71,
+   "verdict": "ok",
+   "findings": [
+    "下部約80%余白"
+   ]
+  },
+  {
+   "page": 72,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(className継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 73,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(className継続行頭割れ)"
+   ]
+  },
+  {
+   "page": 74,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3"
+   ]
+  },
+  {
+   "page": 75,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5"
+   ]
+  },
+  {
+   "page": 76,
+   "verdict": "ok",
+   "findings": [
+    "下部約80%余白"
+   ]
+  },
+  {
+   "page": 77,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4"
+   ]
+  },
+  {
+   "page": 78,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3"
+   ]
+  },
+  {
+   "page": 79,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 80,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 81,
+   "verdict": "ok",
+   "findings": [
+    "用語表ok"
+   ]
+  },
+  {
+   "page": 82,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 83,
+   "verdict": "ok",
+   "findings": [
+    "理解チェック"
+   ]
+  },
+  {
+   "page": 84,
+   "verdict": "suggest",
+   "findings": [
+    "脚注1〜6全て裸URLのみ(Google Drive・vie/w?usp=drivesdk語途中改行) — endnote式同型"
+   ]
+  },
+  {
+   "page": 85,
+   "verdict": "ok",
+   "findings": [
+    "奥付"
+   ]
+  }
+ ]
+}
