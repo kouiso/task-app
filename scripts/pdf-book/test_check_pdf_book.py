@@ -611,6 +611,47 @@ def main() -> int:
             target.REQUIRED_TOOLS = original_tools
             target.check_one = original_check_one
 
+    # NFC/NFD 回帰: glyph map（クラウド/NFC生成）と macOS の NFD ファイル名が
+    # 混ざっても証跡照合が壊れないこと。検査側のズレで生成物を誤判定しない。
+    import unicodedata
+
+    nfd_stem = unicodedata.normalize(
+        "NFD", "day01_開発環境を整えて、初めてのアプリを動かそう"
+    )
+    nfc_stem = unicodedata.normalize("NFC", nfd_stem)
+    if target.work_slug(nfd_stem) != target.work_slug(nfc_stem):
+        failures.append("work_slug が NFD/NFC で別 document_id を返す")
+
+    glyph_entry = {
+        "title": nfc_stem,
+        "path": f"material/30days-curriculum/{nfc_stem}.md",
+        "sha256": "0" * 64,
+    }
+    header_nfd = unicodedata.normalize("NFD", nfc_stem)
+    expected_path_nfd = unicodedata.normalize(
+        "NFD", glyph_entry["path"]
+    )
+    positive = (
+        unicodedata.normalize("NFC", glyph_entry["title"])
+        == unicodedata.normalize("NFC", header_nfd)
+        and unicodedata.normalize("NFC", glyph_entry["path"])
+        == unicodedata.normalize("NFC", expected_path_nfd)
+    )
+    if not positive:
+        failures.append("glyph map 照合が NFC/NFD 等価ペアを弾く")
+    different = (
+        unicodedata.normalize("NFC", glyph_entry["title"])
+        == unicodedata.normalize("NFC", nfc_stem + "（別物）")
+    )
+    if different:
+        failures.append("glyph map 照合が意味の異なるタイトルを通す")
+    other_dir = (
+        unicodedata.normalize("NFC", "material/other-dir/x.md")
+        == unicodedata.normalize("NFC", expected_path_nfd)
+    )
+    if other_dir:
+        failures.append("glyph map 照合が別配置の原稿pathを通す")
+
     if failures:
         print(f"❌ {len(failures)} 件失敗")
         for failure in failures:

@@ -4101,8 +4101,8 @@
   },
   {
    "path": "scripts/pdf-book/check_pdf_book.py",
-   "sha256": "704b7a486b053640a13fb698ff3d6b6b7a250f22728a639b7f86f37998bbbfc1",
-   "bytes": 43640
+   "sha256": "fc0f9d848e51721ef20578a46e33a70b09cd48860e9e09ca777ffdcdfdcc048e",
+   "bytes": 44508
   },
   {
    "path": "scripts/pdf-book/code_wrap.py",
@@ -4246,8 +4246,8 @@
   },
   {
    "path": "scripts/pdf-book/test_check_pdf_book.py",
-   "sha256": "75a8600c757f87ae1b779748238351dbfa07374df10a3545e8f4b266081fc1ae",
-   "bytes": 30942
+   "sha256": "954a8038eac113e1604a78962a97e689c83edf508fe64371889c7434c1a4eead",
+   "bytes": 32640
   },
   {
    "path": "scripts/pdf-book/test_cjk_soft_breaks.py",
@@ -4431,8 +4431,8 @@
   },
   {
    "path": "scripts/pdf-book/verify-margin-outline-pdf.mjs",
-   "sha256": "4c2082b79b6e86ace462c50263b86b5b5b696b062757b7f78c7578f60e9e6af4",
-   "bytes": 20892
+   "sha256": "e4f6d007d79acaa62d7f9990bb31218750073ecc4aff4213bbbd2db2d795d25b",
+   "bytes": 21288
   },
   {
    "path": "scripts/pdf-book/verify-margin-outline-pdf.test.mjs",
