@@ -1,0 +1,931 @@
+{
+  "book": "day14_タスク新規作成.pdf",
+  "pdf_sha256": "9768cb91a72e",
+  "pdf_sha256_head12": "9768cb91a72e",
+  "pages_total": 174,
+  "pages_inspected": 174,
+  "inspection": {
+    "method": "pdftoppm -r 100 PNG→1頁ずつ目視",
+    "inspector": "devin-5fb0621981f244b199d515a943fe0387",
+    "date": "2026-10-10",
+    "commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+    "note": "指示の固定commit e39a1ce9 は旧組版(sha不一致)。sha12が一致する 5881e2f7(macOS mermaid font-measure fix後の再生成版)を対象にした"
+  },
+  "verdicts": {
+    "must": 0,
+    "suggest": 2,
+    "ok": 172
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 5,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "図2 flowchart TD: 全ノードラベル完全・右端クリップ無し。菱形内「送信後に入力を変えていな/いか」は語途中折返しだが文字欠落なし"
+        }
+      ]
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 8,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "概念表で定数 TASK_STATUS_LABELS が『TASK_STAT/US_LABELS』、nativeEnum が『nativeEnu/m』と語途中セル折返し。文字欠落はないが識別子転記時に誤読余地"
+        }
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "見出しが『読/む目安』で語途中折返し(文字欠落なし)"
+        }
+      ]
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 12,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "コード内 generic  と template literal が行跨ぎ折返し。hanging wrap 様式内で判読可"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "図3 Mermaidシーケンス図: 全メッセージラベル完全(FOR UPDATEロック/最大値読み/position付与)。右端クリップ無し"
+        }
+      ]
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "コード  の型引数行跨ぎ折返し。判読可"
+        }
+      ]
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "ok",
+          "detail": "下半分大きめ余白(自然な改頁)"
+        }
+      ]
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 22,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 32,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 57,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 75,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 79,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 81,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 85,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 86,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 87,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 88,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 89,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 90,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 91,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 92,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 93,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 94,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 95,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 96,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 97,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 98,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 99,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 100,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 101,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 102,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 103,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 104,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 105,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 106,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 107,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 108,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 109,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 110,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 111,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 112,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 113,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 114,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 115,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 116,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 117,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 118,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 119,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 120,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 121,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 122,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 123,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 124,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 125,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 126,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 127,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 128,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 129,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 130,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 131,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 132,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 133,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 134,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 135,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 136,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 137,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 138,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 139,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 140,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 141,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 142,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 143,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 144,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 145,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 146,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 147,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 148,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 149,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 150,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 151,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 152,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 153,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 154,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 155,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 156,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 157,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 158,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 159,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 160,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 161,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 162,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 163,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 164,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 165,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 166,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 167,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 168,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 169,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 170,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 171,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 172,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 173,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注1-6が全て裸URLのみ(Drive共有リンク)でURL語途中改行(/vie w?usp=drivesdk等)。day03 p59・day04 p15/p24/p34/p49・day05 p80/p81と同型のendnote式裸URL脚注(組版共通問題)"
+        }
+      ]
+    },
+    {
+      "page": 174,
+      "verdict": "ok",
+      "findings": []
+    }
+  ]
+}
