@@ -1,0 +1,1554 @@
+{
+ "book": "day12",
+ "title": "Day 12: メンバー追加を実装しよう",
+ "pdf": "artifacts/pdf/day12_メンバー追加.pdf",
+ "sha256_head12": "6ce786d724c1",
+ "pages_total": 169,
+ "inspector": "devin-772a3657897443cbab48d3ea9d2f6cd8",
+ "inspected_at": "2026-10-10",
+ "source_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+ "render_dpi": 120,
+ "method": "pdftoppm -r 120 -png; all pages visually opened one by one",
+ "verdict_counts": {
+  "ok": 64,
+  "must": 1,
+  "suggest": 104
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 3,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図1 メンバーカードスクショ 完全描画（管理者/田中太郎/山田花子3人+メンバー追加ボタン）"
+    }
+   ]
+  },
+  {
+   "page": 5,
+   "verdict": "must",
+   "findings": [
+    {
+     "severity": "must",
+     "category": "mermaid-clip",
+     "detail": "図2 Mermaidフローチャートでほぼ全ラベルが語中切断: `prop`(propsのべき)、`ProjectDetail`(View欠落)、`onAddMember(`、`onRemoveMer`、`DeleteConfirmD`、`api.project.addM`、`api.project.removeM`、エッジ `callback を受け取`。day09 p29/day11 p6,p52と同型の組版共通問題だが本図は全面切断で特に重症"
+    }
+   ]
+  },
+  {
+   "page": 6,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 7,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "file-tree注釈 `追加ダイアログと state 管理` が `管理` だけ行頭に孤立（注釈wrap）"
+    }
+   ]
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 9,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 10,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 12,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`assertMemberPermission(userMember ? [userMember] :`→`[], 'canManageMembers');` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図3 集合図（登録ユーザー全員/このプロジェクトのメンバー/佐藤鈴木田中高橋）完全描画"
+    }
+   ]
+  },
+  {
+   "page": 15,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`from`→`'./_helpers/select';` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`.default(`→`PROJECT_MEMBER_ROLE.MEMBER),` が行頭へ割れる + 下部約75%白紙"
+    }
+   ]
+  },
+  {
+   "page": 17,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`.input(`→`projectMemberSchema).mutation(...)`・`Prisma.sql`...${`→`input.projectId} FOR UPDATE`,`・`await`→`tx.projectMember.findUnique({`・`? [userMember] :`→`[], 'canManageMembers');` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 18,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`message:`の日本語文字列 `'オーナー権限の付与はオーナーのみ可能です',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 19,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`message:`の日本語文字列 `'このユーザーは既にプロジェクトのメンバーです',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 21,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`.input(`→`z.object({`、`}`→`)`・`.mutation(`→`async...`・`Prisma.sql`...${`→`input.projectId} FOR UPDATE`,` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 22,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`await`→`tx.projectMember.findUnique({`・`? [userMember]`→`: [], 'canManageMembers');` が行頭へ割れる(2箇所) + 下部約50%白紙"
+    }
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 24,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`message:`の日本語文字列 `'オーナーの削除はオーナーのみ可能です',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`await`→`tx.projectMember.count({`・`message:`→`'プロジェクト唯一のオーナーは削除できません',` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 27,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`Prisma.sql`...${`→`input.projectId} FOR UPDATE`,` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 28,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`await`→`tx.projectMember.findUnique({`・`? [userMember]`→`: [], 'canManageMembers');` が行頭へ割れる(2箇所) + 下部約60%白紙"
+    }
+   ]
+  },
+  {
+   "page": 29,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`await`→`tx.projectMember.findUnique({` が行頭へ割れる + 下部約50%白紙"
+    }
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`targetMember.role ===`→`PROJECT_MEMBER_ROLE.OWNER) &&`・`message:`→`'オーナー権限の変更はオーナーのみ可能です',` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 31,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`&&` 単独行頭孤立・`await`→`tx.projectMember.count({`・`message:`→`'プロジェクト唯一のオーナーの権限は変更できません',` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 33,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "import `from`→`'@/component/project/project-detail-view';` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 34,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`= (`→`projectId: string` が行頭へ割れる + 下部約55%白紙"
+    }
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図4 プロジェクト詳細ページスクショ（左メンバー3人/右タスク3件）完全描画"
+    }
+   ]
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 40,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "本文3行のみで下部約75%白紙"
+    }
+   ]
+  },
+  {
+   "page": 41,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`= (`→`userId: string,` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 42,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`currentMember`→`&& isProjectMemberRole(...)`・`hasPermission(`→`)` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 44,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 47,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`&&`→`canManageMembers,` がブロック行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 48,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "import `} from`→`'@/component/ui/dialog';`・`'@/component/ui/select';` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 49,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 51,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 52,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 53,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 54,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "layout",
+     "detail": "下部約60%白紙"
+    }
+   ]
+  },
+  {
+   "page": 55,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`.filter(([value]) =>`→`value !==`・`PROJECT_MEMBER_ROLE.OWNER` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 56,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`onClick={(`→`) =>` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 57,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図5 メンバー追加ダイアログ（ユーザー選択・ロール選択・キャンセル/追加ボタン）完全描画"
+    }
+   ]
+  },
+  {
+   "page": 58,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "layout",
+     "detail": "下部約60%白紙"
+    }
+   ]
+  },
+  {
+   "page": 59,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 60,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 61,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`useState(false);`・`useState<string | null>(null);` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 62,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 63,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`handleRemoveMember = (`→`) => {` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 64,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "下部約70%白紙"
+    }
+   ]
+  },
+  {
+   "page": 65,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 66,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図6 メンバー削除確認ダイアログ+window.confirm比較表 完全描画"
+    }
+   ]
+  },
+  {
+   "page": 67,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 68,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図7 Mermaidシーケンス図（MEMBERユーザー→ProjectDetailView→project.ts、FORBIDDEN最後の砦）全ラベル完全描画"
+    }
+   ]
+  },
+  {
+   "page": 69,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 70,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 71,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 72,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図8 メンバーカード(3人)スクショ完全描画"
+    }
+   ]
+  },
+  {
+   "page": 73,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 74,
+   "verdict": "ok",
+   "findings": [
+    {
+     "severity": "note",
+     "category": "figure",
+     "detail": "図9 詳細画面(アーカイブボタン赤枠)+図10 アーカイブ表示ON一覧 完全描画"
+    }
+   ]
+  },
+  {
+   "page": 75,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 76,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 77,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 78,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 79,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "import `} from`→`'@/lib/constant/project';`・`'@/lib/constant/roles';`・`'../trpc';`・`'./_helpers/permission';`・`'./_helpers/select';` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 80,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 81,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`endDate: Date | null) => {`・`.default(`→`PROJECT_MEMBER_ROLE.MEMBER),` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 82,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`projectId: string, isArchived: boolean) => {`・`projectId} FOR UPDATE`,`・`[], 'canArchive');`・コメント行が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 83,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`ctx.session.userId) {` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 84,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 85,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 86,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 87,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'desc' }],`・`ctx.session.userId),` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 88,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`prisma.projectMember.findUnique({`・`[], 'canManageMembers');` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 89,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`projectCreateSchema).mutation(...)`・`input.startDate) : null;`・`input.endDate) : null;` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 90,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 91,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`projectUpdateSchema).mutation(...)`・コメント行・`id} FOR UPDATE`,` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 92,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'canManageMembers');`・`'canArchive');` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 93,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`data.endDate ? new Date(data.endDate) : null;`・`data.endDate !== undefined) {` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 94,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 95,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`string }>>(`・`input.id} FOR UPDATE`,`・コメント2行が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 96,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "本文2行のみで約85%白紙"
+    }
+   ]
+  },
+  {
+   "page": 97,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`tx.projectMember.findUnique({`・`ctx.session.userId, projectId: input.id },`・`PROJECT_MEMBER_ROLE.OWNER) {`・コメント・`});` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 98,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`input.projectId} FOR UPDATE`,`・`tx.projectMember.findUnique({`・コメント2行・`[], 'canManageMembers');` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 99,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "コメント2行が行頭へ割れ+`if (` が区切りでページ切れ(文末未完) + 約75%白紙"
+    }
+   ]
+  },
+  {
+   "page": 100,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'オーナー権限の付与はオーナーのみ可能です',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 101,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'このユーザーは既にプロジェクトのメンバーです',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 102,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`input.projectId} FOR UPDATE`,`・コメント4行・`tx.projectMember.findUnique({` が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 103,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`: [], 'canManageMembers');` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 104,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'オーナーの削除はオーナーのみ可能です',`・`tx.projectMember.count({`・コメント2行が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 105,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'プロジェクト唯一のオーナーは削除できません',` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 106,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`input.projectId} FOR UPDATE`,`・コメント3行・`tx.projectMember.findUnique({` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 107,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`: [], 'canManageMembers');`・`tx.projectMember.findUnique({` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 108,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`PROJECT_MEMBER_ROLE.OWNER) &&`・`'オーナー権限の変更はオーナーのみ可能です',`・コメント2行が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 109,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`&&`・`tx.projectMember.count({`・`'プロジェクト唯一のオーナーの権限は変更できません',` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 110,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 111,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`input.id, true);`・`input.id, false);`・`'next/navigation';` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 112,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "import `'@/component/...';` 5行が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 113,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'@/lib/date';`・`ProjectWriteOperation } from`・`shouldRetryQuery } from`・`error: unknown) =>`・`httpStatusOf(error) !==` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 114,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`useState<...>`系6行が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 115,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`null as string | null });` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 116,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`memberDialogProjectId === selectedProject;`・`removeMemberDialogProjectId === selectedProject;`・`*Session.current.generation + 1, target: null };`系3行が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 117,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`return;`・コメント・`*Session.current.generation + 1, target: null };`系3行が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 118,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`membershipChanged = false) => {`・コメント・`const) : ('active' as const),`・`undefined, filters)];`・`id: projectId }, filters)]);` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 119,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`utils.project.getAvailableUsers.invalidate({`・`filters));`・コメント・`error);`・`+` が行頭へ割れる(5箇所)"
+    }
+   ]
+  },
+  {
+   "page": 120,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`'removeMember'].includes(operation)) {`・`operation);` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 121,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`projectId) return;`・`error);`・`toast.error(...)` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 122,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`shouldRetryProjectQuery },` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 123,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`m) => m.userId === currentUser?.id);` が行頭へ割れる + 文末未完でページ切れ + 約55%白紙"
+    }
+   ]
+  },
+  {
+   "page": 124,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`currentMember.role) ? currentMember.role : undefined;`・`canManageMembers,` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 125,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`error, 'update', variables.id),`・`error, 'delete', variables.id),`・`api.project.addMember.useMutation({` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 126,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`error, 'addMember', variables.projectId, true),`・`api.project.removeMember.useMutation({`・`variables.projectId, true),`・`api.project.updateMemberRole.useMutation({` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 127,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`error, 'updateMemberRole', variables.projectId),`・`api.project.archive.useMutation({`・`error, 'archive', variables.id),`・`api.project.unarchive.useMutation({` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 128,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`error, 'unarchive', variables.id),`・`formSession.current.generation + 1, target: null };`・`projectId);`・`formSession.current.generation + 1, target: projectId };`・`dateOnlyFromValue(...)`系2行が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 129,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`deleteSession.current.generation + 1, target: projectId };`・`return;` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 130,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`data.startDate) : undefined,`・`data.endDate) : undefined,` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 131,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`throw error;`・`session.generation &&` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 132,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`return;` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 133,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`memberSubmitting.current || !selectedProject`・`|| !newMemberUserId)`・`|| !memberDialogOpen) return;`・`throw error;` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 134,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "本文2行のみで約85%白紙"
+    }
+   ]
+  },
+  {
+   "page": 135,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`session.generation &&`・`return;` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 136,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`throw error;` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 137,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`session.generation &&`・`session.projectId &&` が行頭へ割れる(2箇所) + 約75%白紙"
+    }
+   ]
+  },
+  {
+   "page": 138,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`deleteSubmitting.current || !session.target) return;`・`session.target });`・`throw error;`・`session.generation &&` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 139,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`ProjectMemberRole) => {`・`boolean) => {`・`archiveMutation;` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 140,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`null,`・`projectsError ? projectsQueryError : null];`・`projectDetailQueryError) === 404;` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 141,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`projectDetailLoading : projectsLoading);`・`projectDetailFetching : projectsFetching);`・`&& !notFound) {` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 142,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`hasFetchError && !hasRequiredData)) {`・`justify-center py-24 text-center\">`・`text-foreground\">`・`) */}` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 143,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`text-muted-foreground\">`・日本語文字列3行・`?`×2・`:` が行頭へ割れる(7箇所)"
+    }
+   ]
+  },
+  {
+   "page": 144,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 145,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`rounded-lg ... px-4`・`py-3 text-sm ...`・`dark:bg-amber-950/40 dark:text-amber-200` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 146,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "本文2行のみで約85%白紙"
+    }
+   ]
+  },
+  {
+   "page": 147,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`) */}`・`このプロジェクトに新しいメンバーを追加します。</DialogDescription>` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 148,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`onValueChange={setNewMemberUserId}>`・`placeholder=... />`・`user.id}>`・`) */}` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 149,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`setNewMemberRole(value);`・`) */}`・`placeholder=... />`・`PROJECT_MEMBER_ROLE_LABELS)`・`PROJECT_MEMBER_ROLE.OWNER)`・`value}>` が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 150,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`closeMemberDialog}>`・`addMemberMutation.isPending}`・`) */}` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 151,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`sm:items-center sm:justify-between\">`・`text-3xl font-bold tracking-tight\">`・`) */}`・`gap-4\">` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 152,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`showArchived} onCheckedChange={setShowArchived} />`・`className=...`・`/> 新規プロジェクト`・`lg:grid-cols-3 xl:grid-cols-4\">`・コメント2行が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 153,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`continue;`・`doneCount++;`・`) */}`・`project.members?.find(`・`currentUser?.id,`・`'canManageMembers');` が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 154,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`0}`・`doneCount }}`・`handleEdit } : {})}`・`handleDelete } : {})}` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 155,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`items-center justify-center py-12 text-center`・`text-muted-foreground\">`・日本語文字列・`:` が行頭へ割れる(4箇所)"
+    }
+   ]
+  },
+  {
+   "page": 156,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`updateMutation.isPending}`・`) */}`・日本語DialogDescription行が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 157,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`onValueChange={setNewMemberUserId}>`・`placeholder=... />`・`user.id}>` が行頭へ割れる(3箇所)"
+    }
+   ]
+  },
+  {
+   "page": 158,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`setNewMemberRole(value);`・`) */}`・`placeholder=... />`・`PROJECT_MEMBER_ROLE_LABELS)`・`PROJECT_MEMBER_ROLE.OWNER)`・`value}>` が行頭へ割れる(6箇所)"
+    }
+   ]
+  },
+  {
+   "page": 159,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`closeMemberDialog}>`・`addMemberMutation.isPending}` が行頭へ割れる(2箇所)"
+    }
+   ]
+  },
+  {
+   "page": 160,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "code-wrap",
+     "detail": "`) */}` が行頭へ割れる"
+    }
+   ]
+  },
+  {
+   "page": 161,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 162,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 163,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 164,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 165,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 166,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 167,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "layout",
+     "detail": "ページ最下部に孤立hr(区切り線のみ) + 次頁へ送り"
+    }
+   ]
+  },
+  {
+   "page": 168,
+   "verdict": "suggest",
+   "findings": [
+    {
+     "severity": "suggest",
+     "category": "footnote-url",
+     "detail": "脚注裸URL×6が語中改行(`vie`/`w?usp=drivesdk`,`/vie`/`w?`) — day09-11と同パターン"
+    }
+   ]
+  },
+  {
+   "page": 169,
+   "verdict": "ok",
+   "findings": []
+  }
+ ]
+}
