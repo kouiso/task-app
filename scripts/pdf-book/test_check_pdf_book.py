@@ -627,6 +627,8 @@ def main() -> int:
         glyph_title: str,
         glyph_path: str,
         glyph_sha: str | None,
+        receipt_title: str | None = None,
+        header: str | None = None,
         omit_provenance: bool = False,
     ) -> list[str]:
         with tempfile.TemporaryDirectory() as directory:
@@ -665,13 +667,16 @@ def main() -> int:
             inventory = []
             for page_index in range(2):
                 inventory += [
-                    outline_item(page_index, "title", stem),
+                    outline_item(page_index, "title", header or stem),
                     outline_item(page_index, "folio", str(page_index + 1)),
                 ]
+            # expected_title/source_title だけ receipt_title で別正規化形にする。
+            # inventory 側は header と同形に揃えて、この2比較の回帰だけを隔離する。
+            title_text = receipt_title or stem
             provenance: dict[str, object] = {}
             if not omit_provenance:
                 provenance = {
-                    "source_title": stem,
+                    "source_title": title_text,
                     "source_sha256": source_sha,
                     "glyph_map_path": str(glyph),
                     "glyph_map_sha256": hashlib.sha256(glyph.read_bytes()).hexdigest(),
@@ -687,7 +692,7 @@ def main() -> int:
                     "provenance": provenance,
                     "conversion": {
                         "status": "pass",
-                        "expected_title": stem,
+                        "expected_title": title_text,
                         "page_count": 2,
                         "converted_box_count": 4,
                         "page_body_geometry_equal": True,
@@ -723,7 +728,9 @@ def main() -> int:
                 glyph,
             )
             try:
-                return target.find_outline_receipt_problems(pdf, 2, stem)
+                return target.find_outline_receipt_problems(
+                    pdf, 2, header or stem
+                )
             finally:
                 target.BUILD_DIR, target.SRC_DIR, target.GLYPH_MAP = (
                     old_build,
@@ -739,6 +746,18 @@ def main() -> int:
     }
     if nfc_fixture_case(**nfc_base):
         failures.append("NFC回帰: NFD実ファイル+NFC glyph mapの等価証跡を拒否した")
+    # receiptの expected_title/provenance.source_title がheaderと別正規化形でも
+    # 正規化照合で通る正例（この2箇所のNFC化を封じる）
+    if nfc_fixture_case(
+        **{**nfc_base, "receipt_title": nfc_stem, "header": nfd_stem}
+    ):
+        failures.append(
+            "NFC回帰: receiptのNFC titleとNFD headerの等価を拒否した"
+        )
+    if not nfc_fixture_case(
+        **{**nfc_base, "receipt_title": nfc_stem + "（別物）", "header": nfd_stem}
+    ):
+        failures.append("NFC回帰: receipt側の意味の異なるtitleを通した")
     if not nfc_fixture_case(
         **{**nfc_base, "glyph_title": nfc_stem + "（別物）"}
     ):
