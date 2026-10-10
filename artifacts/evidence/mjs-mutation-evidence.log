@@ -1,0 +1,11 @@
+=== current code, NFD --title ===
+{"schema_version":1,"result":"pass","problems":[],"inputs":{"pdf_sha256":"7885999f22b9e81e528a4b65b1f9c1f841b5e4a770bf42547ef60701e31467f6","source_sha256":"dcc268aacb28351e2b279e51e082a068b996098a39cc92ca0ac1f6a1552304f7","glyph_map_sha256":"35799ee1832c8c36712516174abc7902fa910c14e41ad9c9037b6dd1e1e5dc77","dom_report_sha256":"0de1889f309c27e5898ac10a2def57dbd19c476c21cfa953bef932f1cfed7e50","mupdf_version":"1.28.0","mupdf_entry_sha256":"9150b3fd97f63a96f7d5e7b6bcbd4b0a7ad087c725bfffa3272f6a8728ca68a2","page_count":82,"title":"Day 01: 開発環境を整えて初めてのアプリを動かそう"}}
+
+=== mutant (4 NFC spots removed), NFD --title ===
+Error: p2: title DOM証跡が一意でないか文字列が不正
+    at expectedSequence (file:///private/tmp/mjs-mutant/verify-margin-outline-pdf.mjs:244:11)
+    at verifyDocument (file:///private/tmp/mjs-mutant/verify-margin-outline-pdf.mjs:509:25)
+    at main (file:///private/tmp/mjs-mutant/verify-margin-outline-pdf.mjs:558:20)
+
+=== restored current code again ===
+{"schema_version":1,"result":"pass","problems":[],"inputs":{"pdf_sha256":"7885999f22b9e81e528a4b65b1f9c1f841b5e4a770bf42547ef60701e31467f6","source_sha256":"dcc268aacb28351e2b279e51e082a068b996098a39cc92ca0ac1f6a1552304f7","glyph_map_sha256":"35799ee1832c8c36712516174abc7902fa910c14e41ad9c9037b6dd1e1e5dc77","dom_report_sha256":"0de1889f309c27e5898ac10a2def57dbd19c476c21cfa953bef932f1cfed7e50","mupdf_version":"1.28.0","mupdf_entry_sha256":"9150b3fd97f63a96f7d5e7b6bcbd4b0a7ad087c725bfffa3272f6a8728ca68a2","page_count":82,"title":"Day 01: 開発環境を整えて初めてのアプリを動かそう"}}
