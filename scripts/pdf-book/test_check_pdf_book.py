@@ -611,46 +611,146 @@ def main() -> int:
             target.REQUIRED_TOOLS = original_tools
             target.check_one = original_check_one
 
-    # NFC/NFD 回帰: glyph map（クラウド/NFC生成）と macOS の NFD ファイル名が
-    # 混ざっても証跡照合が壊れないこと。検査側のズレで生成物を誤判定しない。
+    # NFC/NFD 回帰（実fixture）: glyph map が NFC・実ファイル名が NFD という
+    # 本番と同じ非対称のまま find_outline_receipt_problems を呼び、
+    # 正例は通り・負例（別title/別path/別sha/metadata欠落）が落ちることを実測する。
     import unicodedata
 
-    nfd_stem = unicodedata.normalize(
-        "NFD", "day01_開発環境を整えて、初めてのアプリを動かそう"
-    )
-    nfc_stem = unicodedata.normalize("NFC", nfd_stem)
+    nfc_stem = "day01_開発環境を整えて、初めてのアプリを動かそう"
+    nfd_stem = unicodedata.normalize("NFD", nfc_stem)
     if target.work_slug(nfd_stem) != target.work_slug(nfc_stem):
         failures.append("work_slug が NFD/NFC で別 document_id を返す")
 
-    glyph_entry = {
-        "title": nfc_stem,
-        "path": f"material/30days-curriculum/{nfc_stem}.md",
-        "sha256": "0" * 64,
+    def nfc_fixture_case(
+        *,
+        stem: str,
+        glyph_title: str,
+        glyph_path: str,
+        glyph_sha: str | None,
+        omit_provenance: bool = False,
+    ) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_dir = root / "build"
+            src_dir = root / "source"
+            build_dir.mkdir()
+            src_dir.mkdir()
+            pdf = root / f"{stem}.pdf"
+            pdf.write_bytes(b"nfc fixture pdf")
+            source = src_dir / f"{stem}.md"
+            source.write_text(f"# {stem}\n", encoding="utf-8")
+            source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+            glyph = root / "glyph.json"
+            font = root / "font.ttf"
+            font.write_bytes(b"font bytes")
+            glyph.write_text(
+                json.dumps(
+                    {
+                        "font": {
+                            "sha256": hashlib.sha256(font.read_bytes()).hexdigest()
+                        },
+                        "supported_titles": [
+                            {
+                                "title": glyph_title,
+                                "path": glyph_path,
+                                "sha256": glyph_sha or source_sha,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            slug = target.work_slug(stem)
+            dom_path = build_dir / f"{slug}.inline-layout.json"
+            inventory = []
+            for page_index in range(2):
+                inventory += [
+                    outline_item(page_index, "title", stem),
+                    outline_item(page_index, "folio", str(page_index + 1)),
+                ]
+            provenance: dict[str, object] = {}
+            if not omit_provenance:
+                provenance = {
+                    "source_title": stem,
+                    "source_sha256": source_sha,
+                    "glyph_map_path": str(glyph),
+                    "glyph_map_sha256": hashlib.sha256(glyph.read_bytes()).hexdigest(),
+                    "font_path": str(font),
+                    "font_sha256": hashlib.sha256(font.read_bytes()).hexdigest(),
+                }
+            dom = {
+                "schema_version": 1,
+                "result": "dom_pass_post_pdf_pending",
+                "document_id": slug,
+                "margin_outline": {
+                    "status": "pass",
+                    "provenance": provenance,
+                    "conversion": {
+                        "status": "pass",
+                        "expected_title": stem,
+                        "page_count": 2,
+                        "converted_box_count": 4,
+                        "page_body_geometry_equal": True,
+                        "inventory": inventory,
+                    },
+                },
+            }
+            dom_path.write_text(json.dumps(dom), encoding="utf-8")
+            report = {
+                "schema_version": 1,
+                "result": "pass",
+                "document_id": slug,
+                "issues": [],
+                "page_count": {"dom": 2, "pdf": 2},
+                "inputs": {
+                    "final_pdf": {"sha256": hashlib.sha256(pdf.read_bytes()).hexdigest()},
+                    "dom_report": {
+                        "sha256": hashlib.sha256(dom_path.read_bytes()).hexdigest()
+                    },
+                },
+            }
+            (build_dir / f"{slug}.inline-pdf.json").write_text(
+                json.dumps(report), encoding="utf-8"
+            )
+            old_build, old_src, old_glyph = (
+                target.BUILD_DIR,
+                target.SRC_DIR,
+                target.GLYPH_MAP,
+            )
+            target.BUILD_DIR, target.SRC_DIR, target.GLYPH_MAP = (
+                build_dir,
+                src_dir,
+                glyph,
+            )
+            try:
+                return target.find_outline_receipt_problems(pdf, 2, stem)
+            finally:
+                target.BUILD_DIR, target.SRC_DIR, target.GLYPH_MAP = (
+                    old_build,
+                    old_src,
+                    old_glyph,
+                )
+
+    nfc_base = {
+        "stem": nfd_stem,
+        "glyph_title": nfc_stem,
+        "glyph_path": f"material/30days-curriculum/{nfc_stem}.md",
+        "glyph_sha": None,
     }
-    header_nfd = unicodedata.normalize("NFD", nfc_stem)
-    expected_path_nfd = unicodedata.normalize(
-        "NFD", glyph_entry["path"]
-    )
-    positive = (
-        unicodedata.normalize("NFC", glyph_entry["title"])
-        == unicodedata.normalize("NFC", header_nfd)
-        and unicodedata.normalize("NFC", glyph_entry["path"])
-        == unicodedata.normalize("NFC", expected_path_nfd)
-    )
-    if not positive:
-        failures.append("glyph map 照合が NFC/NFD 等価ペアを弾く")
-    different = (
-        unicodedata.normalize("NFC", glyph_entry["title"])
-        == unicodedata.normalize("NFC", nfc_stem + "（別物）")
-    )
-    if different:
-        failures.append("glyph map 照合が意味の異なるタイトルを通す")
-    other_dir = (
-        unicodedata.normalize("NFC", "material/other-dir/x.md")
-        == unicodedata.normalize("NFC", expected_path_nfd)
-    )
-    if other_dir:
-        failures.append("glyph map 照合が別配置の原稿pathを通す")
+    if nfc_fixture_case(**nfc_base):
+        failures.append("NFC回帰: NFD実ファイル+NFC glyph mapの等価証跡を拒否した")
+    if not nfc_fixture_case(
+        **{**nfc_base, "glyph_title": nfc_stem + "（別物）"}
+    ):
+        failures.append("NFC回帰: 意味の異なるタイトルを通した")
+    if not nfc_fixture_case(
+        **{**nfc_base, "glyph_path": f"material/other-dir/{nfc_stem}.md"}
+    ):
+        failures.append("NFC回帰: 別配置の原稿pathを通した")
+    if not nfc_fixture_case(**{**nfc_base, "glyph_sha": "0" * 64}):
+        failures.append("NFC回帰: 別sha256のglyph mapを通した")
+    if not nfc_fixture_case(**{**nfc_base, "omit_provenance": True}):
+        failures.append("NFC回帰: provenance欠落の証跡を通した")
 
     if failures:
         print(f"❌ {len(failures)} 件失敗")
