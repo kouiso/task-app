@@ -420,11 +420,18 @@ function validateRaster(MuPDF, page, operations, band, width, label, pageNumber)
 
 function verifyDocument(MuPDF, document, title, sourcePath, glyphMap, domReport) {
   const problems = [];
-  const matchingTitle = glyphMap.supported_titles?.filter((entry) => entry.title === title) ?? [];
+  // glyph map は生成環境の正規化形で記録されている（クラウド/NFC と
+  // macOS/NFD でズレる）。照合は Unicode 等価（NFC）で行い、
+  // sha256 の実体結合はそのままにする。
+  const normalizedTitle = title.normalize('NFC');
+  const matchingTitle = glyphMap.supported_titles?.filter(
+    (entry) => entry.title.normalize('NFC') === normalizedTitle,
+  ) ?? [];
   if (matchingTitle.length !== 1)
     problems.push('タイトルがglyph mapのsource-pinned一覧に一意に存在しない');
   else {
-    if (!path.resolve(sourcePath).endsWith(path.normalize(matchingTitle[0].path))) {
+    const expectedTail = path.normalize(matchingTitle[0].path).normalize('NFC');
+    if (!path.resolve(sourcePath).normalize('NFC').endsWith(expectedTail)) {
       problems.push('原稿pathがglyph mapのsource-pinned一覧と一致しない');
     }
     if (matchingTitle[0].sha256 !== sha256(sourcePath)) {
@@ -503,7 +510,7 @@ function verifyDocument(MuPDF, document, title, sourcePath, glyphMap, domReport)
       domReport,
       pageIndex,
       'title',
-      title,
+      normalizedTitle,
       glyphMap.glyphs,
       expectedPaths,
       scale,

@@ -35,6 +35,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -191,7 +192,10 @@ def sha256_file(path: Path) -> str:
 def work_slug(stem: str) -> str:
     """build_pdf_book.py と同じ規則で証跡の basename を求める。"""
     head = re.match(r"[A-Za-z0-9_-]*", stem).group(0)[:6].strip("_-") or "book"
-    return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
+    # 生成側と同じく NFC に揃えてからハッシュする。ズレると検査側だけ
+    # 別の document_id を探しに行って証跡を読めなくなる。
+    normalized = unicodedata.normalize("NFC", stem)
+    return f"{head}-{hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:6]}"
 
 
 def read_json_object(path: Path, label: str) -> tuple[dict[str, object] | None, list[str]]:
@@ -340,7 +344,7 @@ def find_outline_receipt_problems(pdf: Path, total: int, header: str) -> list[st
     if not isinstance(conversion, dict) or conversion.get("status") != "pass":
         problems.append("margin outline変換結果がpassではない")
         conversion = {}
-    if conversion.get("expected_title") != header:
+    if unicodedata.normalize("NFC", str(conversion.get("expected_title") or "")) != unicodedata.normalize("NFC", str(header)):
         problems.append("margin outlineのタイトルがPDF Titleと一致しない")
     if not is_json_int(conversion.get("page_count")) or conversion.get("page_count") != total:
         problems.append("margin outlineのページ数がPDFと一致しない")
@@ -391,7 +395,7 @@ def find_outline_receipt_problems(pdf: Path, total: int, header: str) -> list[st
     if not isinstance(provenance, dict):
         problems.append("margin outline provenanceが無い")
     else:
-        if provenance.get("source_title") != header:
+        if unicodedata.normalize("NFC", str(provenance.get("source_title") or "")) != unicodedata.normalize("NFC", str(header)):
             problems.append("margin outline provenanceのタイトルが一致しない")
         if not source.is_file() or provenance.get("source_sha256") != sha256_file(source):
             problems.append("margin outline provenanceの原稿SHA256が一致しない")
@@ -408,13 +412,19 @@ def find_outline_receipt_problems(pdf: Path, total: int, header: str) -> list[st
         if glyph_map is not None:
             supported_titles = glyph_map.get("supported_titles")
             expected_source_path = f"material/30days-curriculum/{source.name}"
+            # glyph map は生成環境の正規化形で記録されている（クラウド/NFC
+            # と macOS/NFD でズレる）。生成側と同じく NFC 等価で照合する。
+            header_nfc = unicodedata.normalize("NFC", header)
+            expected_path_nfc = unicodedata.normalize("NFC", expected_source_path)
             title_entries = (
                 [
                     entry
                     for entry in supported_titles
                     if isinstance(entry, dict)
-                    and entry.get("title") == header
-                    and entry.get("path") == expected_source_path
+                    and unicodedata.normalize("NFC", str(entry.get("title") or ""))
+                    == header_nfc
+                    and unicodedata.normalize("NFC", str(entry.get("path") or ""))
+                    == expected_path_nfc
                 ]
                 if isinstance(supported_titles, list)
                 else []
