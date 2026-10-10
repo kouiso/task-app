@@ -65,6 +65,10 @@ FP_RE = re.compile(r"filepath:\s*([^\s（)\u3000]+)")
 PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
 CONTINUE_PATTERN = re.compile(r"^(.+?)（.*続き.*）\s*$")
 KANSEI_RE = re.compile(r"完成版|完成形")
+# 「完成版: …」「完成形: …」のラベル行。コードではなく写経ツール用の目印なので、
+# WRITE の全量書き出し・SPLICE の挿入ペイロードからは取り除く。
+#（そのまま挿すと成果物ファイルに目印コメントが混入する）
+KANSEI_LABEL = re.compile(r"^\s*(?://+|/\*+|\{\s*/\*)\s*完成[版形][:：]")
 JP_RE = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff（）]")
 
 # `...IDENT` / `...(` は JS/TS のスプレッド構文であって省略記号ではない。
@@ -88,7 +92,9 @@ def is_safe_rel_path(rel_path: str) -> bool:
     return rel_path.startswith(SAFE_PREFIXES) or rel_path in SAFE_ROOT_FILES
 
 
-def apply_safe_shell_ops(body: str, target_dir: Path) -> tuple[list[str], list[str]]:
+def apply_safe_shell_ops(body: str, target_dir: Path,
+                         backup_root: Path, tag: str
+                         ) -> tuple[list[str], list[str]]:
     written: list[str] = []
     skipped: list[str] = []
     for raw_line in body.split("\n"):
@@ -111,6 +117,10 @@ def apply_safe_shell_ops(body: str, target_dir: Path) -> tuple[list[str], list[s
         if not src_path.exists():
             skipped.append(f"skipped missing shell move source: {src}")
             continue
+        # mv はスナップショット対象外で実行すると restore で元に戻せないため、
+        # 移動元と上書きされる移動先の両方を事前に退避する。
+        snapshot_file(backup_root, tag, src, src_path)
+        snapshot_file(backup_root, tag, dest, dest_path)
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         src_path.rename(dest_path)
         written.append(f"MOVE   {src} -> {dest}")
@@ -342,7 +352,9 @@ def candidates(parts: list[Part]):
     """(label, joined, first_prose) を優先順に yield。"""
     seen: set[str] = set()
     def emit(label: str, sub: list[Part]):
-        body = "\n".join(p.body for p in sub)
+        body = "\n".join(
+            l for p in sub for l in p.body.split("\n")
+            if not KANSEI_LABEL.match(l))
         key = body[:4000]
         if body.strip() and key not in seen:
             seen.add(key)
@@ -573,7 +585,9 @@ def element_end(lines: Sequence[str], start: int) -> int:
                         i += g.end()
                     continue
             i += 1
-        if depth <= 0:
+        # 複数行の開始タグ（<Tag \n attr \n />）は > 未到達のまま depth=0。
+        # in_tag の間は開タグすら確定していないので終端と誤認して返さない。
+        if depth <= 0 and not in_tag:
             return j
     return len(lines) - 1
 
@@ -790,13 +804,15 @@ def _blob_locate(base_nb: list[str], frag_lines: list[str]) -> int:
     vb = "".join(_norm_blob(frag_lines))
     if len(vb) < 10:
         return -1
-    joined = "\x00".join(base_nb)
-    pos = joined.find(vb)
+    # 検索側は行をまたいで結合する。区切り記号を挟むと断片の行折り返し差を
+    # 吸収できないため、haystack 側も同じく区切りなしで並べて探す。
+    flat = "".join(base_nb)
+    pos = flat.find(vb)
     if pos < 0:
         return -1
     acc = 0
     for i, l in enumerate(base_nb):
-        acc += len(l) + 1
+        acc += len(l)
         if acc > pos:
             return i
     return -1
@@ -1344,9 +1360,10 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
         merged = False
         if fl_probe and not _splice_balanced(part.body):
             acc_body = part.body
+            # idx は既に次断片を指すため、そこから順に畳み込む。
+            #（先に j += 1 すると直後の断片を読み飛ばして別要素を誤結合する）
             j = idx
-            while j + 1 < len(parts) and j - idx < 8:
-                j += 1
+            while j < len(parts) and j - idx < 8:
                 acc_body += "\n" + parts[j].body
                 if _splice_balanced(acc_body):
                     part = Part(cont=part.cont, body=acc_body,
@@ -1357,6 +1374,7 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
                     idx = j + 1
                     merged = True
                     break
+                j += 1
         fl = norm(part.body.split("\n"))
         if not fl:
             continue
@@ -1365,7 +1383,9 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
             continue  # 抜粋・読み比べ・写経しませんは参照提示なので適用しない
         # プレースホルダー行（「既存の〜を残す」）はコードではなく指示なので、
         # 挿入用の断片からは除く。retag だけは区切り記号として使うため元の fl を見る
-        fl_ins = [l for l in fl if not PLACEHOLDER_COMMENT.search(l)]
+        fl_ins = [l for l in fl
+                  if not PLACEHOLDER_COMMENT.search(l)
+                  and not KANSEI_LABEL.match(l)]
         if not fl_ins:
             continue
         # 先頭コメント行を落とした変形・空白吸収ブロブでも一致判定
@@ -1443,10 +1463,17 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     key = rel_path.replace("/", "__")
-    if dest.exists():
+    if rel_path in meta["created"]:
+        # 初回実行で新規作成と記録済み。再実行時は作成状態のまま残し、
+        # restore で削除できるようにする（modified へ再分類しない）。
+        pass
+    elif dest.exists():
         snap = backup_root / tag / "files" / key
-        snap.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(dest, snap)
+        # 同タグで再実行しても初回のバックアップを上書きしない。
+        # restore は「このタグの適用前」の状態を保証する責務があるため。
+        if not snap.exists():
+            snap.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, snap)
         if rel_path not in meta["modified"]:
             meta["modified"].append(rel_path)
     else:
@@ -1504,7 +1531,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
     written: list[str] = []
     skipped: list[str] = []
     for m in re.finditer(r"```(bash|shell|sh|zsh)\n(.*?)```", content, re.S):
-        w, s = apply_safe_shell_ops(m.group(2), target_dir)
+        w, s = apply_safe_shell_ops(m.group(2), target_dir, backup_root, tag)
         written.extend(w)
         skipped.extend(s)
 
@@ -1675,6 +1702,13 @@ def main() -> None:
     if not written:
         print("  ❌ no files written — fail to surface false-positive day-pass")
         sys.exit(2)
+
+    # 一部のファイルが reject/skip されても別ファイルが書ければ終了コード0に
+    # なると、「完走した」と見做して部分適用のまま翌日へ進んでしまう。
+    # Gate B では1件でも未適用があれば失敗として扱う。
+    if skipped:
+        print(f"  ❌ {len(skipped)} block(s) not applied — partial apply is a fail")
+        sys.exit(3)
 
 
 if __name__ == "__main__":

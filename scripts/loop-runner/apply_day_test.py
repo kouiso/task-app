@@ -277,5 +277,80 @@ class SafetyTest(unittest.TestCase):
         self.assertFalse(ad.has_ellipsis("...(isTest ? [] : headers)"))
 
 
+class MustReviewFixes(unittest.TestCase):
+    """Codex MUST 指摘の回帰テスト。"""
+
+    def test_merge_consumes_immediate_next_part(self):
+        # `(` / `42` / `);` の3連フェンス: 直後の断片を読み飛ばすと
+        # `(` + `);` が誤結合され、中身の `42` が失われる
+        cur = ["export const a = 1;"]
+        base = cur + ["export const value = (", "  42", ");"]
+        parts = [
+            ad.Part(cont=False, body="export const value = (", kansei=False,
+                    unmarked=False, prose="", directive=None),
+            ad.Part(cont=False, body="  42", kansei=False,
+                    unmarked=False, prose="", directive=None),
+            ad.Part(cont=False, body=");", kansei=False,
+                    unmarked=False, prose="", directive=None),
+        ]
+        new, gaps = ad.splice_parts(cur, parts, base, "src/a.ts", "d1")
+        self.assertIsNotNone(new, gaps)
+        joined = "\n".join(new)
+        self.assertIn("42", joined)
+        # 消費した断片が二重適用されないこと（`);` は1箇所だけ）
+        self.assertEqual(joined.count("42"), 1)
+
+    def test_element_end_multiline_open_tag(self):
+        # <Tag\n  attr\n/> の終了位置は最終行。開始行を返すと要素置換範囲を誤る
+        lines = ["<TaskCard", "  task={t}", "/>", "<div />"]
+        self.assertEqual(ad.element_end(lines, 0), 2)
+
+    def test_snapshot_keeps_first_backup_and_created_state(self):
+        with tempfile.TemporaryDirectory() as td:
+            root, target = Path(td) / "bk", Path(td) / "app"
+            target.mkdir()
+            f = write(target, "src/a.ts", "original\n")
+            ad.snapshot_file(root, "d1", "src/a.ts", f)
+            f.write_text("second run\n", encoding="utf-8")
+            ad.snapshot_file(root, "d1", "src/a.ts", f)
+            ad.restore_day(root, "d1", target)
+            self.assertEqual(f.read_text(), "original\n")
+            # created に記録された新規ファイルは restore で消える
+            g = target / "src/new.ts"
+            ad.snapshot_file(root, "d2", "src/new.ts", g)  # 書き込み前 = created
+            g.write_text("new\n", encoding="utf-8")
+            ad.snapshot_file(root, "d2", "src/new.ts", g)  # 再実行でも created のまま
+            ad.restore_day(root, "d2", target)
+            self.assertFalse(g.exists())
+
+    def test_mv_is_snapshotted_and_restored(self):
+        with tempfile.TemporaryDirectory() as td:
+            root, target = Path(td) / "bk", Path(td) / "app"
+            target.mkdir()
+            write(target, "src/old.ts", "body\n")
+            w, s = ad.apply_safe_shell_ops("mv src/old.ts src/new.ts",
+                                           target, root, "d1")
+            self.assertFalse((target / "src/old.ts").exists())
+            self.assertTrue((target / "src/new.ts").exists())
+            ad.restore_day(root, "d1", target)
+            self.assertTrue((target / "src/old.ts").exists())
+            self.assertFalse((target / "src/new.ts").exists())
+
+    def test_kansei_label_not_written_or_inserted(self):
+        # 完成版ラベル行はファイルへ混入させない
+        parts = [ad.Part(
+            cont=False, body="// 完成版: ファイル全体\nexport const a = 1;",
+            kansei=True, unmarked=False, prose="", directive=None)]
+        outs = list(ad.candidates(parts))
+        self.assertTrue(outs)
+        self.assertNotIn("完成版:", outs[0][1])
+
+    def test_blob_locate_absorbs_line_folds(self):
+        # 断片と oracle で行折り返しが違っても一致を拾う
+        base = ["const a =", "  foo(", "    1", "  )", "const b = 2;"]
+        frag = ["const a = foo(", "  1)"]
+        self.assertEqual(ad._blob_locate(ad._norm_blob(base), frag), 0)
+
+
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
