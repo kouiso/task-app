@@ -1,0 +1,157 @@
+{
+  "book": "day05_ログイン画面のUI.pdf",
+  "pdf_sha256": "944b9a74fa5323f3ad8b7f6d560bd652d22d8dd1ddc0fe5fd56a9088e419f199",
+  "pdf_sha256_head12": "944b9a74fa53",
+  "pages_total": 81,
+  "pages_inspected": 81,
+  "inspection": {
+    "method": "poppler(pdftoppm)で全81頁を100dpi PNG化→1頁ずつ実画像を目視(27頁×3チャンクで生成→目視→削除)。疑義箇所は原稿mdのMermaid原文とラベル照合。抽出テキスト確認は不使用",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-5e46fa7b625f4154a5eff435b71fda1d",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 2,
+    "suggest": 2,
+    "ok": 77
+  },
+  "pages": [
+    {"page": 1, "verdict": "ok", "findings": []},
+    {"page": 2, "verdict": "ok", "findings": []},
+    {"page": 3, "verdict": "ok", "findings": []},
+    {"page": 4, "verdict": "ok", "findings": []},
+    {"page": 5, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(図2が次頁送りの改頁不可ブロック)"}
+    ]},
+    {"page": 6, "verdict": "must", "findings": [
+      {"severity": "must", "detail": "図2(flowchart TD)のノードラベル右端クリップ: B『react-hook-formが値を』(原文 管理→欠落), D『zodスキーマでバリデーショ ン』(ンが分断折返し), E『onSubmit関数が実』(原文 実行→行欠落), G『tRPC APIにデータ送イ』(原文 送信→信がイに化けて欠落)。day01 p13/p67・day03 p30・day04 p4/p5/p23と同型のMermaid右端クリップ(組版パイプライン共通問題)"}
+    ]},
+    {"page": 7, "verdict": "ok", "findings": []},
+    {"page": 8, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "新しく学ぶ概念表のセル『zodResolve/r』が語途中折返し(day04 p12同型)"}
+    ]},
+    {"page": 9, "verdict": "ok", "findings": []},
+    {"page": 10, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "予備知識表のセル『@hookform/resolve/rs』が語途中折返し。下部約5割白紙(図3が次頁送り)"}
+    ]},
+    {"page": 11, "verdict": "ok", "findings": []},
+    {"page": 12, "verdict": "ok", "findings": []},
+    {"page": 13, "verdict": "ok", "findings": []},
+    {"page": 14, "verdict": "ok", "findings": []},
+    {"page": 15, "verdict": "ok", "findings": []},
+    {"page": 16, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(実装コードブロックが次頁送り)"}
+    ]},
+    {"page": 17, "verdict": "ok", "findings": []},
+    {"page": 18, "verdict": "ok", "findings": []},
+    {"page": 19, "verdict": "ok", "findings": []},
+    {"page": 20, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約6割強白紙(form要素コードブロックが次頁送り)"}
+    ]},
+    {"page": 21, "verdict": "ok", "findings": []},
+    {"page": 22, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(図4スクリーンショットが次頁送り。本文が『下の画像は』を参照中で図と分離)"}
+    ]},
+    {"page": 23, "verdict": "ok", "findings": []},
+    {"page": 24, "verdict": "ok", "findings": []},
+    {"page": 25, "verdict": "ok", "findings": []},
+    {"page": 26, "verdict": "ok", "findings": []},
+    {"page": 27, "verdict": "ok", "findings": []},
+    {"page": 28, "verdict": "ok", "findings": []},
+    {"page": 29, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(CardContentコードブロックが次頁送り)"}
+    ]},
+    {"page": 30, "verdict": "ok", "findings": []},
+    {"page": 31, "verdict": "ok", "findings": []},
+    {"page": 32, "verdict": "ok", "findings": []},
+    {"page": 33, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約6割白紙(図5スクリーンショットが次頁送り)"}
+    ]},
+    {"page": 34, "verdict": "ok", "findings": []},
+    {"page": 35, "verdict": "ok", "findings": []},
+    {"page": 36, "verdict": "ok", "findings": []},
+    {"page": 37, "verdict": "ok", "findings": []},
+    {"page": 38, "verdict": "ok", "findings": []},
+    {"page": 39, "verdict": "must", "findings": [
+      {"severity": "must", "detail": "図6(flowchart LR)のノードラベル右端クリップ: ZE『errors.en』(原文 errors.email→ail欠落で識別子が別名になる), SE『error st』(原文 error state→ate欠落)。コード識別子が変わる納品不可級。同型Mermaid右端クリップ(組版共通問題)"}
+    ]},
+    {"page": 40, "verdict": "ok", "findings": []},
+    {"page": 41, "verdict": "ok", "findings": []},
+    {"page": 42, "verdict": "ok", "findings": []},
+    {"page": 43, "verdict": "ok", "findings": []},
+    {"page": 44, "verdict": "ok", "findings": []},
+    {"page": 45, "verdict": "ok", "findings": []},
+    {"page": 46, "verdict": "ok", "findings": []},
+    {"page": 47, "verdict": "ok", "findings": []},
+    {"page": 48, "verdict": "ok", "findings": []},
+    {"page": 49, "verdict": "ok", "findings": []},
+    {"page": 50, "verdict": "ok", "findings": []},
+    {"page": 51, "verdict": "ok", "findings": []},
+    {"page": 52, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(Beforeコードブロックが次頁送り)"}
+    ]},
+    {"page": 53, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "コード長行の折返しで継続行が行頭に来る(『password?: / string } };』『): / LoginValidationResult {』『= / {}』)。判読は可能だが継続行の視覚手掛かりがない(code_wrap.py仕様)"}
+    ]},
+    {"page": 54, "verdict": "ok", "findings": []},
+    {"page": 55, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "コード長行折返しで式途中が行頭継続(『formData.entries()) as LoginFormValues;』等)"}
+    ]},
+    {"page": 56, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "コード長行折返しで式途中が行頭継続(『.test( / value),』『value.trim() : '')』等)"}
+    ]},
+    {"page": 57, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "コード折返しで『): / LoginValidationResult {』が行頭継続"}
+    ]},
+    {"page": 58, "verdict": "ok", "findings": []},
+    {"page": 59, "verdict": "ok", "findings": []},
+    {"page": 60, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(完成コードのコードブロックが次頁送り)"}
+    ]},
+    {"page": 61, "verdict": "ok", "findings": []},
+    {"page": 62, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約4割白紙(コードブロック次頁送り)"}
+    ]},
+    {"page": 63, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約4割半白紙(コードブロック次頁送り)"}
+    ]},
+    {"page": 64, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約4割白紙(コードブロック次頁送り)"}
+    ]},
+    {"page": 65, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約5割白紙(コードブロック次頁送り)"}
+    ]},
+    {"page": 66, "verdict": "ok", "findings": []},
+    {"page": 67, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約4割白紙(コードブロック次頁送り)"}
+    ]},
+    {"page": 68, "verdict": "ok", "findings": []},
+    {"page": 69, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "JSXコメント『filepath: src/app/login/page.tsx(同じファ / イルの続き) */』が語途中折返し(以降同型が繰返し)"}
+    ]},
+    {"page": 70, "verdict": "ok", "findings": []},
+    {"page": 71, "verdict": "ok", "findings": []},
+    {"page": 72, "verdict": "ok", "findings": []},
+    {"page": 73, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "JSXコメントfilepath行の語途中折返し(p69同型)"}
+    ]},
+    {"page": 74, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "下部約4割白紙(次のファイル全体コードが次頁送り)"}
+    ]},
+    {"page": 75, "verdict": "ok", "findings": []},
+    {"page": 76, "verdict": "ok", "findings": []},
+    {"page": 77, "verdict": "ok", "findings": []},
+    {"page": 78, "verdict": "ok", "findings": [
+      {"severity": "note", "detail": "用語表セル『バリデーショ/ン』が語途中折返し"}
+    ]},
+    {"page": 79, "verdict": "ok", "findings": []},
+    {"page": 80, "verdict": "suggest", "findings": [
+      {"severity": "suggest", "detail": "脚注1〜5が全て裸URLのみ(Google Driveリンク・説明文なし)、各URLが『/vie / w?usp=drivesdk』『p-6ry4RDlxBSyz』等で語途中改行。day03 p59・day04 p15/p24/p34/p49同型のendnote式"}
+    ]},
+    {"page": 81, "verdict": "suggest", "findings": [
+      {"severity": "suggest", "detail": "脚注6が裸URLのみ(Google Drive・語途中改行)。p80同型endnote式"},
+      {"severity": "note", "detail": "版権頁・残り約6割白紙(書籍末の自然な構成)"}
+    ]}
+  ]
+}
