@@ -1,0 +1,590 @@
+{
+  "book": "day09",
+  "pdf_file": "day09_プロジェクト一覧画面.pdf",
+  "pdf_sha256_head12": "d90cb705069d",
+  "pdf_pages_total": 86,
+  "pages_inspected": 86,
+  "inspection": {
+    "method": "pdftoppm -r 100 PNG + manual per-page visual check (poppler 26.10.0); mermaid figures re-rendered at -r 200 for label verification",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+    "inspector": "devin-8fcefb2b353645f4a4411adc9e263f8a",
+    "inspected_at": "2026-10-10",
+    "note": "Fresh re-inspection at tip 5881e2f7 (rebuild after macOS mermaid font-measure fix). Old-build ledger e39a1ce9 is stale."
+  },
+  "verdicts": {
+    "must": 0,
+    "suggest": 7,
+    "ok": 79
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": [
+        "cover"
+      ]
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": [
+        "目次"
+      ]
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": [
+        "図1スクリーンショット完全(サイドバー ダッシュボード+プロジェクト)"
+      ]
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": [
+        "図2 sequenceDiagram全ラベル完全(api.project.getAll.useQuery/prisma.project.findMany()/data,isLoading,error)"
+      ]
+    },
+    {
+      "page": 5,
+      "verdict": "ok",
+      "findings": [
+        "やること表・下部約65%余白"
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": [
+        "ファイルツリー+注box完全(loading-spinner.tsx等)"
+      ]
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": [
+        "概念表・Suspense表完全"
+      ]
+    },
+    {
+      "page": 8,
+      "verdict": "ok",
+      "findings": [
+        "ステップ一覧表・下部約40%余白"
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(import from→'../trpc'行頭割れ)"
+      ]
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 12,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap(input.userId!==→ctx.session.userId)行頭割れ)"
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(import from→'./trpc'・createCallerFactory(→appRouter)行頭割れ)"
+      ]
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": [
+        "import群完全(継続行はインデント付き正常折返し)"
+      ]
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": [
+        "className継続行はインデント付き正常折返し"
+      ]
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": [
+        "図3スクショ完全・下部importの}from→'lucide-react'行頭割れ(hardwrap)"
+      ]
+    },
+    {
+      "page": 22,
+      "verdict": "suggest",
+      "findings": [
+        "ページ最下部に区切り線hr孤立(Step見出しは次頁・旧p22同型)"
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": [
+        "useState継続行はインデント付き正常"
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": [
+        "図4スピナースクショ+注box"
+      ]
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": [
+        "下部約55%余白"
+      ]
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": [
+        "★図5Mermaid全ラベル完全(/project を開く/if projectsLoading/スピナーを出す/届いた・まだ・失敗/カードを並べる/再読み込みの案内を出す)旧must解消"
+      ]
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": [
+        "props表完全・下部約30%余白"
+      ]
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": [
+        "props表続き+hr"
+      ]
+    },
+    {
+      "page": 32,
+      "verdict": "suggest",
+      "findings": [
+        "ページ最下部に区切り線hr孤立(仮実装note box後・旧p32同型)"
+      ]
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": [
+        "グリッドコード・className継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": [
+        "下部約60%余白"
+      ]
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": [
+        "ProjectCard propsコード完全"
+      ]
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": [
+        "図6スクショ完全"
+      ]
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": [
+        "列数表完全"
+      ]
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": [
+        "三項演算子コード・説明文"
+      ]
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": [
+        "props後半コード・下部約35%余白"
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": [
+        "else側空状態コード完全"
+      ]
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": [
+        "図7空状態スクショ完全"
+      ]
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": [
+        "import群(継続行はインデント正常)"
+      ]
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": [
+        "return~ヘッダーコード(継続行インデント正常)"
+      ]
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": [
+        "ボタンコード完全"
+      ]
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        "下部約55%余白"
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": [
+        "グリッドmap処理(continue/doneCount++は行頭割れ→hardwrap2箇所)"
+      ]
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": [
+        "map内return完全"
+      ]
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": [
+        "{showArchived?→'アーカイブ済み…'行頭割れ(hardwrap)"
+      ]
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": [
+        "図8完成スクショ完全"
+      ]
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": [
+        "確認表完全(6行・セル折返し正常)"
+      ]
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": [
+        "図9狭幅スクショ完全(プロジェ/クト縦潰れは題材通り)"
+      ]
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": [
+        "Beforeコード完全"
+      ]
+    },
+    {
+      "page": 57,
+      "verdict": "suggest",
+      "findings": [
+        "Before問題点箇条書きのみ・下部約75%余白"
+      ]
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": [
+        "Afterコード完全"
+      ]
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": [
+        "import from→'lucide-react'行頭割れ(hardwrap)・ファイル対応表"
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        "menuItems継続行はインデント正常"
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": [
+        "import from→'../trpc'行頭割れ(hardwrap)・下部約45%余白"
+      ]
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": [
+        "骨組みコード完全"
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": [
+        "input.userId!==→ctx.session.userId行頭割れ(hardwrap)"
+      ]
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": [
+        "where組立コード・下部約55%余白"
+      ]
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": [
+        "findMany return完全(継続行インデント正常)"
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(from→'./trpc'・createCallerFactory(→appRouter)"
+      ]
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(ProjectCard/PageLoadingSpinnerのfrom→path行頭割れ)"
+      ]
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": [
+        "状態とuseQuery完全"
+      ]
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": [
+        "受け皿ハンドラ4件完全・下部約50%余白"
+      ]
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": [
+        "アクセス拒否+loading return完全・下部約45%余白"
+      ]
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": [
+        "error return完全・下部約50%余白"
+      ]
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(items-center→justify-between・font-bold→tracking-tight)"
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×2(projects→&& !projectAccessDenied・text-sm→text-destructive)"
+      ]
+    },
+    {
+      "page": 75,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(ファイ→ル・grid-cols-2→lg:・CANCELLED)→continue;行頭割れ)"
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×1(members?.length ??→0})"
+      ]
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": [
+        "hardwrap×3(col-span-full・showArchived?・:→'進行中…')"
+      ]
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": [
+        "まとめチェックリスト"
+      ]
+    },
+    {
+      "page": 79,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": [
+        "つまずき続き(サイドバー二重 原因で途切れ次頁へ)"
+      ]
+    },
+    {
+      "page": 81,
+      "verdict": "suggest",
+      "findings": [
+        "用語表セル語中分割(デザ|イン手法)"
+      ]
+    },
+    {
+      "page": 82,
+      "verdict": "suggest",
+      "findings": [
+        "用語表セル語中分割(デザ|イン手法・p81同表の続き)"
+      ]
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": [
+        "下部約45%余白"
+      ]
+    },
+    {
+      "page": 85,
+      "verdict": "suggest",
+      "findings": [
+        "脚注1が裸URL(drive.google.com)+hardwrap×2(from→'./trpc'・createCallerFactory→appRouter)"
+      ]
+    },
+    {
+      "page": 86,
+      "verdict": "suggest",
+      "findings": [
+        "脚注2-6が裸URL(5件)"
+      ]
+    }
+  ]
+}
