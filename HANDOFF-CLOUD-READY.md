@@ -75,5 +75,6 @@ git checkout b21c8ec42229605897d518940e3a81fe5211c7c8   # 入力
 ## 8. 残条件（rollback/試験）
 
 - rollback旧バイナリ実在: `OLD/dist/review/drive-backup/` に36PDF+1ZIP(`1JGcp9mhde`)+manifest37件（id/name/size/sha256/revision/backup path）。対応表はmanifest.json
+- 事前snapshot（2026-10-10取得、ZIP同梱 `drive-preflight-evidence/drive-preflight-evidence-20261010.zip`）: 37ID全件metadata取得成功・全件指定フォルダ所属・37件currentRevisionId記録済。**更新直前に再取得必須**。canEdit/version/md5はmetadata戻り値に露出せず未検証扱い。Day07は既存名「認証バックエンドを作ろう」/候補名「ログイン体験を改善しよう」で名称差あり、対象ID `13-JuMAvw7EsJJJMYgyk5HayoeBiGqkTk` は同一として記録
 - 一時fileでの same-ID更新+復元試験: 旧drive-backupに probe 成果物（`update-probe.zip`/`probe-*-readback.zip`）あり=過去実証の痕跡。ただし現行ツールでの再試験は§5分担確定後に実施して結果を追記
 - 既存37件の元共有リンク readback: Drive更新完了後の最終条件として未実施（残条件）
