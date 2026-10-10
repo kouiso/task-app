@@ -1,0 +1,1111 @@
+{
+  "book": "day07_ログイン体験を改善しよう.pdf",
+  "pdf_sha256": "69f92c674c6f4261d5d510c6f149aeb3f8e8c313b09c8d15ccfe7d88f30466e6",
+  "pdf_sha256_head12": "69f92c674c6f",
+  "pages_total": 146,
+  "pages_inspected": 146,
+  "inspection": {
+    "method": "poppler(pdftoppm)で全146頁を100dpi PNG化→1頁ずつ実画像を目視(25頁×5+21頁の6チャンクで生成→目視→削除)。疑義箇所は原稿mdのMermaid原文とラベル照合。抽出テキスト確認は不使用",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-5e46fa7b625f4154a5eff435b71fda1d",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 3,
+    "suggest": 5,
+    "ok": 138
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 5,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 8,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "実装ステップ一覧表『作業内容』セルが語途中折返し多発(控えを取/り、session.t/s を作り直/す 等)。day04 p12同型。下部約2割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 9,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "同表続行で語途中折返し(trpc.ts を/作り直す、auth.ts/を作り直す、middlew/are.ts、ログインし/て動作確認/する)。同型"
+        }
+      ]
+    },
+    {
+      "page": 10,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "同表Step7セル『DevTool/s で JWT/と/Cookie/を確認する』語途中折返し。同型。下部約5割白紙"
+        }
+      ]
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 12,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "password.tsコードが折返し(password:/string、<= /BCRYPT_...等が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "user-email-conflict.tsコードが折返し(error:/unknown、instanceof /Prisma、=== /'P2002' 等)"
+        }
+      ]
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "import文の折返し(from /'jose'、from /'./constant/roles' が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(payload: /JWTPayload): /SessionPayload、&& /payload['role'] が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 22,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(secure: /process.env、expiresAt = /Math.floor が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(= /Math.floor(Date.now) が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙(Step2冒頭のみ)"
+        }
+      ]
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 32,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約8割白紙"
+        }
+      ]
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(=== /ctx.session.version が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('@/lib/constant/roles'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約8割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(type SessionUser }/from '@/lib/session';、'./_helpers/user-email-conflict'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(z.string().email(...)/'パスワードを入力してください') が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(同型)。下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(error:/unknown、${context}中に... の文字列も行頭)"
+        }
+      ]
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(async ({ input, ctx }) => {、input.email, ip); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(message: /'メールアドレスまたは...'、input.password, user.password); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(message: /'メールアドレスまたは...' が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約8割半白紙(図3次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 52,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図3『ログイン処理の流れ』(flowchart TD)ラベル5箇所クリップ:『TOO MANY REQUES』(原文REQUESTS→TS欠落)『UNAUTHORIZED エラ』(エラー→ー欠落)『FORBIDDEN エラ』(同)『JWT 生成 + Cookie {』(Cookie 保存→保存欠落+括り崩れ)エッジ『Ye』(Yes→s欠落)。day01-06同型Mermaid右端クリップ(組版共通問題)"
+        }
+      ]
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 57,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(message文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(sessionVersion: /true }、user.sessionVersion !== が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(async ({ ctx }) => { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('./trpc';、appRouter); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('@trpc/server/adapters/fetch'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙"
+        }
+      ]
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙"
+        }
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 75,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図5(flowchart TB)エッジ『API /api/trp』(原文 /api/trpc/...→c/...欠落・パス識別子変化)+ノードPP『…駄目な ら UNAUTHORIZED を』(原文 を返す→返す欠落)。同型"
+        }
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 79,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙(図6次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 80,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図6『middleware判定フロー』(flowchart TD)ラベル約9箇所クリップ:エッジ『Ye』×4(Yes→s欠落)・『Nc』×4(No→o欠落でc化け)・ノード『Cookie 削除 + /l』(/login→ogin欠落)・菱形『tRPC API』『Cookie あり』(末尾?欠落)。同型・本冊最大"
+        }
+      ]
+    },
+    {
+      "page": 81,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 85,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 86,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙(コードブロック次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 87,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(window.prompt(...)、replace続行、bytes));、replacement}${signature.slice(1)}`; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 88,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 89,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 90,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 91,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 92,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 93,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 94,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(string): boolean =>、BCRYPT_PASSWORD_MAX_BYTES;、日本語message続行 が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 95,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(unknown): boolean => {、'P2002') { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 96,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('jose';、'./constant/roles'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 97,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 98,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(SessionPayload | null {、USER_ROLE.ADMIN) ||、payload['version'] : 0; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 99,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(): Promise<string> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 100,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙(コードブロック次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 101,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(): Promise<SessionPayload | null> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 102,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(): Promise<void> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 103,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(): Promise<string> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 104,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(Promise<SessionPayload | null> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 105,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(Promise<SessionUser | null> { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 106,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 107,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 108,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(async ({ ctx, next }) => { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 109,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(ctx.session.version) {、日本語message文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 110,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 111,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 112,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('@/lib/constant/roles'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 113,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割半白紙(コードブロック次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 114,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(} from '@/lib/session';、publicProcedure } from '../trpc';、user-email-conflict'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 115,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(日本語message文字列3箇所が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 116,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(unknown): never {、{ context, error });、${context}中にエラーが発生しました…文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 117,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(async ({ input, ctx }) => {、//コメント文、input.email, ip); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 118,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(//コメント文、日本語message文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 119,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(input.password, user.password);、//コメント文、日本語message文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 120,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約8割白紙(コードブロック次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 121,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 122,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 123,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 124,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 125,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('このメールアドレスは既に登録されています', 日本語message文字列が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 126,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 127,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し(true },、user.sessionVersion !== ctx.session.version) { が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 128,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 129,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 130,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('./trpc';、appRouter); が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 131,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('@trpc/server/adapters/fetch'; が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 132,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コード折返し('next/server';、|| pathname.startsWith(...) が行頭)"
+        }
+      ]
+    },
+    {
+      "page": 133,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 134,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約4割半白紙"
+        }
+      ]
+    },
+    {
+      "page": 135,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 136,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 137,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 138,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 139,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 140,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 141,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 142,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 143,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 144,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 145,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注1-5が裸URLのみ(Google Drive・vie/w?usp=drivesdk語途中改行)。endnote式同型"
+        }
+      ]
+    },
+    {
+      "page": 146,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注6が裸URLのみ(Google Drive・同語途中改行)。同型"
+        }
+      ]
+    }
+  ]
+}
