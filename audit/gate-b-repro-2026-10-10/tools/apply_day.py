@@ -55,11 +55,11 @@ def parses_as_file(path: str, body: str) -> bool:
         return False
     ext = path.rsplit('.', 1)[-1].lower() if '.' in path else ''
     if ext in ('ts', 'tsx', 'js', 'mjs', 'jsx'):
-        loader = 'tsx' if ext == 'tsx' else 'ts' if ext == 'ts' else 'jsx' if ext == 'jsx' else 'js'
         with tempfile.NamedTemporaryFile('w', suffix='.' + ext, delete=False) as t:
             t.write(body)
             tmp = t.name
-        r = subprocess.run([ESB, f'--loader:{loader}', tmp, '--outfile=/dev/null'],
+        # esbuild は拡張子で loader を推論する（--loader:xxx は invalid 構文で全拒否＝誤判定の原因）
+        r = subprocess.run([ESB, tmp, '--outfile=/dev/null'],
                            capture_output=True, text=True)
         return r.returncode == 0
     if ext == 'json':
@@ -126,6 +126,8 @@ def apply_day(md_path, tag):
             ok = True
             for cont, body in chunks:
                 fl = norm(body.split('\n'))
+                if find_in(cur, fl) >= 0:
+                    continue  # idempotent: fragment already present in file
                 # find fragment inside baseline
                 bi = find_in(base_lines, fl)
                 if bi < 0:
