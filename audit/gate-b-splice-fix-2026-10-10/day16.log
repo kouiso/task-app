@@ -1,0 +1,7 @@
+[apply_day] day16_ステータス変更・時間記録.md (tag=day16)
+  ✅ SPLICE src/server/api/routers/task.ts (4 parts)
+  ✅ SPLICE src/app/task/page.tsx (5 parts)
+  ✅ WRITE  src/component/task/time-log-dialog.tsx (kansei-run)
+  ✅ WRITE  src/component/task/task-card.tsx (kansei-run)
+  → 4 files written
+exit=0
