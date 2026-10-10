@@ -1,0 +1,1274 @@
+{
+ "book": "day11",
+ "pdf_file": "day11_プロジェクト編集・削除.pdf",
+ "pdf_sha256_head12": "4d873fbbb420",
+ "pdf_pages_total": 160,
+ "pages_inspected": 160,
+ "inspection": {
+  "method": "pdftoppm -r 100 全ページ目視",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-8fcefb2b353645f4a4411adc9e263f8a",
+  "inspected_at": "2026-10-10",
+  "note": "Fresh re-inspection at tip 5881e2f7 (rebuild after macOS mermaid font-measure fix). Old-build ledger e39a1ce9 is stale."
+ },
+ "verdicts": {
+  "must": [],
+  "suggest": [
+   3,
+   9,
+   10,
+   21,
+   44,
+   67,
+   69,
+   73,
+   89,
+   93,
+   115,
+   131,
+   137,
+   143,
+   150,
+   159
+  ],
+  "ok": [
+   1,
+   2,
+   4,
+   5,
+   6,
+   7,
+   8,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53,
+   54,
+   55,
+   56,
+   57,
+   58,
+   59,
+   60,
+   61,
+   62,
+   63,
+   64,
+   65,
+   66,
+   68,
+   70,
+   71,
+   72,
+   74,
+   75,
+   76,
+   77,
+   78,
+   79,
+   80,
+   81,
+   82,
+   83,
+   84,
+   85,
+   86,
+   87,
+   88,
+   90,
+   91,
+   92,
+   94,
+   95,
+   96,
+   97,
+   98,
+   99,
+   100,
+   101,
+   102,
+   103,
+   104,
+   105,
+   106,
+   107,
+   108,
+   109,
+   110,
+   111,
+   112,
+   113,
+   114,
+   116,
+   117,
+   118,
+   119,
+   120,
+   121,
+   122,
+   123,
+   124,
+   125,
+   126,
+   127,
+   128,
+   129,
+   130,
+   132,
+   133,
+   134,
+   135,
+   136,
+   138,
+   139,
+   140,
+   141,
+   142,
+   144,
+   145,
+   146,
+   147,
+   148,
+   149,
+   151,
+   152,
+   153,
+   154,
+   155,
+   156,
+   157,
+   158,
+   160
+  ]
+ },
+ "pages": [
+  {
+   "page": 1,
+   "verdict": "ok",
+   "findings": [
+    "cover"
+   ]
+  },
+  {
+   "page": 2,
+   "verdict": "ok",
+   "findings": [
+    "目次"
+   ]
+  },
+  {
+   "page": 3,
+   "verdict": "suggest",
+   "findings": [
+    "目次続き「奥付」1行のみ・約90%白紙"
+   ]
+  },
+  {
+   "page": 4,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 5,
+   "verdict": "ok",
+   "findings": [
+    "図1編集ダイアログ完全"
+   ]
+  },
+  {
+   "page": 6,
+   "verdict": "ok",
+   "findings": [
+    "★図2Mermaid全ラベル完全(deleteTargetId をセット/DeleteConfirmDialog を表示/削除→api.project.delete.mutate/キャンセル→何もしない)旧must解消"
+   ]
+  },
+  {
+   "page": 7,
+   "verdict": "ok",
+   "findings": [
+    "概念表完全(各セル語区切り正常)"
+   ]
+  },
+  {
+   "page": 8,
+   "verdict": "ok",
+   "findings": [
+    "ファイルツリー注記行頭割れ×2(←編集・削除…/←削除確認ダイアログ)"
+   ]
+  },
+  {
+   "page": 9,
+   "verdict": "suggest",
+   "findings": [
+    "Step表セル語中分割(archi"
+   ]
+  },
+  {
+   "page": 10,
+   "verdict": "suggest",
+   "findings": [
+    "Step表セル語中分割(DeleteConfirmDialo"
+   ]
+  },
+  {
+   "page": 11,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 12,
+   "verdict": "ok",
+   "findings": [
+    "from継続行はインデント正常"
+   ]
+  },
+  {
+   "page": 13,
+   "verdict": "ok",
+   "findings": [
+    "下部約62%余白"
+   ]
+  },
+  {
+   "page": 14,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(.input(→schema).mutation(→=>{・${→id}FOR UPDATE`)"
+   ]
+  },
+  {
+   "page": 15,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(members,→'canManageMembers'/'canArchive')"
+   ]
+  },
+  {
+   "page": 16,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(project.endDate:→data.endDate?…・"
+   ]
+  },
+  {
+   "page": 17,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 18,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(id:→string}>>(${→input.id}FOR UPDATE`)"
+   ]
+  },
+  {
+   "page": 19,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(await→tx.projectMember.findUnique・userId:→ctx.session…)+下部約55%余白"
+   ]
+  },
+  {
+   "page": 20,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(!==→PROJECT_MEMBER_ROLE.OWNER)・input.id}→});)"
+   ]
+  },
+  {
+   "page": 21,
+   "verdict": "suggest",
+   "findings": [
+    "本文3段落のみ・下部約78%白紙"
+   ]
+  },
+  {
+   "page": 22,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(string,→projectId…=>{・[userMember]:→[],'canArchive'))"
+   ]
+  },
+  {
+   "page": 23,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(userId,→input.id,true/false)"
+   ]
+  },
+  {
+   "page": 24,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 25,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(createdAt:→'desc'}],)"
+   ]
+  },
+  {
+   "page": 26,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 27,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(===→ctx.session.userId))+下部約45%余白"
+   ]
+  },
+  {
+   "page": 28,
+   "verdict": "ok",
+   "findings": [
+    "権限表完全(セル内wrapはインデント維持)"
+   ]
+  },
+  {
+   "page": 29,
+   "verdict": "ok",
+   "findings": [
+    "下部約54%余白"
+   ]
+  },
+  {
+   "page": 30,
+   "verdict": "ok",
+   "findings": [
+    "import群・from継続行はインデント正常"
+   ]
+  },
+  {
+   "page": 31,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(PageLoadingSpinner}from→loading-spinner path)"
+   ]
+  },
+  {
+   "page": 32,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(type→ProjectWriteOperation})+下部約55%余白"
+   ]
+  },
+  {
+   "page": 33,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(useState折返し・target:null…×2)"
+   ]
+  },
+  {
+   "page": 34,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(generation→formSession/deleteSession+1)"
+   ]
+  },
+  {
+   "page": 35,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(previousProject)→return;・generation×3)"
+   ]
+  },
+  {
+   "page": 36,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×5(('none'as→const)・invalidate×2・console.error→error);・toast+孤立)"
+   ]
+  },
+  {
+   "page": 37,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(includes(→operation)・WriteError(error,→operation);)"
+   ]
+  },
+  {
+   "page": 38,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(!==→projectId)return;・console.error→error);)+下部約45%余白"
+   ]
+  },
+  {
+   "page": 39,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(p.id===→projectId)・generation+1・?→dateOnlyFromValue・FromValue(→project.endDate))"
+   ]
+  },
+  {
+   "page": 40,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(reportWriteError(→error,'delete'…))"
+   ]
+  },
+  {
+   "page": 41,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(generation→deleteSession…+1)"
+   ]
+  },
+  {
+   "page": 42,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(reportWriteError(→error,'update'…))"
+   ]
+  },
+  {
+   "page": 43,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3("
+   ]
+  },
+  {
+   "page": 44,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾+1段落のみ・下部約70%白紙"
+   ]
+  },
+  {
+   "page": 45,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(delete(error))→throw error;・===→session.generation&&)"
+   ]
+  },
+  {
+   "page": 46,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(generation→formSession…+1)+下部約45%余白"
+   ]
+  },
+  {
+   "page": 47,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 48,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4("
+   ]
+  },
+  {
+   "page": 49,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2((open)→if(!open)→closeDeleteDialog();}})"
+   ]
+  },
+  {
+   "page": 50,
+   "verdict": "ok",
+   "findings": [
+    "図3削除確認+表完全"
+   ]
+  },
+  {
+   "page": 51,
+   "verdict": "ok",
+   "findings": [
+    "★図4Mermaid全ラベル完全(isArchived=false/true・archiveMutation.mutate/unarchiveMutation.mutate/setArchiveStatus両枝/invalidateでキャッシュ無効化/一覧が自動更新される)旧must(p52)解消"
+   ]
+  },
+  {
+   "page": 52,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(reportWriteError(→error,'archive'…))"
+   ]
+  },
+  {
+   "page": 53,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(reportWriteError(→error,'unarchive'…))"
+   ]
+  },
+  {
+   "page": 54,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(isArchived:→boolean)=>{・unarchiveMutation:→archiveMutation;)"
+   ]
+  },
+  {
+   "page": 55,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 56,
+   "verdict": "ok",
+   "findings": [
+    "下部約40%余白"
+   ]
+  },
+  {
+   "page": 57,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 58,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 59,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 60,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 61,
+   "verdict": "ok",
+   "findings": [
+    "useQuery引数wrapはインデント維持"
+   ]
+  },
+  {
+   "page": 62,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 63,
+   "verdict": "ok",
+   "findings": [
+    "viewingDetail三項式完全"
+   ]
+  },
+  {
+   "page": 64,
+   "verdict": "ok",
+   "findings": [
+    "bool判定完全・下部約45%余白"
+   ]
+  },
+  {
+   "page": 65,
+   "verdict": "ok",
+   "findings": [
+    "refetchRequiredData+JSX完全"
+   ]
+  },
+  {
+   "page": 66,
+   "verdict": "ok",
+   "findings": [
+    "JSX文字列hardwrap×4(justify-center…\">・text-foreground\">・text-muted-foreground\">・'権限が必要です…'・?孤立)"
+   ]
+  },
+  {
+   "page": 67,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾3行+1段落・下部約70%白紙"
+   ]
+  },
+  {
+   "page": 68,
+   "verdict": "ok",
+   "findings": [
+    "Button JSX完全"
+   ]
+  },
+  {
+   "page": 69,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾2行+2段落・下部約67%白紙"
+   ]
+  },
+  {
+   "page": 70,
+   "verdict": "ok",
+   "findings": [
+    "className文字列hardwrap×3(rounded-lg…・py-3 text-sm…・dark:bg-…\")"
+   ]
+  },
+  {
+   "page": 71,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 72,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(from→'@/component/project/project-detail-view';)arg wrapはインデント正常"
+   ]
+  },
+  {
+   "page": 73,
+   "verdict": "suggest",
+   "findings": [
+    "確認ポイント+本文・下部約69%白紙"
+   ]
+  },
+  {
+   "page": 74,
+   "verdict": "ok",
+   "findings": [
+    "JSX完全"
+   ]
+  },
+  {
+   "page": 75,
+   "verdict": "ok",
+   "findings": [
+    "本文完全"
+   ]
+  },
+  {
+   "page": 76,
+   "verdict": "ok",
+   "findings": [
+    "props表完全"
+   ]
+  },
+  {
+   "page": 77,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 78,
+   "verdict": "ok",
+   "findings": [
+    "下部約45%余白"
+   ]
+  },
+  {
+   "page": 79,
+   "verdict": "ok",
+   "findings": [
+    "図5編集ダイアログ完全"
+   ]
+  },
+  {
+   "page": 80,
+   "verdict": "ok",
+   "findings": [
+    "下部約40%余白"
+   ]
+  },
+  {
+   "page": 81,
+   "verdict": "ok",
+   "findings": [
+    "図6削除確認完全"
+   ]
+  },
+  {
+   "page": 82,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 83,
+   "verdict": "ok",
+   "findings": [
+    "Beforeコード完全"
+   ]
+  },
+  {
+   "page": 84,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(color!==→undefined){・description!==→description!==undefined){)"
+   ]
+  },
+  {
+   "page": 85,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(owner!==→undefined){・owner.name!==→owner.name!==undefined){)+下部約58%余白"
+   ]
+  },
+  {
+   "page": 86,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(startDate!==→undefined){・toDateInputValue(→project.startDate);・endDate!==→undefined){)"
+   ]
+  },
+  {
+   "page": 87,
+   "verdict": "ok",
+   "findings": [
+    "下部約35%余白"
+   ]
+  },
+  {
+   "page": 88,
+   "verdict": "ok",
+   "findings": [
+    "After型宣言完全"
+   ]
+  },
+  {
+   "page": 89,
+   "verdict": "suggest",
+   "findings": [
+    "3行段落のみ・下部約85%白紙"
+   ]
+  },
+  {
+   "page": 90,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(ownerLabel:…??→project.owner?.email??'担当者未設定',)"
+   ]
+  },
+  {
+   "page": 91,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 92,
+   "verdict": "ok",
+   "findings": [
+    "下部約55%余白"
+   ]
+  },
+  {
+   "page": 93,
+   "verdict": "suggest",
+   "findings": [
+    "2段落のみ・下部約76%白紙"
+   ]
+  },
+  {
+   "page": 94,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 95,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 96,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 97,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(userMember?[userMember]:→[],'canArchive');)+下部約65%余白"
+   ]
+  },
+  {
+   "page": 98,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(userId!==→ctx.session.userId){・!==→USER_ROLE.ADMIN){・throw→new TRPCError({)"
+   ]
+  },
+  {
+   "page": 99,
+   "verdict": "ok",
+   "findings": [
+    "下部約35%余白"
+   ]
+  },
+  {
+   "page": 100,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(.input(→projectCreateSchema).mutation(・?new Date(→input.startDate)・?new Date(→input.endDate))"
+   ]
+  },
+  {
+   "page": 101,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(update:.input(→projectUpdateSchema).mutation(…)=>{)+下部約30%余白"
+   ]
+  },
+  {
+   "page": 102,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(id:→string}>>(・${→id}FOR UPDATE`・await→tx.projectMember.findUnique)"
+   ]
+  },
+  {
+   "page": 103,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(project.members,→'canManageMembers'/'canArchive')+下部約45%余白"
+   ]
+  },
+  {
+   "page": 104,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(project.endDate:→data.endDate?…・"
+   ]
+  },
+  {
+   "page": 105,
+   "verdict": "ok",
+   "findings": [
+    "下部約35%余白"
+   ]
+  },
+  {
+   "page": 106,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(id:→string}>>(・${→input.id}FOR UPDATE`・findUnique継続・userId:→ctx.session…input.id})"
+   ]
+  },
+  {
+   "page": 107,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(ctx.session.userId,→input.id,true);)+下部約40%余白"
+   ]
+  },
+  {
+   "page": 108,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(ctx.session.userId,→input.id,false);)+下部約50%余白"
+   ]
+  },
+  {
+   "page": 109,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(assertMemberPermission(→members.filter(・===→ctx.session.userId),)+下部約50%余白"
+   ]
+  },
+  {
+   "page": 110,
+   "verdict": "ok",
+   "findings": [
+    "下部約40%余白"
+   ]
+  },
+  {
+   "page": 111,
+   "verdict": "ok",
+   "findings": [
+    "下部約40%余白"
+   ]
+  },
+  {
+   "page": 112,
+   "verdict": "ok",
+   "findings": [
+    "下部約45%余白"
+   ]
+  },
+  {
+   "page": 113,
+   "verdict": "ok",
+   "findings": [
+    "下部約45%余白"
+   ]
+  },
+  {
+   "page": 114,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(ProjectDialog,→type ProjectFormData,・}→from…project-dialog';)"
+   ]
+  },
+  {
+   "page": 115,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾4行+1段落・下部約68%白紙"
+   ]
+  },
+  {
+   "page": 116,
+   "verdict": "ok",
+   "findings": []
+  },
+  {
+   "page": 117,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(useState<…"
+   ]
+  },
+  {
+   "page": 118,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(target:→null as string"
+   ]
+  },
+  {
+   "page": 119,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(generation+1×3・===selectedProject)→return;)"
+   ]
+  },
+  {
+   "page": 120,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(generation+1・?('none'as→const):('active'asconst),)+下部約45%余白"
+   ]
+  },
+  {
+   "page": 121,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(invalidate(→undefined,filters)]・invalidate({→id:projectId},filters)]);・失敗',→error);・toast+孤立)"
+   ]
+  },
+  {
+   "page": 122,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(includes(→operation)){・classifyProjectWriteError(error,→operation);)"
+   ]
+  },
+  {
+   "page": 123,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(!==→projectId)return;・失敗',→error);)+下部約45%余白"
+   ]
+  },
+  {
+   "page": 124,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(useQuery(→{col0・retry:→shouldRetryProjectQuery}×2)"
+   ]
+  },
+  {
+   "page": 125,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(useQuery(→{・retry:→shouldRetryProjectQuery}×2)"
+   ]
+  },
+  {
+   "page": 126,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(reportWriteError(→error,'update'/'delete',variables.id))"
+   ]
+  },
+  {
+   "page": 127,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(reportWriteError(→error,'archive'…・=→api.project.unarchive…・error,'unarchive'…・generation+1)"
+   ]
+  },
+  {
+   "page": 128,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(p.id===→projectId);・generation+1・?→dateOnlyFromValue(…startDate)・?dateOnlyFromValue(→project.endDate))"
+   ]
+  },
+  {
+   "page": 129,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(generation+1・"
+   ]
+  },
+  {
+   "page": 130,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(Iso(→data.startDate):undefined,・Iso(→data.endDate):undefined,)"
+   ]
+  },
+  {
+   "page": 131,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約80%白紙"
+   ]
+  },
+  {
+   "page": 132,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(delete(error))→throw error;・generation===→session.generation&&)"
+   ]
+  },
+  {
+   "page": 133,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4("
+   ]
+  },
+  {
+   "page": 134,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(isArchived:→boolean)=>{・unarchiveMutation:→archiveMutation;)+下部約65%余白"
+   ]
+  },
+  {
+   "page": 135,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(:→null,・projectsQueryError:null]);)"
+   ]
+  },
+  {
+   "page": 136,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×2(httpStatusOf(→…===404;・(viewingDetail?→projectDetailLoading:projectsLoading);)"
+   ]
+  },
+  {
+   "page": 137,
+   "verdict": "suggest",
+   "findings": [
+    "コード末尾3行+2段落・下部約70%白紙"
+   ]
+  },
+  {
+   "page": 138,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×4(!forbidden→&&!notFound){・(hasFetchError→&&!hasRequiredData)){・className×2:justify-center…\">・text-foreground\">)"
+   ]
+  },
+  {
+   "page": 139,
+   "verdict": "ok",
+   "findings": [
+    "JSX文字列hardwrap×5(text-muted-…\">・'もう一度ログイン…'・'権限が必要です…'・'削除されたか…'・'通信状況…')"
+   ]
+  },
+  {
+   "page": 140,
+   "verdict": "ok",
+   "findings": [
+    "Button JSX完全"
+   ]
+  },
+  {
+   "page": 141,
+   "verdict": "ok",
+   "findings": [
+    "className×3+span文字列hardwrap+下部約55%余白"
+   ]
+  },
+  {
+   "page": 142,
+   "verdict": "ok",
+   "findings": [
+    "JSX完全"
+   ]
+  },
+  {
+   "page": 143,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約78%白紙"
+   ]
+  },
+  {
+   "page": 144,
+   "verdict": "ok",
+   "findings": [
+    "className hardwrap(justify-between\">)"
+   ]
+  },
+  {
+   "page": 145,
+   "verdict": "ok",
+   "findings": [
+    "className hardwrap(sm:grid…/xl:grid-cols-4\">)"
+   ]
+  },
+  {
+   "page": 146,
+   "verdict": "ok",
+   "findings": [
+    "if本体行頭wrap×2(TASK_STATUS.CANCELLED)continue;・DONE)doneCount++;)"
+   ]
+  },
+  {
+   "page": 147,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap×3(members?.find(→col0・currentUser?.id,・PROJECT_MEMBER_ROLE.OWNER;)"
+   ]
+  },
+  {
+   "page": 148,
+   "verdict": "ok",
+   "findings": [
+    "下部約30%余白"
+   ]
+  },
+  {
+   "page": 149,
+   "verdict": "ok",
+   "findings": [
+    "JSX文字列hardwrap×2('アーカイブ済み…'・'進行中…')+isPending"
+   ]
+  },
+  {
+   "page": 150,
+   "verdict": "suggest",
+   "findings": [
+    "1段落のみ・下部約80%白紙"
+   ]
+  },
+  {
+   "page": 151,
+   "verdict": "ok",
+   "findings": [
+    "hardwrap(closeDeleteDialog();}})"
+   ]
+  },
+  {
+   "page": 152,
+   "verdict": "ok",
+   "findings": [
+    "まとめ+つまずきポイント"
+   ]
+  },
+  {
+   "page": 153,
+   "verdict": "ok",
+   "findings": [
+    "つまずきポイント続き"
+   ]
+  },
+  {
+   "page": 154,
+   "verdict": "ok",
+   "findings": [
+    "つまずきポイント続き"
+   ]
+  },
+  {
+   "page": 155,
+   "verdict": "ok",
+   "findings": [
+    "つまずきポイント続き"
+   ]
+  },
+  {
+   "page": 156,
+   "verdict": "ok",
+   "findings": [
+    "用語表完全"
+   ]
+  },
+  {
+   "page": 157,
+   "verdict": "ok",
+   "findings": [
+    "理解チェックQ1-3"
+   ]
+  },
+  {
+   "page": 158,
+   "verdict": "ok",
+   "findings": [
+    "追加課題+次回予告"
+   ]
+  },
+  {
+   "page": 159,
+   "verdict": "suggest",
+   "findings": [
+    "脚注1-6裸URL(Drive直リンク)"
+   ]
+  },
+  {
+   "page": 160,
+   "verdict": "ok",
+   "findings": [
+    "ライセンス文"
+   ]
+  }
+ ]
+}
