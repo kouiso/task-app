@@ -1,7 +1,9 @@
-=== mutant check_pdf_book (4 NFC spots removed) ===
-❌ 2 件失敗
+=== mutant check_pdf_book.py (4 NFC spots removed) + new mixed-form regression ===
+❌ 3 件失敗
   work_slug が NFD/NFC で別 document_id を返す
   NFC回帰: NFD実ファイル+NFC glyph mapの等価証跡を拒否した
+  NFC回帰: receiptのNFC titleとNFD headerの等価を拒否した
 
-=== restored current check_pdf_book ===
+=== restored check_pdf_book.py (normal + -O) ===
+✅ 145 ケースすべて通過
 ✅ 145 ケースすべて通過
