@@ -1,0 +1,39 @@
+{
+ "book": "appendix_用語集.pdf",
+ "pdf_sha256_head12": "2a0947c60ad4",
+ "pages_total": 16,
+ "pages_inspected": 16,
+ "inspection": {
+  "method": "poppler(pdftoppm)で全16頁を100dpi PNG化→1頁ずつ実画像を目視(16頁×1チャンク)。疑義箇所は原稿mdと照合。",
+  "artifacts_branch": "devin/source40-pdf-artifacts",
+  "artifacts_commit": "5881e2f71267aebd996abb0ceba8174e03707365",
+  "inspector": "devin-fc85e1e5e2e749e2a7aaa1c0f4dbc94a",
+  "inspected_at": "2026-10-10",
+  "note": "tip 5881e2f7 初回目視検査(旧build e39a1ce9 では非day冊は未検査だったためtip初検査)"
+ },
+ "verdicts": {
+  "must": 0,
+  "suggest": 1,
+  "ok": 15
+ },
+ "pages": [
+  {"page": 1, "verdict": "ok", "findings": []},
+  {"page": 2, "verdict": "ok", "findings": []},
+  {"page": 3, "verdict": "ok", "findings": []},
+  {"page": 4, "verdict": "ok", "findings": []},
+  {"page": 5, "verdict": "ok", "findings": []},
+  {"page": 6, "verdict": "ok", "findings": []},
+  {"page": 7, "verdict": "ok", "findings": []},
+  {"page": 8, "verdict": "ok", "findings": []},
+  {"page": 9, "verdict": "ok", "findings": []},
+  {"page": 10, "verdict": "ok", "findings": []},
+  {"page": 11, "verdict": "ok", "findings": []},
+  {"page": 12, "verdict": "ok", "findings": []},
+  {"page": 13, "verdict": "ok", "findings": []},
+  {"page": 14, "verdict": "ok", "findings": []},
+  {"page": 15, "verdict": "ok", "findings": []},
+  {"page": 16, "verdict": "suggest", "findings": [
+   {"severity": "suggest", "detail": "脚注1-2が裸URLのみ(Google Drive・`vie`/`w?usp=drivesdk`語途中改行)。endnote式組版共通問題・参照元は同頁「戻る」節*1/*2"}
+  ]}
+ ]
+}
