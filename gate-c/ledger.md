@@ -93,4 +93,5 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 ## 目視手順（要poppler・導入済）
 
 - `bash gate-c/render_pages.sh <pdf_dir> gate-c/pages/` で全冊PNG化＋頁数/sha256一覧（`page-inventory.md`）を自動生成（poppler 26.10.0・pdftoppm）
+- 目視方式（3743頁規模のため二段構え・実施済）: ①全頁を4頁/枚のコンタクトシート（ImageMagick montage・縮小）で網羅走査 → 枠外はみ出し・画像欠落・白ページ・ページ送り崩れを検出 ②疑義頁+各冊先頭/コード頁は100dpi単頁で精査。検査済み範囲は備考欄に記録
 - 観点: 文字化け・フォント欠落 / コードブロック枠外はみ出し / 見出しリンクURL行欠落 / footnote裸URL / 画像・スクショ欠落 / ページ送り崩れ / 白ページ / 目次頁番号ずれ
