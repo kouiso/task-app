@@ -66,6 +66,7 @@ book-pdf-test:
 	@python3 scripts/pdf-book/test_cjk_soft_breaks.py
 	@python3 scripts/pdf-book/test_find_browser.py
 	@python3 scripts/pdf-book/test_keep_next.py
+	@python3 scripts/pdf-book/test_relabel_tsx_fences.py
 
 # 出力が商品として出せる状態かを見る
 # 中身（空白ページ・書体・目次・コード欠け）→ 紙面（はみ出し・重なり・潰れた列・写真・端切れ）→ コードの写経安全性（長行の折り返しで文字が失われないか）
