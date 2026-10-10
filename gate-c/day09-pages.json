@@ -1,0 +1,664 @@
+{
+  "book": "day09_プロジェクト一覧画面.pdf",
+  "pdf_sha256": "db326a9a626fdc9eaaaad8229a21254ae74229d0adedb9c0194e2748ea140019",
+  "pages_total": 86,
+  "pages_inspected": 86,
+  "inspection": {
+    "method": "poppler(pdftoppm)で全86頁を120dpi PNG化→1頁ずつ実画像を目視。p29のMermaid図は220dpiで再描画し拡大確認。抽出テキスト確認は不使用",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-772a3657897443cbab48d3ea9d2f6cd8",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 1,
+    "suggest": 22,
+    "ok": 63
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 5,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "やること/やらないこと表の後、下部約6割が白紙(章末の自然な空白)"
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 8,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 9,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 12,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "コードブロック内で `if (input?.userId && input.userId !==` が右端で折れ `ctx.session.userId) {` が次行に割れる。1論理行が2行に分断"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 16,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "import 行 `createCallerFactory, createTRPCRouter } from`→`'./trpc';` と `createCallerFactory(`→`appRouter);` が継続行行頭(左端)へ割れる。p12と同型のハード折返し"
+        }
+      ]
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "ページ最下部のコードブロックで `import { FolderOpen, LayoutDashboard, LogOut } from`→`'lucide-react';` が継続行行頭へ割れる(左端ハード折返し)"
+        }
+      ]
+    },
+    {
+      "page": 22,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "孤立hr",
+          "detail": "確認ポイント後の区切り線(hr)がページ最下部に単独で残り、続くStep 2見出しは次頁へ。day03 p58と同型"
+        }
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約35%白紙(章末の自然な空白)"
+        }
+      ]
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 29,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "category": "Mermaid右端クリップ",
+          "detail": "図5フローチャート: 上段ノード `/project を開[く]` と左ノード `if projectsLoa[ding]`/`スピナーを出[す]` がノード枠右端で語途中切断(220dpi拡大で確認)。`projectsLoa` は実在しない識別子として表示。day01 p13/p67・day03 p30と同型の組版パイプライン共通問題(Mermaid SVG overflow)。冊固有ではない"
+        }
+      ]
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 32,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "孤立hr",
+          "detail": "仮実装note box後の区切り線がページ最下部に単独で残り、Step 6見出しは次頁へ"
+        }
+      ]
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 34,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "巨大余白",
+          "detail": "map中でProjectCardを返す一文の後、続きのコードブロックが改ページで次頁送りになり下部約65〜70%が白紙(day03 p17と同型)"
+        }
+      ]
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 38,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "コードブロック終了後、下部約40%白紙"
+        }
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約35%白紙"
+        }
+      ]
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約35%白紙"
+        }
+      ]
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 46,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約45%白紙(グリッドコードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`if (t.status === TASK_STATUS.CANCELLED)` 行が長く `continue;`・`doneCount++;` が継続行行頭(左端)へ割れるハード折返し×2"
+        }
+      ]
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 51,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`<p>{showArchived ?` の直後、三項演算子の真側 `'アーカイブ済みのプロジェクトはありません。'` が継続行行頭(左端)へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 57,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "巨大余白",
+          "detail": "「このコードの問題点」箇条書き3項目が上部のみで終わり、下部約70%が白紙(After節が次頁開始)。day03 p17と同型"
+        }
+      ]
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 60,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "import 行 `} from`→`'lucide-react';` が継続行行頭へ割れる(p21と同じimport文の再掲・同型ハード折返し)"
+        }
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約40%白紙(「取り込み:」小見出しのみで終わり本文は次頁)"
+        }
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "import 行 `protectedProcedure } from`→`'../trpc';` が継続行行頭へ割れるハード折返し"
+        }
+      ]
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 64,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`if (input?.userId && input.userId !==`→`ctx.session.userId) {` が継続行行頭へ割れる(p12と同じ判定コードの完成版再掲・同型)"
+        }
+      ]
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約30%白紙(「取得と返却:」小見出しで終わり本文は次頁)"
+        }
+      ]
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "findManyコードブロック完結後、下部約40%白紙"
+        }
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`createTRPCRouter } from`→`'./trpc';` と `createCallerFactory(`→`appRouter);` が継続行行頭へ割れる(p16と同じ完成コード再掲・同型)"
+        }
+      ]
+    },
+    {
+      "page": 68,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "import 2行 `{ ProjectCard } from`→`'@/component/project/project-card';`、`{ PageLoadingSpinner } from`→`'@/component/ui/loading-spinner';` が継続行行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約20%白紙(「ボタンの受け皿:」小見出しで終わり)"
+        }
+      ]
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約35%白紙(小見出しで終わり)"
+        }
+      ]
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約45%白紙(「最初の取得失敗を表示する部分:」小見出しで終わり)"
+        }
+      ]
+    },
+    {
+      "page": 72,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`if (projectsError && (!projects ||`→`projectAccessDenied)) {` が継続行行頭へ割れるハード折返し"
+        }
+      ]
+    },
+    {
+      "page": 73,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "className文字列 `flex items-center`→`justify-between\">`、`text-3xl font-bold`→`tracking-tight\">`、filepathコメント `同じフ`→`ァイルの続き` がそれぞれ継続行行頭へ割れる(3箇所・語途中を含む)"
+        }
+      ]
+    },
+    {
+      "page": 74,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`{projectsError && projects`→`&& !projectAccessDenied && (` と `className=\"text-sm`→`text-destructive\">` が継続行行頭へ割れる(2箇所)"
+        }
+      ]
+    },
+    {
+      "page": 75,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "filepathコメント `同じフアイ`→`ルの続き`(語途中切断)、className `sm:grid-cols-2`→`lg:grid-cols-3 xl:grid-cols-4\">`、`continue;`、`doneCount++;` が継続行行頭へ割れる(4箇所・完成版グリッドブロック)"
+        }
+      ]
+    },
+    {
+      "page": 76,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`memberCount={project.members?.length ??`→`0}` が継続行行頭へ割れる"
+        }
+      ]
+    },
+    {
+      "page": 77,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "className `col-span-full flex flex-col`→`items-center justify-center py-12 text-center`→`text-muted-foreground\">` と三項演算子両分岐(アーカイブ済み/進行中の〜ありません)が継続行行頭へ割れる(4箇所)"
+        }
+      ]
+    },
+    {
+      "page": 78,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 79,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 80,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "「サイドバーが二重に表示される」項目の「原因」ラベルのみがページ最下部に残り、本文は次頁"
+        }
+      ]
+    },
+    {
+      "page": 81,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 82,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 83,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 84,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約35%白紙(完成形コード説明の節末)"
+        }
+      ]
+    },
+    {
+      "page": 85,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "コード折返し",
+          "detail": "`createTRPCRouter } from`→`'./trpc';` と `createCallerFactory(`→`appRouter);` が継続行行頭へ割れる(p16/67と同じroot.ts完成コード・3度目の再掲)"
+        },
+        {
+          "severity": "suggest",
+          "category": "裸URL脚注",
+          "detail": "脚注1が裸URLのみ `https://drive.google.com/file/d/1Oj1x.../view?usp=drivesdk` で `vie`/`w?usp=` 語途中折返し(説明文なし)"
+        }
+      ]
+    },
+    {
+      "page": 86,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "category": "裸URL脚注",
+          "detail": "脚注2〜6が全て裸URL(Google Drive)のみ、各URLが `vie`/`w?usp=drivesdk` で語途中折返し(day03 p59と同型)"
+        }
+      ]
+    }
+  ],
+  "pdf_sha256_head12": "db326a9a626f"
+}
