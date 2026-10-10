@@ -78,6 +78,7 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 ```
 - 実行ログは `gate-c/logs/` 配下に残して本ブランチへ push する（exit code も記録）
 - 前提ツール: poppler（pdftotext/pdfinfo/pdffonts）。本boxは `brew install poppler` 26.10.0 導入済・`/opt/homebrew/bin` に存在確認済
+- **チェッカー版一致ルール（統括追加）**: `check_pdf_book.py` にNFC等価修正が入る。最終PDF受領時は**生成子が使った修正後チェッカーと同一commit/版のもので再検査**する。受領sha256・機検結果は修正後チェッカーの出力を基準に固定し、使用したチェッカーのgit commitを `gate-c/logs/` の実行ログに記録する
 
 ## 目視手順（要poppler・導入済）
 
