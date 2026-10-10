@@ -1,0 +1,537 @@
+教材用の初期土台を /Users/devin/gate-b-repro/repro に作成します。
+Creating a new Next.js app in /tmp/task-app-scaffold-12774-1791633784.
+
+Using npm.
+
+Initializing project with template: app-tw 
+
+
+Installing dependencies:
+- react
+- react-dom
+- next
+
+Installing devDependencies:
+- typescript
+- @types/node
+- @types/react
+- @types/react-dom
+- @tailwindcss/postcss
+- tailwindcss
+
+
+added 48 packages, and audited 49 packages in 8s
+
+11 packages are looking for funding
+  run `npm fund` for details
+
+2 vulnerabilities (1 moderate, 1 high)
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Initialized a git repository.
+
+Success! Created task-app-scaffold-12774-1791633784 at /tmp/task-app-scaffold-12774-1791633784
+
+A new version of `create-next-app` is available!
+You can update by running: npm i -g create-next-app
+
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: react@19.1.0
+npm warn node_modules/react
+npm warn   peer react@"^19.1.0" from react-dom@19.1.0
+npm warn   node_modules/react-dom
+npm warn     react-dom@"^18.3.1" from the root project
+npm warn     14 more (@radix-ui/react-accordion, ...)
+npm warn   21 more (styled-jsx, the root project, react-hook-form, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer react@"^19.1.0" from react-dom@19.1.0
+npm warn node_modules/react-dom
+npm warn   react-dom@"^18.3.1" from the root project
+npm warn   14 more (@radix-ui/react-accordion, ...)
+
+added 153 packages, removed 1 package, changed 4 packages, and audited 201 packages in 13s
+
+31 packages are looking for funding
+  run `npm fund` for details
+
+1 moderate severity vulnerability
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: task-app-scaffold-12774-1791633784@0.1.0
+npm warn Found: @types/react@19.3.0
+npm warn node_modules/@types/react
+npm warn   peerOptional @types/react@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn     @radix-ui/react-accordion@"^1.2.21" from the root project
+npm warn   48 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer @types/react@"^19.3.0" from @types/react-dom@19.3.0
+npm warn node_modules/@types/react-dom
+npm warn   peerOptional @types/react-dom@"*" from @radix-ui/react-accordion@1.2.21
+npm warn   node_modules/@radix-ui/react-accordion
+npm warn   26 more (@radix-ui/react-alert-dialog, @radix-ui/react-arrow, ...)
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 167 packages, changed 4 packages, and audited 368 packages in 11s
+
+70 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (3 moderate, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+up to date, audited 483 packages in 676ms
+
+105 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (3 moderate, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Biome 設定を作成しました。
+.env.example は既にあるため上書きしません。
+shadcn/ui コンポーネントを src/component/ui/ にコピーしました。
+lib ユーティリティを src/lib/ にコピーしました。
+lib ベースファイル (env.ts, prisma.ts) を配置しました。
+定数ファイルを src/lib/constant/ に配置しました。
+tRPC クライアント設定を src/trpc/ に配置しました。
+auth.ts を配置しました。その他の tRPC ルーターは教材で作ります。
+tRPC サーバー基盤を src/server/api/ に配置しました。
+tRPC HTTP ハンドラを src/app/api/trpc/[trpc]/ に配置しました。
+アプリ共通 Provider と layout を配置しました。
+project コンポーネントを src/component/project/ に配置しました。
+task コンポーネントを src/component/task/ に配置しました。
+Prisma スキーマを配置しました。
+docker-compose.yml を配置しました。
+seed コマンドを配置しました。
+.env.example を .env にコピーしました。
+Docker が使えないため、DB 起動はスキップします。
+ローカル PostgreSQL を使う場合は .env の DATABASE_URL を合わせてください。
+Loaded Prisma config from prisma.config.ts.
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 80ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+
+初期セットアップは完了しました。
+カリキュラムの Day 01 の続きを進めてください。

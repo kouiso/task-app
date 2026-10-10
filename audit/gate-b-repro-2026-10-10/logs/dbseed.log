@@ -1,0 +1,10 @@
+
+> task-app@0.1.0 db:seed
+> tsx src/command/seed.ts
+
+⚠️  このコマンドは次のサンプルプロジェクトを削除して作り直します:
+  - Webサイトリニューアル (id: clseedwebsiterenewal0000000)
+  - モバイルアプリ開発 (id: clseedmobileapp000000000000)
+   プロジェクト内のタスク・コメント・メンバー設定も一緒に消えます。
+   それ以外のプロジェクトとユーザーは対象外です。
+   対象DB: postgresql://user:****@localhost:25532/taskapp

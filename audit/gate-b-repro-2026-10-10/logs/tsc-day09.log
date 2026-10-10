@@ -1,0 +1,18 @@
+src/lib/password.ts(1,10): error TS2300: Duplicate identifier 'z'.
+src/lib/password.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
+src/lib/password.ts(3,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
+src/lib/password.ts(5,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
+src/lib/password.ts(14,10): error TS2300: Duplicate identifier 'z'.
+src/lib/password.ts(15,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
+src/lib/password.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
+src/lib/password.ts(18,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
+src/lib/password.ts(27,10): error TS2300: Duplicate identifier 'z'.
+src/lib/password.ts(28,14): error TS2451: Cannot redeclare block-scoped variable 'BCRYPT_PASSWORD_MAX_BYTES'.
+src/lib/password.ts(29,14): error TS2451: Cannot redeclare block-scoped variable 'isPasswordWithinBcryptLimit'.
+src/lib/password.ts(31,14): error TS2451: Cannot redeclare block-scoped variable 'createPasswordSchema'.
+src/server/api/routers/_helpers/user-email-conflict.ts(1,10): error TS2300: Duplicate identifier 'Prisma'.
+src/server/api/routers/_helpers/user-email-conflict.ts(2,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
+src/server/api/routers/_helpers/user-email-conflict.ts(15,10): error TS2300: Duplicate identifier 'Prisma'.
+src/server/api/routers/_helpers/user-email-conflict.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
+src/server/api/routers/_helpers/user-email-conflict.ts(29,10): error TS2300: Duplicate identifier 'Prisma'.
+src/server/api/routers/_helpers/user-email-conflict.ts(30,14): error TS2451: Cannot redeclare block-scoped variable 'isUserEmailUniqueConstraintError'.
