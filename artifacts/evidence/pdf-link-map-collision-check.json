@@ -1,0 +1,10 @@
+{
+  "kind": "PDF_BOOK_LINK_MAP_COLLISION_CHECK",
+  "source_map": "drive-current-link-inventory-20261001-bc782896/pdf-link-map.json",
+  "books": 36,
+  "map_entries": 58,
+  "unique_urls": 36,
+  "unique_file_ids": 36,
+  "collisions": [],
+  "result": "NO_COLLISION"
+}

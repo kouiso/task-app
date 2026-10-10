@@ -1,0 +1,293 @@
+{
+ "books": [
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/00-1_学びのロードマップ.pdf",
+   "file": "00-1_学びのロードマップ.pdf",
+   "pages": 7,
+   "sha256": "b74d11f58b8d3a557d131f16025c6bff119f4a694ebc01bb2ac32f5c1d94b7bc",
+   "source_md": "00-1_学びのロードマップ.md",
+   "source_sha256": "8bd349ed7bc962c4e71293d4d62eab47aa7b801638d7f34169ec19dbaa9b71a6"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/00_カリキュラム目次.pdf",
+   "file": "00_カリキュラム目次.pdf",
+   "pages": 20,
+   "sha256": "f3bebae0d6d0922afee4216eff5b206b3593e76158a7364014c05049761e1cf1",
+   "source_md": "00_カリキュラム目次.md",
+   "source_sha256": "fadedb04d72a0ddbb34d2f9a718a28f60b6d2978b4933d413fdaed106996888e"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/appendix_トラブルシューティング.pdf",
+   "file": "appendix_トラブルシューティング.pdf",
+   "pages": 21,
+   "sha256": "e0d6402d18c31952d0acc1742dda35295f6ff8f21a31a5ddb8d8c36312a70a32",
+   "source_md": "appendix_トラブルシューティング.md",
+   "source_sha256": "0865ac0146ebc8958734f6e36cc77ddd333cfd957b6be5f47d1be166ba24c344"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/appendix_参考資料.pdf",
+   "file": "appendix_参考資料.pdf",
+   "pages": 10,
+   "sha256": "2869cb1b3ce81e2c7538b127dca192b27d262f12bc8878c6a751f5a42b393b7a",
+   "source_md": "appendix_参考資料.md",
+   "source_sha256": "68d4ab3b32efd042781440e8d7811d77aa387238b30882292284e770bae9c1cc"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/appendix_次のステップ.pdf",
+   "file": "appendix_次のステップ.pdf",
+   "pages": 16,
+   "sha256": "9ff7a691e857ab6eaff34b453cca768a3e0619cdf6c4b35c963ce65ea39c0c7f",
+   "source_md": "appendix_次のステップ.md",
+   "source_sha256": "fabeb1b6a820e30cf2a8df4e5c4e8439ec6a406128339afdd081dafb4212ad9f"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/appendix_用語集.pdf",
+   "file": "appendix_用語集.pdf",
+   "pages": 16,
+   "sha256": "eea5748f0a9b04fad1ba4f60c36339c2990819ed02af45beee6a393b3e5d44f5",
+   "source_md": "appendix_用語集.md",
+   "source_sha256": "a47847a5d887358648e3fc11813b2f606c9b16cdc1ec4df589cebb2bf52cd0f7"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+   "file": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+   "pages": 82,
+   "sha256": "7885999f22b9e81e528a4b65b1f9c1f841b5e4a770bf42547ef60701e31467f6",
+   "source_md": "day01_開発環境を整えて、初めてのアプリを動かそう.md",
+   "source_sha256": "dcc268aacb28351e2b279e51e082a068b996098a39cc92ca0ac1f6a1552304f7"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+   "file": "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf",
+   "pages": 70,
+   "sha256": "b2f6d49697162887288ecf0d940140df26df02dd9ece5d80523f198e8e625a5b",
+   "source_md": "day02_ダッシュボードに自分だけのメッセージを追加しよう.md",
+   "source_sha256": "7394d8c218cf3018a2c9fc153f7debf25c6e8950064cf8d2a2ac7c4c0fff046d"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day03_GitHubに保存する.pdf",
+   "file": "day03_GitHubに保存する.pdf",
+   "pages": 60,
+   "sha256": "d4ffcaec4b1746b4e04994992e440bf1dd8abc7493c9fdd0a1c8ba7e29e0ca57",
+   "source_md": "day03_GitHubに保存する.md",
+   "source_sha256": "f083816f377f3548234a53771c333135f0db875825455accd82e3db1b32bae23"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day04_ネットに公開.pdf",
+   "file": "day04_ネットに公開.pdf",
+   "pages": 50,
+   "sha256": "57e06cdc379c2be0c278596ae2a74e3cc6067dffead013d0c308c065f42a9702",
+   "source_md": "day04_ネットに公開.md",
+   "source_sha256": "1df5d15047065acdba722ce6b147aaa9532c341b1fdcb3d9d38ccab1874a18e0"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day05_ログイン画面のUI.pdf",
+   "file": "day05_ログイン画面のUI.pdf",
+   "pages": 81,
+   "sha256": "944b9a74fa5323f3ad8b7f6d560bd652d22d8dd1ddc0fe5fd56a9088e419f199",
+   "source_md": "day05_ログイン画面のUI.md",
+   "source_sha256": "b1e169627e567817bdbcfd41cf02bc0733765327802e96140fbbef4c54c49942"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day06_ユーザー登録画面.pdf",
+   "file": "day06_ユーザー登録画面.pdf",
+   "pages": 77,
+   "sha256": "79fdb8402378ef941057c9415af0e01ad1f56b592e8567c6d0739713d10a22d4",
+   "source_md": "day06_ユーザー登録画面.md",
+   "source_sha256": "cce883290502cf2ab586f8b84b7417b985880df860f53de988e953d1256e96e2"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day07_ログイン体験を改善しよう.pdf",
+   "file": "day07_ログイン体験を改善しよう.pdf",
+   "pages": 146,
+   "sha256": "69f92c674c6f4261d5d510c6f149aeb3f8e8c313b09c8d15ccfe7d88f30466e6",
+   "source_md": "day07_ログイン体験を改善しよう.md",
+   "source_sha256": "d0255667c618150965078a5199f07432e108a19eaeb93aff5b96a8efe66c9349"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day08_サイドバーを完成させよう.pdf",
+   "file": "day08_サイドバーを完成させよう.pdf",
+   "pages": 85,
+   "sha256": "6f834c97a3d600f1c391770ee5e0a00704e8b1ee02c20fdbab4070a174fd3dc5",
+   "source_md": "day08_サイドバーを完成させよう.md",
+   "source_sha256": "e1ac9093bb513655617d702b62bce070976aec65509f0ee6f2ed3faa080015fa"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day09_プロジェクト一覧画面.pdf",
+   "file": "day09_プロジェクト一覧画面.pdf",
+   "pages": 86,
+   "sha256": "db326a9a626fdc9eaaaad8229a21254ae74229d0adedb9c0194e2748ea140019",
+   "source_md": "day09_プロジェクト一覧画面.md",
+   "source_sha256": "476ecea5ff2d2950031721bf39e79b6010c0c102377c7dae5ca65f9f528047b3"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day10_プロジェクト新規作成.pdf",
+   "file": "day10_プロジェクト新規作成.pdf",
+   "pages": 120,
+   "sha256": "30a069f0d86a02098023430ed12e0425bff8ef3efcabe3ac3392e7b6562cc3ec",
+   "source_md": "day10_プロジェクト新規作成.md",
+   "source_sha256": "b190d2dd00559695315d58387ada0918a5f81642f0968f3f4f082337d2affa55"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day11_プロジェクト編集・削除.pdf",
+   "file": "day11_プロジェクト編集・削除.pdf",
+   "pages": 161,
+   "sha256": "23e5722f521e4589001fd9699b1db3d5a68b502e54390499fb31d95e0ed9adf5",
+   "source_md": "day11_プロジェクト編集・削除.md",
+   "source_sha256": "1b28e36e71217664f4dfa383cd4d9f9d1aa19719244c595923fedb4c74af5fa0"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day12_メンバー追加.pdf",
+   "file": "day12_メンバー追加.pdf",
+   "pages": 169,
+   "sha256": "6ce786d724c150348663b1e747d48dc71bbeb056b31e2b8d4a1b44ec5c43e288",
+   "source_md": "day12_メンバー追加.md",
+   "source_sha256": "cd9c659a1fa6416dd92c4505ad27df5e70af2c51082b6b3812f5bbf2e62cd193"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day13_タスク一覧画面.pdf",
+   "file": "day13_タスク一覧画面.pdf",
+   "pages": 103,
+   "sha256": "9becffb6d83008ecb739bf7685f46934551427c71ab846a1c1e71a2df92eea1d",
+   "source_md": "day13_タスク一覧画面.md",
+   "source_sha256": "5c1a9b8481a00f5cb0c4503a110108ebb27c02b60aa6624d9d6e46029ba62453"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day14_タスク新規作成.pdf",
+   "file": "day14_タスク新規作成.pdf",
+   "pages": 174,
+   "sha256": "b0fe793cea2531403af3b0c6ff1ad6815010670cf36e5a11cc95adeca635062f",
+   "source_md": "day14_タスク新規作成.md",
+   "source_sha256": "08507cdcb6bfeb12f87df65454690a1b57f754db058b6bbc742ccf3c5db6f201"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day15_タスク編集・削除.pdf",
+   "file": "day15_タスク編集・削除.pdf",
+   "pages": 127,
+   "sha256": "713e6dc5a204798ac381eda26f248226d3481df3acaddfb13e2924fc915e0c02",
+   "source_md": "day15_タスク編集・削除.md",
+   "source_sha256": "9558e3dc03f3c43ad250e96e3c4cb1572bb2ee46d5e6241a73658bd8ba7cede6"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day16_ステータス変更・時間記録.pdf",
+   "file": "day16_ステータス変更・時間記録.pdf",
+   "pages": 115,
+   "sha256": "8f26d523f4632cddf22c035a06e7d7e046dcd735bcfae6741892cbca3cf57fdd",
+   "source_md": "day16_ステータス変更・時間記録.md",
+   "source_sha256": "dd519fe31d67d10bd3acc6f9022cc44617bfbab233e2195a37c49cbd2506caab"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day17_自分のタスクページ.pdf",
+   "file": "day17_自分のタスクページ.pdf",
+   "pages": 161,
+   "sha256": "d27e8e6f2c3eab0b22871297e60cbc8cb1149c12cab833e1faf8f152aaa0d231",
+   "source_md": "day17_自分のタスクページ.md",
+   "source_sha256": "2ed751ead24d35efee2ab383fc3d0c127b9766f7a7bf9b227206022d2c3d4e3b"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day18_コメント投稿.pdf",
+   "file": "day18_コメント投稿.pdf",
+   "pages": 105,
+   "sha256": "79f55d0cc967ed02ad8b459c3f15f095f93d51f7baac73eebb0a603fc178084c",
+   "source_md": "day18_コメント投稿.md",
+   "source_sha256": "8021236ed149624149b7dcfdb3c08b3cf2f97c4fbd632c118a12f750fdfc1716"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day19_コメント編集・削除.pdf",
+   "file": "day19_コメント編集・削除.pdf",
+   "pages": 130,
+   "sha256": "dc5d4b600f753ce3584aa95de2cf77586e2543b12ee957eb5c89eaaa0ca6f33e",
+   "source_md": "day19_コメント編集・削除.md",
+   "source_sha256": "da4c94b52e3976a5da0a6663cfbb6c3c0d3f1041787dbcc500f1d2a89c1a7fd2"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day20_タスク検索機能.pdf",
+   "file": "day20_タスク検索機能.pdf",
+   "pages": 274,
+   "sha256": "5bca7a75177ea2f37b5f6bcc5b8174addf05b93c3d3e72330a67e05def6dd022",
+   "source_md": "day20_タスク検索機能.md",
+   "source_sha256": "bceee5e7351e9100496aa9eb543d40014158f22c07a8471e91526a62702c52e7"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day21_統計カードを表示.pdf",
+   "file": "day21_統計カードを表示.pdf",
+   "pages": 87,
+   "sha256": "8dc860f0c589e34896428df95e1cee03ef5a7f4cee2bf52219e652db737be43a",
+   "source_md": "day21_統計カードを表示.md",
+   "source_sha256": "ab3803a1f285f351a59eeb4a66c4762f915873e0c973f54c1c992a63eede6a4a"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day22_グラフを表示.pdf",
+   "file": "day22_グラフを表示.pdf",
+   "pages": 56,
+   "sha256": "22c013444ec028257d464646a4fc9cc257371834a4d337abe12badb6fdab518d",
+   "source_md": "day22_グラフを表示.md",
+   "source_sha256": "7899ae6bf39f37bbb750e52042967a4dea9b6cd4b5738eacbeec279f4784f245"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day23_週次レポート.pdf",
+   "file": "day23_週次レポート.pdf",
+   "pages": 121,
+   "sha256": "707d5ee5828e9974ff5568f9b6e774caf60f7e2e835ed9a84e5abdc714d21d23",
+   "source_md": "day23_週次レポート.md",
+   "source_sha256": "99643922c4e6ea658dd458d18a4045d4f311536d0de08fc7b23987fbd4600121"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day24_ユーザー一覧（管理者用）.pdf",
+   "file": "day24_ユーザー一覧（管理者用）.pdf",
+   "pages": 86,
+   "sha256": "ab2fd2186edf4d04969a77d07739cd4fd9a2f8d3f2d02d1cf1962faf94771ad1",
+   "source_md": "day24_ユーザー一覧（管理者用）.md",
+   "source_sha256": "17078826fcffd502132361c6067b11d2e613373cbb80b19cf720d4cfd719840b"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day25_プロフィール編集.pdf",
+   "file": "day25_プロフィール編集.pdf",
+   "pages": 202,
+   "sha256": "d5e54ef735ad86baa1bb9ffd88d519f9c29ee205e12e755ce77ac8504fa33b7c",
+   "source_md": "day25_プロフィール編集.md",
+   "source_sha256": "192cf5d0f54dafa7e952e03b3c0108e5456c9e587411f8991edda96a557c48c0"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day26_エラーページを作って、バグを退治しよう.pdf",
+   "file": "day26_エラーページを作って、バグを退治しよう.pdf",
+   "pages": 179,
+   "sha256": "0ba955dc858009131482eb5a1179f686a9d7289d815a15c6e449e3ad0c44dc47",
+   "source_md": "day26_エラーページを作って、バグを退治しよう.md",
+   "source_sha256": "c1dd6f612135609505a6ff34b302c77dd78d90e9778cecf874512768ce5ce5b3"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+   "file": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+   "pages": 140,
+   "sha256": "b6d8f2ecb5089ea822864de1bd0015a2c5304023a88df83c072994044b844725",
+   "source_md": "day27_プロジェクト詳細・アーカイブを実装しよう.md",
+   "source_sha256": "21270018bf7630347af46d9f0313f333c2f4b78e2b186cf7b638df8ef980e541"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day28_タスク一括操作を実装しよう.pdf",
+   "file": "day28_タスク一括操作を実装しよう.pdf",
+   "pages": 162,
+   "sha256": "ef9f2ae678969e2494a800dc24726accf82456db3b7c00494409725b8e9ea40c",
+   "source_md": "day28_タスク一括操作を実装しよう.md",
+   "source_sha256": "cf043db6fb97bf77054447486e88abfffd9c88c6011ae8a5bc7da9b90ab5deb6"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day29_ユーザー詳細・編集ページを作ろう.pdf",
+   "file": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+   "pages": 176,
+   "sha256": "ca143b3bc8d445b39f52ef2ba8a56f5c52a27d76b641aa5fc7b26bdae829b612",
+   "source_md": "day29_ユーザー詳細・編集ページを作ろう.md",
+   "source_sha256": "c6169f6eb5409dcd72b4f1a6218107110e4596c830fca39da75e920771b31f51"
+  },
+  {
+   "pdf": "/Users/devin/taskapp/source40/dist/pdf/day30_完成版を公開！.pdf",
+   "file": "day30_完成版を公開！.pdf",
+   "pages": 68,
+   "sha256": "6fbb2425cefdf467c8124bb83c268219bf8a241391c7c4d1d416f8c7807523f2",
+   "source_md": "day30_完成版を公開！.md",
+   "source_sha256": "5bedd55830c21a07954d264cfabb5a4ce9714d97640cf97078c361603a991e45"
+  }
+ ],
+ "count": 36
+}
