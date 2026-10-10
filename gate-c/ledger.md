@@ -109,3 +109,16 @@ $PY scripts/pdf-book/check_pdf_book.py dist/pdf    # 引数は「PDFディレク
 - 白頁: 全冊・テキスト15字未満の頁なし（空白頁なし）[pdftotext]
 - 画像: pdfimages -list で各冊1〜7枚確認（冊毎の枚数は既記録）
 - ※本項は機検のみ。細部の判読は子セッション分担の全頁目視で判定する
+
+## S01結果集約（6冊・90頁・全頁目視済・e39a1ce9基準）
+| 冊 | sha256(12) | 検査範囲 | must | suggest/note |
+|---|---|---|---|---|
+| 00-1_学びのロードマップ | b74d11f58b8d | 1-7 | 0 | 脚注裸URL(suggest,p3)・奥付紺帯(note,p7) |
+| 00_カリキュラム目次 | f3bebae0d6d0 | 1-20 | 0 | 脚注裸URL(suggest,pp.3/8-19)・脚注次頁送り(note,pp.11/14)・奥付紺帯(note) |
+| appendix_トラブルシューティング | e0d6402d18c3 | 1-21 | 0 | 脚注裸URL(suggest)・脚注次頁送り(note,p21)・奥付紺帯 |
+| appendix_参考資料 | 2869cb1b3ce8 | 1-10 | 0 | 脚注裸URL(suggest,pp.4-10・表内inline重複) |
+| appendix_次のステップ | (S01JSON参照) | 1-16 | 0 | 同上パターン |
+| appendix_用語集 | (S01JSON参照) | 1-16 | 0 | 同上パターン |
+
+採否: must=0。脚注裸URLは全冊共通のendnote式デザインの可能性が高く「suggest・様式統一確認」として記録（本文側リンクテキストあり・情報欠落なし）。脚注次頁送りはpaged-media脚注溢れの挙動・「note」で記録のみ。奥付紺帯は意図的装飾と認定（全冊共通）。
+運用変更（統括）: 以後のレンジは新規セッション作成せず本セッション（devin-6f57aed9296946fc8f5efedfe102e429）へ逐次再送。入力hash固定・担当範囲は各回で明記。
