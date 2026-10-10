@@ -5,9 +5,13 @@
 
 ## check_pdf_book.py（4箇所のNFC正規化を除去）
 対象: work_slug / glyph-map title+path / expected_title / provenance.source_title
-- 変異後 `test_check_pdf_book.py` → **2件FAIL**:
+- 変異後 `test_check_pdf_book.py` → **3件FAIL**:
   - `work_slug が NFD/NFC で別 document_id を返す`
   - `NFC回帰: NFD実ファイル+NFC glyph mapの等価証跡を拒否した`
+  - `NFC回帰: receiptのNFC titleとNFD headerの等価を拒否した`
+- 回帰は4比較すべてを封じる: work_slug / glyph-map title+path /
+  conversion.expected_title / provenance.source_title
+  （後者2つは receipt側titleを別正規化形にした混在fixtureで隔離検査）
 - 復元後 → 145ケース全PASS
 - ログ: `py-mutation-evidence.log`
 
