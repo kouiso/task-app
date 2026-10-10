@@ -646,6 +646,13 @@ class HtmlLinks(HTMLParser):
 
 PDF_FOOTNOTE_ATTRIBUTE = 'data-pdf-footnote'
 PDF_FOOTNOTE_DISPLAY_ATTRIBUTE = 'data-pdf-footnote-display'
+PDF_HEADING_URL_ATTRIBUTE = 'data-pdf-heading-url'
+PDF_BARE_URL_ATTRIBUTE = 'data-pdf-bare-url'
+PDF_RESERVED_ATTRIBUTES = {
+    PDF_FOOTNOTE_ATTRIBUTE, PDF_FOOTNOTE_DISPLAY_ATTRIBUTE,
+    PDF_HEADING_URL_ATTRIBUTE, PDF_BARE_URL_ATTRIBUTE,
+}
+HEADING_TAGS = frozenset({'h1', 'h2', 'h3', 'h4', 'h5', 'h6'})
 HTML_VOID_ELEMENTS = {
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr',
@@ -680,7 +687,13 @@ def footnote_display_url(href: str) -> str:
 
 
 class ExternalLinkFootnotes(HTMLParser):
-    """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。"""
+    """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。
+
+    issue #474 の直し4・直し5で2種類の例外を付けた。
+    見出しの中のリンクは番号を振らず、表示用のURLを data-pdf-heading-url に
+    入れて book.css が見出しの下の1行に出す。リンクの文字列がURLそのものの
+    リンクも番号を振らず、data-pdf-bare-url を付けて脚注を出さない。
+    """
 
     def __init__(self, markup: str):
         super().__init__(convert_charrefs=False)
@@ -688,42 +701,92 @@ class ExternalLinkFootnotes(HTMLParser):
         for index, character in enumerate(markup):
             if character == '\n':
                 self.line_starts.append(index + 1)
-        self.parent_classes: list[set[str]] = []
+        self.parents: list[tuple[str, set[str]]] = []
         self.edits: list[tuple[int, str]] = []
         self.number = 0
+        # 文字列比較のために開いた <a> の本文を </a> まで集める
+        self.capture: dict | None = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
-        parent_classes = self.parent_classes[-1] if self.parent_classes else set()
+        parent_classes = self.parents[-1][1] if self.parents else set()
         href = attributes.get('href')
         if tag == 'a' and href and href.startswith(('http://', 'https://')):
-            if PDF_FOOTNOTE_ATTRIBUTE in attributes or PDF_FOOTNOTE_DISPLAY_ATTRIBUTE in attributes:
+            reserved = PDF_RESERVED_ATTRIBUTES.intersection(attributes)
+            if reserved:
                 raise ValueError(
-                    f'予約属性 {PDF_FOOTNOTE_ATTRIBUTE} / {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}'
+                    f'予約属性 {" / ".join(sorted(reserved))}'
                     ' は原稿で使用できません'
                 )
             # theme-base の `:not(.footnote) > a[href^="http"]` と対象をそろえる。
             # 明示脚注の中のリンクまで数えると、紙面に出ない欠番が生じる。
             if 'footnote' not in parent_classes:
-                self.number += 1
                 line, column = self.getpos()
                 insertion = self.line_starts[line - 1] + column + 2
-                self.edits.append(
-                    (insertion,
-                     f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
-                     f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
-                )
+                if any(parent_tag in HEADING_TAGS for parent_tag, _ in self.parents):
+                    # 見出しの中のリンクは脚注にしない。表示用のURLは
+                    # book.css の ::after が見出しの下の1行に出す（直し4）
+                    self.edits.append(
+                        (insertion,
+                         f' {PDF_HEADING_URL_ATTRIBUTE}="{footnote_display_url(href)}"')
+                    )
+                else:
+                    self.capture = {
+                        'insertion': insertion,
+                        'href': href,
+                        'chunks': [],
+                    }
         if tag not in HTML_VOID_ELEMENTS:
-            self.parent_classes.append(set((attributes.get('class') or '').split()))
+            self.parents.append((tag, set((attributes.get('class') or '').split())))
 
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
+        if tag == 'a':
+            self.finish_anchor()
         if tag not in HTML_VOID_ELEMENTS:
-            self.parent_classes.pop()
+            self.parents.pop()
+
+    def handle_data(self, data):
+        if self.capture is not None:
+            self.capture['chunks'].append(data)
+
+    def handle_entityref(self, name):
+        if self.capture is not None:
+            self.capture['chunks'].append(html.unescape(f'&{name};'))
+
+    def handle_charref(self, name):
+        if self.capture is not None:
+            self.capture['chunks'].append(html.unescape(f'&#{name};'))
+
+    @staticmethod
+    def _bare_url_key(text: str) -> str:
+        # 折り返し用の不可視文字と前後の空白を外し、末尾の / の有無は同一視する
+        return text.replace('\u200b', '').replace('\u2060', '').strip().rstrip('/')
+
+    def finish_anchor(self):
+        capture, self.capture = self.capture, None
+        if capture is None:
+            return
+        text = ''.join(capture['chunks'])
+        href = capture['href']
+        if text and self._bare_url_key(text) == self._bare_url_key(href):
+            # 文字列がURLそのものなら脚注にしない（直し5）
+            self.edits.append(
+                (capture['insertion'], f' {PDF_BARE_URL_ATTRIBUTE}="1"')
+            )
+            return
+        self.number += 1
+        self.edits.append(
+            (capture['insertion'],
+             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
+             f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+        )
 
     def handle_endtag(self, tag):
-        if tag not in HTML_VOID_ELEMENTS and self.parent_classes:
-            self.parent_classes.pop()
+        if tag == 'a':
+            self.finish_anchor()
+        if tag not in HTML_VOID_ELEMENTS and self.parents:
+            self.parents.pop()
 
 
 def number_external_link_footnotes(markup: str) -> str:
@@ -1133,6 +1196,29 @@ def parse_source(
     return title, body, toc
 
 
+_TS_FENCE = re.compile(r"^(\s*)```(?:typescript|ts)\s*$")
+_ANY_FENCE = re.compile(r"^\s*```")
+_TSX_FILEPATH = re.compile(r"filepath:\s*\S+?\.tsx\b")
+
+
+def relabel_tsx_fences(lines: list[str]) -> list[str]:
+    """filepath が .tsx の typescript / ts ブロックを tsx として色付けさせる。"""
+    out = list(lines)
+    index = 0
+    while index < len(out):
+        if not _ANY_FENCE.match(out[index]):
+            index += 1
+            continue
+        end = index + 1
+        while end < len(out) and not re.match(r"^\s*```\s*$", out[end]):
+            end += 1
+        opener = _TS_FENCE.match(out[index])
+        if opener and any(_TSX_FILEPATH.search(line) for line in out[index + 1:end]):
+            out[index] = f"{opener.group(1)}```tsx"
+        index = end + 1
+    return out
+
+
 def convert_mermaid(body: list[str], stem: str, work: Path,
                     env: dict[str, str],
                     source_stem: str = "") -> tuple[list[str], int, list[str]]:
@@ -1414,6 +1500,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         return [f"{path.name}: H1 が無い"]
 
     body, figures, problems = convert_mermaid(body, slug, WORK_DIR, env, stem)
+    # filepath が .tsx のブロックは tsx と宣言し直して構文色を正す（issue #474 直し3）
+    body = relabel_tsx_fences(body)
 
     document = WORK_DIR / f"{slug}.md"
     document.write_text(

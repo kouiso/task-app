@@ -139,6 +139,18 @@ ORPHAN_PREV_MIN_RATIO = 0.9
 # それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
 URL_BREAK_ALLOWED_AFTER = "/?&="
 FOOTNOTE_URL_START = re.compile(r"^\s*\d+\.\s*https?://")
+
+
+def generated_footnote_line(raw_text: str) -> bool:
+    """生成器が出した脚注の行なら True。
+
+    生成器（build_pdf_book.py の footnote_display_url）は脚注の表示URLに
+    折返し用の不可視文字（U+200B・U+2060）を必ず挟む。原稿の番号付き
+    リストの行頭がたまたま `N. https://…` の形（インラインコードのURL）を
+    していても不可視文字は無いので、この印で脚注と取り違えない
+    （issue #474 直し6）。
+    """
+    return "\u200b" in raw_text or "\u2060" in raw_text
 # URLの続きとしてあり得る行（空白を含まずURL文字だけ）
 URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
 # 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
@@ -603,7 +615,10 @@ def find_url_wrap_problems(lines: list[Line]) -> list[str]:
     for block_lines in blocks.values():
         block_lines.sort(key=lambda line: line.top)
         for index, line in enumerate(block_lines):
-            if not FOOTNOTE_URL_START.match(visible_text(line.text)):
+            if not (
+                FOOTNOTE_URL_START.match(visible_text(line.text))
+                and generated_footnote_line(line.text)
+            ):
                 continue
             previous = line
             for continuation in block_lines[index + 1:]:
@@ -647,6 +662,49 @@ def find_hyphen_break_problems(lines: list[Line]) -> list[str]:
     return problems
 
 
+def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
+    """脚注（`N. https://…`）と呼び出し（`*N`）が別のページに載った箇所を挙げる。
+
+    脚注番号は生成器が <a> へ付けた data-pdf-footnote から CSS の ::after が
+    「*N」の形で描く。呼び出しの行が次のページへ送られず、脚注だけが先へ
+    回ると、読者はリンク先を探してページをめくることになる（issue #474 直し6）。
+    比べる前に折り返し用の不可視文字（U+2060・U+200B など）を外す。
+    柱とノンブルは版面の外なので呼び出しには数えない。
+    """
+    pages: dict[int, list[Line]] = {}
+    for line in lines:
+        pages.setdefault(line.page, []).append(line)
+    problems: list[str] = []
+    for page, page_lines in sorted(pages.items()):
+        numbers: list[int] = []
+        body_parts: list[str] = []
+        footnote = False
+        for line in sorted(page_lines, key=lambda ln: (ln.block, ln.top)):
+            text = visible_text(line.text)
+            if FOOTNOTE_URL_START.match(text) and generated_footnote_line(line.text):
+                footnote = True
+                number = re.match(r"^\s*(\d+)\.", text)
+                numbers.append(int(number.group(1)))
+                continue
+            stripped = text.strip()
+            if footnote and stripped and URL_CONTINUATION.match(stripped):
+                continue
+            footnote = False
+            # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
+            if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
+                continue
+            body_parts.append(text)
+        if not numbers:
+            continue
+        body = "".join(body_parts)
+        for number in numbers:
+            if not re.search(rf"\*{number}(?!\d)", body):
+                problems.append(
+                    f"p{page}: 脚注 {number} が呼び出しと別のページに載っている"
+                )
+    return problems
+
+
 def _footnote_marker_re(markup: str) -> "re.Pattern[str]":
     """外部リンクの脚注番号を PDF の文から外すための正規表現を作る。
 
@@ -684,7 +742,8 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
         footnote = False
         for line in block_lines:
             text = visible_text(line.text).strip()
-            if FOOTNOTE_URL_START.match(visible_text(line.text)):
+            if FOOTNOTE_URL_START.match(visible_text(
+                    line.text)) and generated_footnote_line(line.text):
                 footnote = True
             elif not (footnote and text and URL_CONTINUATION.match(text)):
                 footnote = False
@@ -969,6 +1028,7 @@ def check_one(pdf: Path) -> tuple[list[str], bool | None]:
     problems += find_single_orphan_problems(lines)
     problems += find_url_wrap_problems(lines)
     problems += find_hyphen_break_problems(lines)
+    problems += find_footnote_separation_problems(lines)
 
     # 組んだ冊と同じ内容で残った計測記録があれば、縦並び表の行の分割と
     # 本文1行だけの表の断片を照合する。

@@ -60,6 +60,41 @@ class BookLinksTest(unittest.TestCase):
 <pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>''')
         self.assertEqual(number_external_link_footnotes(source), expected)
 
+    def test_heading_links_get_display_url_instead_of_footnote(self):
+        source = ('<h2><a href="https://example.com/docs">公式</a></h2>\n'
+                  '<p><a href="https://example.net/x">外部</a></p>')
+        result = number_external_link_footnotes(source)
+        # 見出しの中のリンクは番号を消費せず、表示用URLだけを受け取る（issue #474 直し4）
+        self.assertIn('<a data-pdf-heading-url='
+                      '"https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200bdocs"'
+                      ' href="https://example.com/docs">公式</a>', result)
+        # 本文のリンクは 1 から振られる
+        self.assertIn('data-pdf-footnote="1" ', result)
+        self.assertNotIn('data-pdf-footnote="2"', result)
+
+    def test_bare_url_link_is_not_numbered(self):
+        source = ('<p><a href="https://example.com/docs">https://example.com/docs</a></p>\n'
+                  '<p><a href="https://example.net/x">外部</a></p>')
+        result = number_external_link_footnotes(source)
+        # 文字列がURLそのものなら印だけ付けて脚注にしない（issue #474 直し5）
+        self.assertIn('<a data-pdf-bare-url="1" href="https://example.com/docs">', result)
+        self.assertIn('data-pdf-footnote="1" ', result)
+        self.assertNotIn('data-pdf-footnote="2"', result)
+
+    def test_bare_url_ignores_trailing_slash_and_invisible_wrap_chars(self):
+        source = ('<p><a href="https://example.com/docs/">https://example.com/docs</a></p>\n'
+                  '<p><a href="https://example.com/a?b=1&amp;c=2">'
+                  'https://example.com/a?b=1\u200b&amp;\u200bc=2</a></p>')
+        result = number_external_link_footnotes(source)
+        self.assertEqual(result.count('data-pdf-bare-url="1"'), 2)
+        self.assertNotIn('data-pdf-footnote', result)
+
+    def test_new_reserved_attributes_are_rejected(self):
+        for attribute in ('data-pdf-bare-url', 'data-pdf-heading-url'):
+            with self.assertRaises(ValueError):
+                number_external_link_footnotes(
+                    f'<p><a {attribute}="1" href="https://example.com">x</a></p>')
+
     def test_print_footnote_numbers_restart_for_each_book_and_survive_void_elements(self):
         source = '<p><br><a href="https://example.com">外部</a><img src="x"></p>'
         expected = ('<p><br><a data-pdf-footnote="1" '

@@ -35,6 +35,7 @@ from check_page_layout import (  # noqa: E402
     find_image_problems,
     find_ink_overflow,
     find_hyphen_break_problems,
+    find_footnote_separation_problems,
     find_orphan_problems,
     find_overlaps,
     find_single_orphan_problems,
@@ -232,19 +233,22 @@ SINGLE_ORPHAN_CASES: list[tuple[str, list[Line], int]] = [
 # 脚注の表示URLは / ? & = の直後に限って折れる。語の途中で切れたら問題
 URL_WRAP_CASES: list[tuple[str, list[Line], int]] = [
     ("区切りの直後で折れていれば問題なし",
-     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/file/d/ID/"),
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https:/​/​example.com/file/d​/ID​/"),
       line(2, 0, 22.0, 49.2, 60.0, "view?x=1&y=2")], 0),
     ("語の途中で切れたら問題（vie / w に割れた実測）",
-     [line(2, 0, 22.0, 40.0, 120.0, "2. https://drive.google.com/file/d/vie"),
+     [line(2, 0, 22.0, 40.0, 120.0, "2. https:/​/​drive.google.com/file/d/vie"),
       line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 1),
     ("次の行がURLでなければ折返しではないので問題にしない",
-     [line(2, 0, 22.0, 40.0, 120.0, "1. https://example.com/x"),
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https:/​/​example.com/x"),
       line(2, 0, 22.0, 49.2, 100.0, "普通の日本語の行です")], 0),
     ("URLで始まらない行からの切れは脚注ではないので数えない",
      [line(2, 0, 22.0, 40.0, 120.0, "本文の行 vie"),
       line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 0),
+    ("原稿の番号付きリストのURL行は折返し検査の対象にしない",
+     [line(2, 0, 22.0, 40.0, 120.0, "1. https://github.com/new を開く"),
+      line(2, 0, 22.0, 49.2, 60.0, "w?x=1")], 0),
     ("ページ境を跨いだURL折れは塊が分かれるので対象外",
-     [line(2, 0, 22.0, 260.0, 120.0, "1. https://drive.google.com/file/d/vie"),
+     [line(2, 0, 22.0, 260.0, 120.0, "1. https:/​/​drive.google.com/file/d/vie"),
       line(3, 0, 22.0, 30.0, 60.0, "w?x=1")], 0),
 ]
 
@@ -308,12 +312,42 @@ KEEP_NEXT_CASES: list[tuple[str, list[Line], str, int, int]] = [
      KEEP_NEXT_MARKUP, 0, 0),
     ("脚注番号（*N）はPDFの文から外して照合する",
      [line(2, 0, 22.0, 40.0, 120.0, "リンクサイト*3です。"),
-      line(2, 8, 22.0, 255.0, 120.0, "3. https://example.com")],
+      line(2, 8, 22.0, 255.0, 120.0, "3. https:/​/​example.com")],
      '<p>リンク<a data-pdf-footnote="3" href="https://example.com">サイト</a>です。</p>',
      0, 0),
 ]
 
 # 縦並び表の1行は2ページ以上に分かれない
+# 脚注と呼び出しは同じページにいる（issue #474 直し6）
+FOOTNOTE_SEPARATION_CASES: list[tuple[str, list[Line], int]] = [
+    ("呼び出しと脚注が同じページなら問題なし",
+     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 0),
+    ("脚注だけが次のページに回ったら問題",
+     [line(2, 0, 22.0, 40.0, 120.0, "詳しくは公式ドキュメント*3を見よう"),
+      line(3, 1, 22.0, 30.0, 120.0, "3. https:/​/​example.com/docs")], 1),
+    ("呼び出しの無い脚注が2件あれば2件挙げる",
+     [line(3, 1, 22.0, 30.0, 120.0, "3. https:/​/​example.com/a"),
+      line(3, 1, 22.0, 35.0, 120.0, "4. https:/​/​example.com/b")], 2),
+    ("番号の途中まで一致する呼び出しは別物（*3 と脚注 30）",
+     [line(2, 0, 22.0, 40.0, 120.0, "別の節*3も参照"),
+      line(3, 1, 22.0, 30.0, 120.0, "30. https:/​/​example.com/x")], 1),
+    ("折り返し用の不可視文字をまたぐ呼び出しも同じページとみなす",
+     [line(2, 0, 22.0, 40.0, 120.0, "ドキュメント\u2060*3を見よう"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 0),
+    ("脚注の折返し行は呼び出しの判定から外す",
+     [line(2, 0, 22.0, 40.0, 120.0, "本文だけのページ"),
+      line(2, 1, 22.0, 255.0, 120.0, "3. https:/​/​example.com/file/d​/"),
+      line(2, 1, 22.0, 260.0, 60.0, "view*3")], 1),
+    ("原稿の番号付きリストのURL行は脚注ではない（呼び出しが無くても挙げない）",
+     [line(2, 0, 22.0, 40.0, 120.0, "リポジトリを作ろう"),
+      line(2, 1, 22.0, 60.0, 120.0, "1. https://github.com/new を開く")], 0),
+    ("柱とノンブルは呼び出しに数えない",
+     [line(2, 0, 22.0, 10.3, 100.0, "柱*3"),
+      line(2, 9, 22.0, 282.3, 4.0, "*3"),
+      line(2, 1, 22.0, 260.0, 120.0, "3. https:/​/​example.com/docs")], 1),
+]
+
 STACKED_SPLIT_CASES: list[tuple[str, dict, int]] = [
     ("同じ行が2ページに分かれていたら問題",
      {'dom_audit': {'stacked_inventory': [{'fragments': [
@@ -620,6 +654,11 @@ def main() -> int:
         if len(got) != expected:
             failures.append(f"ハイフン折れ／{label}: 期待 {expected}件 実際 {got}")
 
+    for label, lines, expected in FOOTNOTE_SEPARATION_CASES:
+        got = find_footnote_separation_problems(lines)
+        if len(got) != expected:
+            failures.append(f"脚注の分離／{label}: 期待 {expected}件 実際 {got}")
+
     for label, report, expected in STACKED_SPLIT_CASES:
         got = find_stacked_split_problems(report)
         if len(got) != expected:
@@ -637,7 +676,7 @@ def main() -> int:
     haystack, page_ends = _body_page_texts([
         line(2, 0, 22.0, 12.0, 100.0, "柱の見出し"),
         line(2, 1, 22.0, 40.0, 120.0, "本文です。"),
-        line(2, 8, 22.0, 255.0, 120.0, "1. https://example.com/file/d/"),
+        line(2, 8, 22.0, 255.0, 120.0, "1. https:/​/​example.com/file/d​/"),
         line(2, 8, 22.0, 264.0, 60.0, "view?x=1"),
         line(2, 9, 22.0, 282.0, 4.0, "7"),
     ], "")
@@ -748,7 +787,8 @@ def main() -> int:
     total_cases = (len(CODE_BAND_CASES) + len(RULE_CASES) + len(INK_CASES) + len(TEXT_OVERFLOW_CASES) + len(OVERLAP_CASES)
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
-                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES) + 17)
+                   + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES)
+                   + len(FOOTNOTE_SEPARATION_CASES) + 17)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
 
