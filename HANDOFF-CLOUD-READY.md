@@ -56,7 +56,7 @@ git checkout b21c8ec42229605897d518940e3a81fe5211c7c8   # 入力
 - rollback: manifest.jsonの旧PDFバイナリ（`drive-backup/<id>.pdf`）で同一IDへ版復元。
 - capability実測(2026-10-10): `get_file_metadata` on folder → `canAddChildren: true`、ZIP既存file(1JGcp9mhde)のpermissions確認 → kouiso=organizer。**ただし** folder権限は個別fileの内容更新権限を証明しない。
 - **同一IDバイナリ更新: Devin側は現状ツール未対応（確認済）**。MCP `google-drive-4ce0` の提供ツールは copy_file/create_file/download_file_content/get_file_metadata/get_file_permissions/list_recent_files/read_file_content/search_files — `files.update uploadType=media` 相当の in-place binary update（update_file）は存在せず、create/copyは新IDになるため既存37件更新に使えない。OAuth相当の資格情報も未配備（新規発行はoauth-before-provisioningで禁止）。
-- 分担案: 同一ID binary置換はChatGPT側コネクタの `update_file(fileId, file_uri, mime_type)` で実行（Devinは置換後の download_file_content+sha256 で全件readback検証を担当）。実行前に一時PDFでID維持→download hash一致→旧bytes復元の試験を先に行い結果をこの文書へ追記。
+- 分担（実証済）: 同一ID binary置換はChatGPT側コネクタの `update_file(fileId, file_uri, mime_type)` で実行。**実証 2026-10-10**: ChatGPT側が同一ID `17e3H5162e5xzp_tIQ4fA6rM2m1c20yAB` で v1→v2→v1 置換+毎回download SHA256照合成功（v1/復元 `8e42bca6...1be5` / v2 `bb9d4a04...f19`、親フォルダ維持、証拠TEMPはフォルダ内に残置）。手順: 最終版確定後にDevinが成果物URL/commit・37ID・旧version/hashを提示 → ChatGPTがupdate実行 → Devinがdownload_file_content+sha256で独立readback検証。ユーザーローカル入力不要
 
 ## 6. 認証・権限の実取得可否
 
