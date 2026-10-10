@@ -63,6 +63,7 @@ from check_pdf_book import ToolFailure, run_tool  # noqa: E402
 from build_pdf_book import work_slug  # noqa: E402
 from breakable_code import BREAKABLE_MIN_LINES  # noqa: E402
 from keep_next import collect_paragraphs, normalize_text  # noqa: E402
+from table_structure import cell_visual_rows  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF_DIR = REPO_ROOT / "dist" / "pdf"
@@ -828,6 +829,85 @@ def find_stacked_split_problems(report: dict) -> list[str]:
     ]
 
 
+def _table_code_rects(audit: dict) -> dict[str, list]:
+    """実測記録の observed 配列から、表ごとの行内コードの矩形を集める。"""
+    rects: dict[str, list] = {}
+    for group in audit.get('observed', []):
+        for item in group.get('items', []):
+            geometry = item.get('table_geometry')
+            if geometry and item.get('code_rect'):
+                rects.setdefault(geometry['identity']['value'], []).append(item['code_rect'])
+    return rects
+
+
+def _column_visual_stats(table: dict, code_rects: list) -> dict[int, dict]:
+    """表の列ごとに、見出し・最長行の列幅比・見た目の行数・列幅（全角換算）を集める。"""
+    columns: dict[int, dict] = {}
+    for fragment in table.get('fragments', []):
+        for cell in (fragment.get('geometry') or {}).get('cells') or []:
+            box = cell.get('content_rect') or {}
+            font = cell.get('font_size_px')
+            if not box.get('width') or not font:
+                continue
+            rows = cell_visual_rows(cell, code_rects)
+            lines = len(rows)
+            widest = max((row['right'] - row['left'] for row in rows), default=0.0)
+            col = columns.setdefault(cell['column_index'], {
+                'head': '', 'used': 0.0, 'lines': 0, 'em': box['width'] / font})
+            if cell.get('tag') == 'TH':
+                col['head'] = cell.get('text') or ''
+            col['used'] = max(col['used'], widest / box['width'])
+            col['lines'] = max(col['lines'], lines)
+    return columns
+
+
+def find_loose_column_wrap_problems(report: dict) -> list[str]:
+    """短い列が空いたまま、別の列が2行以上に折れている表を挙げる（issue #477）。
+
+    対象は次の3つがそろう表。奥付の表（見出しが空）は数えない。
+      - ある列のセルがどれも1行に収まっている
+      - その列はいちばん長い行でも列幅の半分未満しか使っていない。
+        空きは全角3文字ぶん以上ある
+      - 同じ表の別の列に2行以上に折れたセルがある
+    """
+    problems: list[str] = []
+    audit = report.get('dom_audit', {})
+    code_rects_by_table = _table_code_rects(audit)
+    for table in audit.get('table_inventory', {}).get('tables', []):
+        columns = _column_visual_stats(table, code_rects_by_table.get(table['id'], []))
+        if not columns or not any(col['head'] for col in columns.values()):
+            continue  # 奥付
+        loose = [col for col in columns.values()
+                 if col['lines'] <= 1 and col['used'] < 0.5 and (1 - col['used']) * col['em'] >= 3]
+        tight = [col for col in columns.values() if col['lines'] >= 2]
+        if loose and tight:
+            pages = sorted({fragment.get('page_index', 0) + 1 for fragment in table.get('fragments', [])})
+            detail = ' / '.join(f"{col['head']} {int(col['used'] * 100)}% {col['lines']}行"
+                                for col in columns.values())
+            problems.append(f"短い列が空いたまま別の列が折れる表（p{pages} {detail}）")
+    return problems
+
+
+def find_narrow_cell_wrap_problems(report: dict) -> list[str]:
+    """3列までの表で、6文字以下のセル（見出しも含む）が2行以上に折れている所を挙げる。"""
+    problems: list[str] = []
+    audit = report.get('dom_audit', {})
+    code_rects_by_table = _table_code_rects(audit)
+    for table in audit.get('table_inventory', {}).get('tables', []):
+        code_rects = code_rects_by_table.get(table['id'], [])
+        for fragment in table.get('fragments', []):
+            column_count = (fragment.get('geometry') or {}).get('column_count')
+            if column_count is None or column_count > 3:
+                continue
+            for cell in (fragment.get('geometry') or {}).get('cells') or []:
+                text = (cell.get('text') or '').strip()
+                if len(text) <= 6 and len(cell_visual_rows(cell, code_rects)) >= 2:
+                    problems.append(
+                        f"p{(fragment.get('page_index') or 0) + 1}: "
+                        f"3列までの表で短いセル「{text}」が折れている")
+    return problems
+
+
 def find_single_row_fragment_problems(report: dict) -> list[str]:
     """組版計測の記録から、ページを跨いだ表で本文1行だけの断片を挙げる。
 
@@ -1040,6 +1120,8 @@ def check_one(pdf: Path) -> tuple[list[str], bool | None]:
         report = json.loads(layout_reports[-1].read_text(encoding="utf-8"))
         problems += find_stacked_split_problems(report)
         problems += find_single_row_fragment_problems(report)
+        problems += find_loose_column_wrap_problems(report)
+        problems += find_narrow_cell_wrap_problems(report)
 
     # 印付き段落がページ末尾に残っていないかを、組んだ冊と同じ内容の
     # 生成 HTML と照合する。作業名は PDF の名前と同じ規則で復元する
