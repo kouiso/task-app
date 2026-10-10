@@ -1,0 +1,536 @@
+{
+  "book": "day06_ユーザー登録画面.pdf",
+  "pdf_sha256_head12": "79fdb8402378",
+  "pages_total": 77,
+  "pages_inspected": 77,
+  "inspection": {
+    "method": "poppler(pdftoppm)で全77頁を100dpi PNG化→1頁ずつ実画像を目視(27頁・27頁・23頁の3チャンクで生成→目視→削除)。疑義箇所は原稿mdのMermaid原文とラベル照合。抽出テキスト確認は不使用",
+    "artifacts_branch": "devin/source40-pdf-artifacts",
+    "artifacts_commit": "e39a1ce9b7e3ea8dd7d922902f77af4c98741f07",
+    "inspector": "devin-5e46fa7b625f4154a5eff435b71fda1d",
+    "inspected_at": "2026-10-10"
+  },
+  "verdicts": {
+    "must": 2,
+    "suggest": 3,
+    "ok": 72
+  },
+  "pages": [
+    {
+      "page": 1,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 2,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 3,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割白紙(図1が次頁送りの改頁不可ブロック)"
+        }
+      ]
+    },
+    {
+      "page": 4,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 5,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙(図2が次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 6,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図2『登録処理のフロー』(flowchart TD)のノードラベル右端クリップ: C『tRPC api.auth.re』(原文 tRPC api.auth.register→gister欠落)。API識別子が別名に化ける納品不可級。day01 p13/p67・day03 p30・day04 p4/p5/p23・day05 p6/p39と同型のMermaid右端クリップ(組版パイプライン共通問題)"
+        }
+      ]
+    },
+    {
+      "page": 7,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 8,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 9,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 10,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 11,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 12,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "頁末尾に孤立hr(次節Step2見出しが次頁送りで区切り線だけ最下部に残存。day03 p58・day04 p12同型)"
+        }
+      ]
+    },
+    {
+      "page": 13,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 14,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 15,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 16,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 17,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 18,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 19,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 20,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 21,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 22,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 23,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 24,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割白紙(図3スクリーンショットが次頁送り。本文が『下の画像は』を参照中で図と分離)"
+        }
+      ]
+    },
+    {
+      "page": 25,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 26,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 27,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 28,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 29,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙(図4スクリーンショットが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 30,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 31,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約4割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 32,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 33,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 34,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 35,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 36,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 37,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙(図5が次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 38,
+      "verdict": "must",
+      "findings": [
+        {
+          "severity": "must",
+          "detail": "図5(flowchart TB・bcrypt保存フロー)のラベル5箇所が右端クリップ: 『入力欄: Passw0』(原文 Passw0rd!→rd!欠落)、エッジ『bcrypt に通』(原文 に通す→す欠落)、『$2b$10$... の6(』(原文 の60文字→0文字欠落+括り崩れ)、『users テプ』(原文 テーブル→ーブル欠落)、エッジ『bcrypt.compare に』(原文 に渡す→渡す欠落)。主フローの主体が全滅。組版パイプライン共通問題"
+        }
+      ]
+    },
+    {
+      "page": 39,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 40,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 41,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約4割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 42,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 43,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 44,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約4割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 45,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 46,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注1が裸URLのみ(Google Drive・view?/usp=drivesdk の語途中折返し)。day03 p37/p50/p59・day04 p15/p24/p34/p49・day05 p80/p81同型のendnote式裸URL脚注"
+        }
+      ]
+    },
+    {
+      "page": 47,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙(図6スクリーンショットが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 49,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 50,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 51,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 52,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙(Afterコードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 53,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 54,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約8割白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 55,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 56,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 57,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 58,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約4割白紙(zodスキーマコードが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 59,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 60,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約5割半白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 61,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割白紙(完成コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 62,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 63,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約6割半白紙(JSXコードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 64,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 65,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 66,
+      "verdict": "ok",
+      "findings": [
+        {
+          "severity": "note",
+          "detail": "下部約7割白紙(コードブロックが次頁送り)"
+        }
+      ]
+    },
+    {
+      "page": 67,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 68,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 69,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 70,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 71,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 72,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 73,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 74,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 75,
+      "verdict": "ok",
+      "findings": []
+    },
+    {
+      "page": 76,
+      "verdict": "suggest",
+      "findings": [
+        {
+          "severity": "suggest",
+          "detail": "脚注2〜7の計6件が裸URLのみ(Google Drive・vie/w?usp=drivesdk の語途中折返し)。同型のendnote式裸URL脚注"
+        }
+      ]
+    },
+    {
+      "page": 77,
+      "verdict": "ok",
+      "findings": []
+    }
+  ],
+  "pdf_sha256": "79fdb8402378ef941057c9415af0e01ad1f56b592e8567c6d0739713d10a22d4"
+}
