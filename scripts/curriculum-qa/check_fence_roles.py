@@ -58,8 +58,7 @@ SAFE_ROOT_FILES = frozenset({
 PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
 JP_RE = re.compile(r"[぀-ヿ一-鿿（）]")  # noqa: E501 -- ひらがな/カタカナ/漢字/全角括弧
 INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
-ROLE_EXPECT = re.compile(r"\bexpect\b")
-ROLE_APPLY = re.compile(r"\bapply\b")
+ROLE_TOKEN = re.compile(r"\b(apply|expect)\b")
 CONT_NOTE = re.compile(r"続き")
 ELLIPSIS_LINE = re.compile(
     r"^\s*(?://+|/\*+|#|<!--)?\s*(?:…|\.{3,})\s*$|"
@@ -67,7 +66,15 @@ ELLIPSIS_LINE = re.compile(
 PLACEHOLDER = re.compile(r"既存の|中略|省略|前略|後略|以下略")
 
 
+def _roles(info: str) -> frozenset:
+    """info 文字列の役割トークン。path= の値の中の apply/expect を
+    役割と誤認しないよう、属性を除いてから判定する（apply_day と同じ）。"""
+    return frozenset(ROLE_TOKEN.findall(INFO_PATH.sub("", info)))
+
+
 def is_safe_rel_path(rel: str) -> bool:
+    if ".." in rel or rel.startswith("/"):
+        return False
     return bool(
         PATH_OK.match(rel)
         and not JP_RE.search(rel)
@@ -110,25 +117,29 @@ def check_text(text: str, name: str) -> list[Finding]:
     findings: list[Finding] = []
     apply_targets: set[str] = set()
     expect_entries: list[tuple[int, str, list[str]]] = []
+    expect_seen: dict[str, int] = {}
 
     for lineno, info, body in iter_code_fences(text):
         joined = "\n".join(body)
-        is_expect = bool(ROLE_EXPECT.search(info))
-        is_apply = bool(ROLE_APPLY.search(info))
+        roles = _roles(info)
+        is_expect = "expect" in roles
+        is_apply = "apply" in roles
         pm = INFO_PATH.search(info)
         info_path = pm.group(1) if pm else None
         fm = first_filepath_match(joined)
 
         if is_expect:
-            if info_path is None and fm is None:
+            if info_path is None:
                 findings.append(Finding((
                     lineno,
                     "expect フェンスに path= がありません（検算先が不明）")))
                 continue
-            target = info_path or (filepath_value(fm) if fm else None)
-            if target is None:
-                continue
-            target = target.strip()
+            target = info_path.strip()
+            if target in expect_seen:
+                findings.append(Finding((
+                    lineno,
+                    f"expect が同じ対象に重複しています: {target}"
+                    f"（{expect_seen[target]} 行目と矛盾する恐れ）")))
             if not is_safe_rel_path(target):
                 findings.append(Finding((
                     lineno,
@@ -147,6 +158,7 @@ def check_text(text: str, name: str) -> list[Finding]:
                         f"{target}（{j + 1} 行目）")))
                     break
             expect_entries.append((lineno, target, body))
+            expect_seen.setdefault(target, lineno)
             if is_apply:
                 # ` ```lang apply expect ` は内容であり契約でもある両役フェンス。
                 # 対応 apply の要件は自分自身で満たす。

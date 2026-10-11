@@ -631,6 +631,90 @@ export function useIt(v: unknown): boolean {
         self.assertFalse(skipped, skipped)
         self.assertTrue((self.target / "src/lib/q.ts").exists())
 
+    def test_path_value_does_not_bleed_into_role(self):
+        # `path=src/expect.ts` の値中の "expect" を役割と誤認すると、
+        # apply 断片が検算オラクルに化けて別ファイルを壊す（codex 指摘）。
+        written, skipped = self._run("""```typescript apply path=src/expect.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue((self.target / "src/expect.ts").exists())
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertNotIn({"path": "src/expect.ts", "mode": "expect-ok"},
+                         rec["applied"])
+
+    def test_unsafe_apply_path_is_invalid_not_inherited(self):
+        # `apply path=src/../../evil.ts` を直前フェンスの続きとして
+        # 前のファイルへ混入させない（codex 指摘）。
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript apply path=src/../../evil.ts
+const injected = true;
+```
+""")
+        self.assertFalse((self.target / "src/a.ts")
+                         .read_text().__contains__("injected"))
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+
+    def test_expect_only_fence_needs_info_path(self):
+        # expect の検算先は info の path= のみ。本文の // filepath: では
+        # 契約対象にならない（lint と同じ規則）。
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect
+// filepath: src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+
+    def test_expect_compares_blank_lines(self):
+        # norm() は空行を吸収するが完成版契約は厳密。空行を落とした
+        # 生成物は oracle と一致しない（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text(
+            "export const a = 1;\nexport const b = 2;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+
+export const b = 2;
+```
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
+    def test_multiple_expects_all_verified(self):
+        # 同一対象の expect が2本あれば全件に一致する必要がある。
+        # 後勝ち上書きだと矛盾する契約が黙って通る（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 2;
+```
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts
@@ -705,6 +789,15 @@ export const b = 99;
 """)
         self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
 
+    def test_exit_3_when_nothing_written_but_skips(self):
+        # skipped が非空なら書き込み0件でも exit 3（codex 指摘:
+        # 「0件書き込み+skip → exit 2」の順序では skip 扱いと矛盾する）。
+        r = self._cli("""```typescript expect path=src/b.ts
+export const b = 1;
+```
+""")
+        # expect-without-apply のみ → 書き込み0 + skip非空 → 3
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
 
 
         # splice 成功でも置けなかった kansei 断片が skipped に残り、

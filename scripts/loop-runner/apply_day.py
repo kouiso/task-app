@@ -308,8 +308,17 @@ class Part:
 # その日の最終状態の検算用オラクル（適用はしない）。役割タグが無い
 # filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
 FENCE_RE = re.compile(r"```([a-zA-Z0-9]*)[ \t]*([^\n]*)\n(.*?)```", re.S)
-ROLE_EXPECT = re.compile(r"\bexpect\b")
+ROLE_TOKEN = re.compile(r"\b(apply|expect)\b")
 INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
+
+
+def _roles(info: str) -> frozenset:
+    """info 文字列から役割トークンを取り出す。
+
+    `path=src/expect.ts` のような値の中に現れる apply/expect を役割と
+    誤認しないよう、`path=` 属性を取り除いてから判定する。
+    """
+    return frozenset(ROLE_TOKEN.findall(INFO_PATH.sub("", info)))
 
 
 def _expect_body(code: str) -> str:
@@ -325,31 +334,72 @@ def _expect_body(code: str) -> str:
     return "\n".join(lines).strip("\n")
 
 
-def collect_parts(text: str) -> tuple[dict[str, list[Part]], dict[str, str]]:
-    """(parts, expects) を返す。expects は path -> 完成版本文。"""
+def _expect_norm(body: str) -> list[str]:
+    """expect 検算用の正規化。前後の空行と各行末の空白だけを許す。
+
+    断片照合用の norm() は空行をごっそり除去するが、完成版の検算は
+    「ファイルがこの本文になる」厳密な契約なので、空行の有無やテンプレート
+    内の行まで同一であることを要求する。
+    """
+    return [l.rstrip() for l in body.strip("\n").split("\n")]
+
+
+def collect_parts(text: str) -> tuple[dict[str, list[Part]],
+                                      dict[str, list[str]], list[str]]:
+    """(parts, expects, invalid) を返��。
+
+    expects は path -> 完成版本文のリスト（同一対象の expect が複数あれば
+    全件を検算する）。invalid は役割タグを名乗りながら検算・適用に使える
+    安全な対象を持たないフェンスの一覧で、呼び出し側で skip 扱いにする。
+    """
     parts: dict[str, list[Part]] = {}
-    expects: dict[str, str] = {}
+    expects: dict[str, list[str]] = {}
+    invalid: list[str] = []
     cur_fp: Optional[str] = None
     prev_end = 0
+
+    def _usable(fp: Optional[str]) -> bool:
+        return bool(fp and PATH_OK.match(fp) and is_safe_rel_path(fp)
+                    and not JP_RE.search(fp))
+
     for m in FENCE_RE.finditer(text):
         lang, info, code = m.group(1).lower(), m.group(2).strip(), m.group(3)
         before = text[max(prev_end, m.start() - 400):m.start()]
         before = "\n".join(before.split("\n")[-6:])
         prose = classify_prose(before)
         prev_end = m.end()
+        roles = _roles(info)
         info_fp = INFO_PATH.search(info)
         fm = FP_RE.search(code)
-        fp = (info_fp.group(1) if info_fp else
-              fm.group(1).strip() if fm else None)
-        if fp and PATH_OK.match(fp) and is_safe_rel_path(fp) \
-                and not JP_RE.search(fp):
-            if ROLE_EXPECT.search(info):
-                # expect は「このパスがこの本文になる」宣言。別マップで
-                # 検算に使う。apply も併記されている場合は「内容でもあり
-                # 契約でもある」全量リスティングとして両方へ登録する。
-                expects[fp] = _expect_body(code)
-                if not re.search(r"\bapply\b", info):
-                    continue
+        if "expect" in roles:
+            # expect は「このパスがこの本文になる」宣言。対象は info の
+            # path= のみ（本文の // filepath: は契約の対象として認めない。
+            # lint と同じ規則）。apply も併記されている場合は「内容でもあり
+            # 契約でもある」全量リスティングとして適用側にも登録する。
+            target = info_fp.group(1) if info_fp else None
+            if not _usable(target):
+                invalid.append(
+                    f"expect fence without safe path= (info: {info!r})")
+                cur_fp = None
+                continue
+            expects.setdefault(target, []).append(_expect_body(code))
+            if "apply" not in roles:
+                cur_fp = None
+                continue
+            fp = target
+        elif "apply" in roles:
+            fp = (info_fp.group(1) if info_fp else
+                  fm.group(1).strip() if fm else None)
+            if fp is not None and not _usable(fp):
+                # 役割を名乗った上で書き込めない対象を指すフェンスは、
+                # 黙って直前ファイルへの続き扱いにすると別ファイルへ
+                # 混入する。適用しないことを記録する。
+                invalid.append(f"apply fence with unsafe path: {fp!r}")
+                cur_fp = None
+                continue
+        else:
+            fp = fm.group(1).strip() if fm else None
+        if fp is not None and _usable(fp):
             cur_fp = fp
             body = strip_fp(code)
             if not body.strip():
@@ -367,8 +417,8 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]], dict[str, str]]:
                 directive=directive_of(fp_line, body),
             ))
             continue
-        if fm or (info_fp and ROLE_EXPECT.search(info)):
-            # 実ファイルでない参照フェンスや安全でない path の expect。
+        if fm or info_fp:
+            # 実ファイルでない参照フェンスや安全でない path の指定。
             cur_fp = None
             continue
         if cur_fp is None or lang in SHELLISH:
@@ -378,7 +428,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]], dict[str, str]]:
                 cont=True, body=code,
                 kansei=bool(KANSEI_RE.search("\n".join(code.split("\n")[:2]))),
                 unmarked=True, prose=prose, directive=None))
-    return parts, expects
+    return parts, expects, invalid
 
 
 # ---------------------------------------------------------------------------
@@ -1665,7 +1715,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
     ]
     esbuild = next((p for p in esbuild_candidates if p and Path(p).exists()), None)
 
-    parts_map, expects = collect_parts(content)
+    parts_map, expects, invalid_fences = collect_parts(content)
 
     # シェル操作(mv)はファイル系フェンスより先に処理する
     written: list[str] = []
@@ -1678,6 +1728,10 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
     applied_rec: list[dict] = []
     gaps: list[dict] = []
     written_paths: set[str] = set()
+
+    for inv in invalid_fences:
+        gaps.append({"day": tag, "reason": "invalid-fence", "detail": inv})
+        skipped.append(f"invalid tagged fence: {inv}")
 
     for path, parts in parts_map.items():
         dest = target_dir / path
@@ -1798,7 +1852,8 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
 
     # expect フェンスの検算。適用済みファイルだけを対象にし、不一致は
     # そのファイルを <tag> の適用前状態へ戻す（連鎖崩壊を起こさない）。
-    for path, oracle_body in expects.items():
+    # 同一対象に複数の expect がある場合は全件に一致する必要がある。
+    for path, oracle_bodies in expects.items():
         if path not in parts_map:
             gaps.append({"day": tag, "path": path,
                          "reason": "expect-without-apply-fence"})
@@ -1809,7 +1864,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
             continue
         dest = target_dir / path
         got = dest.read_text(encoding="utf-8") if dest.exists() else ""
-        if norm(got.split("\n")) == norm(oracle_body.split("\n")):
+        if all(_expect_norm(got) == _expect_norm(ob) for ob in oracle_bodies):
             applied_rec.append({"path": path, "mode": "expect-ok"})
             continue
         if restore_one(backup_root, tag, target_dir, path):
@@ -1829,7 +1884,8 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         with ledger_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-    skipped.extend(f"gap:{g['reason']}:{g['path']}" for g in gaps)
+    skipped.extend(f"gap:{g['reason']}:{g.get('path', g.get('detail', ''))}"
+                   for g in gaps)
     return written, skipped
 
 
@@ -1895,18 +1951,16 @@ def main() -> None:
         print("  ℹ️ no app file changes in this day")
         return
 
-    # 0 件書き込みで skip がある = filepath マーカー不足 or 検出ロジック過剰スキップ。
-    # 後段ステップが false-positive で「pass」と判定するのを防ぐため non-zero で抜ける。
-    if not written:
-        print("  ❌ no files written — fail to surface false-positive day-pass")
-        sys.exit(2)
-
     # 一部のファイルが reject/skip されても別ファイルが書ければ終了コード0に
     # なると、「完走した」と見做して部分適用のまま翌日へ進んでしまう。
-    # Gate B では1件でも未適用があれば失敗として扱う。
+    # Gate B では1件でも未適用があれば失敗として扱う。書き込み0件でも同じ。
     if skipped:
         print(f"  ❌ {len(skipped)} block(s) not applied — partial apply is a fail")
         sys.exit(3)
+
+    if not written:
+        print("  ❌ no files written — fail to surface false-positive day-pass")
+        sys.exit(2)
 
 
 if __name__ == "__main__":
