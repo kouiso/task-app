@@ -406,19 +406,41 @@ export const c = 3;
         self.assertIn("export const label = 'a b';", new)
 
     def test_snapshot_key_no_underscore_slash_collision(self):
-        # `src/a/b.ts` と `src/a__b.ts` のバックアップが同一キーに潰れない
+        # `src/a/b.ts` と `src/a__b.ts`、`src/a_/b.ts` と `src/a/_b.ts` の
+        # バックアップが同一キーに潰れない
         with tempfile.TemporaryDirectory() as td:
             root, target = Path(td) / "bk", Path(td) / "app"
             target.mkdir()
-            f1 = write(target, "src/a/b.ts", "SECOND\n")
-            f2 = write(target, "src/a__b.ts", "FIRST\n")
-            ad.snapshot_file(root, "d1", "src/a/b.ts", f1)
-            ad.snapshot_file(root, "d1", "src/a__b.ts", f2)
-            f1.write_text("changed\n", encoding="utf-8")
-            f2.write_text("changed\n", encoding="utf-8")
+            f1 = write(target, "src/a/b.ts", "A_SLASH_B\n")
+            f2 = write(target, "src/a__b.ts", "A__B\n")
+            f3 = write(target, "src/a_/b.ts", "A__SLASH_B\n")
+            f4 = write(target, "src/a/_b.ts", "A_SLASH__B\n")
+            for rel, f in (("src/a/b.ts", f1), ("src/a__b.ts", f2),
+                           ("src/a_/b.ts", f3), ("src/a/_b.ts", f4)):
+                ad.snapshot_file(root, "d1", rel, f)
+            for f in (f1, f2, f3, f4):
+                f.write_text("changed\n", encoding="utf-8")
             ad.restore_day(root, "d1", target)
-            self.assertEqual(f1.read_text(), "SECOND\n")
-            self.assertEqual(f2.read_text(), "FIRST\n")
+            self.assertEqual(f1.read_text(), "A_SLASH_B\n")
+            self.assertEqual(f2.read_text(), "A__B\n")
+            self.assertEqual(f3.read_text(), "A__SLASH_B\n")
+            self.assertEqual(f4.read_text(), "A_SLASH__B\n")
+
+    def test_array_append_inserts_inside_single_line_array(self):
+        # `const second = [];` のような1行配列への array_append は
+        # 宣言の外ではなく括弧の内側へ挿入する
+        cur = ['const first = ["x"];', 'const second = [];']
+        parts = [ad.Part(
+            cont=False, body='  "x",',
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("array_append", ("second",)))]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(new)
+        joined = "\n".join(new)
+        self.assertIn('"x"', joined)
+        # 宣言行の前に裸の要素が置かれていないこと
+        self.assertEqual(new[0], 'const first = ["x"];')
+        self.assertTrue(new[1].startswith("const second = ["))
 
     def test_splice_success_gaps_reach_skipped(self):
         # splice 成功でも置けなかった kansei 断片が skipped に残り、

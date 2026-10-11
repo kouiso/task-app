@@ -704,6 +704,18 @@ def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Opti
                     s = _strip_for_depth(cur[k])
                     depth += s.count("[") - s.count("]")
                     if depth <= 0:
+                        if k == j:
+                            # `const x = [a];` のような1行配列は閉じ括弧の
+                            # 直前に要素を足す（行頭挿入は宣言外になる）
+                            line = cur[j]
+                            ci = line.find("]")
+                            if ci < 0:
+                                return None
+                            head = line[:ci].rstrip()
+                            if not head.endswith(("[", ",")):
+                                head += ","
+                            return (cur[:j] + [head] + fl
+                                    + [line[ci:]] + cur[j + 1:])
                         return cur[:k] + fl + cur[k:]
                 return None
         return None
@@ -1466,8 +1478,10 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
     meta = {"modified": [], "created": []}
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    # `/`→`_` 変換は `a/b.ts` と `a__b.ts` が衝突するため、先に `_` を逃がす
-    key = rel_path.replace("_", "__").replace("/", "_")
+    # パス区切りと `_` を個別エスケープしないと `a/b` と `a_b` や
+    # `a_/b` と `a/_b` が衝突する。`_`→`_u`、`/`→`_s` の一方向変換にする
+    key = "".join("_u" if c == "_" else "_s" if c == "/" else c
+                  for c in rel_path)
     if rel_path in meta["created"]:
         # 初回実行で新規作成と記録済み。再実行時は作成状態のまま残し、
         # restore で削除できるようにする（modified へ再分類しない）。
@@ -1501,7 +1515,8 @@ def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     restored: list[str] = []
     for rel in meta.get("modified", []):
-        snap = backup_root / tag / "files" / rel.replace("_", "__").replace("/", "_")
+        snap = backup_root / tag / "files" / "".join(
+            "_u" if c == "_" else "_s" if c == "/" else c for c in rel)
         if snap.exists():
             dest = target_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1582,7 +1597,9 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # 0.9 以上の高い包含率を要求する。
                 if r2_cur >= 0.6 and (label.startswith("kansei") or r2_cur >= 0.9):
                     picked, mode = joined, label
-                elif r2 >= 0.30:
+                elif r2 >= 0.30 and (r2 >= 0.85 or nlines >= 25):
+                    # oracle 包含率でも短い断片が紛れ込むため、
+                    # ほぼ全量を被覆するか中規模以上の listing のみ採用する
                     picked, mode = joined, label
                 elif (r1 < 0.30 and nlines >= 25 and looks_complete(joined)
                         and prose != "frag"
@@ -1599,6 +1616,12 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                     continue
                 picked, mode = joined, label
             if picked is not None:
+                # 現ファイルと一致するだけの断片は「全量リスティング」ではなく
+                # 再掲コピー。それを WRITE すると、同じフェンス群にある他の
+                # 追記断片が静かに捨てられるため採用しない。
+                if norm(picked.split("\n")) == cur_lines_for_cov:
+                    picked, mode = None, None
+                    continue
                 break
 
         if picked is not None:
