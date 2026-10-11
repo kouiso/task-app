@@ -166,6 +166,11 @@ _REGEX_HINT = re.compile(
     r"|return|typeof|case|in|of|do|else|yield|await)\s*$")
 
 
+# JSX 要素のタグ名（フラグメント <> は別扱い）
+_JSX_OPEN = re.compile(r"<([A-Za-z][\w.]*)")
+_JSX_CLOSE = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
+
+
 def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
     """1行を stack 状態から走査し、行末にあり得る区切りスタックの集合を返す。
 
@@ -213,6 +218,43 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
                 elif l.startswith("${", i):
                     st.append("interp")
                     i += 1
+            elif top.startswith("jsx-head:"):
+                # 開始タグ内部: /> で自分ごと閉じ、> で子要素モードへ
+                if l.startswith("/>", i):
+                    st.pop()
+                    i += 1
+                elif c == ">":
+                    st[-1] = "jsx:" + top[len("jsx-head:"):]
+                elif c == "{":
+                    st.append("{")
+                elif c == "`":
+                    st.append("tpl")
+                elif c in "'\"":
+                    q = c
+            elif top.startswith("jsx:"):
+                # 子要素モード: 行の中身はテキスト。ネスト要素と {} 式だけ追う
+                if l.startswith("</>", i):
+                    if top == "jsx:":
+                        st.pop()
+                    i += 2
+                elif l.startswith("</", i):
+                    m = _JSX_CLOSE.match(l, i)
+                    if m and (m.group(1) or "") == top[4:]:
+                        st.pop()
+                        i = m.end() - 1
+                    # 不一致の閉じタグはリテラル文字として進む
+                elif c == "<":
+                    if l.startswith("<>", i):
+                        st.append("jsx:")
+                        i += 1
+                    else:
+                        m = _JSX_OPEN.match(l, i)
+                        if m:
+                            st.append("jsx-head:" + m.group(1))
+                            i = m.end() - 1
+                        # < の後に名前が無いものはリテラル
+                elif c == "{":
+                    st.append("{")
             elif top in ("interp", "{"):
                 if l.startswith("//", i):
                     # コメント解釈: この行の走査はここで終わる。
@@ -241,6 +283,19 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
                     st.append("tpl")
                 elif c in "'\"":
                     q = c
+                elif c == "<" and (l.startswith("<>", i)
+                                   or _JSX_OPEN.match(l, i)):
+                    # 式の中の <Tag> / <> も JSX になりうる。
+                    # < リテラル（比較・ジェネリクス）との両解釈を残す
+                    m = _JSX_OPEN.match(l, i)
+                    if m:
+                        work.append((tuple(st + ["jsx-head:" + m.group(1)]),
+                                     m.end()))
+                    else:
+                        work.append((tuple(st + ["jsx:"]), i + 2))
+                    work.append((tuple(st), i + 1))
+                    forked = True
+                    break
             else:  # コード面
                 if l.startswith("//", i):
                     results.add(tuple(st))
@@ -262,6 +317,19 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
                     st.append("tpl")
                 elif c in "'\"":
                     q = c
+                elif c == "<" and (l.startswith("<>", i)
+                                   or _JSX_OPEN.match(l, i)):
+                    # <Tag> は JSX 要素かもしれないし、< は比較・
+                    # ジェネリクスかもしれない。両方の解釈を残す
+                    m = _JSX_OPEN.match(l, i)
+                    if m:
+                        work.append((tuple(st + ["jsx-head:" + m.group(1)]),
+                                     m.end()))
+                    else:
+                        work.append((tuple(st + ["jsx:"]), i + 2))
+                    work.append((tuple(st), i + 1))
+                    forked = True
+                    break
                 elif c == "/" and _REGEX_HINT.search(l[:i]):
                     # 正規表現らしき /.../ は行内で読み飛ばす。
                     # 中のバッククォートや引用符が区切り誤認を起こさない
@@ -304,7 +372,17 @@ def _drop_marker_lines(lines: Sequence[str],
     out: list[str] = []
     states: set[tuple] = {()}
     for l in lines:
-        if not (all(not s for s in states) and drop.search(l)):
+        # 剥がしてよいのは全解釈で「コメント」と確定する行だけ。
+        # コード面ならどの注記形でもよい。{...} 式の内側では //・/*・{/* */}
+        # のどれも実コメント。{/* */} 形は JSX 子要素内でも式コンテナの
+        # コメントで表示されない（// は子要素内ではリテラルテキストなので
+        # 対象外）。tpl/文字列/ブロックコメント内側は常に中身なので残す。
+        jsx_note = l.lstrip().startswith("{/")
+        droppable = bool(drop.search(l)) and all(
+            (not s) or s[-1] in ("interp", "{")
+            or (jsx_note and s[-1].startswith("jsx"))
+            for s in states)
+        if not droppable:
             out.append(l)
         nxt: set[tuple] = set()
         for st in states:

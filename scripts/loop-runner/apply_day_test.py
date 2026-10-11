@@ -1011,6 +1011,20 @@ hello";
         self.assertIn("// filepath: src/example.ts",
                       (self.target / "src/a.ts").read_text())
 
+    def test_marker_line_inside_jsx_children_is_kept(self):
+        # <pre>...</pre> の子要素にある // filepath: 行は
+        # JSX テキスト（画面表示される中身）なので剥がさない
+        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+export const el = <pre>
+// filepath: src/example.ts
+hello
+</pre>;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts
