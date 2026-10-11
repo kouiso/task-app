@@ -276,6 +276,10 @@ PROVIDED_FILE = (
     "配布物のファイルへの貼り付けは当てられません。配布物は教材がファイル全体を"
     "書き直した日にだけ置き換えます"
 )
+UNSAFE_TARGET = (
+    "書き込み先が生成先ディレクトリの外を指します。絶対パス・`..` 成分・"
+    "シンボリックリンクは使えません"
+)
 # 差し込み先の目印になる行。オブジェクトの要素（`delete: protectedProcedure`）と
 # トップレベルの宣言（`export const taskRouter`）の両方を受ける。
 ANCHOR = "^(\\s*)(?:{name}\\s*:|(?:export\\s+)?(?:const|let|function|async\\s+function)\\s+{name}\\b)"
@@ -1381,7 +1385,18 @@ def apply_blocks(dest: Path, paths: list[Path]) -> int:
                 PlacementProblem(b, PROVIDED_FILE) for b in blocks if is_placement_note(b.note)
             )
             continue
-        out = dest / target
+        # 生成先の外への書き込みを拒否（教材側の `src/../../x.ts` 対策）
+        target_path = Path(target)
+        resolved = (dest / target_path).resolve()
+        if (
+            target_path.is_absolute()
+            or ".." in target_path.parts
+            or not resolved.is_relative_to(dest.resolve())
+            or resolved.is_symlink()
+        ):
+            problems.extend(PlacementProblem(b, UNSAFE_TARGET) for b in blocks)
+            continue
+        out = resolved
         out.parent.mkdir(parents=True, exist_ok=True)
         if version:
             try:
