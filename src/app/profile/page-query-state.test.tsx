@@ -114,6 +114,30 @@ describe('プロフィール取得失敗の表示', () => {
     expect(mocks.options?.retry?.(0, error)).toBe(false);
   });
 
+  it('再取得で401になった場合は前回のプロフィールを描画しない', async () => {
+    Object.assign(mocks.query, {
+      data: {
+        name: '利用者',
+        email: 'user@example.test',
+        avatar: null,
+        role: 'MEMBER',
+        isActive: true,
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      },
+      isError: true,
+      error: Object.assign(new Error('expired'), {
+        data: { httpStatus: 401 },
+      }),
+    });
+
+    render(<ProfilePage />);
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/login'));
+    expect(screen.queryByText('利用者')).not.toBeInTheDocument();
+    expect(screen.queryByText('user@example.test')).not.toBeInTheDocument();
+  });
+
   it('403をログイン画面へ送らず、権限エラーとして表示する', async () => {
     const error = Object.assign(new Error('inactive'), {
       data: { httpStatus: 403 },

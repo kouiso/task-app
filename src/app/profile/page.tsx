@@ -69,7 +69,8 @@ export default function ProfilePage() {
     );
   }
 
-  if (!currentUser) {
+  // 401 再取得失敗ではログインへ遷移するが、完了まで旧キャッシュの個人情報を描き続けない
+  if (authFailed || !currentUser) {
     return null;
   }
 
