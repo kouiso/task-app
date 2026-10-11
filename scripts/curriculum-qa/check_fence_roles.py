@@ -177,7 +177,11 @@ def check_text(text: str, name: str) -> list[Finding]:
                 lineno,
                 f"apply の対象が写経先として安全ではありません: {info_path}")))
             continue
-        if is_safe_rel_path(target):
+        # 無タグフェンスの対応 apply は `// filepath:` 目印が根拠。
+        # info 側の `path=` だけでは apply_day 側で対象が確定しないため
+        # 数えない（数えると実行時に expect-without-apply で止まる教材を
+        # 品質ゲートが通してしまう）
+        if is_safe_rel_path(target) and (is_apply or fm is not None):
             apply_targets.add(target)
 
     for lineno, target, _body in expect_entries:

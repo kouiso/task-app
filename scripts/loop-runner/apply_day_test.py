@@ -765,6 +765,48 @@ export const a = 2;
         self.assertEqual("export const a = 2;\n",
                          (self.target / "src/a.ts").read_text())
 
+    def test_template_literal_filepath_preserved(self):
+        # テンプレートリテラル内の `// filepath:` 行は文字列の中身。
+        # 剥がすと成果物の実行時値が変わるのにオラクル側も同じ行が
+        # 消えて expect をすり抜ける（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_apply_expect_replaces_existing_file(self):
+        # 既存ファイルへの `apply expect` は全量置換が正当。
+        # 断片用の包含率ゲートで弾くと正当な完成版が exit 3 になる
+        #（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const b = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const b = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+
+    def test_apply_expect_may_drop_import(self):
+        # 完成版が import を削る差分も正当（最終状態の宣言なので）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text(
+            'import { x } from "./x";\n\nexport const a = 1;\n')
+        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const b = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const b = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

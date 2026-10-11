@@ -152,10 +152,39 @@ def has_ellipsis(body: str) -> bool:
 # expect 検算が欠落を検出できなくなるため、行全体がコメント注記のものだけ剥がす
 FP_COMMENT = re.compile(r"^\s*(?://|#|--|;|/\*+\s*|\*\s|<!--)\s*filepath:")
 
+_ESCAPED_QUOTE = re.compile(r"\\[`'\"]")
+
 
 def strip_fp(code: str) -> str:
-    return "\n".join(
-        l for l in code.split("\n") if not FP_COMMENT.match(l))
+    # テンプレートリテラルや三重引用符の内側に現れる目印風の行は
+    # コメント注記ではなく文字列の中身。剥がすと実行時の文字列が変わるのに
+    # オラクル側でも同じ行が消えて検算をすり抜けるため、行またぎ文字列の
+    # 内側を区切り文字の偶奇で簡易追跡して剥がさない
+    out: list[str] = []
+    in_tpl = False
+    in_triple: Optional[str] = None
+    for l in code.split("\n"):
+        if in_tpl or in_triple is not None or not FP_COMMENT.match(l):
+            out.append(l)
+        body = _ESCAPED_QUOTE.sub("", l)
+        if in_triple is not None:
+            if in_triple in body:
+                in_triple = None
+        elif in_tpl:
+            if body.count("`") % 2:
+                in_tpl = False
+        else:
+            first = min(
+                (m for m in
+                 ((body.find("`"), "`"), (body.find('"""'), '"""'),
+                  (body.find("'''"), "'''")) if m[0] >= 0),
+                default=None)
+            if first is not None and body.count(first[1]) % 2:
+                if first[1] == "`":
+                    in_tpl = True
+                else:
+                    in_triple = first[1]
+    return "\n".join(out)
 
 
 def ext_of(path: str) -> str:
@@ -1806,10 +1835,14 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         picked: Optional[str] = None
         mode = None
         for label, joined, prose, has_contract in candidates(parts):
-            if any_import and "import " not in joined:
-                continue
-            if is_ts_family and any_export and "export " not in joined:
-                continue
+            if not has_contract:
+                # import/export 維持は断片候補の前決め条件。`apply expect` の
+                # 全量候補は最終状態の宣言であり import を削る差分も正当なので、
+                # 断片用の条件は通さない（採用結果は最終 expect 検算で突合）
+                if any_import and "import " not in joined:
+                    continue
+                if is_ts_family and any_export and "export " not in joined:
+                    continue
             if not parses_as_file(path, joined, esbuild):
                 continue
             if not dest_exists and parts and not has_contract:
@@ -1826,7 +1859,11 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 if head_line is not None and head_line.strip() \
                         not in (l.strip() for l in joined.split("\n")):
                     continue
-            if dest_exists:
+            if has_contract:
+                # `apply expect` は最終状態の宣言。包含率ゲートで削減差分を
+                # 捨てると正当な完成版が採用されず exit 3 になるため無条件採用
+                picked, mode = joined, label
+            elif dest_exists:
                 r1, r2 = coverage(joined, base_lines)
                 # 中間バージョンは完成版 oracle と乖離するため、
                 # 「当日の完成版が現在ファイルをほぼ包含するか」でも採用を判定する
@@ -1860,7 +1897,9 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # 現ファイルと一致するだけの断片は「全量リスティング」ではなく
                 # 再掲コピー。それを WRITE すると、同じフェンス群にある他の
                 # 追記断片が静かに捨てられるため採用しない。
-                if norm(picked.split("\n")) == cur_lines_for_cov:
+                # `apply expect` は最終状態の宣言なので現状態と同一でも採用する
+                if not has_contract and \
+                        norm(picked.split("\n")) == cur_lines_for_cov:
                     picked, mode = None, None
                     continue
                 break

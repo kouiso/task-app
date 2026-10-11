@@ -104,6 +104,11 @@ export default function Page() {
         "```typescript\n// filepath: src/app/page.tsx\nexport const a = 1;\n```\n\n" + EXPECT,
         0,
     ),
+    (
+        "無タグの path= フェンスは対応 apply に数えない（実行時に止まるため）",
+        "```typescript path=src/app/page.tsx\nexport const a = 1;\n```\n\n" + EXPECT,
+        1,
+    ),
 ]
 
 
