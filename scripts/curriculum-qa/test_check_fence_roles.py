@@ -70,6 +70,36 @@ export const a = 1;
         1,
     ),
     (
+        "apply path= の途中 .. セグメントも止める",
+        "```typescript apply path=src/../../outside.ts\nbody\n```",
+        1,
+    ),
+    (
+        "expect は本文の // filepath: だけでは契約にならない",
+        APPLY + "\n" + """```typescript expect
+// filepath: src/app/page.tsx
+export default function Page() {
+  return <main />;
+}
+```""",
+        1,
+    ),
+    (
+        "expect が同じ対象に重複していれば止める",
+        APPLY + "\n" + EXPECT + "\n" + EXPECT,
+        1,
+    ),
+    (
+        "実コード中の日本語（既存の〜）はプレースホルダーにしない",
+        APPLY + "\n" + """```typescript expect path=src/app/page.tsx
+export const message = "既存のタスクを表示";
+export default function Page() {
+  return <main />;
+}
+```""",
+        0,
+    ),
+    (
         "従来の filepath フェンスが expect の apply 対象として数えられる",
         "```typescript\n// filepath: src/app/page.tsx\nexport const a = 1;\n```\n\n" + EXPECT,
         0,

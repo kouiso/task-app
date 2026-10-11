@@ -715,6 +715,56 @@ export const a = 2;
         self.assertTrue(any("expect mismatch" in s for s in skipped),
                         skipped)
 
+    def test_string_literal_filepath_survives(self):
+        # 文字列リテラル中の "filepath: ..." は目印ではない。
+        # 行を消すと適用側・オラクル側の両方でコードが欠落し、
+        # expect が欠落を検出できなくなる（codex 指摘）。
+        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const marker = "filepath: src/other.ts";
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertIn('marker = "filepath: src/other.ts"',
+                      (self.target / "src/a.ts").read_text())
+
+    def test_splice_keeps_existing_blank_lines_for_expect(self):
+        # splice の行列は空行を落とすが、既存ファイルの空行は
+        # 出力に復元する。落としたままだと厳密 expect が正当な
+        # 断片更新まで巻き戻す（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text(
+            "export const a = 1;\n\nexport const b = 2;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const b = 3;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+
+export const b = 3;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const a = 1;\n\nexport const b = 3;\n",
+                         (self.target / "src/a.ts").read_text())
+
+    def test_apply_expect_final_overrides_fragment_for_new_file(self):
+        # 新規ファイルで `apply` 断片の先頭行を `apply expect` の
+        # 最終版が書き換えるのは正当。先頭行ゲートで弾くと
+        # 中間版しか採れず契約不一致で消える（codex 指摘）。
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript apply expect path=src/a.ts
+export const a = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const a = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

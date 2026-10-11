@@ -64,6 +64,9 @@ ELLIPSIS_LINE = re.compile(
     r"^\s*(?://+|/\*+|#|<!--)?\s*(?:…|\.{3,})\s*$|"
     r"^\s*(?://+|/\*+|#|<!--)\s*(?:…|\.{3,})")
 PLACEHOLDER = re.compile(r"既存の|中略|省略|前略|後略|以下略")
+# 「既存の〜」を含む表示文言など、実コード中の日本語はプレースホルダーでは
+# ない。省略の目印として見るのはコメント行の注記だけに限る
+COMMENT_LINE = re.compile(r"^\s*(?://|/\*|\*|#|<!--|--|;)")
 
 
 def _roles(info: str) -> frozenset:
@@ -151,7 +154,8 @@ def check_text(text: str, name: str) -> list[Finding]:
                     lineno,
                     f"expect はファイル全体でなければなりません（続き注記）: {target}")))
             for j, l in enumerate(body):
-                if ELLIPSIS_LINE.match(l) or PLACEHOLDER.search(l):
+                if ELLIPSIS_LINE.match(l) or (
+                        COMMENT_LINE.match(l) and PLACEHOLDER.search(l)):
                     findings.append(Finding((
                         lineno,
                         f"expect 本体に省略/プレースホルダー行があります: "

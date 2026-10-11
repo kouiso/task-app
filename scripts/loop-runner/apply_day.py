@@ -147,8 +147,15 @@ def has_ellipsis(body: str) -> bool:
                for l in body.split("\n"))
 
 
+# `// filepath:` 目印はフェンス冒頭の注記行。文字列リテラル内の
+# "filepath: ..." まで消すと適用側とオラクル側の両方でコード行が欠落し、
+# expect 検算が欠落を検出できなくなるため、行全体がコメント注記のものだけ剥がす
+FP_COMMENT = re.compile(r"^\s*(?://|#|--|;|/\*+\s*|\*\s|<!--)\s*filepath:")
+
+
 def strip_fp(code: str) -> str:
-    return "\n".join(l for l in code.split("\n") if "filepath:" not in l)
+    return "\n".join(
+        l for l in code.split("\n") if not FP_COMMENT.match(l))
 
 
 def ext_of(path: str) -> str:
@@ -301,6 +308,7 @@ class Part:
     unmarked: bool      # filepath なしで前フェンスに接続
     prose: str          # 'write'|'frag'|'neutral'
     directive: Optional[Directive]
+    contract: bool = False  # `apply expect` フェンス由来（最終状態の宣言）
 
 
 # フェンス info 文字列の役割タグ。
@@ -334,14 +342,15 @@ def _expect_body(code: str) -> str:
     return "\n".join(lines).strip("\n")
 
 
-def _expect_norm(body: str) -> list[str]:
-    """expect 検算用の正規化。前後の空行と各行末の空白だけを許す。
+def _expect_norm(body: str) -> str:
+    """expect 検算用の正規化。前後の空行だけを剥がした生文字列。
 
-    断片照合用の norm() は空行をごっそり除去するが、完成版の検算は
-    「ファイルがこの本文になる」厳密な契約なので、空行の有無やテンプレート
-    内の行まで同一であることを要求する。
+    断片照合用の norm() は空行・行末空白を吸収するが、完成版の検算は
+    「ファイルがこの本文になる」厳密な契約。行末空白まで揃えると
+    テンプレートリテラル内の実行時値の違い（`` `a ` `` vs `` `a` ``）を
+    見逃すため、境界の空行だけを許して中身は byte 一致を要求する。
     """
-    return [l.rstrip() for l in body.strip("\n").split("\n")]
+    return body.strip("\n")
 
 
 def collect_parts(text: str) -> tuple[dict[str, list[Part]],
@@ -354,6 +363,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
     """
     parts: dict[str, list[Part]] = {}
     expects: dict[str, list[str]] = {}
+    cur_contract = False
     invalid: list[str] = []
     cur_fp: Optional[str] = None
     prev_end = 0
@@ -387,6 +397,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 cur_fp = None
                 continue
             fp = target
+            cur_contract = True
         elif "apply" in roles:
             fp = (info_fp.group(1) if info_fp else
                   fm.group(1).strip() if fm else None)
@@ -397,8 +408,10 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 invalid.append(f"apply fence with unsafe path: {fp!r}")
                 cur_fp = None
                 continue
+            cur_contract = False
         else:
             fp = fm.group(1).strip() if fm else None
+            cur_contract = False
         if fp is not None and _usable(fp):
             cur_fp = fp
             body = strip_fp(code)
@@ -415,6 +428,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 unmarked=False,
                 prose=prose,
                 directive=directive_of(fp_line, body),
+                contract=cur_contract,
             ))
             continue
         if fm or info_fp:
@@ -436,7 +450,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
 # ---------------------------------------------------------------------------
 
 def candidates(parts: list[Part]):
-    """(label, joined, first_prose) を優先順に yield。"""
+    """(label, joined, first_prose, has_contract) を優先順に yield。"""
     seen: set[str] = set()
     def emit(label: str, sub: list[Part]):
         body = "\n".join(
@@ -445,7 +459,8 @@ def candidates(parts: list[Part]):
         key = body[:4000]
         if body.strip() and key not in seen:
             seen.add(key)
-            return (label, body, sub[0].prose)
+            return (label, body, sub[0].prose,
+                    any(p.contract for p in sub))
         return None
     n = len(parts)
     # 「完成版」の確認用全量リスティングは末尾に来る。
@@ -1594,6 +1609,47 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
     return out, gaps
 
 
+def _restore_blank_lines(orig_raw: list[str], out: list[str]) -> list[str]:
+    """splice は空行を落とした行列表で照合するため、出力から空行が消える。
+
+    既存ファイルの空行を戻す: raw→out の diff で「一致ブロック同士の間で
+    削除された空行」だけを復元する。書き換えが入った領域の空行は
+    どこに置くか一意に決められないため足さない（足した空行が別行の
+    間に紛れ込む事故の方が害が大きい）。
+    """
+    ops = difflib.SequenceMatcher(a=orig_raw, b=out).get_opcodes()
+    res: list[str] = []
+    for k, (op, i1, i2, j1, j2) in enumerate(ops):
+        if op == "replace":
+            seg = orig_raw[i1:i2]
+            # 書き換え領域の両端にあった空行は、変更部分の中身ではなく
+            # 周囲の行との「間」を表すので保持する。領域内部の空行は
+            # 新しい内容のどこに置くか決められないので足さない
+            lead = 0
+            # ファイル端の「間」は他の行と接しないので足さない
+            if any(l.strip() for l in orig_raw[:i1]):
+                while lead < len(seg) and not seg[lead].strip():
+                    lead += 1
+            trail = 0
+            if any(l.strip() for l in orig_raw[i2:]):
+                while trail < len(seg) - lead \
+                        and not seg[len(seg) - 1 - trail].strip():
+                    trail += 1
+            res.extend(seg[:lead])
+            res.extend(out[j1:j2])
+            if trail:
+                res.extend(seg[len(seg) - trail:])
+            continue
+        if op == "delete" and all(not l.strip() for l in orig_raw[i1:i2]):
+            prev_t = ops[k - 1][0] if k > 0 else None
+            next_t = ops[k + 1][0] if k + 1 < len(ops) else None
+            if prev_t == "equal" and next_t == "equal":
+                res.extend(orig_raw[i1:i2])
+            continue
+        res.extend(out[j1:j2])
+    return res
+
+
 # ---------------------------------------------------------------------------
 # 適用前バックアップ（verify_day 失敗時に baseline へ戻すため）
 # ---------------------------------------------------------------------------
@@ -1749,17 +1805,19 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         cur_lines_for_cov = norm(dest_text.split("\n")) if dest_exists else []
         picked: Optional[str] = None
         mode = None
-        for label, joined, prose in candidates(parts):
+        for label, joined, prose, has_contract in candidates(parts):
             if any_import and "import " not in joined:
                 continue
             if is_ts_family and any_export and "export " not in joined:
                 continue
             if not parses_as_file(path, joined, esbuild):
                 continue
-            if not dest_exists and parts:
+            if not dest_exists and parts and not has_contract:
                 # 新規ファイルを断片から組み立てる時、先頭断片の冒頭行を
                 # 含まない候補は「完成版: 途中から」型の再掲で、採用すると
                 # 'use client' や import の頭が静かに欠ける（day13型）。
+                # `apply expect` の全量候補は最終状態の宣言なので、
+                # 先頭断片の書き換えを意図した差分も正当でゲート対象外とする
                 head_line = next(
                     (l for l in parts[0].body.split("\n")
                      if l.strip() and not l.lstrip().startswith(("//", "/*"))
@@ -1835,6 +1893,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         # 成功パスで握り潰すと ledger と終了コード判定から漏れ「部分適用」を
         # 完走と誤判定するため、成否に関わらず gaps へ集計する。
         gaps.extend(file_gaps)
+        new_lines = _restore_blank_lines(dest_text.split("\n"), new_lines)
         spliced_text = "\n".join(new_lines) + "\n"
         if is_ts_family and not parses_as_file(path, spliced_text, esbuild):
             # splice 後の構文健全性が壊れている時も書き込まず baseline を維持する。
