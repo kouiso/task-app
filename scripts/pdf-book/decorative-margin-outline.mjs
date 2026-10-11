@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const GLYPH_MAP_SHA256 = '35799ee1832c8c36712516174abc7902fa910c14e41ad9c9037b6dd1e1e5dc77';
+export const GLYPH_MAP_SHA256 = 'ee7d1e28cd115e17eb2ac75060d4ab59a5acb712b11754e6eb1a60544da07134';
 
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
