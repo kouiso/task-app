@@ -114,6 +114,10 @@ def iter_code_fences(text: str):
             if open_lang in CODE_LANGS:
                 yield start, info, buf
             open_lang = ""
+    # CommonMark と同じく、閉じないまま終端したフェンスも本文として扱う。
+    # 捨てると expect 契約が lint をすり抜ける
+    if open_lang in CODE_LANGS:
+        yield start, info, buf
 
 
 def check_text(text: str, name: str) -> list[Finding]:

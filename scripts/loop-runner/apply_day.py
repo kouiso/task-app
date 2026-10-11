@@ -158,6 +158,14 @@ def has_ellipsis(body: str) -> bool:
 # expect 検算が欠落を検出できなくなるため、行全体がコメント注記のものだけ剥がす
 FP_COMMENT = re.compile(r"^\s*(?://|#|--|;|/\*+\s*|\*\s|<!--)\s*filepath:")
 
+# /.../ の直前トークンが演算子・開き括弧・キーワード系の時だけ
+# 正規表現リテラルとみなすヒューリスティック（除算との区別）。
+# 誤判定は「行を残す」側に倒れるので害がない
+_REGEX_HINT = re.compile(
+    r"(?:^|[(=,:;!&|?+\-*~^{]|=>"
+    r"|return|typeof|case|in|of|do|else|yield|await)\s*$")
+
+
 def _drop_marker_lines(lines: Sequence[str],
                        drop: "re.Pattern[str]") -> list[str]:
     """コード面上の注記行（drop がヒットする行）だけを取り除く。
@@ -165,47 +173,82 @@ def _drop_marker_lines(lines: Sequence[str],
     目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
     リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
     それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
-    消えて検算をすり抜ける。通常の引用符内のバッククォート（`"`"`）でも
-    誤って内側判定になるため、行内を走査して区切りの内外を追跡する。
+    消えて検算をすり抜ける。区切りの内外は行内走査で追跡し、通常の引用符内の
+    バッククォート（`"`"`）・テンプレート内の ${...} 補間・正規表現内の
+    バッククォート・JSX テキストの // でも内外を誤らない形にする。
+    誤判定は常に「行を残す」側に倒す（残った注記コメントは無害だが、
+    消えた中身は検算をすり抜ける）。
     """
     out: list[str] = []
-    state: Optional[str] = None  # "tpl" / '"""' / "'''"
+    stack: list[str] = []  # "tpl" / "interp" / "{" / '"""' / "'''"
     for l in lines:
-        if state is not None or not drop.search(l):
+        if stack or not drop.search(l):
             out.append(l)
         i, n, q = 0, len(l), None
         while i < n:
             c = l[i]
-            if state is None and q is None:
-                # コメント以降はコード面ではないので走査を終える。
-                # 文字列内の `http://` 等は q 側が先に捕捉する
-                if l.startswith("//", i) or l.startswith("<!--", i) \
-                        or c == "#":
-                    break
-                if c in "'\"":
-                    q = c
-                elif l.startswith('"""', i):
-                    state = '"""'
-                    i += 2
-                elif l.startswith("'''", i):
-                    state = "'''"
-                    i += 2
-                elif c == "`":
-                    state = "tpl"
-            elif q is not None:
+            top = stack[-1] if stack else ""
+            if q is not None:
                 if c == "\\":
                     i += 1
                 elif c == q:
                     q = None
-            elif state in ('"""', "'''"):
-                if l.startswith(state, i):
-                    state = None
+            elif top in ('"""', "'''"):
+                if l.startswith(top, i):
+                    stack.pop()
                     i += 2
-            else:  # state == "tpl"
+            elif top == "tpl":
                 if c == "\\":
                     i += 1
                 elif c == "`":
-                    state = None
+                    stack.pop()
+                elif l.startswith("${", i):
+                    stack.append("interp")
+                    i += 1
+            elif top in ("interp", "{"):
+                if c == "{":
+                    stack.append("{")
+                elif c == "}":
+                    stack.pop()
+                elif l.startswith('"""', i):
+                    stack.append('"""')
+                    i += 2
+                elif l.startswith("'''", i):
+                    stack.append("'''")
+                    i += 2
+                elif c == "`":
+                    stack.append("tpl")
+                elif c in "'\"":
+                    q = c
+            else:  # コード面
+                if l.startswith('"""', i):
+                    stack.append('"""')
+                    i += 2
+                elif l.startswith("'''", i):
+                    stack.append("'''")
+                    i += 2
+                elif c == "`":
+                    stack.append("tpl")
+                elif c in "'\"":
+                    q = c
+                elif c == "/" and _REGEX_HINT.search(l[:i]):
+                    # 正規表現らしき /.../ は行内で読み飛ばす。
+                    # 中のバッククォートや引用符が区切り誤認を起こさない
+                    j = i + 1
+                    in_class = False
+                    while j < n:
+                        cj = l[j]
+                        if cj == "\\":
+                            j += 1
+                        elif in_class:
+                            if cj == "]":
+                                in_class = False
+                        elif cj == "[":
+                            in_class = True
+                        elif cj == "/":
+                            break
+                        j += 1
+                    i = j
             i += 1
     return out
 
@@ -375,18 +418,23 @@ def _iter_fences(text: str):
     """
     lines = text.split("\n")
     buf: list[str] = []
-    info = lang = ""
+    info = lang = before = ""
     open_lineno = prev_close = 0
     for lineno, _line, state, fence in fence_states(text):
         if state == "open" and fence is not None:
             buf, info, lang, open_lineno = [], fence.info, fence.lang, lineno
+            before = "\n".join(
+                lines[max(prev_close, open_lineno - 7):open_lineno - 1])
         elif state == "inside":
             buf.append(_line)
         elif state == "close":
-            before = "\n".join(
-                lines[max(prev_close, open_lineno - 7):open_lineno - 1])
             yield lang, info, "\n".join(buf), before
             prev_close = lineno
+            open_lineno = 0
+    # 閉じられないまま終端したフェンスも CommonMark と同じく本文として扱う。
+    # 捨てると expect 契約が検算されずに通ってしまう
+    if open_lineno:
+        yield lang, info, "\n".join(buf), before
 
 
 # フェンス info 文字列の役割タグ。

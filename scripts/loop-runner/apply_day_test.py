@@ -855,6 +855,70 @@ export const a = 99;
         self.assertTrue(any("expect mismatch" in s for s in skipped),
                         skipped)
 
+    def test_triple_quoted_string_marker_preserved(self):
+        # 三重引用符は通常引用符より先に判定する（先に " が掴まると
+        # 残りの "" が別の文字列として消費されて外側判定がずれる）
+        _w, skipped = self._run('''```python apply expect path=scripts/a.py
+message = """
+// filepath: src/example.ts
+hello
+"""
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "scripts/a.py").read_text())
+
+    def test_backtick_inside_interp_string_keeps_template_open(self):
+        # ${"..."} 内のバッククォートは外側テンプレートを閉じない
+        body = 'export const m = `${"`"}\n// filepath: x\nhello\n`;'
+        self.assertIn("// filepath: x", ad.strip_fp(body))
+        self.assertIn("// filepath: x", ad._expect_body(body))
+
+    def test_regex_backtick_does_not_open_template(self):
+        # 正規表現リテラル内のバッククォートは区切りではない
+        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+export const tick = /`/;
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_slashslash_in_jsx_text_does_not_hide_template(self):
+        # JSX テキスト中の // はコメント開始ではない。
+        # それ以降のバッククォートまでスキャンを止めると
+        # テンプレート内の文字列行が剥がれる
+        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+export const Page = () => <div>// text {`
+// filepath: src/example.ts
+hello
+`}</div>;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
+    def test_unclosed_expect_fence_is_still_verified(self):
+        # 閉じないまま終端した expect フェンスも契約として扱う。
+        # 捨てると不一致の契約が検算されずに通る
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+~~~typescript expect path=src/a.ts
+export const a = 99;
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts
