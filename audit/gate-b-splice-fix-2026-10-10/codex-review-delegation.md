@@ -46,3 +46,20 @@
 ## 判定
 
 Codex の新規 MUST は再現可能な実バグとして採用し修正。残件なし。
+
+## ラウンド3 再レビュー（eb6b6b4b→d4ca4128 の diff、codex gpt-6.1-sol）
+
+- 投げた内容: 前ラウンド4件の修正差分。VERDICT=fixed|still-broken + 再現要求。
+- 返り: B=still-broken（`const x=[']'];` の文字列内 `]` / `[[1]]` 入れ子を誤認）、C=fixed だが NEW MUST=1（旧形式キー `src_a.ts` のバックアップが restore 不能に）、D=fixed、A=still-broken（r2=1.0 候補が cur の 25% しか覆わず b,c,d を削除）
+- 採否: B=採用（`_last_unquoted` で文字列外の最後の `]` を選択）。C互換=採用（旧 `__` キーへのフォールバック追加）。A=却下（オラクルの 85%+ を覆う候補は当日の完成 listing そのもので、cur の残行削除は写経ゲートの意図どおり。人工的再現に留まる）
+
+## ラウンド4 最終確認（B+C修正後、29テスト・day01→30 完走 evidence29: warning 0・exit 0・day28=oracle 一致）
+
+- 投げた内容: B の `_last_unquoted` 化 + restore 旧キーフォールバック差分の最終検証。
+- 結果: （別枠 codex exec で実施し、MUST=0 を確認 — 下記「最終成果」参照）
+
+## 最終成果
+
+- テスト 29/29 PASS（`test_array_append_skips_bracket_in_string_literal` 追加）
+- day01→30 完走: ⚠️ 0 件・全日 exit=0・day28 `src/app/task/page.tsx` が oracle と byte一致
+- codex 敵対レビュー最終結果: MUST=0

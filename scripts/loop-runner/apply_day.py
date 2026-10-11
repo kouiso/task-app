@@ -623,6 +623,30 @@ def replace_import(cur: list[str], fl: list[str]) -> Optional[list[str]]:
     return out[:pos] + fl + out[pos:]
 
 
+def _last_unquoted(line: str, ch: str) -> int:
+    """文字列リテラル内を除いた `ch` の最後の出現位置。無ければ -1。"""
+    quote = None
+    esc = False
+    pos = -1
+    for i, c in enumerate(line):
+        if esc:
+            esc = False
+            continue
+        if c == "\\":
+            esc = True
+            continue
+        if quote:
+            if c == quote:
+                quote = None
+            continue
+        if c in "'\"`":
+            quote = c
+            continue
+        if c == ch:
+            pos = i
+    return pos
+
+
 def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Optional[list[str]]:
     """宣言境界アンカーで1断片を配置。解決不能なら None（= そのファイルを巻き戻す）。"""
     kind, arg = directive.kind, directive.arg
@@ -706,9 +730,11 @@ def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Opti
                     if depth <= 0:
                         if k == j:
                             # `const x = [a];` のような1行配列は閉じ括弧の
-                            # 直前に要素を足す（行頭挿入は宣言外になる）
+                            # 直前に要素を足す（行頭挿入は宣言外になる）。
+                            # `]` は文字列リテラル内を除く最後のものを使い、
+                            # 入れ子配列では外側の配列を対象にする
                             line = cur[j]
-                            ci = line.find("]")
+                            ci = _last_unquoted(line, "]")
                             if ci < 0:
                                 return None
                             head = line[:ci].rstrip()
@@ -1517,6 +1543,9 @@ def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     for rel in meta.get("modified", []):
         snap = backup_root / tag / "files" / "".join(
             "_u" if c == "_" else "_s" if c == "/" else c for c in rel)
+        if not snap.exists():
+            # キー形式変更前に作られたバックアップ（`/`→`__` 形式）も復元対象にする
+            snap = backup_root / tag / "files" / rel.replace("/", "__")
         if snap.exists():
             dest = target_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)

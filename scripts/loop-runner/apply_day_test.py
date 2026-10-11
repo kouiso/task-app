@@ -442,6 +442,29 @@ export const c = 3;
         self.assertEqual(new[0], 'const first = ["x"];')
         self.assertTrue(new[1].startswith("const second = ["))
 
+    def test_array_append_skips_bracket_in_string_literal(self):
+        # `const x = [']'];` の文字列内 `]` を閉じ括弧と誤認しない。
+        # 入れ子配列 `[[1]]` では外側の配列を対象にする
+        cur = ["const x = [']'];", "const y = [[1]];"]
+        parts = [ad.Part(
+            cont=False, body='  2,',
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("array_append", ("x",)))]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(new)
+        joined = "\n".join(new)
+        # 閉じ `]` は行末 `];` に残り、要素 `2,` が括弧内に入る
+        self.assertTrue(new[0].endswith(","))
+        self.assertIn("  2,", joined)
+        self.assertIn("];", joined)
+        parts2 = [ad.Part(
+            cont=False, body='  2,',
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("array_append", ("y",)))]
+        new2, _ = ad.splice_parts(cur, parts2, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(new2)
+        self.assertIn("const y = [[1],", "\n".join(new2))
+
     def test_splice_success_gaps_reach_skipped(self):
         # splice 成功でも置けなかった kansei 断片が skipped に残り、
         # exit 判定と ledger から漏れない
