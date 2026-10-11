@@ -617,9 +617,20 @@ def replace_import(cur: list[str], fl: list[str]) -> Optional[list[str]]:
             end = hit[0]
             out[start:end + 1] = fl
             return out
-    # 同名 import が無ければ import 群の末尾へ足す
+    # 同名 import が無ければ import 群の末尾へ足す。
+    # 複数行 import（`import {` 〜 `} from 'x'`）の途中には挿入しない。
+    # 開始行だけ見ると `import {` の直後に割り込んで構文を壊すため、
+    # 文末（from 行・side-effect import・;）まで読み進める（issue #630）
     last_import = max((i for i, l in enumerate(out) if re.match(r"^import\b", l)), default=-1)
     pos = last_import + 1 if last_import >= 0 else 0
+    if last_import >= 0:
+        j = last_import
+        while j < len(out) and not (
+                IMPORT_FROM_RE.search(out[j])
+                or BARE_IMPORT_RE.search(out[j])
+                or out[j].rstrip().endswith(";")):
+            j += 1
+        pos = min(j + 1, len(out))
     return out[:pos] + fl + out[pos:]
 
 
@@ -846,8 +857,38 @@ def _variants_for_match(fl: list[str]) -> list[list[str]]:
     return variants
 
 
+def _collapse_code_ws(line: str) -> str:
+    """コード上の空白だけ潰す。文字列リテラル内の空白は内容なので残す。
+    全部潰すと `"a b"` → `"ab"` の変更を適用済みと誤認する（issue #630）。"""
+    out: list[str] = []
+    quote = None
+    esc = False
+    for c in line:
+        if esc:
+            esc = False
+            out.append(c)
+            continue
+        if c == "\\":
+            esc = True
+            out.append(c)
+            continue
+        if quote:
+            out.append(c)
+            if c == quote:
+                quote = None
+            continue
+        if c in "'\"`":
+            quote = c
+            out.append(c)
+            continue
+        if c.isspace():
+            continue
+        out.append(c)
+    return "".join(out)
+
+
 def _norm_blob(lines: Sequence[str]) -> list[str]:
-    return [re.sub(r"\s+", "", l) for l in lines if l.strip()]
+    return [_collapse_code_ws(l) for l in lines if l.strip()]
 
 
 def _blob_locate(base_nb: list[str], frag_lines: list[str]) -> int:
@@ -1440,6 +1481,26 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
                   and not KANSEI_LABEL.match(l)]
         if not fl_ins:
             continue
+        # 照合は norm 済み行で行うが、書き込みは教材フェンスの原文を使う。
+        # norm 結果を書き込むと文字列リテラルやテンプレート内の空行・行末空白が
+        # 失われて完成版と食い違うため、前後の空行だけ落とした原文断片を渡す
+        raw_lines = [l for l in part.body.split("\n")
+                     if not PLACEHOLDER_COMMENT.search(l)
+                     and not KANSEI_LABEL.match(l)]
+        fl_write = list(raw_lines)
+        while fl_write and not fl_write[0].strip():
+            fl_write.pop(0)
+        while fl_write and not fl_write[-1].strip():
+            fl_write.pop()
+        if not fl_write:
+            continue
+        # retag はプレースホルダー行自体を区切りに使うため、
+        # フィルタ無しの原文断片を別途渡す（norm 版の fl だと中身が失われる）
+        fl_raw = part.body.split("\n")
+        while fl_raw and not fl_raw[0].strip():
+            fl_raw.pop(0)
+        while fl_raw and not fl_raw[-1].strip():
+            fl_raw.pop()
         # 先頭コメント行を落とした変形・空白吸収ブロブでも一致判定
         #（位置コメントや行折り返し差で一致しないだけの再適用を防ぐ）
         strip_i = leading_meta_lines(fl_ins)
@@ -1456,12 +1517,12 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
             continue  # 冪等: 既に存在する断片はスキップ（完成版参照や再適用）
         res: Optional[list[str]] = None
         if part.directive:
-            res = apply_directive(out, part.directive, fl_ins)
+            res = apply_directive(out, part.directive, fl_write)
             if res is None:
                 # 指示が解けない時も oracle 位置照合で救えるなら救う
-                res = oracle_anchor(out, base_lines, fl_ins)
+                res = oracle_anchor(out, base_lines, fl_write)
             if res is None:
-                res = positional_splice(out, base_lines, fl_ins)
+                res = positional_splice(out, base_lines, fl_write)
             if res is not None:
                 last_end = _diff_start(out, res) + len(fl_ins)
                 out = res
@@ -1470,23 +1531,23 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
                          "reason": "directive-anchor-not-found",
                          "anchor": f"{part.directive.kind}:{part.directive.arg[0] if part.directive.arg else ''}"[:80]})
             return None, gaps
-        res = retag_element(out, base_lines, fl)
+        res = retag_element(out, base_lines, fl_raw)
         if res is None:
-            res = import_splice(out, fl_ins)
+            res = import_splice(out, fl_write)
         if res is None:
-            res = decl_replace(out, fl_ins)
+            res = decl_replace(out, fl_write)
         if res is None:
-            res = element_replace(out, base_lines, fl_ins)
+            res = element_replace(out, base_lines, fl_write)
         if res is None and merged:
-            res = element_region_replace(out, base_lines, fl_ins)
+            res = element_region_replace(out, base_lines, fl_write)
         if res is None:
-            res = oracle_anchor(out, base_lines, fl_ins)
+            res = oracle_anchor(out, base_lines, fl_write)
         if res is None:
-            res = positional_splice(out, base_lines, fl_ins)
+            res = positional_splice(out, base_lines, fl_write)
         if res is None and last_end is not None and _closers_only(fl_ins):
             # 閉じタグだけの断片: 教材は同じ編集箇所を連続で示すため
             # 直前に挿入した断片の直後に続ける
-            res = out[:last_end] + fl_ins + out[last_end:]
+            res = out[:last_end] + fl_write + out[last_end:]
         if res is None:
             if part.kansei or _is_listing_like(fl):
                 # 確認用リスティングが置けなくても実害はないので、

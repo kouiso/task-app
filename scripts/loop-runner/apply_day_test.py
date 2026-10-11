@@ -516,5 +516,52 @@ export const missing = 5;
             self.assertTrue(any("kansei-listing-unplaced" in x for x in s), s)
 
 
+class Issue630Fixes(unittest.TestCase):
+    def test_string_literal_ws_change_not_treated_as_applied(self):
+        # "a b" → "ab" のように文字列リテラル内の空白差だけが違う断片を
+        # ブロブ照合が適用済みと誤認しない
+        cur = ["const msg = 'a b';"]
+        parts = [ad.Part(
+            cont=False, body="const msg = 'ab';",
+            kansei=False, unmarked=False, prose="",
+            directive=None)]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        # oracle=cur なので oracle_anchor/positional_splice 等が置き換え経路を
+        # 探す。適用済み誤認でスキップされなければ 'ab' が入る
+        self.assertIsNotNone(new)
+        self.assertIn("'ab'", "\n".join(new))
+
+    def test_insert_past_multiline_import_not_inside(self):
+        # `import {` が複数行に跨る時、その途中ではなく文の末尾へ挿入する
+        cur = [
+            "import {",
+            "  A,",
+            "  B,",
+            "} from 'lib';",
+            "",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        imp_idx = joined.index("import { C } from 'other';")
+        from_idx = joined.index("} from 'lib';")
+        self.assertTrue(imp_idx > from_idx)
+
+    def test_splice_writes_verbatim_fragment(self):
+        # 書き込みは正規化行ではなく教材原文を使う。
+        # テンプレート内の空行・行末空白が消えないこと
+        body = "const t = `head\n\n  indented line  \ntail`;"
+        parts = [ad.Part(
+            cont=False, body=body,
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("append_end", ()))]
+        new, _gaps = ad.splice_parts(["const a = 1;"], parts,
+                                     ["const a = 1;"], "src/a.ts", "d1")
+        self.assertIsNotNone(new)
+        joined = "\n".join(new)
+        self.assertIn("head\n\n  indented line  \ntail", joined)
+
+
 if __name__ == "__main__":
     unittest.main()
