@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createAuthenticatedCaller,
   createTestCaller,
+  createTestProject,
+  createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
@@ -76,6 +78,33 @@ describe('userRouter', () => {
       await expect(caller.user.getById({ id: NON_EXISTENT_ID })).rejects.toThrow(
         'ユーザーが見つかりません',
       );
+    });
+
+    it('所属プロジェクトの担当タスクだけが返る', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-task-in') });
+      const other = await createTestUser({ email: uniqueEmail('u-task-out') });
+      const mine = await createTestProject(user.id);
+      const theirs = await createTestProject(other.id);
+      const visible = await createTestTask(mine.id, user.id, { assigneeId: user.id });
+      // 退会済み・他人プロジェクト側の担当は本人チェックを通っても返してはいけない
+      await createTestTask(theirs.id, other.id, { assigneeId: user.id });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.user.getById({ id: user.id });
+      const ids = result.assignedTasks.map((t) => t.id);
+      expect(ids).toContain(visible.id);
+      expect(ids).toHaveLength(1);
+    });
+
+    it('ADMINには他ユーザーの担当タスクが所属問わず返る', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-task-adm') });
+      const owner = await createTestUser({ email: uniqueEmail('u-task-own') });
+      const project = await createTestProject(owner.id);
+      const task = await createTestTask(project.id, owner.id, { assigneeId: target.id });
+
+      const result = await caller.user.getById({ id: target.id });
+      expect(result.assignedTasks.map((t) => t.id)).toContain(task.id);
     });
   });
 

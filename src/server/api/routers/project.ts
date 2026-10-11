@@ -429,6 +429,16 @@ export const projectRouter = createTRPCRouter({
           },
         });
 
+        // 退会後も担当タスクが残ると退会者側からタスク情報が読め続けるため、
+        // 同じトランザクションでこのプロジェクト内の担当を外して整合を取る
+        await tx.task.updateMany({
+          where: {
+            projectId: input.projectId,
+            assigneeId: input.userId,
+          },
+          data: { assigneeId: null },
+        });
+
         return { success: true };
       });
     }),

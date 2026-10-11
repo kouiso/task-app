@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestProject,
+  createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
@@ -319,6 +320,23 @@ describe('projectRouter', () => {
       await expect(
         caller.project.removeMember({ projectId: project.id, userId: ghost.id }),
       ).rejects.toThrow('メンバーが見つかりません');
+    });
+
+    it('削除したメンバーの担当タスクは同プロジェクト内で担当解除される', async () => {
+      const { owner, project, caller } = await setupProjectWithActor('OWNER');
+      const target = await createTestUser({ email: 'rm-assignee@example.com' });
+      await addMember(project.id, target.id, 'MEMBER');
+      const inProject = await createTestTask(project.id, owner.id, { assigneeId: target.id });
+      const otherProject = await createTestProject(owner.id);
+      const outside = await createTestTask(otherProject.id, owner.id, { assigneeId: target.id });
+
+      await caller.project.removeMember({ projectId: project.id, userId: target.id });
+
+      // 対象プロジェクトの担当だけ外れ、他プロジェクトの担当は残る
+      const cleared = await prisma.task.findUniqueOrThrow({ where: { id: inProject.id } });
+      const kept = await prisma.task.findUniqueOrThrow({ where: { id: outside.id } });
+      expect(cleared.assigneeId).toBeNull();
+      expect(kept.assigneeId).toBe(target.id);
     });
 
     it('MEMBERはメンバー削除を拒否される', async () => {
