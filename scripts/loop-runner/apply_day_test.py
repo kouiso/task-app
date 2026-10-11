@@ -889,15 +889,16 @@ hello
         self.assertIn("// filepath: src/example.ts",
                       (self.target / "src/a.ts").read_text())
 
-    def test_slashslash_in_jsx_text_does_not_hide_template(self):
-        # JSX テキスト中の // はコメント開始ではない。
-        # それ以降のバッククォートまでスキャンを止めると
-        # テンプレート内の文字列行が剥がれる
+    def test_slashslash_comment_with_backtick_keeps_string_markers(self):
+        # 行途中コメント内のバッククォートで文字列状態が反転すると、
+        # 実テンプレート内の // filepath: 行が本文とオラクルの両方から
+        # 欠落したまま検算を通る（適用結果が静かに変わる）
         _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
-export const Page = () => <div>// text {`
+export const a = 1; // ` はテンプレートの区切り
+export const message = `
 // filepath: src/example.ts
 hello
-`}</div>;
+`;
 ```
 ''')
         self.assertFalse(skipped, skipped)

@@ -206,11 +206,9 @@ def _drop_marker_lines(lines: Sequence[str],
                     stack.append("interp")
                     i += 1
             elif top in ("interp", "{"):
-                if l.startswith("//", i) and not l[:i].strip():
-                    # 行頭の // は必ずコメント。コメント内の ` や {}
-                    # は区切りではない。途中の // はJSXテキスト内の
-                    # リテラルかも知れないので触らない（誤認しても
-                    # 行を残す方向にのみ外れる）。
+                if l.startswith("//", i):
+                    # {} 式の中の // は必ずJSコメント。
+                    # コメント内の ` や {} は区切りではない。
                     break
                 if c == "{":
                     stack.append("{")
@@ -227,11 +225,13 @@ def _drop_marker_lines(lines: Sequence[str],
                 elif c in "'\"":
                     q = c
             else:  # コード面
-                if l.startswith("//", i) and not l[:i].strip():
-                    # 行頭の // は必ずコメント。コメント中のバッククォートを
+                if l.startswith("//", i):
+                    # // は行末までコメント。コメント中のバッククォートを
                     # テンプレート開始と誤認すると文字列中の
-                    # // filepath: 行まで消える。途中の // はJSX
-                    # テキスト等のリテラルの可能性があるので触らない。
+                    # // filepath: 行まで消える。JSXテキスト中の
+                    # リテラル // とは区別できないが、カリキュラム実績では
+                    # 「コメント内に区切り文字が来る」方が圧倒的に多い
+                    # ためJS意味論に揃える。
                     break
                 if l.startswith('"""', i):
                     stack.append('"""')
