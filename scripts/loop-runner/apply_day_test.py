@@ -998,6 +998,19 @@ hello
         self.assertIn("// filepath: src/example.ts",
                       (self.target / "src/a.tsx").read_text())
 
+    def test_backslash_line_continuation_keeps_string_markers(self):
+        # "..."\ の行継続文字列の中身にある // filepath: は
+        # 文字列の一部なので剥がさない
+        _w, skipped = self._run('''```tsx apply expect path=src/a.ts
+export const message = "\\
+// filepath: src/example.ts\\
+hello";
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

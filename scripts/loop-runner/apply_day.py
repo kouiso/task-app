@@ -183,6 +183,11 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
         seen.add((st0, i0))
         st = list(st0)
         i, n, q = i0, len(l), None
+        # 前行末の \ 継続や未終了文字列は q をスタックの "q:" 要素として
+        # 持ち越す。行またぎ文字列の中身がコード面に出ると目印を誤剥離する
+        if st and st[-1].startswith("q:"):
+            q = st[-1][-1]
+            st.pop()
         forked = False
         while i < n:
             c = l[i]
@@ -210,7 +215,8 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
                     i += 1
             elif top in ("interp", "{"):
                 if l.startswith("//", i):
-                    # コメント解釈: この行の走査はここで終わる
+                    # コメント解釈: この行の走査はここで終わる。
+                    # q はここでは必ず None（引用符判定が先に処理される）
                     results.add(tuple(st))
                     # リテラル解釈: 中身として走査を続ける
                     work.append((tuple(st), i + 2))
@@ -276,7 +282,9 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
                     i = j
             i += 1
         if not forked:
-            results.add(tuple(st))
+            # 引用符が閉じないまま行末に来た時は \ 継続・未終了のいずれでも
+            # 「文字列内側」の可能性として次行へ持ち越す
+            results.add(tuple(st) + (("q:" + q,) if q else ()))
     return results
 
 
