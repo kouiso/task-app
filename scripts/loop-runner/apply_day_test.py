@@ -972,6 +972,16 @@ export const mid = 2;
                 "// テンプレートは ` で始まります\n"
                 "const a = `\n// filepath: x\n`;"))
 
+    def test_backtick_inside_block_comment_does_not_open_template(self):
+        # 複数行 /* */ コメント内のバッククォートでテンプレート状態が
+        # 反転すると、文字列内の // filepath: 行が消える
+        self.assertEqual(
+            "/*\nテンプレートの区切りは `\n*/\n"
+            "const a = `\n// filepath: x\n`;",
+            ad.strip_fp(
+                "/*\nテンプレートの区切りは `\n*/\n"
+                "const a = `\n// filepath: x\n`;"))
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

@@ -180,7 +180,7 @@ def _drop_marker_lines(lines: Sequence[str],
     消えた中身は検算をすり抜ける）。
     """
     out: list[str] = []
-    stack: list[str] = []  # "tpl" / "interp" / "{" / '"""' / "'''"
+    stack: list[str] = []  # "tpl"/"interp"/"{"/'"""'/"'''"/"blk"
     for l in lines:
         if stack or not drop.search(l):
             out.append(l)
@@ -197,6 +197,10 @@ def _drop_marker_lines(lines: Sequence[str],
                 if l.startswith(top, i):
                     stack.pop()
                     i += 2
+            elif top == "blk":
+                if l.startswith("*/", i):
+                    stack.pop()
+                    i += 1
             elif top == "tpl":
                 if c == "\\":
                     i += 1
@@ -210,7 +214,11 @@ def _drop_marker_lines(lines: Sequence[str],
                     # {} 式の中の // は必ずJSコメント。
                     # コメント内の ` や {} は区切りではない。
                     break
-                if c == "{":
+                if l.startswith("/*", i):
+                    # ブロックコメント内の ` 等も区切りではない
+                    stack.append("blk")
+                    i += 1
+                elif c == "{":
                     stack.append("{")
                 elif c == "}":
                     stack.pop()
@@ -233,7 +241,11 @@ def _drop_marker_lines(lines: Sequence[str],
                     # 「コメント内に区切り文字が来る」方が圧倒的に多い
                     # ためJS意味論に揃える。
                     break
-                if l.startswith('"""', i):
+                if l.startswith("/*", i):
+                    # ブロックコメント内の ` や引用符も区切りではない
+                    stack.append("blk")
+                    i += 1
+                elif l.startswith('"""', i):
                     stack.append('"""')
                     i += 2
                 elif l.startswith("'''", i):
