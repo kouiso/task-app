@@ -336,6 +336,23 @@ class MustReviewFixes(unittest.TestCase):
             self.assertTrue((target / "src/old.ts").exists())
             self.assertFalse((target / "src/new.ts").exists())
 
+    def test_mv_then_recreate_keeps_modified_state(self):
+        # mv old→new の後に同名 old.ts を再作成しても、old.ts は
+        # modified のまま（created へ二重登録されない）。restore は
+        # 原本を復元して削除しない。
+        with tempfile.TemporaryDirectory() as td:
+            root, target = Path(td) / "bk", Path(td) / "app"
+            target.mkdir()
+            write(target, "src/old.ts", "original\n")
+            ad.apply_safe_shell_ops("mv src/old.ts src/new.ts",
+                                    target, root, "d1")
+            g = target / "src/old.ts"
+            ad.snapshot_file(root, "d1", "src/old.ts", g)  # 書き込み前
+            g.write_text("recreated\n", encoding="utf-8")
+            ad.restore_day(root, "d1", target)
+            self.assertEqual(g.read_text(), "original\n")
+            self.assertFalse((target / "src/new.ts").exists())
+
     def test_kansei_label_not_written_or_inserted(self):
         # 完成版ラベル行はファイルへ混入させない
         parts = [ad.Part(

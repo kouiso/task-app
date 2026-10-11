@@ -1477,7 +1477,11 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
         if rel_path not in meta["modified"]:
             meta["modified"].append(rel_path)
     else:
-        if rel_path not in meta["created"]:
+        # modified 記録済みのパスは「タグ開始時に存在した」が正しい状態。
+        # mv で移動した後に同名を再作成すると、modified と created の両方へ
+        # 登録され、restore が復元直後に削除してしまう。created は未登録の
+        # パスのみに限定する。
+        if rel_path not in meta["created"] and rel_path not in meta["modified"]:
             meta["created"].append(rel_path)
     meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta_path.write_text(json.dumps(meta, indent=1, ensure_ascii=False) + "\n",
