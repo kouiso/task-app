@@ -70,3 +70,9 @@ Codex の新規 MUST は再現可能な実バグとして採用し修正。残�
 - 返り: MUST=1 — day30 `array_append("headers")` が `async headers()` の外側 return 配列へ挿入し内側 `headers: [` を外す。実 day30 md で再現。
 - 採否: 採用。`name: [` プロパティ配列を宣言より優先する修正。回帰テスト `test_array_append_targets_property_array_not_outer_return` 追加（day30 next.config 形状）。
 - 再検証: evidence30 で day01→30 全 exit=0・warning 0、day30 next.config.ts で3要素が内側配列へ正しく挿入。
+
+## ラウンド6 最終検証（2460ecef、codex gpt-6.1-sol）
+
+- 投げた内容: array_append の `name: [` プロパティ優先修正の VERDICT + 全教材を対象にした NEW MUST 有無。
+- 返り: **VERDICT=fixed**（実 day30 フェンスで `apply_directive` を実行し、3要素が内側 `headers: [...]` へ入ることを確認）。**NEW MUST=0** — カリキュラム入力で発火する具体的な不具合なし。
+- これで merge ゲート「別AIレビューで無問題」を充足。委譲レビューは全6ラウンドでログ完備。
