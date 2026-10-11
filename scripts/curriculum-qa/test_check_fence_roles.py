@@ -109,6 +109,39 @@ export default function Page() {
         "```typescript path=src/app/page.tsx\nexport const a = 1;\n```\n\n" + EXPECT,
         1,
     ),
+    (
+        "属性値の語（meta=expect）は役割にしない",
+        APPLY + "\n" + """```typescript meta=expect path=src/app/page.tsx
+export default function Page() {
+  return <main />;
+}
+```""",
+        0,
+    ),
+    (
+        "path= 値の中の expect 語は役割にしない",
+        "```typescript apply path=src/app/expect-utils.ts\nexport const a = 1;\n```",
+        0,
+    ),
+    (
+        "非コード言語の expect も検査する（yaml で apply 無し）",
+        "```yaml expect path=src/app/page.tsx\na: 1\n```",
+        1,
+    ),
+    (
+        "続き注記つき従来 filepath 注記も対応 apply に数える",
+        "```typescript\n// filepath: src/app/page.tsx（続き）\nexport const a = 1;\n```\n\n" + EXPECT,
+        0,
+    ),
+    (
+        "省略せずの通常コメントはプレースホルダーにしない（day27 実在）",
+        APPLY + "\n" + """```typescript expect path=src/app/page.tsx
+export default function Page() {
+  return <div>{/* タイトル行: 長い名前も省略せず全文表示する */}</div>;
+}
+```""",
+        0,
+    ),
 ]
 
 

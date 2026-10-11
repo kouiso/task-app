@@ -441,17 +441,17 @@ def _iter_fences(text: str):
 # ` ```tsx apply path=...` は適用する断片、` ```tsx expect path=...` は
 # その日の最終状態の検算用オラクル（適用はしない）。役割タグが無い
 # filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
-ROLE_TOKEN = re.compile(r"\b(apply|expect)\b")
 INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
+_ROLE_WORDS = frozenset({"apply", "expect"})
 
 
 def _roles(info: str) -> frozenset:
     """info 文字列から役割トークンを取り出す。
 
-    `path=src/expect.ts` のような値の中に現れる apply/expect を役割と
-    誤認しないよう、`path=` 属性を取り除いてから判定する。
+    `path=src/expect.ts` や `meta=apply` のような属性値の中の語を役割と
+    誤認しないよう、空白区切りで独立したトークンだけを見る。
     """
-    return frozenset(ROLE_TOKEN.findall(INFO_PATH.sub("", info)))
+    return frozenset(t for t in info.split() if t in _ROLE_WORDS)
 
 
 # expect 本体から剥がす注記行の合成パターン。
@@ -523,7 +523,14 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
         elif "apply" in roles:
             fp = (info_fp.group(1) if info_fp else
                   fm.group(1).strip() if fm else None)
-            if fp is not None and not _usable(fp):
+            if fp is None:
+                # apply を名乗るのに対象が読み取れないフェンスを
+                # 直前ファイルへの続き扱いすると別ファイルへ混入する
+                invalid.append(
+                    f"apply fence without target (info: {info!r})")
+                cur_fp = None
+                continue
+            if not _usable(fp):
                 # 役割を名乗った上で書き込めない対象を指すフェンスは、
                 # 黙って直前ファイルへの続き扱いにすると別ファイルへ
                 # 混入する。適用しないことを記録する。
@@ -1947,10 +1954,16 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # 含まない候補は「完成版: 途中から」型の再掲で、採用すると
                 # 'use client' や import の頭が静かに欠ける（day13型）。
                 # `apply expect` の全量候補は最終状態の宣言なので、
-                # 先頭断片の書き換えを意図した差分も正当でゲート対象外とする
+                # 先頭断片の書き換えを意図した差分も正当でゲート対象外とする。
+                # ファイルの先頭は最初の完全な断片（続き・無印ではない part）
+                # の冒頭行とみなす。先頭が未完成の再掲の時に完成版リスティングが
+                # 頭落ち判定で弾かれないためである。
+                head_part = next(
+                    (p for p in parts if not p.cont and not p.unmarked),
+                    parts[0])
                 head_line = next(
                     (l for l in _drop_marker_lines(
-                        parts[0].body.split("\n"), KANSEI_LABEL)
+                        head_part.body.split("\n"), KANSEI_LABEL)
                      if l.strip() and not l.lstrip().startswith(("//", "/*"))),
                     None)
                 if head_line is not None and head_line.strip() \

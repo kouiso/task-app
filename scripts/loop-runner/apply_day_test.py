@@ -919,6 +919,47 @@ export const a = 99;
         self.assertTrue(any("expect mismatch" in s for s in skipped),
                         skipped)
 
+    def test_role_token_requires_standalone_word(self):
+        # `meta=expect` のような属性値の語は役割ではない。
+        # expect 扱いされると対象が契約として登録され、
+        # apply なしの検算だけが残る
+        parts, expects, invalid = ad.collect_parts(
+            "```tsx meta=expect path=src/a.ts\n"
+            "// filepath: src/a.ts\nexport const a = 1;\n```\n")
+        self.assertEqual({}, expects)
+        # path=src/expect.ts の値の中の語も役割ではない
+        _p2, expects2, _i2 = ad.collect_parts(
+            "```ts apply path=src/expect.ts\nexport const a = 1;\n```\n")
+        self.assertEqual({}, expects2)
+
+    def test_apply_without_target_is_not_appended_to_previous(self):
+        # apply を名乗るのに対象を持たないフェンスは、
+        # 直前ファイルへの追記扱いにすると別ファイルへ混入する
+        parts, _e, invalid = ad.collect_parts(
+            "```ts apply path=src/a.ts\nexport const a = 1;\n```\n\n"
+            "```ts apply\nexport const leak = 2;\n```\n")
+        self.assertEqual(
+            ["export const a = 1;"],
+            [p.body for p in parts["src/a.ts"]])
+        self.assertTrue(invalid)
+
+    def test_completed_listing_wins_when_first_part_is_continuation(self):
+        # 先頭の part が続き注記の断片でも、完成版リスティングの頭を
+        # ファイルの先頭として採用できる（続き断片の頭で弾かれない）
+        _w, skipped = self._run("""```ts
+// filepath: src/a.ts（続き）
+export const mid = 2;
+```
+
+```ts apply path=src/a.ts
+export const top = 1;
+export const mid = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const top = 1;\nexport const mid = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

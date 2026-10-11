@@ -58,21 +58,25 @@ SAFE_ROOT_FILES = frozenset({
 PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
 JP_RE = re.compile(r"[぀-ヿ一-鿿（）]")  # noqa: E501 -- ひらがな/カタカナ/漢字/全角括弧
 INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
-ROLE_TOKEN = re.compile(r"\b(apply|expect)\b")
+_ROLE_WORDS = frozenset({"apply", "expect"})
 CONT_NOTE = re.compile(r"続き")
 ELLIPSIS_LINE = re.compile(
     r"^\s*(?://+|/\*+|#|<!--)?\s*(?:…|\.{3,})\s*$|"
     r"^\s*(?://+|/\*+|#|<!--)\s*(?:…|\.{3,})")
-PLACEHOLDER = re.compile(r"既存の|中略|省略|前略|後略|以下略")
-# 「既存の〜」を含む表示文言など、実コード中の日本語はプレースホルダーでは
-# ない。省略の目印として見るのはコメント行の注記だけに限る
-COMMENT_LINE = re.compile(r"^\s*(?://|/\*|\*|#|<!--|--|;)")
+# 「既存の〜を残す」「中略」等、コメント自体が省略「指示」のものだけを
+# プレースホルダーとみなす。`省略せず全文表示` のような通常コメントは
+# 対象外（day27 実在コメント）。末尾は語の終わりを要求して誤検を防ぐ
+PLACEHOLDER_NOTE = re.compile(
+    r"^\s*(?://+|/\*+|\{/\*|\*\s|#|<!--|--|;)\s*(?:"
+    r"既存の[^\n]*?(?:残す|そのまま|変えない)|"
+    r"中略|前略|後略|以下略|省略)(?:$|[\s:：*/]|…)")
 
 
 def _roles(info: str) -> frozenset:
-    """info 文字列の役割トークン。path= の値の中の apply/expect を
-    役割と誤認しないよう、属性を除いてから判定する（apply_day と同じ）。"""
-    return frozenset(ROLE_TOKEN.findall(INFO_PATH.sub("", info)))
+    """info 文字列の役割トークン。`path=src/expect.ts` や `meta=apply` の
+    ような属性値の中の語を役割と誤認しないよう、空白区切りで独立した
+    トークンだけを見る（apply_day と同じ）。"""
+    return frozenset(t for t in info.split() if t in _ROLE_WORDS)
 
 
 def is_safe_rel_path(rel: str) -> bool:
@@ -96,6 +100,18 @@ class Finding(tuple):
         return self[1]
 
 
+def _fm_target(fm) -> str | None:
+    """従来の `// filepath:` 注記から対象パスを取り出す。
+
+    `// filepath: src/a.ts（続き）` のような末尾の補足注記はパスでは
+    ないので括弧以降を削る。残せると安全パス判定で落ちて対応 apply が
+    数えられなくなる。
+    """
+    if fm is None:
+        return None
+    return re.split(r"[（(]", filepath_value(fm).strip())[0].strip() or None
+
+
 def iter_code_fences(text: str):
     """(開始行, info, 中身行) を言語付きフェンスごとに返す。"""
     buf: list[str] = []
@@ -111,12 +127,16 @@ def iter_code_fences(text: str):
             buf.append(line)
             continue
         if state == "close":
-            if open_lang in CODE_LANGS:
+            # 役割タグを持つフェンスは言語を問わず検査対象
+            #（```yaml expect のような契約を素通りさせない）
+            if open_lang in CODE_LANGS or _roles(info):
                 yield start, info, buf
-            open_lang = ""
+            # 閉じた後に info が残ると終端の未閉フェンス判定が
+            # 同じフェンスを二重に返すため、ここで必ず消す
+            buf, start, info, open_lang = [], 0, "", ""
     # CommonMark と同じく、閉じないまま終端したフェンスも本文として扱う。
     # 捨てると expect 契約が lint をすり抜ける
-    if open_lang in CODE_LANGS:
+    if open_lang and (open_lang in CODE_LANGS or _roles(info)):
         yield start, info, buf
 
 
@@ -158,8 +178,7 @@ def check_text(text: str, name: str) -> list[Finding]:
                     lineno,
                     f"expect はファイル全体でなければなりません（続き注記）: {target}")))
             for j, l in enumerate(body):
-                if ELLIPSIS_LINE.match(l) or (
-                        COMMENT_LINE.match(l) and PLACEHOLDER.search(l)):
+                if ELLIPSIS_LINE.match(l) or PLACEHOLDER_NOTE.match(l):
                     findings.append(Finding((
                         lineno,
                         f"expect 本体に省略/プレースホルダー行があります: "
@@ -173,7 +192,7 @@ def check_text(text: str, name: str) -> list[Finding]:
                 apply_targets.add(target)
             continue
 
-        target = info_path or (filepath_value(fm).strip() if fm else None)
+        target = info_path or _fm_target(fm)
         if target is None:
             continue
         if is_apply and info_path and not is_safe_rel_path(info_path):
