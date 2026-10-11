@@ -982,6 +982,22 @@ export const mid = 2;
                 "/*\nテンプレートの区切りは `\n*/\n"
                 "const a = `\n// filepath: x\n`;"))
 
+    def test_slashslash_jsx_text_variant_keeps_later_template_markers(self):
+        # JSXテキストの // 以降にある実テンプレートも正しく開く。
+        # コメント解釈とリテラル解釈の両候補を追跡し、
+        # 文字列内側の可能性がある行は剥がさない
+        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+export const el = <div>// text</div>;
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

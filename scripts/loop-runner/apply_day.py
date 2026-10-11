@@ -166,28 +166,27 @@ _REGEX_HINT = re.compile(
     r"|return|typeof|case|in|of|do|else|yield|await)\s*$")
 
 
-def _drop_marker_lines(lines: Sequence[str],
-                       drop: "re.Pattern[str]") -> list[str]:
-    """コード面上の注記行（drop がヒットする行）だけを取り除く。
+def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
+    """1行を stack 状態から走査し、行末にあり得る区切りスタックの集合を返す。
 
-    目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
-    リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
-    それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
-    消えて検算をすり抜ける。区切りの内外は行内走査で追跡し、通常の引用符内の
-    バッククォート（`"`"`）・テンプレート内の ${...} 補間・正規表現内の
-    バッククォート・JSX テキストの // でも内外を誤らない形にする。
-    誤判定は常に「行を残す」側に倒す（残った注記コメントは無害だが、
-    消えた中身は検算をすり抜ける）。
+    `//` と `/*` は JS ではコメントだが JSX テキストではリテラルであり、
+    文脈なしには確定できない。そのため曖昧なものは両方の解釈を残す
+    （コメントとして行末まで無視する系と、リテラルとして走査を続ける系）。
     """
-    out: list[str] = []
-    stack: list[str] = []  # "tpl"/"interp"/"{"/'"""'/"'''"/"blk"
-    for l in lines:
-        if stack or not drop.search(l):
-            out.append(l)
-        i, n, q = 0, len(l), None
+    results: set[tuple] = set()
+    work: list[tuple] = [(tuple(stack), 0)]
+    seen: set[tuple] = set()
+    while work:
+        st0, i0 = work.pop()
+        if (st0, i0) in seen:
+            continue
+        seen.add((st0, i0))
+        st = list(st0)
+        i, n, q = i0, len(l), None
+        forked = False
         while i < n:
             c = l[i]
-            top = stack[-1] if stack else ""
+            top = st[-1] if st else ""
             if q is not None:
                 if c == "\\":
                     i += 1
@@ -195,64 +194,66 @@ def _drop_marker_lines(lines: Sequence[str],
                     q = None
             elif top in ('"""', "'''"):
                 if l.startswith(top, i):
-                    stack.pop()
+                    st.pop()
                     i += 2
             elif top == "blk":
                 if l.startswith("*/", i):
-                    stack.pop()
+                    st.pop()
                     i += 1
             elif top == "tpl":
                 if c == "\\":
                     i += 1
                 elif c == "`":
-                    stack.pop()
+                    st.pop()
                 elif l.startswith("${", i):
-                    stack.append("interp")
+                    st.append("interp")
                     i += 1
             elif top in ("interp", "{"):
                 if l.startswith("//", i):
-                    # {} 式の中の // は必ずJSコメント。
-                    # コメント内の ` や {} は区切りではない。
+                    # コメント解釈: この行の走査はここで終わる
+                    results.add(tuple(st))
+                    # リテラル解釈: 中身として走査を続ける
+                    work.append((tuple(st), i + 2))
+                    forked = True
                     break
                 if l.startswith("/*", i):
-                    # ブロックコメント内の ` 等も区切りではない
-                    stack.append("blk")
-                    i += 1
-                elif c == "{":
-                    stack.append("{")
+                    work.append((tuple(st + ["blk"]), i + 2))
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if c == "{":
+                    st.append("{")
                 elif c == "}":
-                    stack.pop()
+                    st.pop()
                 elif l.startswith('"""', i):
-                    stack.append('"""')
+                    st.append('"""')
                     i += 2
                 elif l.startswith("'''", i):
-                    stack.append("'''")
+                    st.append("'''")
                     i += 2
                 elif c == "`":
-                    stack.append("tpl")
+                    st.append("tpl")
                 elif c in "'\"":
                     q = c
             else:  # コード面
                 if l.startswith("//", i):
-                    # // は行末までコメント。コメント中のバッククォートを
-                    # テンプレート開始と誤認すると文字列中の
-                    # // filepath: 行まで消える。JSXテキスト中の
-                    # リテラル // とは区別できないが、カリキュラム実績では
-                    # 「コメント内に区切り文字が来る」方が圧倒的に多い
-                    # ためJS意味論に揃える。
+                    results.add(tuple(st))
+                    work.append((tuple(st), i + 2))
+                    forked = True
                     break
                 if l.startswith("/*", i):
-                    # ブロックコメント内の ` や引用符も区切りではない
-                    stack.append("blk")
-                    i += 1
-                elif l.startswith('"""', i):
-                    stack.append('"""')
+                    work.append((tuple(st + ["blk"]), i + 2))
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if l.startswith('"""', i):
+                    st.append('"""')
                     i += 2
                 elif l.startswith("'''", i):
-                    stack.append("'''")
+                    st.append("'''")
                     i += 2
                 elif c == "`":
-                    stack.append("tpl")
+                    st.append("tpl")
                 elif c in "'\"":
                     q = c
                 elif c == "/" and _REGEX_HINT.search(l[:i]):
@@ -274,6 +275,33 @@ def _drop_marker_lines(lines: Sequence[str],
                         j += 1
                     i = j
             i += 1
+        if not forked:
+            results.add(tuple(st))
+    return results
+
+
+def _drop_marker_lines(lines: Sequence[str],
+                       drop: "re.Pattern[str]") -> list[str]:
+    """コード面上の注記行（drop がヒットする行）だけを取り除く。
+
+    目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
+    リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
+    それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
+    消えて検算をすり抜ける。区切りの内外は _scan_variants が行ごとの解釈
+    候補の集合として追跡し、剥がすのは全候補でコード面にある行だけに
+    限る。候補のどれか1つでも文字列内側を指すなら、その行は中身の可能性
+    があるので残す（誤判定は常に「残す」側に倒す。残った注記コメントは
+    無害だが、消えた中身は検算をすり抜ける）。
+    """
+    out: list[str] = []
+    states: set[tuple] = {()}
+    for l in lines:
+        if not (all(not s for s in states) and drop.search(l)):
+            out.append(l)
+        nxt: set[tuple] = set()
+        for st in states:
+            nxt |= _scan_variants(l, st)
+        states = nxt or {()}
     return out
 
 
