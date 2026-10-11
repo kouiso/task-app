@@ -717,33 +717,47 @@ def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Opti
         pos = last_import + 1 if last_import >= 0 else 0
         return cur[:pos] + add + cur[pos:]
     if kind == "array_append":
-        b = decl_boundary(cur, arg[0])
-        if b is None:
-            return None
-        si, ei = b
-        for j in range(si, ei + 1):
-            if "[" in _strip_for_depth(cur[j]):
-                depth = 0
-                for k in range(j, len(cur)):
-                    s = _strip_for_depth(cur[k])
-                    depth += s.count("[") - s.count("]")
-                    if depth <= 0:
-                        if k == j:
-                            # `const x = [a];` のような1行配列は閉じ括弧の
-                            # 直前に要素を足す（行頭挿入は宣言外になる）。
-                            # `]` は文字列リテラル内を除く最後のものを使い、
-                            # 入れ子配列では外側の配列を対象にする
-                            line = cur[j]
-                            ci = _last_unquoted(line, "]")
-                            if ci < 0:
-                                return None
-                            head = line[:ci].rstrip()
-                            if not head.endswith(("[", ",")):
-                                head += ","
-                            return (cur[:j] + [head] + fl
-                                    + [line[ci:]] + cur[j + 1:])
-                        return cur[:k] + fl + cur[k:]
+        name = arg[0]
+        j = None
+        # `name: [...]` のプロパティ配列を優先する。`headers の配列に追加`
+        # は `async headers()` 関数の return 配列ではなく、その内側の
+        # `headers: [...]` プロパティを指すため
+        prop_re = re.compile(r"^\s*" + re.escape(name) + r"\s*:\s*\[")
+        for i, l in enumerate(cur):
+            if prop_re.match(l):
+                j = i
+                break
+        if j is None:
+            b = decl_boundary(cur, name)
+            if b is None:
                 return None
+            si, ei = b
+            for jj in range(si, ei + 1):
+                if "[" in _strip_for_depth(cur[jj]):
+                    j = jj
+                    break
+        if j is None:
+            return None
+        depth = 0
+        for k in range(j, len(cur)):
+            s = _strip_for_depth(cur[k])
+            depth += s.count("[") - s.count("]")
+            if depth <= 0:
+                if k == j:
+                    # `const x = [a];` のような1行配列は閉じ括弧の
+                    # 直前に要素を足す（行頭挿入は宣言外になる）。
+                    # `]` は文字列リテラル内を除く最後のものを使い、
+                    # 入れ子配列では外側の配列を対象にする
+                    line = cur[j]
+                    ci = _last_unquoted(line, "]")
+                    if ci < 0:
+                        return None
+                    head = line[:ci].rstrip()
+                    if not head.endswith(("[", ",")):
+                        head += ","
+                    return (cur[:j] + [head] + fl
+                            + [line[ci:]] + cur[j + 1:])
+                return cur[:k] + fl + cur[k:]
         return None
     if kind == "replace_decl":
         b = decl_boundary(cur, arg[0])

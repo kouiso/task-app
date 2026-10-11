@@ -63,3 +63,10 @@ Codex の新規 MUST は再現可能な実バグとして採用し修正。残�
 - テスト 29/29 PASS（`test_array_append_skips_bracket_in_string_literal` 追加）
 - day01→30 完走: ⚠️ 0 件・全日 exit=0・day28 `src/app/task/page.tsx` が oracle と byte一致
 - codex 敵対レビュー最終結果: MUST=0
+
+## ラウンド5 全体 diff 敵対レビュー（71277c58、codex gpt-6.1-sol）
+
+- 投げた内容: main→HEAD 全 diff の merge-gate レビュー。実教材で再現できる破壊的不具合のみ報告を要求。
+- 返り: MUST=1 — day30 `array_append("headers")` が `async headers()` の外側 return 配列へ挿入し内側 `headers: [` を外す。実 day30 md で再現。
+- 採否: 採用。`name: [` プロパティ配列を宣言より優先する修正。回帰テスト `test_array_append_targets_property_array_not_outer_return` 追加（day30 next.config 形状）。
+- 再検証: evidence30 で day01→30 全 exit=0・warning 0、day30 next.config.ts で3要素が内側配列へ正しく挿入。

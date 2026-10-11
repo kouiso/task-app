@@ -465,6 +465,36 @@ export const c = 3;
         self.assertIsNotNone(new2)
         self.assertIn("const y = [[1],", "\n".join(new2))
 
+    def test_array_append_targets_property_array_not_outer_return(self):
+        # day30 `headers の配列に追加`: `async headers()` 関数の return 配列
+        # ではなく、内側の `headers: [...]` プロパティ配列へ入れる
+        cur = [
+            "const nextConfig = {",
+            "  async headers() {",
+            "    return [",
+            "      {",
+            "        source: '/(.*)',",
+            "        headers: [",
+            "          { key: 'A', value: 'a' },",
+            "        ],",
+            "      },",
+            "    ];",
+            "  },",
+            "};",
+        ]
+        parts = [ad.Part(
+            cont=False, body="          { key: 'B', value: 'b' },",
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("array_append", ("headers",)))]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "next.config.ts", "d30")
+        self.assertIsNotNone(new)
+        joined = "\n".join(new)
+        # 内側 headers 配列の `],` 直前に要素が入る（外側 return 配列ではない）
+        b_idx = joined.index("{ key: 'B', value: 'b' },")
+        a_idx = joined.index("{ key: 'A', value: 'a' },")
+        close_idx = joined.index("        ],")
+        self.assertTrue(a_idx < b_idx < close_idx)
+
     def test_splice_success_gaps_reach_skipped(self):
         # splice 成功でも置けなかった kansei 断片が skipped に残り、
         # exit 判定と ledger から漏れない
