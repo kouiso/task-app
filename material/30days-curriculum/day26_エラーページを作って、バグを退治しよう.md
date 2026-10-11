@@ -1114,7 +1114,7 @@ describe("共通レイアウトのセッション取得状態", () => {
 // filepath: src/app/profile/page-query-state.test.tsx
 // 続き 1/8
 // @vitest-environment jsdom
-
+import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
