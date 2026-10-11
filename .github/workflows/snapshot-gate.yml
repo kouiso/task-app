@@ -42,6 +42,11 @@ on:
     - cron: '0 19 * * 0'
   workflow_dispatch:
 
+# 同一 workflow・同 ref の二重起動を潰す
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash
@@ -49,6 +54,8 @@ defaults:
 jobs:
   snapshot:
     name: 写経ビルド検査
+    # draft PR では走らない（ready_for_review で再走）。draft は merge 不能なのでゲートの意味は変わらん
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 

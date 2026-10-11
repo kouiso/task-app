@@ -2,7 +2,8 @@ name: Devin Security Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    # 既定 types には ready_for_review が無い。draft→ready で再走するよう列挙
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'src/**/*.ts'
       - 'src/**/*.tsx'
@@ -11,11 +12,19 @@ on:
       - 'package*.json'
       - '.env*'
 
+# 同一 workflow・同 ref の二重起動を潰す
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   security-review:
     # DEVIN_REVIEW_ENABLED へ移行するまでの間、旧 CODEX_REVIEW_ENABLED でも動くようにしている
-    if: vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true'
+    if: |
+      github.event.pull_request.draft != true &&
+      (vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true')
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write

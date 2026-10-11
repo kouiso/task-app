@@ -109,10 +109,19 @@ on:
       - 'scripts/**'
   workflow_dispatch:
 
+# 同一 workflow・同 ref の二重起動を潰す
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sale-package-gate:
     name: 販売用ZIP初期状態チェック
+    # draft PR では走らない（ready_for_review で再走）。push/dispatch は pull_request が null なので
+    # != true で素通し（== false だと null 評価で誤 skip する罠）
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -122,7 +131,9 @@ jobs:
 
   vendored-skill-integrity:
     name: 執筆スキルvendoring整合性チェック
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -167,7 +178,9 @@ jobs:
 
   material-gate:
     name: 教材品質ゲート
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

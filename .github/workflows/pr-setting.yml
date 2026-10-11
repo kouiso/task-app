@@ -1,21 +1,53 @@
-name: Pr Auto Setting
+name: PR Auto Setting
 
 on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
 
+# 同一 workflow・同 ref の二重起動を潰す
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
-  assignAuthor:
-    name: Assign author to PR
-    runs-on: ${{ vars.RUNNER_LINUX }}
-    if: github.event.pull_request.user.type != 'Bot'
+  assign-author:
+    name: Assign Author
+    if: (github.event.action == 'opened' || github.event.action == 'reopened') && github.event.pull_request.user.type != 'Bot'
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 5
     steps:
-      - name: Assign author to PR
-        uses: technote-space/assign-author@9558557c5c4816f38bd06176fbc324ba14bb3160 # v1.6.2
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const login = context.payload.pull_request.user.login;
+
+            // GraphQL の addAssigneesToAssignable は既にassign済みだと
+            // "Assignee has already been taken" で失敗するため、
+            // 冪等な REST API (重複・無効assigneeを黙って無視する) を使う
+            const assignees = context.payload.pull_request.assignees ?? [];
+            if (assignees.some((a) => a.login === login)) {
+              console.info(login + ' is already assigned to PR #' + context.issue.number);
+              return;
+            }
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: [login],
+            });
+
+            console.info('Assigned ' + login + ' to PR #' + context.issue.number);
 
   auto-label-branch:
     name: Label based on branch name
-    runs-on: ${{ vars.RUNNER_LINUX }}
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 5
     steps:
       - name: Add label based on branch name
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -72,12 +104,12 @@ jobs:
 
   auto-label-files:
     name: Label based on changed files
-    runs-on: ${{ vars.RUNNER_LINUX }}
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 5
     steps:
+      # sync-labels: 旧 labeler.yml 側にだけあった指定。差分が外れたラベルを剥がす挙動を
+      # 統合時にも保つために取り込む（旧 pr-setting.yml の auto-label-files には無かった）
       - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
         with:
           configuration-path: '.github/labeler.yml'
+          sync-labels: true

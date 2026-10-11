@@ -49,6 +49,11 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
+# 同一 workflow・同 ref の二重起動を潰す。70分ジョブの二重起動を防ぐ
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash
@@ -66,6 +71,8 @@ jobs:
     # 判定境界の退行テスト。件数はジョブ名に入れん — 45件目を足した瞬間に必須チェック名が
     # 変わって、Ruleset が要求する名前を誰も報告せんくなりPRが全部止まる。
     name: 教材PDF検査の退行テスト
+    # draft PR では走らない（ready_for_review で再走）。draft は merge 不能なのでゲートの意味は変わらん
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -91,6 +98,8 @@ jobs:
 
   pdf-book-inspection:
     name: 教材PDF検査
+    # draft PR では走らない（ready_for_review で再走）
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     # 判定が描画環境に依存する（check_pdf_book.py の ALLOWED_FONTS は閉じた許可リストで、
     # pdffonts の列レイアウトも poppler の版で変わる）。イメージが転がると無関係に赤くなるので固定する。
     runs-on: ubuntu-24.04
