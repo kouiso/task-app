@@ -1,0 +1,6 @@
+[apply_day] day28_タスク一括操作を実装しよう.md (tag=day28)
+  ✅ WRITE  src/server/api/routers/task.ts (kansei-run)
+  ✅ WRITE  src/app/task/page.tsx (kansei-run)
+  ✅ SPLICE src/lib/constant/status.ts (1 parts)
+  → 3 files written
+exit=0

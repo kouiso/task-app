@@ -48,8 +48,8 @@ CODE_LINE = re.compile(
 )
 # 自分で閉じるタグは開きっぱなしにならない。数えると外側の閉じタグと
 # 対応してしまい、開いていない閉じタグを見落とす。
-OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)(?![^>]*/>)")
-SELF_CLOSING = re.compile(r"<([A-Za-z][\w.]*)[^>]*/>")
+OPEN_TAG = re.compile(r"<([A-Za-z][\w.]*)(?![^<>]*/>)")
+SELF_CLOSING = re.compile(r"<([A-Za-z][\w.]*)[^<>]*/>")
 # 断片の短縮形 `</>` も閉じタグである。名前が無いので別に拾う。
 CLOSE_TAG = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
 # 教材で実際に分割されている JSX 三項演算子の形。文字列や別の波括弧を含む行は
