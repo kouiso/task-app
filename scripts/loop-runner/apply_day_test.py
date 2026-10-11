@@ -960,6 +960,17 @@ export const mid = 2;
         self.assertEqual("export const top = 1;\nexport const mid = 2;\n",
                          (self.target / "src/a.ts").read_text())
 
+    def test_backtick_inside_line_comment_does_not_open_template(self):
+        # `// テンプレートは ` で始まります` のようなコメント中の
+        # バッククォートでテンプレートが開いてしまうと、文字列内の
+        # // filepath: 行まで消える
+        self.assertEqual(
+            "// テンプレートは ` で始まります\n"
+            "const a = `\n// filepath: x\n`;",
+            ad.strip_fp(
+                "// テンプレートは ` で始まります\n"
+                "const a = `\n// filepath: x\n`;"))
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts

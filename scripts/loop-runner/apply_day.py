@@ -206,6 +206,12 @@ def _drop_marker_lines(lines: Sequence[str],
                     stack.append("interp")
                     i += 1
             elif top in ("interp", "{"):
+                if l.startswith("//", i) and not l[:i].strip():
+                    # 行頭の // は必ずコメント。コメント内の ` や {}
+                    # は区切りではない。途中の // はJSXテキスト内の
+                    # リテラルかも知れないので触らない（誤認しても
+                    # 行を残す方向にのみ外れる）。
+                    break
                 if c == "{":
                     stack.append("{")
                 elif c == "}":
@@ -221,6 +227,12 @@ def _drop_marker_lines(lines: Sequence[str],
                 elif c in "'\"":
                     q = c
             else:  # コード面
+                if l.startswith("//", i) and not l[:i].strip():
+                    # 行頭の // は必ずコメント。コメント中のバッククォートを
+                    # テンプレート開始と誤認すると文字列中の
+                    # // filepath: 行まで消える。途中の // はJSX
+                    # テキスト等のリテラルの可能性があるので触らない。
+                    break
                 if l.startswith('"""', i):
                     stack.append('"""')
                     i += 2
