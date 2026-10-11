@@ -1393,9 +1393,13 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
         strip_i = leading_meta_lines(fl_ins)
         fl_core = fl_ins[strip_i:] if strip_i else fl_ins
         out_nb = _norm_blob(out)
+        # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
+        # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する
         already = (find_in(out, fl_ins) >= 0
                    or (fl_core and find_in(out, fl_core) >= 0)
-                   or any(_blob_locate(out_nb, v) >= 0 for v in _variants_for_match(fl_ins)))
+                   or (not part.directive
+                       and any(_blob_locate(out_nb, v) >= 0
+                               for v in _variants_for_match(fl_ins))))
         if already:
             continue  # 冪等: 既に存在する断片はスキップ（完成版参照や再適用）
         res: Optional[list[str]] = None
@@ -1462,7 +1466,8 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
     meta = {"modified": [], "created": []}
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    key = rel_path.replace("/", "__")
+    # `/`→`_` 変換は `a/b.ts` と `a__b.ts` が衝突するため、先に `_` を逃がす
+    key = rel_path.replace("_", "__").replace("/", "_")
     if rel_path in meta["created"]:
         # 初回実行で新規作成と記録済み。再実行時は作成状態のまま残し、
         # restore で削除できるようにする（modified へ再分類しない）。
@@ -1496,7 +1501,7 @@ def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     restored: list[str] = []
     for rel in meta.get("modified", []):
-        snap = backup_root / tag / "files" / rel.replace("/", "__")
+        snap = backup_root / tag / "files" / rel.replace("_", "__").replace("/", "_")
         if snap.exists():
             dest = target_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1571,7 +1576,11 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # 「当日の完成版が現在ファイルをほぼ包含するか」でも採用を判定する
                 _c1, r2_cur = coverage(joined, cur_lines_for_cov)
                 nlines = len([l for l in joined.split("\n") if l.strip()])
-                if r2_cur >= 0.6:
+                # 既存ファイルの WRITE 採用は「現在のファイルをほぼ包含」が条件。
+                # 完成版以外の断片候補がファイルの一部（例: 末尾2行）を被覆するだけで
+                # 全量リスティング扱いされると残りが消えるため、kansei 系以外は
+                # 0.9 以上の高い包含率を要求する。
+                if r2_cur >= 0.6 and (label.startswith("kansei") or r2_cur >= 0.9):
                     picked, mode = joined, label
                 elif r2 >= 0.30:
                     picked, mode = joined, label
@@ -1615,6 +1624,10 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
             gaps.extend(file_gaps)
             skipped.append(f"splice rejected, baseline kept: {path}")
             continue
+        # splice 成功でも未適用断片が残る場合がある（kansei-listing-unplaced 等）。
+        # 成功パスで握り潰すと ledger と終了コード判定から漏れ「部分適用」を
+        # 完走と誤判定するため、成否に関わらず gaps へ集計する。
+        gaps.extend(file_gaps)
         spliced_text = "\n".join(new_lines) + "\n"
         if is_ts_family and not parses_as_file(path, spliced_text, esbuild):
             # splice 後の構文健全性が壊れている時も書き込まず baseline を維持する。

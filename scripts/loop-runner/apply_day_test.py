@@ -368,6 +368,78 @@ class MustReviewFixes(unittest.TestCase):
         frag = ["const a = foo(", "  1)"]
         self.assertEqual(ad._blob_locate(ad._norm_blob(base), frag), 0)
 
+    def test_suffix_fragment_not_promoted_to_write(self):
+        # ファイル末尾と一致するだけの小断片が全量リスティング扱いで
+        # WRITE されると、既存の宣言が静かに消える
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "app"
+            oracle = root / "oracle"
+            target.mkdir(); oracle.mkdir()
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const b = 2;\nexport const c = 3;\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+export const d = 4;
+```
+
+```typescript
+// filepath: src/a.ts
+export const b = 2;
+export const c = 3;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn("export const a = 1;", body)
+
+    def test_directive_rewrite_not_swallowed_by_blob(self):
+        # 'ab' → 'a b' の指示つき書き直しが、空白吸収ブロブの冪等判定で
+        # 「適用済み」と誤認されない
+        cur = ["export const label = 'ab';", "export const x = 1;"]
+        parts = [ad.Part(
+            cont=False, body="export const label = 'a b';",
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("replace_decl", ("label",)))]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(new)
+        self.assertIn("export const label = 'a b';", new)
+
+    def test_snapshot_key_no_underscore_slash_collision(self):
+        # `src/a/b.ts` と `src/a__b.ts` のバックアップが同一キーに潰れない
+        with tempfile.TemporaryDirectory() as td:
+            root, target = Path(td) / "bk", Path(td) / "app"
+            target.mkdir()
+            f1 = write(target, "src/a/b.ts", "SECOND\n")
+            f2 = write(target, "src/a__b.ts", "FIRST\n")
+            ad.snapshot_file(root, "d1", "src/a/b.ts", f1)
+            ad.snapshot_file(root, "d1", "src/a__b.ts", f2)
+            f1.write_text("changed\n", encoding="utf-8")
+            f2.write_text("changed\n", encoding="utf-8")
+            ad.restore_day(root, "d1", target)
+            self.assertEqual(f1.read_text(), "SECOND\n")
+            self.assertEqual(f2.read_text(), "FIRST\n")
+
+    def test_splice_success_gaps_reach_skipped(self):
+        # splice 成功でも置けなかった kansei 断片が skipped に残り、
+        # exit 判定と ledger から漏れない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "app"
+            oracle = root / "oracle"
+            target.mkdir(); oracle.mkdir()
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\nexport const d = 4;\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+// 完成版: 追加宣言
+export const missing = 5;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            self.assertTrue(any("kansei-listing-unplaced" in x for x in s), s)
+
 
 if __name__ == "__main__":
     unittest.main()
