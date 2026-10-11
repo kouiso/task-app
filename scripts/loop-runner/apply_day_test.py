@@ -495,7 +495,218 @@ export const c = 3;
         close_idx = joined.index("        ],")
         self.assertTrue(a_idx < b_idx < close_idx)
 
-    def test_splice_success_gaps_reach_skipped(self):
+    def test_splice_strips_kansei_label_lines(self):
+        # codex SUGGEST: SPLICE 経路でも `// 完成版:` ラベル行が
+        # 挿入ペイロードに混入しないことを固定する
+        cur = ["export const taskRouter = router({",
+               "  getAll: publicProcedure.query(() => []),",
+               "});"]
+        parts = [ad.Part(
+            cont=False, body="// 完成版: 追加分\n  del: publicProcedure.mutation(() => null),",
+            kansei=True, unmarked=False, prose="",
+            directive=ad.Directive("append_end", ()))]
+        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(new)
+        self.assertNotIn("完成版", "\n".join(new))
+
+
+class ApplyExpectRoleTest(unittest.TestCase):
+    """```lang apply path=... / ```lang expect path=... 役割タグ記法。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.target = root / "app"
+        self.oracle = root / "oracle"
+        self.ledger = root / "ledger.jsonl"
+        self.target.mkdir(); self.oracle.mkdir()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _run(self, md: str):
+        md_path = write(Path(self.tmp.name), "dayX.md", md)
+        return ad.apply_day(md_path, self.target, oracle_dir=self.oracle,
+                            tag="dayX", ledger_path=self.ledger)
+
+    def test_apply_role_tag_with_path(self):
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue(written)
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+
+    def test_expect_ok_is_recorded(self):
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
+
+    def test_expect_mismatch_restores_baseline(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        write(self.oracle, "src/a.ts", "export const a = 2;\n")
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+export const b = 99;
+```
+""")
+        # 不一致 = そのファイルは適用前状態へ戻り、skip として記録される
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+        self.assertTrue(any("expect mismatch" in s for s in skipped), skipped)
+
+    def test_expect_without_apply_is_flagged(self):
+        _w, skipped = self._run("""```typescript expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("expect without apply" in s for s in skipped),
+                        skipped)
+
+    def test_apply_expect_combined_writes_and_verifies(self):
+        # ` ```lang apply expect ` は全量リスティングを適用し、かつ
+        # 同一本文を最終状態の検算にも使う（day28 完成版リスティングの形）。
+        written, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
+
+    def test_new_file_listing_must_include_first_fragment_head(self):
+        # day13型: 「完成版: 途中から」の再掲が kansei-run として選ばれると
+        # 先頭断片の 'use client' / import が静かに欠ける。
+        # 先頭断片の冒頭行を含まない候補は新規ファイルでは採用しない。
+        md = """```typescript
+// filepath: src/a.ts
+'use client';
+import { A } from './a';
+```
+
+```typescript
+// filepath: src/a.ts
+// 完成版: 途中から
+export const b = 2;
+```
+"""
+        md_path = write(Path(self.tmp.name), "dayY.md", md)
+        ad.apply_day(md_path, self.target, oracle_dir=self.oracle, tag="d1")
+        body = (self.target / "src/a.ts").read_text()
+        self.assertTrue(body.startswith("'use client';"), body[:120])
+
+    def test_new_file_starting_with_bare_function(self):
+        # day11型: query-error.ts は 'use client' も import も無い
+        # `function ...` 宣言で始まる正規のファイル。先頭行の白リストが
+        # import/export/コメント系だけだと正当な新規ファイルを拒否する。
+        written, skipped = self._run("""```typescript
+// filepath: src/lib/q.ts
+function isRecord(v: unknown): boolean {
+  return typeof v === 'object';
+}
+export function useIt(v: unknown): boolean {
+  return isRecord(v);
+}
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue((self.target / "src/lib/q.ts").exists())
+
+    def test_expect_body_strips_marker_lines(self):
+        # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+// filepath: src/a.ts
+// 完成版: ファイル全体
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+
+
+class CliExitCodeTest(unittest.TestCase):
+    """codex SUGGEST: CLI 終了コードを直接検証する（部分適用 = 非ゼロ）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.target = root / "app"
+        self.oracle = root / "oracle"
+        self.target.mkdir(); self.oracle.mkdir()
+        self.script = Path(ad.__file__).resolve()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _cli(self, md_body: str):
+        md = write(Path(self.tmp.name), "day5.md", md_body)
+        import subprocess
+        return subprocess.run(
+            [sys.executable, str(self.script), str(md), str(self.target),
+             "--oracle", str(self.oracle)],
+            capture_output=True, text=True)
+
+    def test_exit_0_on_clean_apply(self):
+        r = self._cli("""```typescript
+// filepath: src/a.ts
+export const a = 1;
+```
+""")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_exit_3_on_partial_apply(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        r = self._cli("""```typescript
+// filepath: src/a.ts
+export const a = 1;
+```
+
+```typescript
+// filepath: src/ghost.ts （router の中に追加）
+const g = 1;
+```
+""")
+        # src/ghost.ts は挿入位置指示つきの断片のみ → 新規作成不可で skip → exit 3
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+
+    def test_exit_3_on_expect_mismatch(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        r = self._cli("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+export const b = 99;
+```
+""")
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+
+
+
         # splice 成功でも置けなかった kansei 断片が skipped に残り、
         # exit 判定と ledger から漏れない
         with tempfile.TemporaryDirectory() as td:

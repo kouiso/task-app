@@ -303,36 +303,73 @@ class Part:
     directive: Optional[Directive]
 
 
-def collect_parts(text: str) -> dict[str, list[Part]]:
+# フェンス info 文字列の役割タグ。
+# ` ```tsx apply path=...` は適用する断片、` ```tsx expect path=...` は
+# その日の最終状態の検算用オラクル（適用はしない）。役割タグが無い
+# filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
+FENCE_RE = re.compile(r"```([a-zA-Z0-9]*)[ \t]*([^\n]*)\n(.*?)```", re.S)
+ROLE_EXPECT = re.compile(r"\bexpect\b")
+INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
+
+
+def _expect_body(code: str) -> str:
+    """expect フェンス本体から写経ツール用の目印行を剥がした本文を返す。
+
+    検算対象は「ファイルが最終的にこうなる」本文なので、
+    `// filepath:` と `// 完成版:` 系ラベルは成果物に含まれない。
+    """
+    lines = [
+        l for l in strip_fp(code).split("\n")
+        if not KANSEI_LABEL.match(l)
+    ]
+    return "\n".join(lines).strip("\n")
+
+
+def collect_parts(text: str) -> tuple[dict[str, list[Part]], dict[str, str]]:
+    """(parts, expects) を返す。expects は path -> 完成版本文。"""
     parts: dict[str, list[Part]] = {}
+    expects: dict[str, str] = {}
     cur_fp: Optional[str] = None
     prev_end = 0
-    for m in re.finditer(r"```([a-zA-Z0-9]*)\n(.*?)```", text, re.S):
-        lang, code = m.group(1).lower(), m.group(2)
+    for m in FENCE_RE.finditer(text):
+        lang, info, code = m.group(1).lower(), m.group(2).strip(), m.group(3)
         before = text[max(prev_end, m.start() - 400):m.start()]
         before = "\n".join(before.split("\n")[-6:])
         prose = classify_prose(before)
         prev_end = m.end()
+        info_fp = INFO_PATH.search(info)
         fm = FP_RE.search(code)
-        if fm:
-            fp = fm.group(1).strip()
-            fp_line = next(l for l in code.split("\n") if "filepath:" in l)
-            if PATH_OK.match(fp) and is_safe_rel_path(fp) and not JP_RE.search(fp):
-                cur_fp = fp
-                body = strip_fp(code)
-                if not body.strip():
+        fp = (info_fp.group(1) if info_fp else
+              fm.group(1).strip() if fm else None)
+        if fp and PATH_OK.match(fp) and is_safe_rel_path(fp) \
+                and not JP_RE.search(fp):
+            if ROLE_EXPECT.search(info):
+                # expect は「このパスがこの本文になる」宣言。別マップで
+                # 検算に使う。apply も併記されている場合は「内容でもあり
+                # 契約でもある」全量リスティングとして両方へ登録する。
+                expects[fp] = _expect_body(code)
+                if not re.search(r"\bapply\b", info):
                     continue
-                head = "\n".join(body.split("\n")[:2])
-                parts.setdefault(fp, []).append(Part(
-                    cont=is_continuation(fp_line, code),
-                    body=body,
-                    kansei=bool(KANSEI_RE.search(head)),
-                    unmarked=False,
-                    prose=prose,
-                    directive=directive_of(fp_line, body),
-                ))
-            else:
-                cur_fp = None  # 読み比べ用・ターミナル等
+            cur_fp = fp
+            body = strip_fp(code)
+            if not body.strip():
+                continue
+            fp_line = next(
+                (l for l in code.split("\n") if "filepath:" in l),
+                f"// filepath: {fp}")
+            head = "\n".join(body.split("\n")[:2])
+            parts.setdefault(fp, []).append(Part(
+                cont=is_continuation(fp_line, code),
+                body=body,
+                kansei=bool(KANSEI_RE.search(head)),
+                unmarked=False,
+                prose=prose,
+                directive=directive_of(fp_line, body),
+            ))
+            continue
+        if fm or (info_fp and ROLE_EXPECT.search(info)):
+            # 実ファイルでない参照フェンスや安全でない path の expect。
+            cur_fp = None
             continue
         if cur_fp is None or lang in SHELLISH:
             continue
@@ -341,7 +378,7 @@ def collect_parts(text: str) -> dict[str, list[Part]]:
                 cont=True, body=code,
                 kansei=bool(KANSEI_RE.search("\n".join(code.split("\n")[:2]))),
                 unmarked=True, prose=prose, directive=None))
-    return parts
+    return parts, expects
 
 
 # ---------------------------------------------------------------------------
@@ -402,7 +439,10 @@ def looks_complete(joined: str) -> bool:
         if not s:
             continue
         return bool(re.match(
-            r"^('use (client|server)'|\"use (client|server)\"|import |export |//|/\*|\{/\*|#|@|/\*)", s))
+            r"^('use (client|server)'|\"use (client|server)\"|import |export "
+            r"|//|/\*|\{/\*|#|@"
+            r"|(?:async\s+)?function\s|const\s|let\s|var\s"
+            r"|type\s|interface\s|class\s|enum\s|namespace\s|declare\s)", s))
     return False
 
 
@@ -1547,6 +1587,39 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
                          encoding="utf-8")
 
 
+def _snap_key(rel_path: str) -> str:
+    return "".join(
+        "_u" if c == "_" else "_s" if c == "/" else c for c in rel_path)
+
+
+def restore_one(backup_root: Path, tag: str, target_dir: Path,
+                rel_path: str) -> bool:
+    """1ファイルだけを <tag> の適用前状態へ戻す。
+
+    expect 検算で不一致が出た時に、そのファイルだけ baseline を
+    クリーンな状態へ戻すために使う（他の正常ファイルは巻き込まない）。
+    """
+    meta_path = backup_root / tag / "manifest.json"
+    if not meta_path.exists():
+        return False
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    dest = target_dir / rel_path
+    if rel_path in meta.get("modified", []):
+        snap = backup_root / tag / "files" / _snap_key(rel_path)
+        if not snap.exists():
+            snap = backup_root / tag / "files" / rel_path.replace("/", "__")
+        if not snap.exists():
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(snap, dest)
+        return True
+    if rel_path in meta.get("created", []):
+        if dest.exists():
+            dest.unlink()
+        return True
+    return False
+
+
 def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     """manifest に従い <tag> の適用前状態へ復元し、復元したパスを返す。"""
     meta_path = backup_root / tag / "manifest.json"
@@ -1592,7 +1665,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
     ]
     esbuild = next((p for p in esbuild_candidates if p and Path(p).exists()), None)
 
-    parts_map = collect_parts(content)
+    parts_map, expects = collect_parts(content)
 
     # シェル操作(mv)はファイル系フェンスより先に処理する
     written: list[str] = []
@@ -1604,6 +1677,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
 
     applied_rec: list[dict] = []
     gaps: list[dict] = []
+    written_paths: set[str] = set()
 
     for path, parts in parts_map.items():
         dest = target_dir / path
@@ -1628,6 +1702,18 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 continue
             if not parses_as_file(path, joined, esbuild):
                 continue
+            if not dest_exists and parts:
+                # 新規ファイルを断片から組み立てる時、先頭断片の冒頭行を
+                # 含まない候補は「完成版: 途中から」型の再掲で、採用すると
+                # 'use client' や import の頭が静かに欠ける（day13型）。
+                head_line = next(
+                    (l for l in parts[0].body.split("\n")
+                     if l.strip() and not l.lstrip().startswith(("//", "/*"))
+                        and not KANSEI_LABEL.match(l)),
+                    None)
+                if head_line is not None and head_line.strip() \
+                        not in (l.strip() for l in joined.split("\n")):
+                    continue
             if dest_exists:
                 r1, r2 = coverage(joined, base_lines)
                 # 中間バージョンは完成版 oracle と乖離するため、
@@ -1674,6 +1760,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                             encoding="utf-8")
             written.append(f"WRITE  {path} ({mode})")
             applied_rec.append({"path": path, "n": len(parts), "mode": mode})
+            written_paths.add(path)
             continue
 
         # リスティングとして採用できない = 断片。既存ファイルへ splice する。
@@ -1707,6 +1794,34 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         dest.write_text(spliced_text, encoding="utf-8")
         written.append(f"SPLICE {path} ({len(parts)} parts)")
         applied_rec.append({"path": path, "n": len(parts), "mode": "splice"})
+        written_paths.add(path)
+
+    # expect フェンスの検算。適用済みファイルだけを対象にし、不一致は
+    # そのファイルを <tag> の適用前状態へ戻す（連鎖崩壊を起こさない）。
+    for path, oracle_body in expects.items():
+        if path not in parts_map:
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-without-apply-fence"})
+            skipped.append(f"expect without apply: {path}")
+            continue
+        if path not in written_paths:
+            # 適用自体が reject/スキップ済み。そちらの記録で足りる。
+            continue
+        dest = target_dir / path
+        got = dest.read_text(encoding="utf-8") if dest.exists() else ""
+        if norm(got.split("\n")) == norm(oracle_body.split("\n")):
+            applied_rec.append({"path": path, "mode": "expect-ok"})
+            continue
+        if restore_one(backup_root, tag, target_dir, path):
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-mismatch; baseline restored"})
+            skipped.append(f"expect mismatch, baseline restored: {path}")
+        else:
+            # スナップショットが取れていない（書き込み前に snapshot できなかった
+            # 異常系）。ファイルは不一致のまま残るので完走扱いにはしない。
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-mismatch; no snapshot to restore"})
+            skipped.append(f"expect mismatch, file left dirty: {path}")
 
     if ledger_path is not None:
         rec = {"day": tag, "md": md_path.name, "applied": applied_rec, "gaps": gaps}
