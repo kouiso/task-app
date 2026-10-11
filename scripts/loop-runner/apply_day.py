@@ -35,6 +35,12 @@ from typing import Optional, Sequence
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 
+# フェンスの解釈は品質ゲート（scripts/curriculum-qa）と同一の
+# CommonMark 系スキャナーを使う。runner だけ ``` 専用だと、
+# lint が受理する ~~~ フェンスを読み落として契約が検算されない
+sys.path.insert(0, str(REPO_DIR / "scripts" / "curriculum-qa"))
+from markdown_scan import fence_states  # noqa: E402
+
 SKIP_LANGS = {
     "bash", "shell", "sh", "zsh", "console", "terminal", "output",
     "mermaid", "diff", "sql", "dockerfile", "makefile", "text",
@@ -152,39 +158,60 @@ def has_ellipsis(body: str) -> bool:
 # expect 検算が欠落を検出できなくなるため、行全体がコメント注記のものだけ剥がす
 FP_COMMENT = re.compile(r"^\s*(?://|#|--|;|/\*+\s*|\*\s|<!--)\s*filepath:")
 
-_ESCAPED_QUOTE = re.compile(r"\\[`'\"]")
+def _drop_marker_lines(lines: Sequence[str],
+                       drop: "re.Pattern[str]") -> list[str]:
+    """コード面上の注記行（drop がヒットする行）だけを取り除く。
+
+    目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
+    リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
+    それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
+    消えて検算をすり抜ける。通常の引用符内のバッククォート（`"`"`）でも
+    誤って内側判定になるため、行内を走査して区切りの内外を追跡する。
+    """
+    out: list[str] = []
+    state: Optional[str] = None  # "tpl" / '"""' / "'''"
+    for l in lines:
+        if state is not None or not drop.search(l):
+            out.append(l)
+        i, n, q = 0, len(l), None
+        while i < n:
+            c = l[i]
+            if state is None and q is None:
+                # コメント以降はコード面ではないので走査を終える。
+                # 文字列内の `http://` 等は q 側が先に捕捉する
+                if l.startswith("//", i) or l.startswith("<!--", i) \
+                        or c == "#":
+                    break
+                if c in "'\"":
+                    q = c
+                elif l.startswith('"""', i):
+                    state = '"""'
+                    i += 2
+                elif l.startswith("'''", i):
+                    state = "'''"
+                    i += 2
+                elif c == "`":
+                    state = "tpl"
+            elif q is not None:
+                if c == "\\":
+                    i += 1
+                elif c == q:
+                    q = None
+            elif state in ('"""', "'''"):
+                if l.startswith(state, i):
+                    state = None
+                    i += 2
+            else:  # state == "tpl"
+                if c == "\\":
+                    i += 1
+                elif c == "`":
+                    state = None
+            i += 1
+    return out
 
 
 def strip_fp(code: str) -> str:
-    # テンプレートリテラルや三重引用符の内側に現れる目印風の行は
-    # コメント注記ではなく文字列の中身。剥がすと実行時の文字列が変わるのに
-    # オラクル側でも同じ行が消えて検算をすり抜けるため、行またぎ文字列の
-    # 内側を区切り文字の偶奇で簡易追跡して剥がさない
-    out: list[str] = []
-    in_tpl = False
-    in_triple: Optional[str] = None
-    for l in code.split("\n"):
-        if in_tpl or in_triple is not None or not FP_COMMENT.match(l):
-            out.append(l)
-        body = _ESCAPED_QUOTE.sub("", l)
-        if in_triple is not None:
-            if in_triple in body:
-                in_triple = None
-        elif in_tpl:
-            if body.count("`") % 2:
-                in_tpl = False
-        else:
-            first = min(
-                (m for m in
-                 ((body.find("`"), "`"), (body.find('"""'), '"""'),
-                  (body.find("'''"), "'''")) if m[0] >= 0),
-                default=None)
-            if first is not None and body.count(first[1]) % 2:
-                if first[1] == "`":
-                    in_tpl = True
-                else:
-                    in_triple = first[1]
-    return "\n".join(out)
+    return "\n".join(_drop_marker_lines(code.split("\n"), FP_COMMENT))
 
 
 def ext_of(path: str) -> str:
@@ -340,11 +367,32 @@ class Part:
     contract: bool = False  # `apply expect` フェンス由来（最終状態の宣言）
 
 
+def _iter_fences(text: str):
+    """(lang, info, code, 直前の地の文) をフェンスごとに返す。
+
+    ``` と ~~~ の両方を lint と同じ意味で解釈する。
+    地の文は開始行の直前6行まで（直前のフェンスより手前は取らない）。
+    """
+    lines = text.split("\n")
+    buf: list[str] = []
+    info = lang = ""
+    open_lineno = prev_close = 0
+    for lineno, _line, state, fence in fence_states(text):
+        if state == "open" and fence is not None:
+            buf, info, lang, open_lineno = [], fence.info, fence.lang, lineno
+        elif state == "inside":
+            buf.append(_line)
+        elif state == "close":
+            before = "\n".join(
+                lines[max(prev_close, open_lineno - 7):open_lineno - 1])
+            yield lang, info, "\n".join(buf), before
+            prev_close = lineno
+
+
 # フェンス info 文字列の役割タグ。
 # ` ```tsx apply path=...` は適用する断片、` ```tsx expect path=...` は
 # その日の最終状態の検算用オラクル（適用はしない）。役割タグが無い
 # filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
-FENCE_RE = re.compile(r"```([a-zA-Z0-9]*)[ \t]*([^\n]*)\n(.*?)```", re.S)
 ROLE_TOKEN = re.compile(r"\b(apply|expect)\b")
 INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
 
@@ -358,16 +406,19 @@ def _roles(info: str) -> frozenset:
     return frozenset(ROLE_TOKEN.findall(INFO_PATH.sub("", info)))
 
 
+# expect 本体から剥がす注記行の合成パターン。
+# コード面上の目印だけが対象（文字列内の同名行は中身なので残す）
+_EXPECT_MARKER = re.compile(
+    f"(?:{FP_COMMENT.pattern})|(?:{KANSEI_LABEL.pattern})")
+
+
 def _expect_body(code: str) -> str:
     """expect フェンス本体から写経ツール用の目印行を剥がした本文を返す。
 
     検算対象は「ファイルが最終的にこうなる」本文なので、
     `// filepath:` と `// 完成版:` 系ラベルは成果物に含まれない。
     """
-    lines = [
-        l for l in strip_fp(code).split("\n")
-        if not KANSEI_LABEL.match(l)
-    ]
+    lines = _drop_marker_lines(code.split("\n"), _EXPECT_MARKER)
     return "\n".join(lines).strip("\n")
 
 
@@ -395,18 +446,12 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
     cur_contract = False
     invalid: list[str] = []
     cur_fp: Optional[str] = None
-    prev_end = 0
-
     def _usable(fp: Optional[str]) -> bool:
         return bool(fp and PATH_OK.match(fp) and is_safe_rel_path(fp)
                     and not JP_RE.search(fp))
 
-    for m in FENCE_RE.finditer(text):
-        lang, info, code = m.group(1).lower(), m.group(2).strip(), m.group(3)
-        before = text[max(prev_end, m.start() - 400):m.start()]
-        before = "\n".join(before.split("\n")[-6:])
+    for lang, info, code, before in _iter_fences(text):
         prose = classify_prose(before)
-        prev_end = m.end()
         roles = _roles(info)
         info_fp = INFO_PATH.search(info)
         fm = FP_RE.search(code)
@@ -483,8 +528,8 @@ def candidates(parts: list[Part]):
     seen: set[str] = set()
     def emit(label: str, sub: list[Part]):
         body = "\n".join(
-            l for p in sub for l in p.body.split("\n")
-            if not KANSEI_LABEL.match(l))
+            l for p in sub
+            for l in _drop_marker_lines(p.body.split("\n"), KANSEI_LABEL))
         key = body[:4000]
         if body.strip() and key not in seen:
             seen.add(key)
@@ -1050,6 +1095,11 @@ def oracle_anchor(cur: list[str], base_lines: list[str], fl: list[str]) -> Optio
 JSX_ELEM_HEAD = re.compile(r"^\s*<([A-Za-z][\w.]*)")
 PLACEHOLDER_COMMENT = re.compile(r"残す|そのまま|変えない|残して")
 
+# splice 挿入ペイロードから剥がす行（プレースホルダー指示 + 完成ラベル）。
+# コード面上の目印だけが対象（文字列内の同名行は中身なので残す）
+_PAYLOAD_MARKER = re.compile(
+    f"(?:{PLACEHOLDER_COMMENT.pattern})|(?:{KANSEI_LABEL.pattern})")
+
 
 def element_replace(cur: list[str], base_lines: list[str], fl: list[str]) -> Optional[list[str]]:
     """断片が <Tag ...> の完全な要素で cur に同名要素がある時は要素ごと置き換える。
@@ -1569,9 +1619,8 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
             continue  # 抜粋・読み比べ・写経しませんは参照提示なので適用しない
         # プレースホルダー行（「既存の〜を残す」）はコードではなく指示なので、
         # 挿入用の断片からは除く。retag だけは区切り記号として使うため元の fl を見る
-        fl_ins = [l for l in fl
-                  if not PLACEHOLDER_COMMENT.search(l)
-                  and not KANSEI_LABEL.match(l)]
+        fl_ins = _drop_marker_lines(
+            fl, _PAYLOAD_MARKER)
         if not fl_ins:
             continue
         # 先頭コメント行を落とした変形・空白吸収ブロブでも一致判定
@@ -1852,9 +1901,9 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # `apply expect` の全量候補は最終状態の宣言なので、
                 # 先頭断片の書き換えを意図した差分も正当でゲート対象外とする
                 head_line = next(
-                    (l for l in parts[0].body.split("\n")
-                     if l.strip() and not l.lstrip().startswith(("//", "/*"))
-                        and not KANSEI_LABEL.match(l)),
+                    (l for l in _drop_marker_lines(
+                        parts[0].body.split("\n"), KANSEI_LABEL)
+                     if l.strip() and not l.lstrip().startswith(("//", "/*"))),
                     None)
                 if head_line is not None and head_line.strip() \
                         not in (l.strip() for l in joined.split("\n")):

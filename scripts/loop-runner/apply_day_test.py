@@ -807,6 +807,54 @@ export const b = 2;
         self.assertEqual("export const b = 2;\n",
                          (self.target / "src/a.ts").read_text())
 
+    def test_backtick_inside_normal_string_does_not_open_template(self):
+        # 通常の文字列内のバッククォート（`"`"`）はテンプレート開始では
+        # ない。それで内側判定がずれると、本物のテンプレート内にある
+        # 目印風行が剥がれて検算をすり抜ける（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+export const tick = "`";
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_kansei_label_inside_template_preserved(self):
+        # テンプレート内の `// 完成版:` 行も文字列の中身。
+        # 剥がすと成果物が変わるのにオラクル側も同じ行が消える
+        #（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+export const message = `
+// 完成版: keep this text
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// 完成版: keep this text",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_tilde_fence_expect_is_verified(self):
+        # `~~~` フェンスも lint と同じく契約として解釈する。
+        # runner だけが読み落とすと不一致の契約が検算も記録も
+        # されない（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+~~~typescript expect path=src/a.ts
+export const a = 99;
+~~~
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
     def test_expect_body_strips_marker_lines(self):
         # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
         _w, skipped = self._run("""```typescript apply path=src/a.ts
