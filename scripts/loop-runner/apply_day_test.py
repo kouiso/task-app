@@ -1127,15 +1127,41 @@ class Pr635LateReviewFixes(unittest.TestCase):
         self.assertEqual(ad.find_decl_end(jsx, 0), 0)
 
     def test_splice_into_whitespace_only_file(self):
-        # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む
+        # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む。
+        # 先頭に追加でも断片の前に空行を残さない（#! が先頭に来なくなる）
+        oracle = ("export const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\nexport const d = 4;\n")
+        for where in ("末尾に追加", "先頭に追加"):
+            body, s = self._apply(
+                oracle, "   \n\n",
+                f"```typescript\n// filepath: src/a.ts（{where}）\n"
+                "export const a = 1;\n```\n")
+            self.assertEqual(body, "export const a = 1;\n", (where, body))
+            self.assertEqual(s, [[]], where)
+
+    def test_code_fragment_present_across_existing_comment(self):
+        # コードだけの断片は既存側の間にコメントが挟まっていても適用済み。
+        # 見失うと宣言置き換えで b が二重定義になる
+        target = ("export const a = 1;\n// keep\nexport const b = 2;\n"
+                  "export const c = 3;\n")
         body, s = self._apply(
-            "export const a = 1;\nexport const b = 2;\n"
-            "export const c = 3;\nexport const d = 4;\n",
-            "   \n",
-            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
-            "export const a = 1;\n```\n")
-        self.assertEqual(body, "   \nexport const a = 1;\n", body)
+            "export const a = 1;\nexport const b = 2;\nexport const c = 3;\n"
+            "export const d = 4;\n",
+            target,
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1;\nexport const b = 2;\n```\n")
+        self.assertEqual(body, target, body)
         self.assertEqual(s, [[]])
+
+    def test_comment_only_fragment_inside_block_comment_is_applied(self):
+        # 外側の /* */ の中身として同じ文字列があっても適用済みとしない
+        body, _s = self._apply(
+            "export const a = 1;\n",
+            "/*\n// marker\n*/\nexport const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(
+            body, "/*\n// marker\n*/\nexport const a = 1;\n// marker\n", body)
 
     def test_splice_raw_end_covers_whole_fragment(self):
         # 断片の先頭・末尾が既存行と equal でも、終端は断片全体の後ろを返す。
@@ -1148,6 +1174,15 @@ class Pr635LateReviewFixes(unittest.TestCase):
                                       [[l] for l in frag])
         self.assertEqual([l for g in new_raw for l in g], res)
         self.assertEqual(end, 4)
+
+    def test_splice_raw_end_picks_written_occurrence(self):
+        # 断片と同じ並びが既存側にもある時は、変更区間と重なる側を終端にする
+        out = ["A", "B", "A"]
+        res = ["A", "B", "A", "B", "A", "B"]
+        frag = ["A", "B", "A", "B"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 6)
 
 
 if __name__ == "__main__":
