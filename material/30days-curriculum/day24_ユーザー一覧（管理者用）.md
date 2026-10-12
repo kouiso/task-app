@@ -1871,7 +1871,7 @@ import {
   ClipboardList,
   Search,
   BarChart,
-  Users
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -1888,9 +1888,9 @@ import {
   AlertDialogTrigger,
 } from '@/component/ui/alert-dialog';
 import { Button } from '@/component/ui/button';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { USER_ROLE } from '@/lib/constant/roles';
 
 interface MenuItem {
   text: string;
@@ -2005,26 +2005,26 @@ export function AppLayout({
                 </Link>
               </li>
             ))}
-{session.user.role === USER_ROLE.ADMIN && (
-  <li>
-    <Link
-      href="/user"
-      className={cn(
-        'flex items-center gap-3 rounded-md ' +
-          'px-3 py-2 text-sm transition-colors',
-        pathname === '/user'
-          ? 'bg-sidebar-accent ' +
-            'text-sidebar-accent-foreground font-medium'
-          : 'text-sidebar-foreground/70 ' +
-            'hover:bg-sidebar-accent/50 ' +
-            'hover:text-sidebar-foreground',
-      )}
-    >
-      <Users className="h-5 w-5" />
-      ユーザー管理
-    </Link>
-  </li>
-)}
+            {session.user.role === USER_ROLE.ADMIN && (
+              <li>
+                <Link
+                  href="/user"
+                  className={cn(
+                    'flex items-center gap-3 rounded-md ' +
+                      'px-3 py-2 text-sm transition-colors',
+                    pathname === '/user'
+                      ? 'bg-sidebar-accent ' +
+                        'text-sidebar-accent-foreground font-medium'
+                      : 'text-sidebar-foreground/70 ' +
+                        'hover:bg-sidebar-accent/50 ' +
+                        'hover:text-sidebar-foreground',
+                  )}
+                >
+                  <Users className="h-5 w-5" />
+                  ユーザー管理
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
         {/* ユーザー情報 + ログアウト */}

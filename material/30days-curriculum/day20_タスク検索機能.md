@@ -5051,7 +5051,7 @@ Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDi
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useSearchParams }
+import { useRouter, useSearchParams }
   from 'next/navigation';
 import {
   Suspense, useCallback,
@@ -5110,8 +5110,15 @@ function TaskPageContent() {
   const [deleteTargetId, setDeleteTargetId]
     = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const taskIdParam =
-    searchParams.get('taskId');
+  const router = useRouter();
+  const taskIdParam = searchParams.get('taskId');
+  const isEditLink =
+    searchParams.get('edit') === 'true';
+  const { data: linkedTask } =
+    api.task.getById.useQuery(
+      { id: taskIdParam ?? '' },
+      { enabled: !!taskIdParam && isEditLink },
+    );
 
   const {
     data: tasks,
@@ -5130,11 +5137,10 @@ function TaskPageContent() {
   const { data: session } =
     api.auth.getSession.useQuery();
   const utils = api.useUtils();
-// 時間記録の成功後に一覧を取り直す
-// （useCallback は react から import）
-const handleTimeLogSuccess = useCallback(() => {
-  void utils.task.getAll.invalidate();
-}, [utils.task.getAll]);
+  // 時間記録の成功後に一覧を取り直す
+  const handleTimeLogSuccess = useCallback(() => {
+    void utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -5167,16 +5173,42 @@ const handleTimeLogSuccess = useCallback(() => {
     [myRoleByProject],
   );
   useEffect(() => {
-    if (taskIdParam) {
+    if (taskIdParam && !isEditLink) {
       setSelectedTask(taskIdParam);
       setDetailOpen(true);
     }
-  }, [taskIdParam]);
+  }, [isEditLink, taskIdParam]);
+
+  useEffect(() => {
+    if (!isEditLink || !linkedTask) return;
+    setEditingTask(
+      taskToFormData(linkedTask),
+    );
+    setDetailOpen(false);
+    setDialogOpen(true);
+  }, [isEditLink, linkedTask]);
+
+  const closeTaskDialog = () => {
+    setDialogOpen(false);
+    setEditingTask(undefined);
+    if (!isEditLink) return;
+
+    const params = new URLSearchParams(
+      searchParams.toString(),
+    );
+    params.delete('taskId');
+    params.delete('edit');
+    const query = params.toString();
+    router.replace(
+      query ? `/task?${query}` : '/task',
+    );
+  };
+
   const createMutation =
     api.task.create.useMutation({
       onSuccess: () => {
         utils.task.getAll.invalidate();
-        setDialogOpen(false);
+        closeTaskDialog();
       },
     });
 
@@ -5189,7 +5221,7 @@ const handleTimeLogSuccess = useCallback(() => {
             { id: selectedTask }
           );
         }
-        setDialogOpen(false);
+        closeTaskDialog();
       },
       onError: (error) => {
         toast.error(error.message);
@@ -5346,24 +5378,23 @@ const handleTimeLogSuccess = useCallback(() => {
           xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
-                      <TaskCard
-                        // 完成版: TaskCard へ渡す2つの props
-                        key={task.id}
-                        id={task.id}
-                        title={task.title}
-                        description={task.description}
-                        status={task.status}
-                        priority={task.priority}
-                        dueDate={task.dueDate}
-                        assignee={task.assignee}
-                        timeSpentMinutes={task.timeSpentMinutes}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onClick={handleTaskClick}
-                        onTimeLogSuccess={handleTimeLogSuccess}
-                        canEdit={canEditProject(task.projectId)}
-                        canDelete={canDeleteProject(task.projectId)}
-                      />
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                timeSpentMinutes={task.timeSpentMinutes}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                onTimeLogSuccess={handleTimeLogSuccess}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
             ))
           ) : (
             <div className="col-span-full flex
@@ -5378,17 +5409,16 @@ const handleTimeLogSuccess = useCallback(() => {
             </div>
           )}
         </div>
-{/* 権限判定を詳細ダイアログへ渡す */}
-<TaskDetailDialog
-  open={detailOpen}
-  taskId={selectedTask}
-  onClose={handleDetailClose}
-  canEditProject={canEditProject}
-/>
+        <TaskDetailDialog
+          open={detailOpen}
+          taskId={selectedTask}
+          onClose={handleDetailClose}
+          canEditProject={canEditProject}
+        />
 
         <TaskDialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={closeTaskDialog}
           onSubmit={handleSubmit}
           initialData={editingTask}
           projects={projects ?? []}

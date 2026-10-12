@@ -197,6 +197,96 @@ CASES: list[tuple[str, str, str, int]] = [
         day("", block(LAYOUT, "  { text: '検索', path: '/search' },")),
         0,
     ),
+    (
+        "DECLARED_EXCERPTS の登録先が listing なしで完全なファイルになったら登録が古いとして止める",
+        "day28_x.md",
+        day(
+            "",
+            block(TASK_ROUTER, "// 完成版: 一括操作で使う import\nimport { z } from 'zod';")
+            + block(
+                TASK_ROUTER,
+                "// 完成版: router 本体\nexport const taskRouter = createTRPCRouter({});",
+                note="（同じファイルの続き）",
+            ),
+        ),
+        1,
+    ),
+    (
+        "JSX コメントの `完成版:` 目印が付いた抜粋と listing が並ぶ形も止める",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "{/* 完成版: ボタン */}\n  return <button onClick={() => setOpen(!open)} />;")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "`完成版（抜粋）:` のように括弧書きを挟んだ目印も目印として扱う",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 完成版（抜粋）: 状態\n  const [open, setOpen] = useState(false);")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "断片の変更を含まない listing（day25 app-layout.tsx が前日の版のままだった形）は止める",
+        "day25_x.md",
+        day(
+            "",
+            block(PAGE, "// プロフィールへの入口\n  return <a href=\"/profile\" />;")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "括弧が閉じずに途中で切れた listing はファイル全体と見なさない",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);")
+            + unit(PAGE, WHOLE_PAGE.rsplit("\n", 1)[0]),
+        ),
+        1,
+    ),
+    (
+        "import の組み直しと末尾カンマの有無は断片との違いとして数えない",
+        "day20_x.md",
+        day(
+            "",
+            block(LAYOUT, "// アイコン\nimport { Search } from 'lucide-react';")
+            + block(LAYOUT, "// アイコン（折り返し）\nimport {\n  Search,\n} from 'lucide-react';")
+            + block(LAYOUT, "// メニュー\n  {\n    text: '検索',\n    path: '/search'\n  }")
+            + unit(
+                LAYOUT,
+                "// 完成版: ファイル全体\nimport {\n  LayoutDashboard,\n  Search\n} from 'lucide-react';\n\n"
+                "export const menuItems = [\n  {\n    text: '検索',\n    path: '/search',\n  },\n];",
+            ),
+        ),
+        0,
+    ),
+    (
+        "LISTING_DIVERGES に登録した listing（day28 page.tsx）は断片と違っても通す",
+        "day28_x.md",
+        day(
+            "",
+            block(PAGE, "// 一括完了\n  if (canCompleteSelected) {\n  }")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
+    (
+        "LISTING_DIVERGES の登録先で断片がすべて listing に入ったら登録が古いとして止める",
+        "day28_x.md",
+        day(
+            "",
+            block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
 ]
 
 

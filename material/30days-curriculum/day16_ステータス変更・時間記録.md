@@ -2675,11 +2675,10 @@ function TaskPageContent() {
   const { data: session } =
     api.auth.getSession.useQuery();
   const utils = api.useUtils();
-// 時間記録の成功後に一覧を取り直す
-// （useCallback は react から import）
-const handleTimeLogSuccess = useCallback(() => {
-  void utils.task.getAll.invalidate();
-}, [utils.task.getAll]);
+  // 時間記録の成功後に一覧を取り直す
+  const handleTimeLogSuccess = useCallback(() => {
+    void utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -2891,24 +2890,23 @@ const handleTimeLogSuccess = useCallback(() => {
           xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
-                      <TaskCard
-                        // 完成版: TaskCard へ渡す2つの props
-                        key={task.id}
-                        id={task.id}
-                        title={task.title}
-                        description={task.description}
-                        status={task.status}
-                        priority={task.priority}
-                        dueDate={task.dueDate}
-                        assignee={task.assignee}
-                        timeSpentMinutes={task.timeSpentMinutes}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onClick={handleTaskClick}
-                        onTimeLogSuccess={handleTimeLogSuccess}
-                        canEdit={canEditProject(task.projectId)}
-                        canDelete={canDeleteProject(task.projectId)}
-                      />
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                timeSpentMinutes={task.timeSpentMinutes}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                onTimeLogSuccess={handleTimeLogSuccess}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
             ))
           ) : (
             <div className="col-span-full flex

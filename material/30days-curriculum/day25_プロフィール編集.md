@@ -3084,7 +3084,7 @@ import {
   ClipboardList,
   Search,
   BarChart,
-  Users
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -3101,9 +3101,9 @@ import {
   AlertDialogTrigger,
 } from '@/component/ui/alert-dialog';
 import { Button } from '@/component/ui/button';
+import { USER_ROLE } from '@/lib/constant/roles';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { USER_ROLE } from '@/lib/constant/roles';
 
 interface MenuItem {
   text: string;
@@ -3218,31 +3218,36 @@ export function AppLayout({
                 </Link>
               </li>
             ))}
-{session.user.role === USER_ROLE.ADMIN && (
-  <li>
-    <Link
-      href="/user"
-      className={cn(
-        'flex items-center gap-3 rounded-md ' +
-          'px-3 py-2 text-sm transition-colors',
-        pathname === '/user'
-          ? 'bg-sidebar-accent ' +
-            'text-sidebar-accent-foreground font-medium'
-          : 'text-sidebar-foreground/70 ' +
-            'hover:bg-sidebar-accent/50 ' +
-            'hover:text-sidebar-foreground',
-      )}
-    >
-      <Users className="h-5 w-5" />
-      ユーザー管理
-    </Link>
-  </li>
-)}
+            {session.user.role === USER_ROLE.ADMIN && (
+              <li>
+                <Link
+                  href="/user"
+                  className={cn(
+                    'flex items-center gap-3 rounded-md ' +
+                      'px-3 py-2 text-sm transition-colors',
+                    pathname === '/user'
+                      ? 'bg-sidebar-accent ' +
+                        'text-sidebar-accent-foreground font-medium'
+                      : 'text-sidebar-foreground/70 ' +
+                        'hover:bg-sidebar-accent/50 ' +
+                        'hover:text-sidebar-foreground',
+                  )}
+                >
+                  <Users className="h-5 w-5" />
+                  ユーザー管理
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">
-          <div className="mb-3 flex items-center gap-3">
+          <Link
+            href="/profile"
+            className="mb-3 flex items-center gap-3
+              rounded-md px-2 py-2
+              hover:bg-sidebar-accent"
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
               {session.user.name?.[0] || 'U'}
             </div>
@@ -3256,7 +3261,7 @@ export function AppLayout({
                   : 'ユーザー'}
               </span>
             </div>
-          </div>
+          </Link>
           {/* ログアウトボタン（確認ダイアログ付き） */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -3291,9 +3296,34 @@ export function AppLayout({
         </div>
       </aside>
       {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
-      <main className="flex-1 overflow-y-auto p-6">
-        {children}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <nav className="flex gap-2 overflow-x-auto
+          border-b p-2 md:hidden">
+          {menuItems.map((item) => (
+            <Link key={item.path}
+              href={item.path}
+              className="whitespace-nowrap
+                rounded-md px-3 py-2 text-sm">
+              {item.text}
+            </Link>
+          ))}
+          {session.user.role === USER_ROLE.ADMIN && (
+            <Link href="/user"
+              className="whitespace-nowrap
+                rounded-md px-3 py-2 text-sm">
+              ユーザー管理
+            </Link>
+          )}
+          <Link href="/profile"
+            className="whitespace-nowrap
+              rounded-md px-3 py-2 text-sm">
+            プロフィール
+          </Link>
+        </nav>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

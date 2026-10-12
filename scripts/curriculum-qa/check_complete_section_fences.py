@@ -27,6 +27,13 @@ day20・day21 の `app-layout.tsx` も同じ形で reject されていた。
    目印付きの抜粋と listing が並ぶと、権威記述が2つになる。
    `build_day_snapshots.py` は目印付きの並びを1つの版として連結するので、
    listing と抜粋の中身が二重に入ったファイルを組み立ててしまう。
+   - listing 単体がファイル全体になっていること（`is_complete_file`）
+   - listing の前に並べた断片の各行が listing の中にあること（空白は無視）
+   目印の文言は手で書けるので、中身が途中で切れた listing や、その日の変更を
+   含まない前日の版でも構造だけなら通ってしまう。day25 `app-layout.tsx` の
+   listing が前日の版のままで、断片で示したプロフィールへの入口を欠いていた。
+   断片の import 行は listing 側で1つの import にまとめ直すので照合しない。
+   listing が断片と別の実装を載せている既知の箇所は LISTING_DIVERGES に理由つきで登録する。
 2. listing が無い場合
    - そのファイルのフェンスを順に連結すると1つの完全なファイルになること
      （`is_complete_file`）。day11 `project.ts` のように、ファイル全体を
@@ -59,8 +66,9 @@ from markdown_scan import fence_states  # noqa: E402
 
 SECTION_TITLE = "## 完成コード全体"
 UNIT_MARKER = "<!-- code-block-length-exception: complete-copy-unit -->"
-FINAL_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形][:：]")
-WHOLE_FILE = "ファイル全体"
+FINAL_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形](?:（[^）]*）)?[:：]")
+WHOLE_FILE = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形][:：]\s*ファイル全体\s*(?:\*/\})?\s*$")
+EXCERPT_SKIP = re.compile(r"^(?://|/\*|\*|\{/\*|import\b|\.\.\.|…)")
 
 # 本文で抜粋だと断っている完成コード節の記述。キーは (日, 書き込み先)、値は「なぜ抜粋でよいか」。
 # 理由を書けない抜粋は全ファイル listing へ統合する。登録した記述が完全な
@@ -73,6 +81,17 @@ DECLARED_EXCERPTS: dict[tuple[int, str], str] = {
     (28, "src/server/api/routers/task.ts"): (
         "本文で「Day 13 から Day 16 の中身が残るので今日足した部分だけを載せる」と断っている。"
         "Gate B では SPLICE で適用され reject は出ない"
+    ),
+}
+
+# listing が断片と別の実装を載せている既知の箇所。キーは (日, 書き込み先)、値は理由。
+# 断片の行がすべて listing に入ったら「登録が古い」として落とす。
+LISTING_DIVERGES: dict[tuple[int, str], str] = {
+    (28, "src/app/task/page.tsx"): (
+        "listing は PR #622 で src/ の実装を載せたもので、断片とは変数名（task と t）と"
+        "一括ハンドラーの判定（canCompleteSelected と selectedTaskList.length > 0）が違う。"
+        "Day 28 時点で存在しない `@/lib/task-filter-query` も import しており、"
+        "day28 スナップショットの tsc が通らない。listing を Day 28 の Step に合わせ直すまでの登録"
     ),
 }
 
@@ -127,9 +146,64 @@ def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
             continue
         head = next((line for line in block.lines if line.strip()), "")
         labeled = bool(FINAL_LABEL.match(head))
-        whole = labeled and WHOLE_FILE in head
+        whole = bool(WHOLE_FILE.match(head))
         out.setdefault(block.target, []).append(SectionFence(block, labeled, whole))
     return out
+
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", "", text)
+
+
+def missing_excerpt_lines(
+    parts: list[SectionFence], listing: SectionFence
+) -> list[tuple[int, str]]:
+    """listing の前の断片のうち、listing に見当たらない行を (行番号, 行) で返す。
+
+    listing 側は行の折り返しや字下げが断片と違うことがあるので空白を潰して部分一致で見る。
+    断片の末尾要素はカンマを持たずに切れることがあるので、行末のカンマは外して探す。
+    """
+    body = _squash("\n".join(listing.block.lines))
+    missing: list[tuple[int, str]] = []
+    for part in parts:
+        for offset, line in enumerate(part.block.lines, start=1):
+            stripped = line.strip()
+            if not stripped or EXCERPT_SKIP.match(stripped):
+                continue
+            if _squash(stripped).rstrip(",") not in body:
+                missing.append((part.block.lineno + offset, stripped))
+    return missing
+
+
+def check_listing_content(
+    day: int, target: str, fences: list[SectionFence], source: str
+) -> list[Finding]:
+    """最後の全ファイル listing が、ファイル全体であり断片の中身を含んでいるかを見る。"""
+    listing = fences[-1]
+    if not listing.whole:
+        return []
+    findings: list[Finding] = []
+    if not is_complete_file([listing.block]):
+        findings.append(
+            Finding(source, listing.block.lineno, target,
+                    "全ファイル listing がファイル全体になっていない"
+                    "（先頭の構文・export・括弧の収支のどれかが崩れている）")
+        )
+    missing = missing_excerpt_lines(fences[:-1], listing)
+    diverges = (day, target) in LISTING_DIVERGES
+    if missing and not diverges:
+        lineno, line = missing[0]
+        findings.append(
+            Finding(source, lineno, target,
+                    f"listing の前の断片に listing に無い行が {len(missing)} 行ある"
+                    f"（最初: `{line}`）。その日の変更を listing へ反映する")
+        )
+    elif diverges and not missing:
+        findings.append(
+            Finding(source, listing.block.lineno, target,
+                    "LISTING_DIVERGES に登録があるが断片はすべて listing に入っている（登録が古い）")
+        )
+    return findings
 
 
 def check_target(
@@ -165,6 +239,7 @@ def check_target(
                 Finding(source, first, target,
                         "DECLARED_EXCERPTS に登録があるが全ファイル listing に統合済み（登録が古い）")
             )
+        findings.extend(check_listing_content(day, target, fences, source))
         return findings
 
     if len(fences) == 1 and not labeled_parts:
