@@ -2170,7 +2170,7 @@ submitUserEditForm(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。断片を貼り重ねる作業が11個の Step にまたがったので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。`user.ts` は Day 24 と Day 25 で書いた中身がそのまま残るため今日足した部分だけを載せます。残り4つは今日作ったファイルなのでDay 29 終了時点の全文です。
+今日は5つのファイルを触りました。断片を貼り重ねる作業が11個の Step にまたがったので途中でどこへ貼ったか分からなくなった場合は以下のコードと手元のファイルを見比べてください。どのファイルも見出しの下の最後のブロックがDay 29 終了時点の全文です。`user.ts` は今日足した部分を先に載せます。そのあとの全文には Day 24 と Day 25 で書いた中身もそのまま入っています。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2399,11 +2399,11 @@ import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
-import { TASK_STATUS } from '@/lib/constant/status';
 
 const userUpdateSchema = z
   .object({
