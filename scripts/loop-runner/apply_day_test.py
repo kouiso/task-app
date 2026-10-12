@@ -1072,5 +1072,73 @@ export const trailingDeclarationTwo = 2;
         self.assertEqual(res, base)
 
 
+class Pr635LateReviewFixes(unittest.TestCase):
+    """PR#635 マージ直前に付いたレビュー指摘の回帰テスト。"""
+
+    def _apply(self, oracle_body: str, target_body: str, md_body: str,
+               runs: int = 1) -> tuple[str, list[list[str]]]:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", oracle_body)
+            write(target, "src/a.ts", target_body)
+            md = write(root, "day.md", md_body)
+            skipped = []
+            for r in range(runs):
+                _w, s = ad.apply_day(md, target, oracle_dir=oracle,
+                                     tag=f"d{r}")
+                skipped.append(s)
+            return (target / "src/a.ts").read_text(), skipped
+
+    def test_comment_only_fragment_rerun_is_idempotent(self):
+        # コメントだけの断片は再適用で重複させない
+        body, _s = self._apply(
+            "export const a = 1;\n", "export const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(body, "export const a = 1;\n// marker\n", body)
+
+    def test_inline_comment_only_change_is_applied(self):
+        # 行末コメントだけが違う断片を適用済みと誤認せず、
+        # 置き換えで後続の宣言も消さない
+        oracle = ("export const a = 1; // new\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "export const a = 1; // old\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1; // new\n```\n")
+        self.assertEqual(body, oracle, body)
+        self.assertEqual(s, [[]])
+
+    def test_decl_end_ignores_trailing_line_comment(self):
+        lines = ["export const a = 1; // note", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(lines, 0), 0)
+
+    def test_splice_into_whitespace_only_file(self):
+        # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む
+        body, s = self._apply(
+            "export const a = 1;\nexport const b = 2;\n"
+            "export const c = 3;\nexport const d = 4;\n",
+            "   \n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "export const a = 1;\n```\n")
+        self.assertEqual(body, "   \nexport const a = 1;\n", body)
+        self.assertEqual(s, [[]])
+
+    def test_splice_raw_end_covers_whole_fragment(self):
+        # 断片の先頭・末尾が既存行と equal でも、終端は断片全体の後ろを返す。
+        # 最初の変更区間の終端を返すと後続の閉じ断片が断片内部へ入る
+        out = ["<div>", "<Widget>", "<a />", "</Widget>"]
+        res = ["<div>", "<Widget>", "<b />", "</Widget>"]
+        frag = ["<Widget>", "<b />", "</Widget>"]
+        raw = [[l] for l in out]
+        new_raw, end = ad._splice_raw(raw, out, res, frag,
+                                      [[l] for l in frag])
+        self.assertEqual([l for g in new_raw for l in g], res)
+        self.assertEqual(end, 4)
+
+
 if __name__ == "__main__":
     unittest.main()

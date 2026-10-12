@@ -507,7 +507,9 @@ def find_decl_end(lines: Sequence[str], start: int) -> int:
         s = _strip_for_depth(lines[j])
         depth += s.count("{") + s.count("(") + s.count("[")
         depth -= s.count("}") + s.count(")") + s.count("]")
-        stripped = lines[j].rstrip()
+        # 行末の // コメントを終端判定に含めると `x = 1; // note` の宣言が
+        # 終わらず、置き換えで後続の宣言まで消える
+        stripped = _code_text(lines[j]).rstrip()
         last = stripped[-1:] if stripped else ""
         nxt = lines[j + 1].strip() if j + 1 < len(lines) else ""
         if depth <= 0 and last and last in ";,)}]>":
@@ -996,13 +998,15 @@ def _variants_for_match(fl: list[str]) -> list[list[str]]:
     return variants
 
 
-def _norm_blob(lines: Sequence[str]) -> list[str]:
+def _norm_blob(lines: Sequence[str], keep_comments: bool = False) -> list[str]:
     """コード上の空白だけ潰した照合用の行リスト。
     文字列リテラル内の空白は内容なので残す。全部潰すと `"a b"` → `"ab"`
     の変更を適用済みと誤認する（issue #630）。テンプレートリテラルは行を
     跨ぐため引用状態と `${}` のブレース深さを行間で持ち回る。
     `${}` の中に文字列やテンプレートが入れ子になっても外側のテンプレート
-    状態を失わないよう、テンプレートの文脈はスタックで持つ。"""
+    状態を失わないよう、テンプレートの文脈はスタックで持つ。
+    keep_comments は冪等判定用。コメントも空白だけ潰して残し、
+    コメントだけが違う断片を適用済みと誤認しないようにする。"""
     out: list[str] = []
     quote: Optional[str] = None  # ' / " の文字列内
     # 要素は "`"（テンプレート文字列部）か int（その `${}` 内のブレース深さ）
@@ -1021,8 +1025,12 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
             if in_block_comment:
                 if c == "*" and i + 1 < n and l[i + 1] == "/":
                     in_block_comment = False
+                    if keep_comments:
+                        buf.append("*/")
                     i += 2
                     continue
+                if keep_comments and not c.isspace():
+                    buf.append(c)
                 i += 1
                 continue
             if quote or (tpl and tpl[-1] == "`"):
@@ -1048,9 +1056,13 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
                 continue
             if c == "/" and i + 1 < n:
                 if l[i + 1] == "/":
+                    if keep_comments:
+                        buf.append(re.sub(r"\s+", "", l[i:]))
                     break
                 if l[i + 1] == "*":
                     in_block_comment = True
+                    if keep_comments:
+                        buf.append("/*")
                     i += 2
                     continue
             if c in "'\"":
@@ -1093,10 +1105,12 @@ def _match_keys(line: str) -> list[str]:
     return [a, b] if a != b else [a]
 
 
-def _blob_locate(base_nb: list[str], frag_lines: list[str]) -> int:
+def _blob_locate(base_nb: list[str], frag_lines: list[str],
+                 keep_comments: bool = False) -> int:
     """空白無視の文字列ブロブ照合で oracle 内の行位置を返す。
-    教材と完成版コードで行の折り返しが違っていても内容が一致すれば見つかる。"""
-    vb = "".join(_norm_blob(frag_lines))
+    教材と完成版コードで行の折り返しが違っていても内容が一致すれば見つかる。
+    keep_comments は base_nb を作った _norm_blob と揃える。"""
+    vb = "".join(_norm_blob(frag_lines, keep_comments))
     if len(vb) < 10:
         return -1
     # 検索側は行をまたいで結合する。区切り記号を挟むと断片の行折り返し差を
@@ -1803,6 +1817,11 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
             new_raw[-1] += pend
         else:
             new_raw.append(pend)
+    # 断片の先頭や末尾が既存行と equal 扱いになると最初の変更区間は断片の
+    # 途中で終わる。続く閉じ断片を断片の内側へ入れないよう、断片全体の
+    # 終端を優先する
+    if span >= 0:
+        return new_raw, span + m
     return new_raw, (first_change_end
                      if first_change_end is not None else len(res))
 
@@ -1819,6 +1838,11 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
     gaps: list[dict] = []
     out = list(cur_norm)
     raw = _raw_groups(cur_raw)
+    # 空白行だけのファイルは norm 行を持たないが _raw_groups は空行だけの
+    # グループを1つ作る。対応する norm 行が無いので先頭の原文として退避する
+    lead: list[str] = []
+    if not out and len(raw) == 1:
+        lead = raw.pop()
     if len(raw) != len(out):
         return None, [{"day": tag, "path": path,
                        "reason": "raw-norm-mismatch"}]
@@ -1888,13 +1912,16 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         #（位置コメントや行折り返し差で一致しないだけの再適用を防ぐ）
         strip_i = leading_meta_lines(fl_ins)
         fl_core = fl_ins[strip_i:] if strip_i else fl_ins
-        out_nb = _norm_blob(out)
+        # 冪等判定ではコメントも内容として比べる。落とすと `// old` → `// new`
+        # のようなコメントだけの書き換えを適用済みと誤認して黙って飛ばす
+        out_nb = _norm_blob(out, keep_comments=True)
         # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
         # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する
         present_norm = (find_in(out, fl_ins) >= 0
                         or (fl_core and find_in(out, fl_core) >= 0)
                         or (not part.directive
-                            and any(_blob_locate(out_nb, v) >= 0
+                            and any(_blob_locate(out_nb, v, keep_comments=True)
+                                    >= 0
                                     for v in _variants_for_match(fl_ins))))
         # 正規化は空行・行末空白を消すため、空白だけが違う壊れた baseline を
         # 「適用済み」と見逃す。原文で存在する時だけスキップする（issue #630）。
@@ -1902,9 +1929,16 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         # /* */ や // の中に置かれた見掛け上の一致は適用済みと数えない
         flat = [l for g in raw for l in g]
         noncode = _noncode_line_flags(flat)
+        # コメントだけの断片はコメント自体が書き込む中身なので、
+        # 一致区間がコメント行だけでも適用済みとして数える
+        frag_has_code = not all(_noncode_line_flags(fl_write))
+
+        def _counts_as_present(s: int, e: int) -> bool:
+            return not frag_has_code or not all(noncode[s:e])
+
         m = len(fl_write)
         verbatim = any(
-            flat[k:k + m] == fl_write and not all(noncode[k:k + m])
+            flat[k:k + m] == fl_write and _counts_as_present(k, k + m)
             for k in range(len(flat) - m + 1))
         if verbatim:
             continue  # 冪等: 既に存在する断片はスキップ（完成版参照や再適用）
@@ -1929,7 +1963,7 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
             # 修復せず、通常の splice 経路で実際のコード位置へ書き込む
             s0 = sum(len(g) for g in raw[:i])
             e0 = s0 + sum(len(g) for g in raw[i:i + hit])
-            if not all(noncode[s0:e0]):
+            if _counts_as_present(s0, e0):
                 # 先頭行の前の空行は既存ファイル側を保ち、以降は断片原文を使う
                 fg = ([raw[i][:-1] + seg_groups[0][-1:]]
                       + [list(g) for g in seg_groups[1:]])
@@ -1990,7 +2024,7 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         # norm 後の長さだと断片中の空行分ずれて次の断片が文の途中へ入る
         raw, last_end = _splice_raw(raw, out, res, fl_ins, frag_groups)
         out = res
-    flat_out = [l for g in raw for l in g]
+    flat_out = lead + [l for g in raw for l in g]
     return (out, flat_out), gaps
 
 
