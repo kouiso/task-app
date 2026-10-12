@@ -23,7 +23,7 @@ jobs:
       packages: 'write'
 
     runs-on: ${{ vars.RUNNER_LINUX }}
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
