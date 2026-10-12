@@ -1068,7 +1068,10 @@ def _norm_blob(lines: Sequence[str], keep_comments: bool = False) -> list[str]:
             if c == "/" and i + 1 < n:
                 if l[i + 1] == "/":
                     if keep_comments:
-                        buf.append(re.sub(r"\s+", "", l[i:]))
+                        # 行コメントは行末で終わる。区切りを残さないと
+                        # `// a` + 次行のコードと、コードまでコメントアウト
+                        # された1行 `// a code` が同じブロブになる
+                        buf.append(re.sub(r"\s+", "", l[i:]) + "\x00")
                     break
                 if l[i + 1] == "*":
                     in_block_comment = True
@@ -1930,16 +1933,16 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         fl_core = fl_ins[strip_i:] if strip_i else fl_ins
         # 冪等判定ではコメントも内容として比べる。落とすと `// old` → `// new`
         # のようなコメントだけの書き換えを適用済みと誤認して黙って飛ばす。
-        # コメントを持たない変形だけは、既存側の間に挟まったコメントで
-        # 一致を見失わないようコメントを落とした比較も使う
+        # コメントを持たない変形はコメントを落とした比較を使う。既存側の
+        # 間に挟まったコメントで一致を見失わず、コメントアウトされた
+        # コードの文字列にも一致しない
         out_nb_c = _norm_blob(out, keep_comments=True)
         out_nb = _norm_blob(out)
 
         def _blob_present(v: list[str]) -> bool:
-            if _blob_locate(out_nb_c, v, keep_comments=True) >= 0:
-                return True
-            return (_norm_blob(v, keep_comments=True) == _norm_blob(v)
-                    and _blob_locate(out_nb, v) >= 0)
+            if _norm_blob(v, keep_comments=True) == _norm_blob(v):
+                return _blob_locate(out_nb, v) >= 0
+            return _blob_locate(out_nb_c, v, keep_comments=True) >= 0
 
         # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
         # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する

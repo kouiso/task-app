@@ -1112,6 +1112,20 @@ class Pr635LateReviewFixes(unittest.TestCase):
         self.assertEqual(body, oracle, body)
         self.assertEqual(s, [[]])
 
+    def test_commented_out_code_is_not_present(self):
+        # `// 説明` + 次行のコードの断片を、コードまでコメントアウトされた
+        # 1行と同じとみなして飛ばさない
+        oracle = ("// explanation\nexport const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "// explanation export const a = 1;\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "// explanation\nexport const a = 1;\n```\n")
+        self.assertIn("\nexport const a = 1;\n", body)
+        self.assertEqual(s, [[]])
+
     def test_decl_end_ignores_trailing_line_comment(self):
         lines = ["export const a = 1; // note", "export const b = 2;"]
         self.assertEqual(ad.find_decl_end(lines, 0), 0)
