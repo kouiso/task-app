@@ -579,10 +579,26 @@ export const a = 1;
         self.assertTrue(any("expect without apply" in s for s in skipped),
                         skipped)
 
-    def test_apply_expect_combined_writes_and_verifies(self):
-        # ` ```lang apply expect ` は全量リスティングを適用し、かつ
-        # 同一本文を最終状態の検算にも使う（day28 完成版リスティングの形）。
-        written, skipped = self._run("""```typescript apply expect path=src/a.ts
+    def test_apply_expect_combined_is_invalid(self):
+        # ` ```lang apply expect ` の併記は複合役割として廃止。
+        # 同じ本文を適用してから自分と突合する自己比較は何も検算しない
+        # ため、適用も検算もしない invalid 扱いにする（#631）。
+        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+        self.assertFalse((self.target / "src/a.ts").exists())
+
+    def test_apply_then_expect_verifies(self):
+        # 分離後の形: Step 断片は apply で適用し、完成版は別の expect
+        # フェンスで照合する。一致すれば expect-ok が記録される。
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
 export const a = 1;
 ```
 """)
@@ -719,7 +735,7 @@ export const a = 2;
         # 文字列リテラル中の "filepath: ..." は目印ではない。
         # 行を消すと適用側・オラクル側の両方でコードが欠落し、
         # expect が欠落を検出できなくなる（codex 指摘）。
-        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
 export const marker = "filepath: src/other.ts";
 export const a = 1;
 ```
@@ -749,27 +765,27 @@ export const b = 3;
         self.assertEqual("export const a = 1;\n\nexport const b = 3;\n",
                          (self.target / "src/a.ts").read_text())
 
-    def test_apply_expect_final_overrides_fragment_for_new_file(self):
-        # 新規ファイルで `apply` 断片の先頭行を `apply expect` の
-        # 最終版が書き換えるのは正当。先頭行ゲートで弾くと
-        # 中間版しか採れず契約不一致で消える（codex 指摘）。
+    def test_expect_catches_wrong_step_fragment(self):
+        # Step の apply 断片が教材の記述ミスで完成版と違う時、
+        # 検算は別フェンスの expect が担う。不一致でそのファイルを
+        # baseline の状態へ戻す（複合役割はこれを検出できなかった）。
         _w, skipped = self._run("""```typescript apply path=src/a.ts
 export const a = 1;
 ```
 
-```typescript apply expect path=src/a.ts
+```typescript expect path=src/a.ts
 export const a = 2;
 ```
 """)
-        self.assertFalse(skipped, skipped)
-        self.assertEqual("export const a = 2;\n",
-                         (self.target / "src/a.ts").read_text())
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+        self.assertFalse((self.target / "src/a.ts").exists())
 
     def test_template_literal_filepath_preserved(self):
         # テンプレートリテラル内の `// filepath:` 行は文字列の中身。
         # 剥がすと成果物の実行時値が変わるのにオラクル側も同じ行が
         # 消えて expect をすり抜ける（codex 指摘）。
-        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
 export const message = `
 // filepath: src/example.ts
 hello
@@ -780,38 +796,34 @@ hello
         self.assertIn("// filepath: src/example.ts",
                       (self.target / "src/a.ts").read_text())
 
-    def test_apply_expect_replaces_existing_file(self):
-        # 既存ファイルへの `apply expect` は全量置換が正当。
-        # 断片用の包含率ゲートで弾くと正当な完成版が exit 3 になる
-        #（codex 指摘）。
+    def test_full_listing_replaces_and_expect_verifies(self):
+        # 既存ファイルの全量置換は `完成版` ラベル付き apply で行い、
+        # 置換結果は別の expect で照合する。
         (self.target / "src").mkdir(parents=True, exist_ok=True)
         (self.target / "src/a.ts").write_text("export const a = 1;\n")
-        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+// 完成版: ファイル全体
+export const a = 1;
 export const b = 2;
 ```
-""")
-        self.assertFalse(skipped, skipped)
-        self.assertEqual("export const b = 2;\n",
-                         (self.target / "src/a.ts").read_text())
 
-    def test_apply_expect_may_drop_import(self):
-        # 完成版が import を削る差分も正当（最終状態の宣言なので）。
-        (self.target / "src").mkdir(parents=True, exist_ok=True)
-        (self.target / "src/a.ts").write_text(
-            'import { x } from "./x";\n\nexport const a = 1;\n')
-        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+```typescript expect path=src/a.ts
+export const a = 1;
 export const b = 2;
 ```
 """)
         self.assertFalse(skipped, skipped)
-        self.assertEqual("export const b = 2;\n",
+        self.assertEqual("export const a = 1;\nexport const b = 2;\n",
                          (self.target / "src/a.ts").read_text())
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
 
     def test_backtick_inside_normal_string_does_not_open_template(self):
         # 通常の文字列内のバッククォート（`"`"`）はテンプレート開始では
         # ない。それで内側判定がずれると、本物のテンプレート内にある
         # 目印風行が剥がれて検算をすり抜ける（codex 指摘）。
-        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
 export const tick = "`";
 export const message = `
 // filepath: src/example.ts
@@ -827,7 +839,7 @@ hello
         # テンプレート内の `// 完成版:` 行も文字列の中身。
         # 剥がすと成果物が変わるのにオラクル側も同じ行が消える
         #（codex 指摘）。
-        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
 export const message = `
 // 完成版: keep this text
 hello
@@ -858,7 +870,7 @@ export const a = 99;
     def test_triple_quoted_string_marker_preserved(self):
         # 三重引用符は通常引用符より先に判定する（先に " が掴まると
         # 残りの "" が別の文字列として消費されて外側判定がずれる）
-        _w, skipped = self._run('''```python apply expect path=scripts/a.py
+        _w, skipped = self._run('''```python apply path=scripts/a.py
 message = """
 // filepath: src/example.ts
 hello
@@ -877,7 +889,7 @@ hello
 
     def test_regex_backtick_does_not_open_template(self):
         # 正規表現リテラル内のバッククォートは区切りではない
-        _w, skipped = self._run('''```typescript apply expect path=src/a.ts
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
 export const tick = /`/;
 export const message = `
 // filepath: src/example.ts
@@ -893,7 +905,7 @@ hello
         # 行途中コメント内のバッククォートで文字列状態が反転すると、
         # 実テンプレート内の // filepath: 行が本文とオラクルの両方から
         # 欠落したまま検算を通る（適用結果が静かに変わる）
-        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
 export const a = 1; // ` はテンプレートの区切り
 export const message = `
 // filepath: src/example.ts
@@ -986,7 +998,7 @@ export const mid = 2;
         # JSXテキストの // 以降にある実テンプレートも正しく開く。
         # コメント解釈とリテラル解釈の両候補を追跡し、
         # 文字列内側の可能性がある行は剥がさない
-        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
 export const el = <div>// text</div>;
 export const message = `
 // filepath: src/example.ts
@@ -1001,7 +1013,7 @@ hello
     def test_backslash_line_continuation_keeps_string_markers(self):
         # "..."\ の行継続文字列の中身にある // filepath: は
         # 文字列の一部なので剥がさない
-        _w, skipped = self._run('''```tsx apply expect path=src/a.ts
+        _w, skipped = self._run('''```tsx apply path=src/a.ts
 export const message = "\\
 // filepath: src/example.ts\\
 hello";
@@ -1014,7 +1026,7 @@ hello";
     def test_marker_line_inside_jsx_children_is_kept(self):
         # <pre>...</pre> の子要素にある // filepath: 行は
         # JSX テキスト（画面表示される中身）なので剥がさない
-        _w, skipped = self._run('''```tsx apply expect path=src/a.tsx
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
 export const el = <pre>
 // filepath: src/example.ts
 hello

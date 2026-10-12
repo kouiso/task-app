@@ -142,6 +142,15 @@ export default function Page() {
 ```""",
         0,
     ),
+    (
+        "apply expect の併記は廃止した複合役割なので止める",
+        """```typescript apply expect path=src/app/page.tsx
+export default function Page() {
+  return <main />;
+}
+```""",
+        1,
+    ),
 ]
 
 

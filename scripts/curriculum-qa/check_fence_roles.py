@@ -42,23 +42,12 @@ from curriculum_blocks import (  # noqa: E402
     first_filepath_match,
 )
 from markdown_scan import fence_states  # noqa: E402
+from fence_roles import (  # noqa: E402
+    INFO_PATH,
+    is_safe_rel_path,
+    roles as _roles,
+)
 
-# apply_day.py の is_safe_rel_path と同じ判定。写経ツールが書き込みを許すのと
-# 同じ範囲を lint でも認める。乖離すると教材が lint で通って写経で reject される
-# （またはその逆の）すれ違いが起きる。
-SAFE_PREFIXES = ("src/", "prisma/", "public/", "scripts/", "e2e/")
-SAFE_ROOT_FILES = frozenset({
-    ".env.example", ".env.local.example", "docker-compose.yml",
-    "docker-compose.yaml", "next.config.ts", "next.config.js",
-    "next.config.mjs", "vitest.config.ts", "vitest.config.mts",
-    "tailwind.config.ts", "tailwind.config.js", "postcss.config.mjs",
-    "postcss.config.js", "components.json", "middleware.ts",
-    "tsconfig.json", "playwright.config.ts",
-})
-PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
-JP_RE = re.compile(r"[぀-ヿ一-鿿（）]")  # noqa: E501 -- ひらがな/カタカナ/漢字/全角括弧
-INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
-_ROLE_WORDS = frozenset({"apply", "expect"})
 CONT_NOTE = re.compile(r"続き")
 ELLIPSIS_LINE = re.compile(
     r"^\s*(?://+|/\*+|#|<!--)?\s*(?:…|\.{3,})\s*$|"
@@ -70,22 +59,6 @@ PLACEHOLDER_NOTE = re.compile(
     r"^\s*(?://+|/\*+|\{/\*|\*\s|#|<!--|--|;)\s*(?:"
     r"既存の[^\n]*?(?:残す|そのまま|変えない)|"
     r"中略|前略|後略|以下略|省略)(?:$|[\s:：*/]|…)")
-
-
-def _roles(info: str) -> frozenset:
-    """info 文字列の役割トークン。`path=src/expect.ts` や `meta=apply` の
-    ような属性値の中の語を役割と誤認しないよう、空白区切りで独立した
-    トークンだけを見る（apply_day と同じ）。"""
-    return frozenset(t for t in info.split() if t in _ROLE_WORDS)
-
-
-def is_safe_rel_path(rel: str) -> bool:
-    if ".." in rel or rel.startswith("/"):
-        return False
-    return bool(
-        PATH_OK.match(rel)
-        and not JP_RE.search(rel)
-        and (rel.startswith(SAFE_PREFIXES) or rel in SAFE_ROOT_FILES))
 
 
 class Finding(tuple):
@@ -156,6 +129,16 @@ def check_text(text: str, name: str) -> list[Finding]:
         fm = first_filepath_match(joined)
 
         if is_expect:
+            if is_apply:
+                # ` ```lang apply expect ` の併記は複合役割として廃止。
+                # 同じ本文を適用してから自分と突合する自己比較は何も検算
+                # しないため、apply 断片と expect 完成版に分けて書く。
+                findings.append(Finding((
+                    lineno,
+                    "apply と expect の併記は使えません"
+                    "（適用は apply フェンス、最終状態の検算は別の expect"
+                    " フェンスに分けて書きます）")))
+                continue
             if info_path is None:
                 findings.append(Finding((
                     lineno,
@@ -186,10 +169,6 @@ def check_text(text: str, name: str) -> list[Finding]:
                     break
             expect_entries.append((lineno, target, body))
             expect_seen.setdefault(target, lineno)
-            if is_apply:
-                # ` ```lang apply expect ` は内容であり契約でもある両役フェンス。
-                # 対応 apply の要件は自分自身で満たす。
-                apply_targets.add(target)
             continue
 
         target = info_path or _fm_target(fm)

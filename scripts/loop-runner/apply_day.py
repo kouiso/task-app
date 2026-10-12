@@ -39,6 +39,12 @@ REPO_DIR = Path(__file__).resolve().parents[2]
 # CommonMark 系スキャナーを使う。runner だけ ``` 専用だと、
 # lint が受理する ~~~ フェンスを読み落として契約が検算されない
 sys.path.insert(0, str(REPO_DIR / "scripts" / "curriculum-qa"))
+from fence_roles import (  # noqa: E402
+    INFO_PATH,
+    has_safe_path_shape,
+    is_safe_rel_path,
+    roles,
+)
 from markdown_scan import fence_states  # noqa: E402
 
 SKIP_LANGS = {
@@ -55,27 +61,13 @@ FAMILY = {
     "example": {"env", "text", "txt", ""}, "env": {"env", "text", "txt", ""},
 }
 
-# 教材が書き込み指示を出すルート直下ファイルの限定許可。
-# src/ prisma/ public/ 以外を無条件に通すと「ターミナル」等のラベルが
-# 実ファイルへ化けるため、実教材で使う名前だけを列挙する。
-SAFE_ROOT_FILES = {
-    ".env.example", ".env.local.example", "docker-compose.yml", "docker-compose.yaml",
-    "next.config.ts", "next.config.js", "next.config.mjs",
-    "vitest.config.ts", "vitest.config.mts", "tailwind.config.ts", "tailwind.config.js",
-    "postcss.config.mjs", "postcss.config.js", "components.json", "middleware.ts",
-    "tsconfig.json", "playwright.config.ts",
-}
-SAFE_PREFIXES = ("src/", "prisma/", "public/", "scripts/", "e2e/")
-
 FP_RE = re.compile(r"filepath:\s*([^\s（)\u3000]+)")
-PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
 CONTINUE_PATTERN = re.compile(r"^(.+?)（.*続き.*）\s*$")
 KANSEI_RE = re.compile(r"完成版|完成形")
 # 「完成版: …」「完成形: …」のラベル行。コードではなく写経ツール用の目印なので、
 # WRITE の全量書き出し・SPLICE の挿入ペイロードからは取り除く。
 #（そのまま挿すと成果物ファイルに目印コメントが混入する）
 KANSEI_LABEL = re.compile(r"^\s*(?://+|/\*+|\{\s*/\*)\s*完成[版形][:：]")
-JP_RE = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff（）]")
 
 # `...IDENT` / `...(` は JS/TS のスプレッド構文であって省略記号ではない。
 # 省略はコメント頭の …/...・日本語の省略語・点だけの行だけを認める。
@@ -90,12 +82,6 @@ FRAG_PROSE = re.compile(r"追加|追記|末尾に|先頭に|途中に|変更|修
 EXCERPT_RE = re.compile(r"抜粋|作成済み|読み比べ|確認用|実ファイルには対応しません|写経しません")
 
 IDENT_RE = re.compile(r"^[A-Za-z_$][\w$]*$")
-
-
-def is_safe_rel_path(rel_path: str) -> bool:
-    if ".." in rel_path or rel_path.startswith("/"):
-        return False
-    return rel_path.startswith(SAFE_PREFIXES) or rel_path in SAFE_ROOT_FILES
 
 
 def apply_safe_shell_ops(body: str, target_dir: Path,
@@ -116,7 +102,7 @@ def apply_safe_shell_ops(body: str, target_dir: Path,
         if parts[0] != "mv" or len(parts) != 3:
             continue
         src, dest = parts[1], parts[2]
-        if not is_safe_rel_path(src) or not is_safe_rel_path(dest):
+        if not has_safe_path_shape(src) or not has_safe_path_shape(dest):
             skipped.append(f"skipped unsafe shell move: {src} -> {dest}")
             continue
         src_path, dest_path = target_dir / src, target_dir / dest
@@ -356,22 +342,33 @@ def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
     return results
 
 
+# 目印はフェンス冒頭の注記（実教材での最深位置は先頭5行目）。
+# 冒頭のこの行数までだけを解釈追跡の対象にし、それ以降の同名行は
+# 文字列や JSX テキストの中身であり得るので剥がさない。全行を追跡すると
+# 解釈候補が行数比例で増殖し O(n^2) になる（day28 で 0.01s→71s の退行）
+_MARKER_HEAD_LINES = 16
+
+
 def _drop_marker_lines(lines: Sequence[str],
                        drop: "re.Pattern[str]") -> list[str]:
-    """コード面上の注記行（drop がヒットする行）だけを取り除く。
+    """フェンス冒頭の注記区間にある目印行（drop がヒットする行）だけを取り除く。
 
     目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
     リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
     それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
-    消えて検算をすり抜ける。区切りの内外は _scan_variants が行ごとの解釈
-    候補の集合として追跡し、剥がすのは全候補でコード面にある行だけに
+    消えて検算をすり抜ける。冒頭区間の区切り内外は _scan_variants が行ごとの
+    解釈候補の集合として追跡し、剥がすのは全候補でコード面にある行だけに
     限る。候補のどれか1つでも文字列内側を指すなら、その行は中身の可能性
     があるので残す（誤判定は常に「残す」側に倒す。残った注記コメントは
     無害だが、消えた中身は検算をすり抜ける）。
     """
     out: list[str] = []
     states: set[tuple] = {()}
-    for l in lines:
+    for i, l in enumerate(lines):
+        if i >= _MARKER_HEAD_LINES:
+            # 冒頭区間を過ぎた行は目印ではない。追跡も打ち切る
+            out.append(l)
+            continue
         # 剥がしてよいのは全解釈で「コメント」と確定する行だけ。
         # コード面ならどの注記形でもよい。{...} 式の内側では //・/*・{/* */}
         # のどれも実コメント。{/* */} 形は JSX 子要素内でも式コンテナの
@@ -545,7 +542,6 @@ class Part:
     unmarked: bool      # filepath なしで前フェンスに接続
     prose: str          # 'write'|'frag'|'neutral'
     directive: Optional[Directive]
-    contract: bool = False  # `apply expect` フェンス由来（最終状態の宣言）
 
 
 def _iter_fences(text: str):
@@ -575,21 +571,12 @@ def _iter_fences(text: str):
         yield lang, info, "\n".join(buf), before
 
 
-# フェンス info 文字列の役割タグ。
+# フェンス info 文字列の役割タグは fence_roles で lint と共有する。
 # ` ```tsx apply path=...` は適用する断片、` ```tsx expect path=...` は
-# その日の最終状態の検算用オラクル（適用はしない）。役割タグが無い
+# その日の最終状態の検算用オラクル（適用はしない）。`apply expect` の
+# 併記は自己比較になるため廃止（invalid 扱い）。役割タグが無い
 # filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
-INFO_PATH = re.compile(r"\bpath=([^\s（)]+)")
-_ROLE_WORDS = frozenset({"apply", "expect"})
-
-
-def _roles(info: str) -> frozenset:
-    """info 文字列から役割トークンを取り出す。
-
-    `path=src/expect.ts` や `meta=apply` のような属性値の中の語を役割と
-    誤認しないよう、空白区切りで独立したトークンだけを見る。
-    """
-    return frozenset(t for t in info.split() if t in _ROLE_WORDS)
+_roles = roles
 
 
 # expect 本体から剥がす注記行の合成パターン。
@@ -629,23 +616,29 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
     """
     parts: dict[str, list[Part]] = {}
     expects: dict[str, list[str]] = {}
-    cur_contract = False
     invalid: list[str] = []
     cur_fp: Optional[str] = None
     def _usable(fp: Optional[str]) -> bool:
-        return bool(fp and PATH_OK.match(fp) and is_safe_rel_path(fp)
-                    and not JP_RE.search(fp))
+        return bool(fp and is_safe_rel_path(fp))
 
     for lang, info, code, before in _iter_fences(text):
         prose = classify_prose(before)
-        roles = _roles(info)
+        roles_set = _roles(info)
         info_fp = INFO_PATH.search(info)
         fm = FP_RE.search(code)
-        if "expect" in roles:
+        if "expect" in roles_set:
+            # `apply expect` 併記は複合役割。同じ本文を��用してから自分と
+            # 突合する自己比較は何も検算しないため、適用・検算のどちらにも
+            # 使わず invalid とする（lint 側でもエラー）
+            if "apply" in roles_set:
+                invalid.append(
+                    "apply+expect combined role is not allowed "
+                    f"(info: {info!r})")
+                cur_fp = None
+                continue
             # expect は「このパスがこの本文になる」宣言。対象は info の
             # path= のみ（本文の // filepath: は契約の対象として認めない。
-            # lint と同じ規則）。apply も併記されている場合は「内容でもあり
-            # 契約でもある」全量リスティングとして適用側にも登録する。
+            # lint と同じ規則）。expect 本体は適用せず検算にだけ使う
             target = info_fp.group(1) if info_fp else None
             if not _usable(target):
                 invalid.append(
@@ -653,12 +646,9 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 cur_fp = None
                 continue
             expects.setdefault(target, []).append(_expect_body(code))
-            if "apply" not in roles:
-                cur_fp = None
-                continue
-            fp = target
-            cur_contract = True
-        elif "apply" in roles:
+            cur_fp = None
+            continue
+        elif "apply" in roles_set:
             fp = (info_fp.group(1) if info_fp else
                   fm.group(1).strip() if fm else None)
             if fp is None:
@@ -675,10 +665,8 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 invalid.append(f"apply fence with unsafe path: {fp!r}")
                 cur_fp = None
                 continue
-            cur_contract = False
         else:
             fp = fm.group(1).strip() if fm else None
-            cur_contract = False
         if fp is not None and _usable(fp):
             cur_fp = fp
             body = strip_fp(code)
@@ -695,7 +683,6 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
                 unmarked=False,
                 prose=prose,
                 directive=directive_of(fp_line, body),
-                contract=cur_contract,
             ))
             continue
         if fm or info_fp:
@@ -717,7 +704,7 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
 # ---------------------------------------------------------------------------
 
 def candidates(parts: list[Part]):
-    """(label, joined, first_prose, has_contract) を優先順に yield。"""
+    """(label, joined, first_prose) を優先順に yield。"""
     seen: set[str] = set()
     def emit(label: str, sub: list[Part]):
         body = "\n".join(
@@ -726,8 +713,7 @@ def candidates(parts: list[Part]):
         key = body[:4000]
         if body.strip() and key not in seen:
             seen.add(key)
-            return (label, body, sub[0].prose,
-                    any(p.contract for p in sub))
+            return (label, body, sub[0].prose)
         return None
     n = len(parts)
     # 「完成版」の確認用全量リスティングは末尾に来る。
@@ -1821,10 +1807,16 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
         strip_i = leading_meta_lines(fl_ins)
         fl_core = fl_ins[strip_i:] if strip_i else fl_ins
         out_nb = _norm_blob(out)
+        # scaffold が完成版を配るファイル（.env.example 等）では、
+        # 教材の「この行を足す」断片が既に散在して全部入っている。
+        # 行の並びを問わず全行が在るなら追加することは無い = 冪等スキップ。
+        out_lines = set(out)
         # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
         # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する
         already = (find_in(out, fl_ins) >= 0
                    or (fl_core and find_in(out, fl_core) >= 0)
+                   or (not part.directive
+                       and all(l in out_lines for l in fl_ins))
                    or (not part.directive
                        and any(_blob_locate(out_nb, v) >= 0
                                for v in _variants_for_match(fl_ins))))
@@ -1935,16 +1927,12 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
     meta = {"modified": [], "created": []}
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    # パス区切りと `_` を個別エスケープしないと `a/b` と `a_b` や
-    # `a_/b` と `a/_b` が衝突する。`_`→`_u`、`/`→`_s` の一方向変換にする
-    key = "".join("_u" if c == "_" else "_s" if c == "/" else c
-                  for c in rel_path)
     if rel_path in meta["created"]:
         # 初回実行で新規作成と記録済み。再実行時は作成状態のまま残し、
         # restore で削除できるようにする（modified へ再分類しない）。
         pass
     elif dest.exists():
-        snap = backup_root / tag / "files" / key
+        snap = backup_root / tag / "files" / _snap_key(rel_path)
         # 同タグで再実行しても初回のバックアップを上書きしない。
         # restore は「このタグの適用前」の状態を保証する責務があるため。
         if not snap.exists():
@@ -1965,6 +1953,10 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
 
 
 def _snap_key(rel_path: str) -> str:
+    """`a/b` と `a_b`、`a_/b` と `a/_b` が衝突しない一方向変換。
+
+    `_`→`_u`、`/`→`_s` の置換でファイル名キーを作る。
+    """
     return "".join(
         "_u" if c == "_" else "_s" if c == "/" else c for c in rel_path)
 
@@ -2005,8 +1997,7 @@ def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     restored: list[str] = []
     for rel in meta.get("modified", []):
-        snap = backup_root / tag / "files" / "".join(
-            "_u" if c == "_" else "_s" if c == "/" else c for c in rel)
+        snap = backup_root / tag / "files" / _snap_key(rel)
         if not snap.exists():
             # キー形式変更前に作られたバックアップ（`/`→`__` 形式）も復元対象にする
             snap = backup_root / tag / "files" / rel.replace("/", "__")
@@ -2076,23 +2067,17 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         cur_lines_for_cov = norm(dest_text.split("\n")) if dest_exists else []
         picked: Optional[str] = None
         mode = None
-        for label, joined, prose, has_contract in candidates(parts):
-            if not has_contract:
-                # import/export 維持は断片候補の前決め条件。`apply expect` の
-                # 全量候補は最終状態の宣言であり import を削る差分も正当なので、
-                # 断片用の条件は通さない（採用結果は最終 expect 検算で突合）
-                if any_import and "import " not in joined:
-                    continue
-                if is_ts_family and any_export and "export " not in joined:
-                    continue
+        for label, joined, prose in candidates(parts):
+            if any_import and "import " not in joined:
+                continue
+            if is_ts_family and any_export and "export " not in joined:
+                continue
             if not parses_as_file(path, joined, esbuild):
                 continue
-            if not dest_exists and parts and not has_contract:
+            if not dest_exists and parts:
                 # 新規ファイルを断片から組み立てる時、先頭断片の冒頭行を
                 # 含まない候補は「完成版: 途中から」型の再掲で、採用すると
                 # 'use client' や import の頭が静かに欠ける（day13型）。
-                # `apply expect` の全量候補は最終状態の宣言なので、
-                # 先頭断片の書き換えを意図した差分も正当でゲート対象外とする。
                 # ファイルの先頭は最初の完全な断片（続き・無印ではない part）
                 # の冒頭行とみなす。先頭が未完成の再掲の時に完成版リスティングが
                 # 頭落ち判定で弾かれないためである。
@@ -2107,11 +2092,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 if head_line is not None and head_line.strip() \
                         not in (l.strip() for l in joined.split("\n")):
                     continue
-            if has_contract:
-                # `apply expect` は最終状態の宣言。包含率ゲートで削減差分を
-                # 捨てると正当な完成版が採用されず exit 3 になるため無条件採用
-                picked, mode = joined, label
-            elif dest_exists:
+            if dest_exists:
                 r1, r2 = coverage(joined, base_lines)
                 # 中間バージョンは完成版 oracle と乖離するため、
                 # 「当日の完成版が現在ファイルをほぼ包含するか」でも採用を判定する
@@ -2145,9 +2126,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 # 現ファイルと一致するだけの断片は「全量リスティング」ではなく
                 # 再掲コピー。それを WRITE すると、同じフェンス群にある他の
                 # 追記断片が静かに捨てられるため採用しない。
-                # `apply expect` は最終状態の宣言なので現状態と同一でも採用する
-                if not has_contract and \
-                        norm(picked.split("\n")) == cur_lines_for_cov:
+                if norm(picked.split("\n")) == cur_lines_for_cov:
                     picked, mode = None, None
                     continue
                 break

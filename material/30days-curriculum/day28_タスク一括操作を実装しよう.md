@@ -1652,7 +1652,7 @@ const handleBulkUpdateStatus = (
 このファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
-```typescript apply expect path=src/app/task/page.tsx
+```typescript apply path=src/app/task/page.tsx
 // filepath: src/app/task/page.tsx
 // 完成版: ファイル全体
 'use client';
