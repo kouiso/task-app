@@ -611,15 +611,23 @@ def replace_import(cur: list[str], fl: list[str]) -> Optional[list[str]]:
         if hit:
             start = hit[0]
             while start > 0 and out[start - 1].strip() not in {";", ""} and \
-                    re.match(r"^\s*(import\b|[A-Za-z_$][\w$]*,?|})", out[start - 1]) and \
+                    re.match(r"^\s*(import\s(?!\()|[A-Za-z_$][\w$]*,?|})", out[start - 1]) and \
                     ";" not in out[start - 1]:
                 start -= 1
             end = hit[0]
             out[start:end + 1] = fl
             return out
-    # 同名 import が無ければ import 群の末尾へ足す
-    last_import = max((i for i, l in enumerate(out) if re.match(r"^import\b", l)), default=-1)
-    pos = last_import + 1 if last_import >= 0 else 0
+    # 同名 import が無ければ import 群の末尾へ足す。
+    # 複数行 import（`import {` 〜 `} from 'x'`）の途中には挿入しない。
+    # 開始行だけ見ると `import {` の直後に割り込んで構文を壊すため、
+    # 文末（from 行・side-effect import・;）まで読み進める（issue #630）
+    last_import = max((i for i, l in enumerate(out) if STATIC_IMPORT_RE.match(l)), default=-1)
+    if last_import < 0:
+        return fl + out
+    end = _import_end(out, last_import)
+    if end is None:
+        return None
+    pos = end + 1
     return out[:pos] + fl + out[pos:]
 
 
@@ -645,6 +653,143 @@ def _last_unquoted(line: str, ch: str) -> int:
         if c == ch:
             pos = i
     return pos
+
+
+def _code_text(line: str) -> str:
+    """// コメントを除いたコード部分を返す。文字列リテラル内の // は残す。"""
+    quote = None
+    esc = False
+    for i, c in enumerate(line):
+        if esc:
+            esc = False
+            continue
+        if c == "\\":
+            esc = True
+            continue
+        if quote:
+            if c == quote:
+                quote = None
+            continue
+        if c in "'\"`":
+            quote = c
+            continue
+        if c == "/" and i + 1 < len(line) and line[i + 1] == "/":
+            return line[:i]
+    return line
+
+
+def _mask_code(lines: Sequence[str]) -> list[str]:
+    """各行を「コード位置の文字だけ残した」文字列に変換する。
+
+    文字列・テンプレートリテラルの中身は \\x00 に伏せ（引用符自体は残す）、
+    // コメントと /* */ コメントは取り除く。` は行を跨ぐリテラルとして、
+    /* */ も行を跨いで状態を維持する。' と " は行を跨げないため
+    行末で未閉鎖なら状態をリセットする。
+    走査結果は元の行と同じ長さなので列位置をそのまま使える。"""
+    out: list[str] = []
+    quote: Optional[str] = None
+    in_block = False
+    for l in lines:
+        buf: list[str] = []
+        i, n = 0, len(l)
+        while i < n:
+            c = l[i]
+            if in_block:
+                if c == "*" and l[i + 1:i + 2] == "/":
+                    in_block = False
+                    i += 2
+                    continue
+                i += 1
+                continue
+            if quote:
+                if c == "\\":
+                    buf.append("\x00\x00")
+                    i += 2
+                    continue
+                if c == quote:
+                    buf.append(c)
+                    quote = None
+                    i += 1
+                    continue
+                buf.append("\x00")
+                i += 1
+                continue
+            if c == "/" and l[i + 1:i + 2] == "/":
+                break
+            if c == "/" and l[i + 1:i + 2] == "*":
+                in_block = True
+                i += 2
+                continue
+            if c in "'\"`":
+                quote = c
+                buf.append(c)
+                i += 1
+                continue
+            buf.append(c)
+            i += 1
+        out.append("".join(buf))
+        # ' と " は行を跨げないので行末で未閉鎖なら状態をリセットする
+        if quote in ("'", '"'):
+            quote = None
+    return out
+
+
+# 静的な import 宣言だけを拾う。`import(`（動的 import）や
+# `import.meta` は文の先頭ではないため除外する。
+STATIC_IMPORT_RE = re.compile(r"^\s*import\s(?!\()")
+
+# `import x = require('y')` 形式。`;` も from 指定子も無い終端形を拾う
+IMPORT_REQUIRE_RE = re.compile(r"\bimport\s+[\w${},\s*]*=\s*require\s*\(")
+
+# 別の文が始まる先頭キーワード（import 文の継続行になり得ないもの）
+_STMT_START_RE = re.compile(
+    r"^(?:import\s(?!\()|export\b|const\b|let\b|var\b|function\b|class\b"
+    r"|interface\b|type\b|enum\b|if\b|for\b|while\b|return\b|switch\b"
+    r"|try\b|throw\b)")
+
+
+def _import_end(lines: Sequence[str], start: int) -> Optional[int]:
+    """start 行から始まる import 文の終端行 index を返す。見つからなければ None。
+
+    文字列・コメント・テンプレートリテラルの外側のコードだけを走査し、
+    文の終端（コード位置の `;` か、from/require 指定子を持つ行の ASI）を
+    検出する。コメント内の `;` や文字列内の `;` では止まらない。
+    別の文が波括弧深度 0 で始まったら直前行を ASI の終端とみなす。
+    見つからない場合（`import x = require('y')` が EOF まで延びる等）は
+    None を返し、呼び出し側で gap 扱いにする。
+    `with {`/`assert {` の属性句が指定子の後に続く場合も終端まで読み進める
+    （issue #630）。"""
+    masked = _mask_code(lines)
+    depth = 0
+    for j in range(start, len(lines)):
+        code = masked[j]
+        s = code.strip()
+        if (j > start and depth == 0 and s
+                and _STMT_START_RE.match(s)):
+            # 前の文が継続中でない位置で別文が始まった → 直前行が ASI の終端
+            return j - 1
+        if ";" in code:
+            return j
+        if (IMPORT_FROM_RE.search(code) or BARE_IMPORT_RE.match(code)
+                or IMPORT_REQUIRE_RE.search(code)):
+            # 属性句が `{` で開いて続く場合・次のコード行が with/assert の場合は
+            # 文がまだ続く。それ以外なら指定子のある行が文の終端（ASI も含む）
+            if not code.rstrip().endswith("{"):
+                nxt = next(
+                    (masked[k].strip() for k in range(j + 1, len(lines))
+                     if masked[k].strip()),
+                    "")
+                if not re.match(r"^(with|assert)\b", nxt):
+                    return j
+        depth += code.count("{") - code.count("}")
+    return None
+
+
+def _noncode_line_flags(lines: Sequence[str]) -> list[bool]:
+    """各行が「コードを含まない」か（コメント・空行のみ）。
+    /* */ 内に置かれた見掛け上のコード行を「適用済み」と誤認しないための判定。"""
+    masked = _mask_code(lines)
+    return [not m.strip() for m in masked]
 
 
 def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Optional[list[str]]:
@@ -712,9 +857,14 @@ def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Opti
         if not add:
             return cur
         last_import = max(
-            (i for i, l in enumerate(cur) if re.match(r"^\s*import\b", l)),
+            (i for i, l in enumerate(cur) if STATIC_IMPORT_RE.match(l)),
             default=-1)
-        pos = last_import + 1 if last_import >= 0 else 0
+        if last_import < 0:
+            return add + cur
+        end = _import_end(cur, last_import)
+        if end is None:
+            return None
+        pos = end + 1
         return cur[:pos] + add + cur[pos:]
     if kind == "array_append":
         name = arg[0]
@@ -776,7 +926,7 @@ def apply_directive(cur: list[str], directive: Directive, fl: list[str]) -> Opti
         if "import" in name:
             word = name.replace("既存の", "").replace("import", "").strip()
             hit = [i for i, l in enumerate(cur)
-                   if re.match(r"^\s*import\b", l) and (not word or word in l)]
+                   if STATIC_IMPORT_RE.match(l) and (not word or word in l)]
             if not hit:
                 return None
             si = hit[0]
@@ -847,7 +997,100 @@ def _variants_for_match(fl: list[str]) -> list[list[str]]:
 
 
 def _norm_blob(lines: Sequence[str]) -> list[str]:
-    return [re.sub(r"\s+", "", l) for l in lines if l.strip()]
+    """コード上の空白だけ潰した照合用の行リスト。
+    文字列リテラル内の空白は内容なので残す。全部潰すと `"a b"` → `"ab"`
+    の変更を適用済みと誤認する（issue #630）。テンプレートリテラルは行を
+    跨ぐため引用状態と `${}` のブレース深さを行間で持ち回る。
+    `${}` の中に文字列やテンプレートが入れ子になっても外側のテンプレート
+    状態を失わないよう、テンプレートの文脈はスタックで持つ。"""
+    out: list[str] = []
+    quote: Optional[str] = None  # ' / " の文字列内
+    # 要素は "`"（テンプレート文字列部）か int（その `${}` 内のブレース深さ）
+    tpl: list[str | int] = []
+    in_block_comment = False
+    for l in lines:
+        if not l.strip():
+            # テンプレート内の空行は文字列の中身なので、直前の行へ畳んで残す
+            if tpl and tpl[-1] == "`" and out:
+                out[-1] += l + "\n"
+            continue
+        buf: list[str] = []
+        i, n = 0, len(l)
+        while i < n:
+            c = l[i]
+            if in_block_comment:
+                if c == "*" and i + 1 < n and l[i + 1] == "/":
+                    in_block_comment = False
+                    i += 2
+                    continue
+                i += 1
+                continue
+            if quote or (tpl and tpl[-1] == "`"):
+                # 文字列内容は空白も内容なのでそのまま残す
+                buf.append(c)
+                if c == "\\" and i + 1 < n:
+                    buf.append(l[i + 1])
+                    i += 2
+                    continue
+                if quote:
+                    if c == quote:
+                        quote = None
+                elif c == "$" and i + 1 < n and l[i + 1] == "{":
+                    buf.append("{")
+                    tpl.append(1)
+                    i += 1
+                elif c == "`":
+                    tpl.pop()
+                i += 1
+                continue
+            if c.isspace():
+                i += 1
+                continue
+            if c == "/" and i + 1 < n:
+                if l[i + 1] == "/":
+                    break
+                if l[i + 1] == "*":
+                    in_block_comment = True
+                    i += 2
+                    continue
+            if c in "'\"":
+                quote = c
+            elif c == "`":
+                tpl.append("`")
+            elif tpl and c == "{":
+                tpl[-1] += 1
+            elif tpl and c == "}":
+                tpl[-1] -= 1
+                if tpl[-1] == 0:
+                    tpl.pop()
+            buf.append(c)
+            i += 1
+        # テンプレート内の改行も文字列の中身。区切りなしで連結する
+        # _blob_locate で `a\nb` と `ab` が同一視されないよう残す
+        if tpl and tpl[-1] == "`":
+            buf.append("\n")
+        out.append("".join(buf))
+        # ' と " は行を跨げないので行末で未閉鎖なら状態をリセットする
+        quote = None
+    return out
+
+
+def _squash(line: str) -> str:
+    """照合用の1行つぶし。コード側の空白だけ潰し、文字列中身は保持する。
+    _norm_blob の1行版。比較の両側で同じつぶし方を使うために統一する。
+    空行は _norm_blob が落とすため '' を返す。"""
+    b = _norm_blob([line])
+    return b[0] if b else ""
+
+
+def _match_keys(line: str) -> list[str]:
+    """oracle行探し用のつぶしキー候補。
+    リテラル保持つぶしを先に試し、断片がテンプレート行途中から始まる等で
+    行単位のリテラル状態が取れない場合に備えて全空白つぶしもフォールバックにする。
+    位置はあくまで手がかりで、内容の同一性は後段の照合が担保する。"""
+    a = _squash(line)
+    b = re.sub(r"\s+", "", line)
+    return [a, b] if a != b else [a]
 
 
 def _blob_locate(base_nb: list[str], frag_lines: list[str]) -> int:
@@ -910,6 +1153,8 @@ def oracle_anchor(cur: list[str], base_lines: list[str], fl: list[str]) -> Optio
     if best_b < 0:
         return None
     fl_ins = _dedup_tail(_strip_excess_closers(fl), cur, best_b)
+    if not _literal_fragment_insert_ok(cur, fl_ins, best_b):
+        return None
     return cur[:best_b] + fl_ins + cur[best_b:]
 
 
@@ -1026,7 +1271,7 @@ def _split_imports(fl: list[str]) -> list[list[str]]:
         if re.match(r"^(//|/\*|\{/\*|#)", s):
             continue  # 教材の位置コメントは import 本体ではない
         if cur_imp is None:
-            if re.match(r"^import\b", s):
+            if STATIC_IMPORT_RE.match(s):
                 cur_imp = [l]
                 if IMPORT_FROM_RE.search(s) or BARE_IMPORT_RE.match(s):
                     imps.append(cur_imp)
@@ -1075,11 +1320,16 @@ def import_splice(cur: list[str], fl: list[str]) -> Optional[list[str]]:
                 replacement = imp if h == hits[0] else []
                 out = out[:start] + replacement + out[h + 1:]
         else:
-            last_imp = -1
-            for i, l in enumerate(out):
-                if l.lstrip().startswith("import ") or IMPORT_FROM_RE.search(l):
-                    last_imp = i
-            pos = last_imp + 1 if last_imp >= 0 else 0
+            last_imp = max(
+                (i for i, l in enumerate(out)
+                 if STATIC_IMPORT_RE.match(l)),
+                default=-1)
+            if last_imp < 0:
+                return imp + out
+            end = _import_end(out, last_imp)
+            if end is None:
+                return None
+            pos = end + 1
             out = out[:pos] + imp + out[pos:]
     return out
 
@@ -1191,8 +1441,8 @@ def _dedup_tail(fl: list[str], cur: list[str], pos: int) -> list[str]:
     dropped = 0
     while dropped < len(fl) and pos + dropped < len(cur):
         fl_l = fl[len(fl) - 1 - dropped]
-        fn = re.sub(r"\s+", "", fl_l)
-        cn = re.sub(r"\s+", "", cur[pos + dropped])
+        fn = _squash(fl_l)
+        cn = _squash(cur[pos + dropped])
         pure_closer = (re.fullmatch(r"[\)\]\};/,]+", fn)
                        or re.match(r"^</", fl_l.strip()))
         if fn and fn == cn and pure_closer:
@@ -1213,18 +1463,19 @@ def element_region_replace(cur: list[str], base_lines: list[str],
     joined = "\x00".join(base_nb)
     hits: list[int] = []
     for l in fl:
-        nb = re.sub(r"\s+", "", l)
-        if len(nb) < 15:
-            continue
-        pos = joined.find(nb)
-        if pos < 0:
-            continue
-        acc = 0
-        for i, b in enumerate(base_nb):
-            acc += len(b) + 1
-            if acc > pos:
-                hits.append(i)
-                break
+        for nb in _match_keys(l):
+            if len(nb) < 15:
+                continue
+            pos = joined.find(nb)
+            if pos < 0:
+                continue
+            acc = 0
+            for i, b in enumerate(base_nb):
+                acc += len(b) + 1
+                if acc > pos:
+                    hits.append(i)
+                    break
+            break
     if len(hits) < 2:
         return None
     bi0, bi1 = min(hits), max(hits)
@@ -1252,9 +1503,11 @@ def element_region_replace(cur: list[str], base_lines: list[str],
     ce = element_end(cur, cs)
     if ce >= be:
         be = ce + 1
-    # cur 側の対象区間が oracle の要素と十分に似ている時だけ置き換える
-    span_set = {re.sub(r"\s+", "", l) for l in span if l.strip()}
-    cur_set = {re.sub(r"\s+", "", l) for l in cur[bs:be] if l.strip()}
+    # cur 側の対象区間が oracle の要素と十分に似ている時だけ置き換える。
+    # 行単位の _squash は複数行テンプレート・コメント中の引用符で揺れるため
+    # 状態を持ち回る _norm_blob 側で比較する（issue #630）
+    span_set = set(_norm_blob(span))
+    cur_set = set(_norm_blob(cur[bs:be]))
     common = len(span_set & cur_set)
     # 分割断片のマージ単位は完成版の権威。一致3行以上あれば差し替えを認める
     if common < 3:
@@ -1302,11 +1555,12 @@ def _oracle_pos(base_lines: list[str], fl: list[str]) -> int:
     base_nb = _norm_blob(base_lines)
     joined = "\x00".join(base_nb)
     for l in sorted(fl, key=lambda x: -len(re.sub(r"\s+", "", x))):
-        nb = re.sub(r"\s+", "", l)
-        if len(nb) < 20:
-            continue
-        pos = joined.find(nb)
-        if pos >= 0:
+        for nb in _match_keys(l):
+            if len(nb) < 20:
+                continue
+            pos = joined.find(nb)
+            if pos < 0:
+                continue
             acc = 0
             for i, b in enumerate(base_nb):
                 acc += len(b) + 1
@@ -1361,7 +1615,60 @@ def positional_splice(cur: list[str], base_lines: list[str], fl: list[str]) -> O
                         e = element_end(cur, s)
                         return cur[:s] + fl + cur[e + 1:]
     fl_ins = _dedup_tail(_strip_excess_closers(fl), cur, best_b)
+    if not _literal_fragment_insert_ok(cur, fl_ins, best_b):
+        return None
     return cur[:best_b] + fl_ins + cur[best_b:]
+
+
+def _code_bracket_stack(
+        lines: Sequence[str], upto: int
+) -> list[tuple[str, int, int]]:
+    """upto 行までの未閉鎖括弧スタック（文字・行・列）。文字列・コメント内の
+    括弧は数えない。裸のオブジェクト/配列リテラル断片を文レベルの位置へ
+    誤挿入するのを防ぐコンテキスト判定に使う。"""
+    stack: list[tuple[str, int, int]] = []
+    closer_of = {"}": "{", ")": "(", "]": "["}
+    masked = _mask_code(lines[:upto])
+    for ln, code in enumerate(masked):
+        for i, c in enumerate(code):
+            if c in "{([":
+                stack.append((c, ln, i))
+            elif (c in "})]" and stack
+                  and stack[-1][0] == closer_of[c]):
+                stack.pop()
+    return stack
+
+
+def _literal_fragment_insert_ok(
+        cur: list[str], fl_ins: list[str], pos: int) -> bool:
+    """裸のオブジェクト/配列リテラル断片（`{...}`/`[...]` 単体）の挿入可否。
+    式コンテナ外の文位置に入ると `{ text: ... },` が裸ブロック化して構文
+    エラーになるため、最内の開き括弧が式位置であることを確認する。"""
+    first = next((l for l in fl_ins if l.strip()), "")
+    if not re.match(r"^\s*[{([]", first):
+        return True
+    stack = _code_bracket_stack(cur, pos)
+    if not stack:
+        # 括弧スタックが空でも暗黙 return の JSX（`() => <div>…`）の中なら
+        # `{` 始まり断片は式コンテナに入るので許可する（issue #630）
+        return _jsx_depth(list(cur[:pos])) > 0
+    ch, li, ci = stack[-1]
+    if ch in "[(":
+        return True
+    prev = _code_text(cur[li])[:ci].rstrip()
+    if not prev:
+        # `{` が行頭に来る JS ブロック文位置は拒否するが、JSX 要素の内側なら
+        # `{expr}` の式コンテナなので許可する
+        return _jsx_depth(list(cur[:li])) > 0
+    if prev.endswith("=>"):
+        return False
+    if re.search(r"\b(return|yield|throw|await|case)$", prev):
+        return True
+    if prev[-1] in "=(:,?[!&|{>":
+        return True
+    # 最内の `{` が式位置でなくても、挿入位置が JSX 要素の内側なら
+    # `{` 断片は式コンテナに入るので許可する（issue #630）
+    return _jsx_depth(list(cur[:pos])) > 0
 
 
 def _is_listing_like(fl: list[str]) -> bool:
@@ -1395,11 +1702,126 @@ def _diff_start(before: list[str], after: list[str]) -> int:
     return min(len(before), len(after))
 
 
-def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
-                 path: str, tag: str) -> tuple[Optional[list[str]], list[dict]]:
-    """1ファイル分の全断片を適用。1つでも失敗したら None（呼び出し側で巻き戻す）。"""
+def _raw_groups(raw_lines: list[str]) -> list[list[str]]:
+    """生行を「空行でない1行 + その直前の連続空行」のグループに分ける。
+
+    照合用の norm 行1つに対応する書き込み単位。末尾に残った空行は
+    最後のグループへ畳み込む。"""
+    groups: list[list[str]] = []
+    pend: list[str] = []
+    for l in raw_lines:
+        if not l.strip():
+            pend.append(l)
+            continue
+        groups.append(pend + [l])
+        pend = []
+    if pend:
+        if groups:
+            groups[-1] += pend
+        else:
+            groups.append(pend)
+    return groups
+
+
+def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
+                frag_norm: list[str], frag_groups: list[list[str]]
+                ) -> tuple[list[list[str]], int]:
+    """out→res の変更を書き込み用 raw 行グループへ写す。
+
+    変更の無い行は raw の元グループ（空行・行末空白つき）をそのまま維持し、
+    変更区間は res の行を使う。res 行が断片の norm 行と順に一致するなら
+    断片側の生行グループを採用して、断片内部の空行・行末空白も復元する。
+    消える行が所有していた先頭空行は次の行へ付け替えて消えないようにする。
+    戻り値は (新しい raw グループ, res 上の変更終端 index)。"""
+    sm = difflib.SequenceMatcher(None, out, res, autojunk=False)
+    opcodes = sm.get_opcodes()
+    new_raw: list[list[str]] = []
+    pend: list[str] = []
+    fp = 0
+    first_change_end: Optional[int] = None
+    # 断片が res 内に連続して書き込まれている位置。SequenceMatcher は断片の
+    # 先頭行などを既存行との equal として扱うことがあり、変更区間だけで
+    # 断片行を数えると対応がずれて正規化行が書き込まれるため、断片全体の
+    # 位置で対応させる。変更区間と重なる出現だけを書き込み位置とみなす
+    span = -1
+    m = len(frag_norm)
+    changed = [(j1, j2) for op, _i1, _i2, j1, j2 in opcodes
+               if op != "equal" and j1 < j2]
+    if m:
+        for p in range(len(res) - m + 1):
+            if res[p:p + m] == frag_norm and any(
+                    j1 < p + m and p < j2 for j1, j2 in changed):
+                span = p
+                break
+
+    def emit(group: list[str]) -> None:
+        nonlocal pend
+        if pend:
+            group = pend + group
+            pend = []
+        new_raw.append(group)
+
+    def frag_group(j: int, existing: Optional[list[str]]) -> list[str]:
+        nonlocal pend
+        k = j - span
+        if k > 0:
+            # 断片内部の空行配置は断片原文が持つ。置き換えで消える既存行の
+            # 空行まで前置するとテンプレート内に改行が増える
+            pend = []
+        if k == 0 and existing is not None:
+            # 断片先頭行の前の空行は既存ファイル側の配置を保つ
+            return existing[:-1] + frag_groups[0][-1:]
+        return list(frag_groups[k])
+
+    for op, i1, i2, j1, j2 in opcodes:
+        if op == "equal":
+            for k in range(i1, i2):
+                j = j1 + (k - i1)
+                if span >= 0 and span <= j < span + m:
+                    emit(frag_group(j, raw[k]))
+                else:
+                    emit(list(raw[k]))
+            continue
+        if first_change_end is None:
+            first_change_end = j2
+        if i1 < i2:
+            pend.extend(raw[i1][:-1])
+        for j in range(j1, j2):
+            rline = res[j]
+            if span >= 0:
+                if span <= j < span + m:
+                    emit(frag_group(j, None))
+                else:
+                    emit([rline])
+            elif fp < len(frag_norm) and rline == frag_norm[fp]:
+                emit(list(frag_groups[fp]))
+                fp += 1
+            else:
+                emit([rline])
+    if pend:
+        if new_raw:
+            new_raw[-1] += pend
+        else:
+            new_raw.append(pend)
+    return new_raw, (first_change_end
+                     if first_change_end is not None else len(res))
+
+
+def splice_parts(cur_norm: list[str], cur_raw: list[str],
+                 parts: list[Part], base_lines: list[str],
+                 path: str, tag: str
+                 ) -> tuple[Optional[tuple[list[str], list[str]]], list[dict]]:
+    """1ファイル分の全断片を適用。1つでも失敗したら None（呼び出し側で巻き戻す）。
+
+    照合は cur_norm（空行削除・行末空白削除済み）で行い、書き込み用の原文は
+    cur_raw 由来の行グループだけで組み立てる。正規化済み行を書き戻すと
+    無関係なテンプレートリテラル内の空行・行末空白まで壊れるため（issue #630）。"""
     gaps: list[dict] = []
-    out = cur
+    out = list(cur_norm)
+    raw = _raw_groups(cur_raw)
+    if len(raw) != len(out):
+        return None, [{"day": tag, "path": path,
+                       "reason": "raw-norm-mismatch"}]
     last_end: Optional[int] = None
     idx = 0
     while idx < len(parts):
@@ -1440,6 +1862,28 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
                   and not KANSEI_LABEL.match(l)]
         if not fl_ins:
             continue
+        # 照合は norm 済み行で行うが、書き込みは教材フェンスの原文を使う。
+        # norm 結果を書き込むと文字列リテラルやテンプレート内の空行・行末空白が
+        # 失われて完成版と食い違うため、前後の空行だけ落とした原文断片を使う
+        raw_lines = [l for l in part.body.split("\n")
+                     if not PLACEHOLDER_COMMENT.search(l)
+                     and not KANSEI_LABEL.match(l)]
+        fl_write = list(raw_lines)
+        while fl_write and not fl_write[0].strip():
+            fl_write.pop(0)
+        while fl_write and not fl_write[-1].strip():
+            fl_write.pop()
+        if not fl_write:
+            continue
+        # fl_ins（norm・空行無し）と同じ対応順の生行グループ
+        frag_groups = _raw_groups(fl_write)
+        # retag はプレースホルダー行自体を区切りに使うため、
+        # フィルタ無しの原文断片を別途渡す（norm 版の fl だと中身が失われる）
+        fl_raw = part.body.split("\n")
+        while fl_raw and not fl_raw[0].strip():
+            fl_raw.pop(0)
+        while fl_raw and not fl_raw[-1].strip():
+            fl_raw.pop()
         # 先頭コメント行を落とした変形・空白吸収ブロブでも一致判定
         #（位置コメントや行折り返し差で一致しないだけの再適用を防ぐ）
         strip_i = leading_meta_lines(fl_ins)
@@ -1447,14 +1891,52 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
         out_nb = _norm_blob(out)
         # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
         # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する
-        already = (find_in(out, fl_ins) >= 0
-                   or (fl_core and find_in(out, fl_core) >= 0)
-                   or (not part.directive
-                       and any(_blob_locate(out_nb, v) >= 0
-                               for v in _variants_for_match(fl_ins))))
-        if already:
+        present_norm = (find_in(out, fl_ins) >= 0
+                        or (fl_core and find_in(out, fl_core) >= 0)
+                        or (not part.directive
+                            and any(_blob_locate(out_nb, v) >= 0
+                                    for v in _variants_for_match(fl_ins))))
+        # 正規化は空行・行末空白を消すため、空白だけが違う壊れた baseline を
+        # 「適用済み」と見逃す。原文で存在する時だけスキップする（issue #630）。
+        # 比較は変化し続ける現在のファイル内容（raw 全体）に対し行境界つきで行い、
+        # /* */ や // の中に置かれた見掛け上の一致は適用済みと数えない
+        flat = [l for g in raw for l in g]
+        noncode = _noncode_line_flags(flat)
+        m = len(fl_write)
+        verbatim = any(
+            flat[k:k + m] == fl_write and not all(noncode[k:k + m])
+            for k in range(len(flat) - m + 1))
+        if verbatim:
             continue  # 冪等: 既に存在する断片はスキップ（完成版参照や再適用）
         res: Optional[list[str]] = None
+        if present_norm:
+            # 正規化済みでは存在するが原文が違う = 空白差だけの壊れた
+            # baseline。find_in で位置が取れるならその場で原文断片へ
+            # 置き換えて修復する。取れない緩い一致は従来どおりスキップ
+            i = find_in(out, fl_ins)
+            off = 0
+            if i < 0 and fl_core:
+                i = find_in(out, fl_core)
+                off = strip_i
+            if i < 0:
+                continue
+            # 本体だけが一致した場合は先頭の位置指示コメントを書き込まない。
+            # 教材用のコメントがファイルへ紛れ込むため
+            seg = fl_ins[off:]
+            seg_groups = frag_groups[off:]
+            hit = len(seg)
+            # 一致区間が /* */ や // の内側なら「適用済み」の見掛け一致なので
+            # 修復せず、通常の splice 経路で実際のコード位置へ書き込む
+            s0 = sum(len(g) for g in raw[:i])
+            e0 = s0 + sum(len(g) for g in raw[i:i + hit])
+            if not all(noncode[s0:e0]):
+                # 先頭行の前の空行は既存ファイル側を保ち、以降は断片原文を使う
+                fg = ([raw[i][:-1] + seg_groups[0][-1:]]
+                      + [list(g) for g in seg_groups[1:]])
+                out = out[:i] + seg + out[i + hit:]
+                raw = raw[:i] + fg + raw[i + hit:]
+                last_end = i + hit
+                continue
         if part.directive:
             res = apply_directive(out, part.directive, fl_ins)
             if res is None:
@@ -1463,14 +1945,15 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
             if res is None:
                 res = positional_splice(out, base_lines, fl_ins)
             if res is not None:
-                last_end = _diff_start(out, res) + len(fl_ins)
+                raw, last_end = _splice_raw(raw, out, res,
+                                            fl_ins, frag_groups)
                 out = res
                 continue
             gaps.append({"day": tag, "path": path,
                          "reason": "directive-anchor-not-found",
                          "anchor": f"{part.directive.kind}:{part.directive.arg[0] if part.directive.arg else ''}"[:80]})
             return None, gaps
-        res = retag_element(out, base_lines, fl)
+        res = retag_element(out, base_lines, fl_raw)
         if res is None:
             res = import_splice(out, fl_ins)
         if res is None:
@@ -1485,8 +1968,12 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
             res = positional_splice(out, base_lines, fl_ins)
         if res is None and last_end is not None and _closers_only(fl_ins):
             # 閉じタグだけの断片: 教材は同じ編集箇所を連続で示すため
-            # 直前に挿入した断片の直後に続ける
-            res = out[:last_end] + fl_ins + out[last_end:]
+            # 直前に挿入した断片の直後に続ける。書き込み側の行数で進める
+            out = out[:last_end] + fl_ins + out[last_end:]
+            raw = raw[:last_end] + [list(g) for g in frag_groups] \
+                + raw[last_end:]
+            last_end += len(fl_ins)
+            continue
         if res is None:
             if part.kansei or _is_listing_like(fl):
                 # 確認用リスティングが置けなくても実害はないので、
@@ -1499,9 +1986,12 @@ def splice_parts(cur: list[str], parts: list[Part], base_lines: list[str],
                          "reason": "fragment-not-in-baseline-or-anchor-ambiguous",
                          "head": head0[:80]})
             return None, gaps
-        last_end = _diff_start(out, res) + len(fl)
+        # 挿入位置の記録は「書き込んだ側」の長さで進める。
+        # norm 後の長さだと断片中の空行分ずれて次の断片が文の途中へ入る
+        raw, last_end = _splice_raw(raw, out, res, fl_ins, frag_groups)
         out = res
-    return out, gaps
+    flat_out = [l for g in raw for l in g]
+    return (out, flat_out), gaps
 
 
 # ---------------------------------------------------------------------------
@@ -1659,6 +2149,16 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                     continue
                 picked, mode = joined, label
             if picked is not None:
+                if dest_exists and not mode.endswith("-divergent"):
+                    # 既存ファイルを「明らかに小さい継ぎ足し」で上書きすると
+                    # 既存宣言が消える（day28 task.ts 型の損失: 完成版の断片結合を
+                    # 全量リスティングと誤認し残りを丸ごと落とす）。部分リスティング
+                    # による内容喪失を防ぐため、大きく縮む WRITE は採用しない。
+                    # -divergent は全量置き換えが意図の候補なので対象外。
+                    cur_n = len([l for l in dest_text.split("\n") if l.strip()])
+                    if nlines < cur_n * 0.9:
+                        picked, mode = None, None
+                        continue
                 # 現ファイルと一致するだけの断片は「全量リスティング」ではなく
                 # 再掲コピー。それを WRITE すると、同じフェンス群にある他の
                 # 追記断片が静かに捨てられるため採用しない。
@@ -1683,9 +2183,17 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
             skipped.append(f"splice skipped (file absent): {path}")
             continue
 
+        # 照合は norm 済み行で行うが、書き込みは既存ファイルの原文を使う。
+        # norm の結果をそのまま書くと無関係な箇所の空行・行末空白まで
+        # 消えて完成版と食い違うため、照合用と書込用を別系列で持ち回る
+        #（issue #630）
         cur = norm(dest_text.split("\n"))
-        new_lines, file_gaps = splice_parts(cur, parts, base_lines, path, tag)
-        if new_lines is None:
+        cur_raw = dest_text.split("\n")
+        if cur_raw and not cur_raw[-1]:
+            cur_raw.pop()
+        spliced, file_gaps = splice_parts(
+            cur, cur_raw, parts, base_lines, path, tag)
+        if spliced is None:
             # 断片照合の失敗: このファイルは書き換えない（= 直前の正常 baseline を維持）。
             gaps.extend(file_gaps)
             skipped.append(f"splice rejected, baseline kept: {path}")
@@ -1694,7 +2202,8 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         # 成功パスで握り潰すと ledger と終了コード判定から漏れ「部分適用」を
         # 完走と誤判定するため、成否に関わらず gaps へ集計する。
         gaps.extend(file_gaps)
-        spliced_text = "\n".join(new_lines) + "\n"
+        _new_norm, new_raw_lines = spliced
+        spliced_text = "\n".join(new_raw_lines) + "\n"
         if is_ts_family and not parses_as_file(path, spliced_text, esbuild):
             # splice 後の構文健全性が壊れている時も書き込まず baseline を維持する。
             gaps.append({"day": tag, "path": path,

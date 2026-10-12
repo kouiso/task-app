@@ -1,0 +1,20 @@
+diff --git a/src/component/task/task-dialog.tsx b/src/component/task/task-dialog.tsx
+index 2731203..1569649 100644
+--- a/src/component/task/task-dialog.tsx
++++ b/src/component/task/task-dialog.tsx
+@@ -90,7 +90,6 @@ export function TaskDialog({
+   open, onClose, onSubmit,
+   initialData, projects,
+ }: TaskDialogProps) {
+-// Day 14 で書いた useForm の初期値
+   const {
+     register, handleSubmit, control,
+     watch, reset, setValue,
+@@ -115,7 +114,6 @@ export function TaskDialog({
+     );
+   const users = projectMembers ?? [];
+ 
+-// 同じファイルの続き。間は省略しています
+   useEffect(() => {
+     projectsRef.current = projects;
+   }, [projects]);

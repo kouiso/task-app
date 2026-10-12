@@ -1,0 +1,6 @@
+[apply_day] day13_タスク一覧画面.md (tag=day13)
+  ✅ WRITE  src/server/api/routers/task.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (listing-run)
+  ✅ SPLICE src/component/layout/app-layout.tsx (4 parts)
+  ✅ WRITE  src/app/task/page.tsx (kansei-run)
+  → 4 files written
