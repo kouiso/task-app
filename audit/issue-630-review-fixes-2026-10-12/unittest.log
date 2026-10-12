@@ -1,0 +1,77 @@
+test_schema_before_router_and_proc_after_delete (apply_day_test.Day16TypeTest.test_schema_before_router_and_proc_after_delete) ... ok
+test_reject_keeps_baseline_and_restores (apply_day_test.Day28TypeTest.test_reject_keeps_baseline_and_restores) ... ok
+test_restore_removes_created_files (apply_day_test.Day28TypeTest.test_restore_removes_created_files) ... ok
+test_restore_reverts_successful_day (apply_day_test.Day28TypeTest.test_restore_reverts_successful_day) ... ok
+test_decl_end_walks_call_chain (apply_day_test.DeclBoundaryTest.test_decl_end_walks_call_chain) ... ok
+test_find_decl_start_prefers_shallowest (apply_day_test.DeclBoundaryTest.test_find_decl_start_prefers_shallowest) ... ok
+test_insert_before_decl_start_not_inside (apply_day_test.DeclBoundaryTest.test_insert_before_decl_start_not_inside) ... ok
+test_member_decl_inside_router (apply_day_test.DeclBoundaryTest.test_member_decl_inside_router) ... ok
+test_after_elem_treats_as_literal_name (apply_day_test.DirectiveParseTest.test_after_elem_treats_as_literal_name) ... ok
+test_before_decl (apply_day_test.DirectiveParseTest.test_before_decl) ... ok
+test_continuation_is_not_directive (apply_day_test.DirectiveParseTest.test_continuation_is_not_directive) ... ok
+test_edge_and_inside (apply_day_test.DirectiveParseTest.test_edge_and_inside) ... ok
+test_replace_prisma_import (apply_day_test.DirectiveParseTest.test_replace_prisma_import) ... ok
+test_skip_distributed (apply_day_test.DirectiveParseTest.test_skip_distributed) ... ok
+test_apply_day_preserves_existing_whitespace (apply_day_test.Issue630Fixes.test_apply_day_preserves_existing_whitespace) ... ok
+test_blob_keeps_multiline_template_whitespace (apply_day_test.Issue630Fixes.test_blob_keeps_multiline_template_whitespace) ... ok
+test_insert_past_comment_semicolon_in_import (apply_day_test.Issue630Fixes.test_insert_past_comment_semicolon_in_import) ... ok
+test_insert_past_import_attribute_block (apply_day_test.Issue630Fixes.test_insert_past_import_attribute_block) ... ok
+test_insert_past_multiline_import_not_inside (apply_day_test.Issue630Fixes.test_insert_past_multiline_import_not_inside) ... ok
+test_literal_fragment_insert_needs_expression_container (apply_day_test.Issue630Fixes.test_literal_fragment_insert_needs_expression_container) ... ok
+test_literal_fragment_insert_ok_inside_implicit_return_jsx (apply_day_test.Issue630Fixes.test_literal_fragment_insert_ok_inside_implicit_return_jsx) ... ok
+test_oracle_pos_matches_wrapped_fragment_line (apply_day_test.Issue630Fixes.test_oracle_pos_matches_wrapped_fragment_line) ... ok
+test_splice_writes_verbatim_fragment (apply_day_test.Issue630Fixes.test_splice_writes_verbatim_fragment) ... ok
+test_squash_keeps_literal_whitespace (apply_day_test.Issue630Fixes.test_squash_keeps_literal_whitespace) ... ok
+test_string_literal_ws_change_not_treated_as_applied (apply_day_test.Issue630Fixes.test_string_literal_ws_change_not_treated_as_applied) ... ok
+test_verbatim_different_fragment_repairs_baseline (apply_day_test.Issue630Fixes.test_verbatim_different_fragment_repairs_baseline) ... ok
+test_blob_keeps_template_state_across_interpolated_string (apply_day_test.Issue630ReviewFixes.test_blob_keeps_template_state_across_interpolated_string) ... ok
+test_closers_fragment_lands_after_written_fragment (apply_day_test.Issue630ReviewFixes.test_closers_fragment_lands_after_written_fragment) ... ok
+test_core_match_repair_does_not_insert_meta_comment (apply_day_test.Issue630ReviewFixes.test_core_match_repair_does_not_insert_meta_comment) ... ok
+test_element_region_maps_each_hit_to_one_line (apply_day_test.Issue630ReviewFixes.test_element_region_maps_each_hit_to_one_line) ... ok
+test_fragment_inside_block_comment_not_treated_as_applied (apply_day_test.Issue630ReviewFixes.test_fragment_inside_block_comment_not_treated_as_applied) ... ok
+test_import_insert_after_require_without_semicolon (apply_day_test.Issue630ReviewFixes.test_import_insert_after_require_without_semicolon) ... ok
+test_import_insert_ends_at_code_semicolon (apply_day_test.Issue630ReviewFixes.test_import_insert_ends_at_code_semicolon) ... ok
+test_import_insert_unclosed_import_is_gap (apply_day_test.Issue630ReviewFixes.test_import_insert_unclosed_import_is_gap) ... ok
+test_interstitial_blank_lines_preserved_on_insert (apply_day_test.Issue630ReviewFixes.test_interstitial_blank_lines_preserved_on_insert) ... ok
+test_replace_does_not_double_blank_lines_inside_fragment (apply_day_test.Issue630ReviewFixes.test_replace_does_not_double_blank_lines_inside_fragment) ... ok
+test_replace_keeps_fragment_raw_after_unchanged_first_line (apply_day_test.Issue630ReviewFixes.test_replace_keeps_fragment_raw_after_unchanged_first_line) ... ok
+test_splice_inside_template_preserves_blank_lines (apply_day_test.Issue630ReviewFixes.test_splice_inside_template_preserves_blank_lines) ... ok
+test_template_newline_change_is_applied (apply_day_test.Issue630ReviewFixes.test_template_newline_change_is_applied) ... ok
+test_template_text_change_after_interpolation_is_applied (apply_day_test.Issue630ReviewFixes.test_template_text_change_after_interpolation_is_applied) ... ok
+test_array_append_inserts_inside_single_line_array (apply_day_test.MustReviewFixes.test_array_append_inserts_inside_single_line_array) ... ok
+test_array_append_skips_bracket_in_string_literal (apply_day_test.MustReviewFixes.test_array_append_skips_bracket_in_string_literal) ... ok
+test_array_append_targets_property_array_not_outer_return (apply_day_test.MustReviewFixes.test_array_append_targets_property_array_not_outer_return) ... ok
+test_blob_locate_absorbs_line_folds (apply_day_test.MustReviewFixes.test_blob_locate_absorbs_line_folds) ... ok
+test_directive_rewrite_not_swallowed_by_blob (apply_day_test.MustReviewFixes.test_directive_rewrite_not_swallowed_by_blob) ... ok
+test_element_end_multiline_open_tag (apply_day_test.MustReviewFixes.test_element_end_multiline_open_tag) ... ok
+test_kansei_label_not_written_or_inserted (apply_day_test.MustReviewFixes.test_kansei_label_not_written_or_inserted) ... ok
+test_merge_consumes_immediate_next_part (apply_day_test.MustReviewFixes.test_merge_consumes_immediate_next_part) ... ok
+test_mv_is_snapshotted_and_restored (apply_day_test.MustReviewFixes.test_mv_is_snapshotted_and_restored) ... ok
+test_mv_then_recreate_keeps_modified_state (apply_day_test.MustReviewFixes.test_mv_then_recreate_keeps_modified_state) ... ok
+test_snapshot_keeps_first_backup_and_created_state (apply_day_test.MustReviewFixes.test_snapshot_keeps_first_backup_and_created_state) ... ok
+test_snapshot_key_no_underscore_slash_collision (apply_day_test.MustReviewFixes.test_snapshot_key_no_underscore_slash_collision) ... ok
+test_splice_success_gaps_reach_skipped (apply_day_test.MustReviewFixes.test_splice_success_gaps_reach_skipped) ... ok
+test_suffix_fragment_not_promoted_to_write (apply_day_test.MustReviewFixes.test_suffix_fragment_not_promoted_to_write) ... ok
+test_ellipsis_fragment_rejected_as_listing (apply_day_test.SafetyTest.test_ellipsis_fragment_rejected_as_listing) ... ok
+test_unsafe_paths_still_rejected (apply_day_test.SafetyTest.test_unsafe_paths_still_rejected) ... ok
+test_records_build_test_and_playwright_evidence (verify_day_test.VerifyDayTest.test_records_build_test_and_playwright_evidence) ... [verify_day] Day 11 — evidence: /tmp/tmpbsbmyc8y/evidence
+[verify_day] build: npm run build
+  ✅ PASS — build
+[verify_day] test: npm test -- --passWithNoTests
+  ✅ PASS — test
+[verify_day] playwright-screenshots: npx playwright test e2e/screenshots.spec.ts --project=chromium
+  ✅ PASS — playwright-screenshots
+ok
+test_stops_after_first_failed_check (verify_day_test.VerifyDayTest.test_stops_after_first_failed_check) ... [verify_day] Day 12 — evidence: /tmp/tmpw5i0o7pm/evidence
+[verify_day] build: npm run build
+  ❌ FAIL — build failed (exit 1)
+--- stdout ---
+
+--- stderr ---
+
+ok
+
+----------------------------------------------------------------------
+Ran 58 tests in 0.070s
+
+OK

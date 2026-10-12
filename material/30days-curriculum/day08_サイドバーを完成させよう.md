@@ -738,7 +738,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 
 ## 完成コード全体
 
-今日は4つのファイルを扱いました。このうち `providers.tsx` と `layout.tsx` は中身の確認だけです。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードと自分のファイルを見比べてください。上から順に読めばStep 1 から Step 4 で扱ったものがどう1つのファイルになったかを確かめられます。
+今日は4つのファイルを扱いました。このうち `providers.tsx` と `layout.tsx` は中身の確認だけです。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードと自分のファイルを見比べてください。上から順に読めばStep 1 から Step 4 で扱ったものがどう1つのファイルになったかを確かめられます。各ファイルの最後のブロックがそのファイルの全文です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -777,7 +777,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ```tsx
 // filepath: src/app/layout.tsx
-// 完成版: 取り込みとフォントの読み込み
+// 取り込みとフォントの読み込み
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono, Noto_Sans_JP } from 'next/font/google';
 import { Providers } from './providers';
@@ -809,7 +809,58 @@ Step 2 では `Inter` の1つ分だけを載せました。残る2つも書き�
 
 ```tsx
 // filepath: src/app/layout.tsx（同じファイルの続き）
-// 完成版: 題名と全ページの外枠
+// 題名と全ページの外枠
+export const metadata: Metadata = {
+  title: 'TaskApp - プロジェクト・タスク管理',
+  description:
+    'チームで使えるプロジェクト・タスク管理アプリケーション。' +
+      'プロジェクト管理、タスクトラッキング、進捗レポート機能を提供します。',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html
+      lang="ja"
+      className={`${inter.variable} ${jetBrainsMono.variable} ${notoSansJP.variable}`}
+    >
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+完成版の `src/app/layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/layout.tsx
+// 完成版: ファイル全体
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono, Noto_Sans_JP } from 'next/font/google';
+import { Providers } from './providers';
+import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-noto-sans-jp',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'TaskApp - プロジェクト・タスク管理',
   description:
@@ -839,7 +890,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: ブラウザ側の宣言と外部ライブラリの取り込み
+// ブラウザ側の宣言と外部ライブラリの取り込み
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
@@ -860,7 +911,7 @@ import { useEffect, useState } from 'react';
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: 画面部品と tRPC の取り込み
+// 画面部品と tRPC の取り込み
 import {
   AlertDialog,
   AlertDialogAction,
@@ -883,7 +934,7 @@ import { api } from '@/trpc/react';
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: メニュー項目の型
+// メニュー項目の型
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
@@ -897,7 +948,7 @@ interface MenuItem {
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: メニュー項目の一覧
+// メニュー項目の一覧
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -923,7 +974,7 @@ const menuItems: MenuItem[] = [
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: 状態とサーバーへの問い合わせ
+// 状態とサーバーへの問い合わせ
 export function AppLayout({
   children,
 }: {
@@ -955,7 +1006,7 @@ export function AppLayout({
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: 未ログインの人を送り出す判定
+// 未ログインの人を送り出す判定
   useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -985,7 +1036,7 @@ export function AppLayout({
 
 ```tsx
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
-// 完成版: サイドバーの外枠とロゴ
+// サイドバーの外枠とロゴ
   return (
     <div className="flex h-screen bg-background">
       {/* サイドバー */}
@@ -1004,7 +1055,7 @@ export function AppLayout({
 
 ```tsx
         {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-        {/* 完成版: ナビゲーション */}
+        {/* ナビゲーション */}
         {/* ナビゲーション */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
@@ -1027,7 +1078,7 @@ export function AppLayout({
 
 ```tsx
                 {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-                {/* 完成版: ナビゲーションの続き */}
+                {/* ナビゲーションの続き */}
                 >
                   {item.icon}
                   {item.text}
@@ -1044,7 +1095,7 @@ export function AppLayout({
 
 ```tsx
         {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-        {/* 完成版: ユーザー情報 */}
+        {/* ユーザー情報 */}
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">
           <div className="mb-3 flex items-center gap-3">
@@ -1070,7 +1121,7 @@ export function AppLayout({
 
 ```tsx
           {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-          {/* 完成版: ログアウトボタン */}
+          {/* ログアウトボタン */}
           {/* ログアウトボタン（確認ダイアログ付き） */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -1091,7 +1142,7 @@ export function AppLayout({
 
 ```tsx
             {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-            {/* 完成版: ログアウトの確認ダイアログ */}
+            {/* ログアウトの確認ダイアログ */}
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
@@ -1121,7 +1172,208 @@ export function AppLayout({
 
 ```tsx
       {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-      {/* 完成版: 本文の置き場所 */}
+      {/* 本文の置き場所 */}
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
+```
+
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+];
+
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+
       {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
       <main className="flex-1 overflow-y-auto p-6">
         {children}
@@ -1141,7 +1393,7 @@ Step 4 で書き換えたのは取り込みの1行と `return` の外枠だけ�
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx
-// 完成版: 取り込みと型定義
+// 取り込みと型定義
 import { AppLayout } from '@/component/layout/app-layout';
 
 type DashboardOwner = {
@@ -1165,7 +1417,7 @@ Day 02 のこのファイルには取り込みが1行もありませんでした
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 表示する値とあいさつの組み立て
+// 表示する値とあいさつの組み立て
 const dashboardOwner: DashboardOwner = {
   name: 'Taro',
   role: 'Web エンジニア',
@@ -1193,7 +1445,7 @@ function getGreetingByHour(hour: number): string {
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 画面の関数とカードの並び
+// 画面の関数とカードの並び
 function buildMainMessage(owner: DashboardOwner, hour: number): string {
   const greeting = getGreetingByHour(hour);
 
@@ -1217,7 +1469,7 @@ export default function DashboardPage() {
 
 ```tsx
 // filepath: src/app/dashboard/page.tsx（同じファイルの続き）
-// 完成版: 残りのカードと外枠の開始
+// 残りのカードと外枠の開始
     {
       label: '今日',
       value: dashboardOwner.todayGoal,
@@ -1242,7 +1494,7 @@ export default function DashboardPage() {
 
 ```tsx
           {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-          {/* 完成版: ヘッダー */}
+          {/* ヘッダー */}
           <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
@@ -1265,7 +1517,7 @@ export default function DashboardPage() {
 
 ```tsx
           {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 主役のメッセージ */}
+          {/* 主役のメッセージ */}
           <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
               <div className="border-b border-border px-8 py-6">
@@ -1284,7 +1536,7 @@ export default function DashboardPage() {
 
 ```tsx
                 {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-                {/* 完成版: 説明文と集中テーマの帯 */}
+                {/* 説明文と集中テーマの帯 */}
                 <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
                   今日は
                   <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
@@ -1303,7 +1555,7 @@ export default function DashboardPage() {
 
 ```tsx
               {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-              {/* 完成版: 下段の3枚のカード */}
+              {/* 下段の3枚のカード */}
               <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
                 {focusCards.map((card) => (
                   <article
@@ -1331,7 +1583,7 @@ export default function DashboardPage() {
 
 ```tsx
             {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-            {/* 完成版: 右側の補助カード */}
+            {/* 右側の補助カード */}
             <aside className="space-y-4">
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
@@ -1358,7 +1610,175 @@ export default function DashboardPage() {
 
 ```tsx
               {/* filepath: src/app/dashboard/page.tsx（同じファイルの続き） */}
-              {/* 完成版: 最後のカードと閉じタグ */}
+              {/* 最後のカードと閉じタグ */}
+              <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+                <p className="text-sm font-semibold text-card-foreground">
+                  明日やること
+                </p>
+                <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                  レビューの指摘をまとめて、直す順番を決める。
+                </p>
+              </article>
+            </aside>
+          </section>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/dashboard/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/dashboard/page.tsx
+// 完成版: ファイル全体
+import { AppLayout } from '@/component/layout/app-layout';
+
+type DashboardOwner = {
+  name: string;
+  role: string;
+  todayFocus: string;
+  todayGoal: string;
+  nextAction: string;
+};
+
+type FocusCard = {
+  label: string;
+  value: string;
+  description: string;
+};
+
+const dashboardOwner: DashboardOwner = {
+  name: 'Taro',
+  role: 'Web エンジニア',
+  todayFocus: 'ポートフォリオの企画',
+  todayGoal: 'トップページのラフを決める',
+  nextAction: 'レビューをもらう',
+};
+
+function getGreetingByHour(hour: number): string {
+  if (hour < 12) {
+    return 'おはよう';
+  }
+
+  if (hour < 18) {
+    return 'こんにちは';
+  }
+
+  return 'こんばんは';
+}
+
+function buildMainMessage(owner: DashboardOwner, hour: number): string {
+  const greeting = getGreetingByHour(hour);
+
+  return `${greeting}、${owner.name}さん。今日は${owner.todayFocus}に取り組みます。`;
+}
+
+export default function DashboardPage() {
+  const currentHour = new Date().getHours();
+  const mainMessage = buildMainMessage(dashboardOwner, currentHour);
+  const focusCards: FocusCard[] = [
+    {
+      label: '担当',
+      value: dashboardOwner.name,
+      description: dashboardOwner.role,
+    },
+
+    {
+      label: '今日',
+      value: dashboardOwner.todayGoal,
+      description: dashboardOwner.todayFocus,
+    },
+    {
+      label: '次',
+      value: dashboardOwner.nextAction,
+      description: '明日いちばんに動く',
+    },
+  ];
+
+  return (
+    <AppLayout>
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
+
+          <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                タスク管理
+              </p>
+              <h1 className="text-lg font-semibold text-card-foreground">
+                My Dashboard
+              </h1>
+            </div>
+
+            <div className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground">
+              作業中
+            </div>
+          </header>
+
+          <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+              <div className="border-b border-border px-8 py-6">
+                <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+                  今日のフォーカス
+                </span>
+
+                <h2 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-card-foreground sm:text-5xl">
+                  {mainMessage}
+                </h2>
+
+                <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+                  今日は
+                  <span className="font-semibold text-foreground"> {dashboardOwner.todayGoal}</span>
+                  まで進めます。
+                </p>
+
+                <div className="mt-8 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm">
+                  進行中: {dashboardOwner.todayFocus}
+                </div>
+              </div>
+
+              <div className="grid gap-4 bg-secondary px-8 py-6 md:grid-cols-3">
+                {focusCards.map((card) => (
+                  <article
+                    key={card.label}
+                    className="rounded-2xl border border-border bg-background px-4 py-4 shadow-xs"
+                  >
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      {card.label}
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">
+                      {card.value}
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {card.description}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </article>
+
+            <aside className="space-y-4">
+              <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+                <p className="text-sm font-semibold text-card-foreground">
+                  メモ
+                </p>
+                <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                  午前は集中して作業。夕方に振り返りを入れる。
+                </p>
+              </article>
+
+              <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+                <p className="text-sm font-semibold text-card-foreground">
+                  今週の予定
+                </p>
+                <p className="mt-4 text-sm leading-8 text-muted-foreground">
+                  金曜までにトップページのラフを固める。
+                </p>
+              </article>
+
               <article className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm font-semibold text-card-foreground">
                   明日やること

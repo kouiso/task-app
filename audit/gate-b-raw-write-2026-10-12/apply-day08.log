@@ -1,0 +1,6 @@
+[apply_day] day08_サイドバーを完成させよう.md (tag=day08)
+  ✅ WRITE  src/app/providers.tsx (listing-run)
+  ✅ WRITE  src/app/layout.tsx (kansei-run)
+  ✅ WRITE  src/component/layout/app-layout.tsx (kansei-run)
+  ✅ WRITE  src/app/dashboard/page.tsx (kansei-run-divergent)
+  → 4 files written
