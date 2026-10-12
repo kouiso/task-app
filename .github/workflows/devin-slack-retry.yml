@@ -1,4 +1,4 @@
-# Devin 起動リクエストの定期リトライ（sweep 専用。ラベル即時起動は trigger 側だけが持つため並行重複しない）。
+# Devin 起動リクエストの定期リトライ（sweep 専用）。ラベル即時起動は devin-slack-trigger 側だけが担い、本 workflow は concurrency で sweep 同士を直列化する。trigger との同時実行自体は起こり得るため、重複起動の抑止は中央側が issue ラベルと状態マーカーを再読して行う。
 # リポ毎に同じ実装を抱えると修正が点在するため、正本は ritmo-devin の reusable 側に寄せる
 name: Devin Slack Retry
 
