@@ -109,6 +109,10 @@ KNOWN_DRIFT: dict[str, str] = {
     # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
     # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
     "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま",
+    # 教材の day25 完成版は Day 08 の簡易サイドバーに Day 13〜25 の変更を積んだ形
+    # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
+    # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
+    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従",
 }
 
 

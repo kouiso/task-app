@@ -1273,7 +1273,7 @@ switch 文は「設定オブジェクト + lookup」に置き換えられるこ�
 
 ## 完成コード全体
 
-今日は4つのファイルを触りました。以下で各ファイルのコードを確認できます。`src/component/layout/app-layout.tsx` は変更部分だけを掲載しています。このファイルはStep 1の手順でアイコンのインポートと `menuItems` だけを置き換えてください。コンポーネント本体は残します。ほかの3ファイルは各見出しの下にあるコードブロックを順につなげると全文になります。
+今日は4つのファイルを触りました。以下で各ファイルのコードを確認できます。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1282,7 +1282,7 @@ switch 文は「設定オブジェクト + lookup」に置き換えられるこ�
 | `src/component/layout/app-layout.tsx` | サイドバーのタスク導線 | Step 1 |
 | `src/app/task/page.tsx` | タスク一覧ページ本体 | Step 1〜Step 7 |
 
-`app-layout.tsx` だけはDay 08 で作った土台のうち今日書き換えた2か所を載せます。残りの部分に今日は触っていないので手元のファイルをそのまま残してください。
+`app-layout.tsx` は今日書き換えた2か所を先に載せます。そのあとの全文には Day 08 で作った土台もそのまま入っています。
 
 ### `src/server/api/routers/task.ts`
 
@@ -1290,7 +1290,7 @@ switch 文は「設定オブジェクト + lookup」に置き換えられるこ�
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: インポート
+// インポート
 import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -1310,7 +1310,7 @@ import { USER_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getAll の入力
+// getAll の入力
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1337,7 +1337,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getAll の権限による絞り込み
+// getAll の権限による絞り込み
       const projectIds = await getUserProjectIds(ctx.session.userId);
 
       where.projectId = { in: projectIds };
@@ -1362,7 +1362,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getAll の関連データ
+// getAll の関連データ
       return await prisma.task.findMany({
         where,
         include: {
@@ -1390,7 +1390,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getAll の並び順と件数
+// getAll の並び順と件数
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         take: limit,
         skip: offset,
@@ -1404,7 +1404,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getById の取得
+// getById の取得
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1432,7 +1432,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getById のコメント
+// getById のコメント
           comments: {
             include: {
               user: {
@@ -1451,7 +1451,132 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: getById の存在確認と権限確認
+// getById の存在確認と権限確認
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+
+      assertMemberPermission(task.project.members);
+
+      return task;
+    }),
+});
+```
+
+完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: ファイル全体
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
       if (!task) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -1497,13 +1622,13 @@ router を書いただけでは画面から呼べません。この一覧へ `ta
 
 ### `src/component/layout/app-layout.tsx`
 
-ここは変更部分だけです。ファイル全体を置き換えずStep 1で指定した箇所へ反映してください。
+今日書き換えたのは次の2か所です。最後のブロックが Day 08 の土台を含めた全文です。
 
 **アイコンのインポート**:
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: アイコンのインポート
+// アイコンのインポート
 import {
   ClipboardList,
   FolderOpen,
@@ -1519,7 +1644,7 @@ import {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: サイドバーのメニュー項目
+// サイドバーのメニュー項目
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -1544,6 +1669,204 @@ const menuItems: MenuItem[] = [
 ];
 ```
 
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+];
+
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
+```
+
 項目をコードの中へ直接書かず配列にまとめてあるので要素を1つ足すだけでリンクが1本増えます。Day 08 で作った描画の仕組みには手を入れません。`path` の `/task` は `src/app/task/page.tsx` の置き場所と一致している必要があります。App Router はフォルダの並びをそのまま URL にするため`/tasks` と書き間違えるとクリックしても404ページに飛びます。
 
 
@@ -1553,7 +1876,7 @@ const menuItems: MenuItem[] = [
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: クライアント宣言とインポートの前半
+// クライアント宣言とインポートの前半
 'use client';
 
 import { useSearchParams } from 'next/navigation';
@@ -1570,7 +1893,7 @@ import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: インポートの後半
+// インポートの後半
 import {
   Select,
   SelectContent,
@@ -1589,7 +1912,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: state と URL パラメータ
+// state と URL パラメータ
 function TaskPageContent() {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
@@ -1613,7 +1936,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: データ取得
+// データ取得
   const { data: session } = api.auth.getSession.useQuery();
   const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
     {
@@ -1631,7 +1954,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: プロジェクトごとのロールの表
+// プロジェクトごとのロールの表
   // プロジェクトごとのログインユーザー自身のロールを引けるようにする
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
@@ -1655,7 +1978,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: 編集と削除の権限判定
+// 編集と削除の権限判定
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -1679,7 +2002,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: ハンドラーと読み込み中の表示
+// ハンドラーと読み込み中の表示
   const handleTaskClick = (taskId: string) => {
     setSelectedTask(taskId);
     setDetailOpen(true);
@@ -1709,7 +2032,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: 見出しとプロジェクトの絞り込み
+// 見出しとプロジェクトの絞り込み
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -1739,7 +2062,7 @@ function TaskPageContent() {
 
 ```typescript
           {/* filepath: src/app/task/page.tsx */}
-          {/* 完成版: ステータスの絞り込み */}
+          {/* ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select
               value={filterStatus}
@@ -1769,7 +2092,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx */}
-        {/* 完成版: タスクカードの一覧 */}
+        {/* タスクカードの一覧 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
@@ -1799,7 +2122,7 @@ function TaskPageContent() {
 ```typescript
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               {/* filepath: src/app/task/page.tsx */}
-              {/* 完成版: 0件のときの表示と詳細ダイアログ */}
+              {/* 0件のときの表示と詳細ダイアログ */}
               <p>タスクが見つかりません。</p>
               {filterProject === 'all' && filterStatus === 'all' && (
     <p>最初のタスクを作成しましょう！</p>
@@ -1821,7 +2144,203 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: Suspense で包んだページ本体
+// Suspense で包んだページ本体
+export default function TaskPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/lib/constant/roles';
+import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+function TaskPageContent() {
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const searchParams = useSearchParams();
+  const taskIdParam = searchParams.get('taskId');
+
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
+
+  const { data: session } = api.auth.getSession.useQuery();
+  const { data: tasks, isLoading: tasksLoading } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all' ? undefined : filterProject,
+      status: filterStatus === 'all' ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } = api.project.getAll.useQuery();
+
+  // プロジェクトごとのログインユーザー自身のロールを引けるようにする
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find((member) => member.userId === userId);
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const handleTaskClick = (taskId: string) => {
+    setSelectedTask(taskId);
+    setDetailOpen(true);
+  };
+
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleEdit = (taskId: string) => { void taskId; };
+
+  const handleDelete = (taskId: string) => { void taskId; };
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold tracking-tight">タスク</h1>
+
+        <div className="flex gap-2 w-full sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject} onValueChange={setFilterProject}>
+              <SelectTrigger aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder="すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのプロジェクト</SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-[200px]">
+            <Select
+              value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all' || isTaskStatus(value)) setFilterStatus(value);
+              }}
+            >
+              <SelectTrigger aria-label="ステータスで絞り込み">
+                <SelectValue placeholder="すべてのステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのステータス</SelectItem>
+                {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+          ) : (
+
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              {/* 完成版: 0件のときの表示と詳細ダイアログ */}
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+    <p>最初のタスクを作成しましょう！</p>
+  )}
+            </div>
+          )}
+        </div>
+
+        <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
+      </div>
+    </AppLayout>
+  );
+}
+
 export default function TaskPage() {
   return (
     <Suspense fallback={<PageLoadingSpinner />}>

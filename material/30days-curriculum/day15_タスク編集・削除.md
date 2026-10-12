@@ -1254,7 +1254,7 @@ const handleSubmit = (data: TaskFormData) => {
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
+今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は各ファイルの最後にある全文のブロックでファイルを置き換えてください。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1267,7 +1267,7 @@ const handleSubmit = (data: TaskFormData) => {
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: インポート
+// インポート
 import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -1290,7 +1290,7 @@ import { USER_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: create の入力スキーマ
+// create の入力スキーマ
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
@@ -1309,7 +1309,7 @@ const taskCreateSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の入力スキーマ
+// update の入力スキーマ
 const taskUpdateSchema = z.object({
   id: z.string().cuid(),
   expectedUpdatedAt: z.string().datetime().optional(),
@@ -1331,7 +1331,7 @@ const taskUpdateSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: position の採番
+// position の採番
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
@@ -1358,7 +1358,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: 担当者の所属チェック
+// 担当者の所属チェック
 async function assertTaskAssigneeBelongsToProject(
   projectId: string,
   assigneeId: string,
@@ -1388,7 +1388,7 @@ async function assertTaskAssigneeBelongsToProject(
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getAll の入力
+// getAll の入力
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1415,7 +1415,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getAll の絞り込み
+// getAll の絞り込み
       const projectIds = await getUserProjectIds(ctx.session.userId);
 
       where.projectId = { in: projectIds };
@@ -1441,7 +1441,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getAll の取得
+// getAll の取得
       return await prisma.task.findMany({
         where,
         include: {
@@ -1469,7 +1469,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getAll の並び順
+// getAll の並び順
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         take: limit,
         skip: offset,
@@ -1483,7 +1483,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getById の取得
+// getById の取得
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1511,7 +1511,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: getById の権限確認
+// getById の権限確認
           comments: {
             include: {
               user: {
@@ -1542,7 +1542,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: create の権限確認
+// create の権限確認
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
@@ -1575,7 +1575,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: create のデータ組み立て
+// create のデータ組み立て
     return await prisma.$transaction(async (tx) => {
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
@@ -1606,7 +1606,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: create の保存
+// create の保存
       if (input.assigneeId) {
         createData.assignee = {
           connect: { id: input.assigneeId },
@@ -1635,7 +1635,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の下ごしらえ
+// update の下ごしらえ
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, expectedUpdatedAt, ...data } = input;
 
@@ -1656,7 +1656,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update のステータスと完了日時
+// update のステータスと完了日時
     if (data.status !== undefined) {
       updateData.status = data.status;
       if (data.status !== existingTask.status) {
@@ -1675,7 +1675,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の残りの項目
+// update の残りの項目
     if (data.priority !== undefined) {
       updateData.priority = data.priority;
     }
@@ -1700,7 +1700,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update のプロジェクト移動
+// update のプロジェクト移動
     if (isProjectChanging) {
       const destinationMember = await prisma.projectMember.findUnique({
         where: {
@@ -1721,7 +1721,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の担当者
+// update の担当者
     if (data.assigneeId !== undefined) {
       if (data.assigneeId === null) {
         updateData.assignee = { disconnect: true };
@@ -1751,7 +1751,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の保存
+// update の保存
     try {
       // 比較と更新の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めて1回のクエリにまとめる
@@ -1782,7 +1782,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: update の競合エラー
+// update の競合エラー
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         throw new TRPCError({
@@ -1803,7 +1803,393 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 完成版: delete
+// delete
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await findTaskWithPermission(input.id, ctx.session.userId);
+      assertMemberPermission(task.project.members, 'canDelete');
+
+      await prisma.task.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+});
+```
+
+完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: ファイル全体
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  findTaskWithPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().cuid(),
+  assigneeId: z.string().cuid().optional(),
+});
+
+const taskUpdateSchema = z.object({
+  id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).optional().nullable(),
+  actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
+  assigneeId: z.string().cuid().optional().nullable(),
+});
+
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  if (lockedProjects.length === 0) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'プロジェクトが見つかりません',
+    });
+  }
+
+  const maxPosition = await tx.task.findFirst({
+    where: { projectId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  return (maxPosition?.position ?? -1) + 1;
+};
+
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+
+      where.projectId = { in: projectIds };
+
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+
+      assertMemberPermission(task.project.members);
+
+      return task;
+    }),
+
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+
+    assertMemberPermission(project.members, 'canEdit');
+
+    if (input.assigneeId) {
+      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
+        priority: input.priority,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        position: await getNextTaskPosition(tx, input.projectId),
+        project: {
+          connect: { id: input.projectId },
+        },
+        createdBy: {
+          connect: { id: ctx.session.userId },
+        },
+      };
+
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours = input.estimatedHours;
+      }
+
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+
+      return await tx.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+
+  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, expectedUpdatedAt, ...data } = input;
+
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+
+    const updateData: Prisma.TaskUpdateInput = {};
+    if (data.title !== undefined) {
+      updateData.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.status !== existingTask.status) {
+        if (data.status === TASK_STATUS.DONE) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+      }
+    }
+
+    if (data.priority !== undefined) {
+      updateData.priority = data.priority;
+    }
+    if (data.estimatedHours !== undefined) {
+      updateData.estimatedHours = data.estimatedHours;
+    }
+    if (data.actualHours !== undefined) {
+      updateData.actualHours = data.actualHours;
+    }
+    if (data.dueDate !== undefined) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+
+    if (isProjectChanging) {
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.project = { connect: { id: targetProjectId } };
+    }
+
+    if (data.assigneeId !== undefined) {
+      if (data.assigneeId === null) {
+        updateData.assignee = { disconnect: true };
+      } else {
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
+        updateData.assignee = { connect: { id: data.assigneeId } };
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assignee = { disconnect: true };
+      }
+    }
+
+    try {
+      // 比較と更新の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めて1回のクエリにまとめる
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+
+        return await tx.task.update({
+          where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
+          data: updateData,
+          include: {
+            project: true,
+            createdBy: {
+              select: USER_SELECT,
+            },
+            assignee: {
+              select: USER_SELECT,
+            },
+          },
+        });
+      });
+
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'タスクの内容が更新されています。' +
+            '最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
+  }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -1826,7 +2212,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: React と部品のインポート
+// React と部品のインポート
 'use client';
 
 import { Plus } from 'lucide-react';
@@ -1854,7 +2240,7 @@ import {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 選択欄と定数のインポート
+// 選択欄と定数のインポート
 import { Button }
   from '@/component/ui/button';
 import { DeleteConfirmDialog } from
@@ -1873,7 +2259,7 @@ import {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 定数と道具のインポート
+// 定数と道具のインポート
 import {
   hasPermission, isProjectMemberRole,
   type ProjectMemberRole,
@@ -1896,7 +2282,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 画面の状態
+// 画面の状態
 function TaskPageContent() {
   const [filterProject, setFilterProject] =
     useState<string>('all');
@@ -1922,7 +2308,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: URL と取得
+// URL と取得
   const searchParams = useSearchParams();
   const taskIdParam =
     searchParams.get('taskId');
@@ -1952,7 +2338,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 権限の判定
+// 権限の判定
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -1977,7 +2363,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 編集と削除の可否
+// 編集と削除の可否
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -2001,7 +2387,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: URL からの詳細表示
+// URL からの詳細表示
   useEffect(() => {
     if (taskIdParam) {
       setSelectedTask(taskIdParam);
@@ -2016,7 +2402,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 作成と更新の通信
+// 作成と更新の通信
   const createMutation =
     api.task.create.useMutation({
       onSuccess: () => {
@@ -2048,7 +2434,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 削除の通信
+// 削除の通信
   const deleteMutation =
     api.task.delete.useMutation({
       onSuccess: () => {
@@ -2066,7 +2452,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 3つのハンドラー
+// 3つのハンドラー
   const handleCreate = () => {
     setEditingTask(undefined);
     setDialogOpen(true);
@@ -2093,7 +2479,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 送信ハンドラーの更新分岐
+// 送信ハンドラーの更新分岐
   const handleSubmit =
     (data: TaskFormData) => {
       if (data.id) {
@@ -2125,7 +2511,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 送信ハンドラーの作成分岐
+// 送信ハンドラーの作成分岐
       if (!session?.user?.id) return;
       createMutation.mutate({
         title: data.title,
@@ -2152,7 +2538,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: カードのハンドラー
+// カードのハンドラー
   const handleTaskClick =
     (taskId: string) => {
       setSelectedTask(taskId);
@@ -2178,7 +2564,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 見出しとフィルター
+// 見出しとフィルター
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -2210,7 +2596,7 @@ function TaskPageContent() {
 
 ```typescript
               {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-              {/* 完成版: プロジェクトの絞り込み */}
+              {/* プロジェクトの絞り込み */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのプロジェクト
@@ -2231,7 +2617,7 @@ function TaskPageContent() {
 
 ```typescript
           {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-          {/* 完成版: ステータスの絞り込み */}
+          {/* ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select value={filterStatus}
               onValueChange={(value) => {
@@ -2251,7 +2637,7 @@ function TaskPageContent() {
 
 ```typescript
               {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-              {/* 完成版: ステータスの選択肢 */}
+              {/* ステータスの選択肢 */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのステータス
@@ -2275,7 +2661,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: カードの一覧 */}
+        {/* カードの一覧 */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -2305,7 +2691,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 空のときの表示
+// 空のときの表示
           ) : (
             <div className="col-span-full flex
               flex-col items-center
@@ -2327,7 +2713,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 3つのダイアログ */}
+        {/* 3つのダイアログ */}
         <TaskDetailDialog
           open={detailOpen}
           taskId={selectedTask}
@@ -2349,7 +2735,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 削除の確認ダイアログ */}
+        {/* 削除の確認ダイアログ */}
         <DeleteConfirmDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
@@ -2374,7 +2760,395 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ページ本体
+// ページ本体
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { api } from '@/trpc/react';
+
+function TaskPageContent() {
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [filterStatus, setFilterStatus] =
+    useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] =
+    useState<string | null>(null);
+  const [detailOpen, setDetailOpen] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen]
+    = useState(false);
+  const [deleteTargetId, setDeleteTargetId]
+    = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const taskIdParam =
+    searchParams.get('taskId');
+
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all'
+        ? undefined : filterProject,
+      status: filterStatus === 'all'
+        ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: session } =
+    api.auth.getSession.useQuery();
+  const utils = api.useUtils();
+
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
+
+  const createMutation =
+    api.task.create.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        setDialogOpen(false);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+
+  const handleCreate = () => {
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit =
+    (data: TaskFormData) => {
+      if (data.id) {
+        updateMutation.mutate({
+          id: data.id,
+          title: data.title,
+          description:
+            data.description || null,
+          status: data.status,
+          priority: data.priority,
+          dueDate: data.dueDate
+            ? dateOnlyToUtcStartIso(data.dueDate)
+            : null,
+          estimatedHours:
+            data.estimatedHours ?? null,
+          projectId: data.projectId,
+          assigneeId:
+            data.assigneeId || null,
+          expectedUpdatedAt:
+            data.expectedUpdatedAt,
+        });
+        return;
+      }
+
+      if (!session?.user?.id) return;
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        projectId: data.projectId,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : undefined,
+        estimatedHours:
+          data.estimatedHours ?? undefined,
+        assigneeId:
+          data.assigneeId || undefined,
+      });
+    };
+
+  const handleTaskClick =
+    (taskId: string) => {
+      setSelectedTask(taskId);
+      setDetailOpen(true);
+    };
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full
+          sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger
+                aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder=
+                  "すべてのプロジェクト" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-[200px]">
+            <Select value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all'
+                  || isTaskStatus(value))
+                  setFilterStatus(value);
+              }}>
+              <SelectTrigger>
+                <SelectValue placeholder=
+                  "すべてのステータス" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのステータス
+                </SelectItem>
+                {Object.entries(
+                  TASK_STATUS_LABELS
+                ).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <TaskDetailDialog
+          open={detailOpen}
+          taskId={selectedTask}
+          onClose={handleDetailClose}
+        />
+
+        <TaskDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingTask}
+          projects={projects ?? []}
+        />
+
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => {
+            if (deleteTargetId) {
+              deleteMutation.mutate(
+                { id: deleteTargetId }
+              );
+            }
+          }}
+          isPending={deleteMutation.isPending}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+
 export default function TaskPage() {
   return (
     <Suspense
