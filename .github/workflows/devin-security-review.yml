@@ -16,7 +16,7 @@ jobs:
     # DEVIN_REVIEW_ENABLED へ移行するまでの間、旧 CODEX_REVIEW_ENABLED でも動くようにしている
     if: vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write
