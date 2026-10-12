@@ -503,17 +503,19 @@ def find_decl_end(lines: Sequence[str], start: int) -> int:
     """宣言ブロックの終了行。メソッドチェーン(.foo( や => の継続を読み飛ばす。"""
     depth = 0
     j = start
+    # 行末の // コメントを終端判定に含めると `x = 1; // note` の宣言が
+    # 終わらず、置き換えで後続の宣言まで消える。コメントの除去は複数行
+    # テンプレートの状態を持ち回る _mask_code で行う（テンプレート内の
+    # `a; // b` をコメントとみなすと宣言が途中で終わる）。JSX テキスト内の
+    # `https://` もコメントとみなされるため、原文の行末が終端記号ならそちらを優先する
+    masked = _mask_code(lines[start:])
     while j < len(lines):
         s = _strip_for_depth(lines[j])
         depth += s.count("{") + s.count("(") + s.count("[")
         depth -= s.count("}") + s.count(")") + s.count("]")
-        # 行末の // コメントを終端判定に含めると `x = 1; // note` の宣言が
-        # 終わらず、置き換えで後続の宣言まで消える。ただし _code_text は
-        # 複数行テンプレートや JSX テキスト内の `https://` もコメントとみなす
-        # ため、原文の行末が終端記号ならそちらを優先する
         raw_last = lines[j].rstrip()[-1:]
         last = (raw_last if raw_last and raw_last in ";,)}]>"
-                else _code_text(lines[j]).rstrip()[-1:])
+                else masked[j - start].rstrip()[-1:])
         nxt = lines[j + 1].strip() if j + 1 < len(lines) else ""
         if depth <= 0 and last and last in ";,)}]>":
             if not nxt.startswith((".", "=>", "?", ":")):
@@ -1770,9 +1772,11 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
     # 断片が res 内に連続して書き込まれている位置。SequenceMatcher は断片の
     # 先頭行などを既存行との equal として扱うことがあり、変更区間だけで
     # 断片行を数えると対応がずれて正規化行が書き込まれるため、断片全体の
-    # 位置で対応させる。変更区間と重なる出現だけを書き込み位置とみなし、
-    # 断片が繰り返し現れる時は変更区間と最も多く重なる出現を選ぶ
-    #（最初に重なった出現だと既存の同じ並びを書き込み位置と取り違える）
+    # 位置で対応させる。断片が繰り返し現れる時は、out の連続区間1つを
+    # 断片へ置き換えれば res になる出現（前後が out と一致する出現）の
+    # 最初を選ぶ。SequenceMatcher の変更区間は繰り返しのある所では
+    # 書き込み位置と別の場所を指すことがある。そうした出現が無い時だけ
+    # 変更区間と最も多く重なる出現を使う
     span = -1
     m = len(frag_norm)
     changed = [(j1, j2) for op, _i1, _i2, j1, j2 in opcodes
@@ -1782,6 +1786,11 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
         for p in range(len(res) - m + 1):
             if res[p:p + m] != frag_norm:
                 continue
+            tail = len(res) - p - m
+            if (len(out) - tail >= p and res[:p] == out[:p]
+                    and res[p + m:] == out[len(out) - tail:]):
+                span = p
+                break
             ov = sum(max(0, min(j2, p + m) - max(j1, p))
                      for j1, j2 in changed)
             if ov > best:

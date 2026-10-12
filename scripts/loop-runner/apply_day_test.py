@@ -1139,6 +1139,10 @@ class Pr635LateReviewFixes(unittest.TestCase):
         jsx = ['export const L = () => <a href="/x">https://example.com</a>;',
                "export const b = 2;"]
         self.assertEqual(ad.find_decl_end(jsx, 0), 0)
+        # テンプレート内の `value; // literal` で宣言を終えない
+        tpl2 = ["const s = `", "value; // literal", "tail`;",
+                "const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl2, 0), 2)
 
     def test_splice_into_whitespace_only_file(self):
         # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む。
@@ -1197,6 +1201,13 @@ class Pr635LateReviewFixes(unittest.TestCase):
         _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
                                    [[l] for l in frag])
         self.assertEqual(end, 6)
+        # 変更区間が断片の出現と揃わない時も、前後が out と一致する
+        # 最初の出現（先頭の A の直後への挿入）を書き込み位置にする
+        out = ["A", "A", "B", "A", "A"]
+        res = ["A", "A", "B", "A", "B", "A", "B", "A", "A"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 5)
 
 
 if __name__ == "__main__":
