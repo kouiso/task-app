@@ -1120,7 +1120,7 @@ tRPCの `useQuery` は取得・状態・型をまとめて引き受けてくれ�
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: 取り込み
+// 取り込み
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -1136,7 +1136,7 @@ import { USER_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（同じファイルの続き）
-// 完成版: 手続きの骨組みと入力
+// 手続きの骨組みと入力
 export const projectRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1157,7 +1157,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（同じファイルの続き）
-// 完成版: 他人の一覧を守る判定
+// 他人の一覧を守る判定
       if (input?.userId && input.userId !== ctx.session.userId) {
         if (ctx.session.role !== USER_ROLE.ADMIN) {
           throw new TRPCError({
@@ -1174,7 +1174,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（同じファイルの続き）
-// 完成版: 検索条件の組み立て
+// 検索条件の組み立て
       if (!input?.userId) {
         where.members = {
           some: { userId: ctx.session.userId },
@@ -1196,7 +1196,80 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（同じファイルの続き）
-// 完成版: 取得と返却
+// 取得と返却
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
+完成版の `src/server/api/routers/project.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+
       return await prisma.project.findMany({
         where,
         include: {
@@ -1251,7 +1324,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 取り込み
+// 取り込み
 'use client';
 
 import { Plus } from 'lucide-react';
@@ -1272,7 +1345,7 @@ Step 1・Step 2・Step 4・Step 8 で少しずつ足した取り込みが最後�
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 状態とサーバーへの問い合わせ
+// 状態とサーバーへの問い合わせ
 function ProjectPageContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1292,7 +1365,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: ボタンの受け皿
+// ボタンの受け皿
   const handleEdit = (projectId: string) => {
     void projectId;
   };
@@ -1313,7 +1386,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 認証・認可の判定と読み込み中の表示
+// 認証・認可の判定と読み込み中の表示
   const projectAccessDenied =
     projectsError?.data?.code === 'UNAUTHORIZED' ||
     projectsError?.data?.code === 'FORBIDDEN';
@@ -1333,7 +1406,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 最初の取得失敗
+// 最初の取得失敗
   if (projectsError && (!projects || projectAccessDenied)) {
     return (
       <AppLayout>
@@ -1353,7 +1426,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 見出しまで
+// 見出しまで
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -1369,7 +1442,7 @@ function ProjectPageContent() {
 
 ```typescript
           {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
-          {/* 完成版: スイッチとボタン */}
+          {/* スイッチとボタン */}
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Switch
@@ -1402,7 +1475,7 @@ function ProjectPageContent() {
 
 ```typescript
         {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
-        {/* 完成版: カードを並べる枠 */}
+        {/* カードを並べる枠 */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {projects && projects.length > 0
             ? (projects.map((project) => {
@@ -1424,7 +1497,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 1件ぶんのカード
+// 1件ぶんのカード
               return (
                 <ProjectCard
                   key={project.id}
@@ -1451,7 +1524,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 0件のときの表示と閉じタグ
+// 0件のときの表示と閉じタグ
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               <p>プロジェクトが見つかりません。</p>
@@ -1471,7 +1544,162 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 画面として書き出す部分
+// 画面として書き出す部分
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/project/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { ProjectCard } from '@/component/project/project-card';
+import { Button } from '@/component/ui/button';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Switch } from '@/component/ui/switch';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+    error: projectsError,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+
+  const handleEdit = (projectId: string) => {
+    void projectId;
+  };
+  const handleDelete = (projectId: string) => {
+    void projectId;
+  };
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  const projectAccessDenied =
+    projectsError?.data?.code === 'UNAUTHORIZED' ||
+    projectsError?.data?.code === 'FORBIDDEN';
+
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (projectsError && (!projects || projectAccessDenied)) {
+    return (
+      <AppLayout>
+        <p role="alert">
+          {projectAccessDenied
+            ? 'この一覧を表示する権限がありません。'
+            : 'プロジェクトを読み込めませんでした。'}
+        </p>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">
+            プロジェクト
+          </h1>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={setShowArchived} />
+              <Label htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        {projectsError && projects && !projectAccessDenied && (
+          <p role="alert" className="text-sm text-destructive">
+            最新の一覧を取得できませんでした。
+            前回の一覧を表示しています。
+          </p>
+        )}
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {projects && projects.length > 0
+            ? (projects.map((project) => {
+              // キャンセル済みは進捗の母数に含めない
+              let taskCount = 0;
+              let doneCount = 0;
+              for (const t of project.tasks ?? []) {
+                if (t.status === TASK_STATUS.CANCELLED)
+                  continue;
+                taskCount++;
+                if (t.status === TASK_STATUS.DONE)
+                  doneCount++;
+              }
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={project.description}
+                  color={project.color}
+                  memberCount={project.members?.length ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount,
+                  }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={handleProjectClick}
+                  isArchived={project.isArchived}
+                />);
+            })
+
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <p>プロジェクトが見つかりません。</p>
+              <p>最初のプロジェクトを作成しましょう！</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
 export default function ProjectPage() {
   return (
     <Suspense

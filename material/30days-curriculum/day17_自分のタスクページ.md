@@ -1397,7 +1397,7 @@ function buildStatusSections(
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: 画面部品のインポート
+// 画面部品のインポート
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
@@ -1427,7 +1427,7 @@ import {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 判定と変換のインポート
+// 判定と変換のインポート
 import type { TaskPriority }
   from '@/lib/constant/priority';
 import {
@@ -1455,7 +1455,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: タブの定義
+// タブの定義
 const ACTIVE_STATUSES: TaskStatus[] = [
   TASK_STATUS.TODO,
   TASK_STATUS.IN_PROGRESS,
@@ -1480,7 +1480,7 @@ const STATUS_TABS: {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: グループ表示に渡す値の型
+// グループ表示に渡す値の型
 interface TaskGroupSectionProps {
   title: string;
   titleClassName?: string;
@@ -1507,7 +1507,7 @@ interface TaskGroupSectionProps {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: グループ表示が受け取る関数
+// グループ表示が受け取る関数
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTimeLogSuccess: () => void;
@@ -1522,7 +1522,7 @@ interface TaskGroupSectionProps {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: グループ表示の見出し
+// グループ表示の見出し
 const TaskGroupSection = ({
   title, titleClassName,
   tasks, onEdit, onDelete,
@@ -1547,7 +1547,7 @@ const TaskGroupSection = ({
 
 ```typescript
       {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: グループ表示のカード生成 */}
+      {/* グループ表示のカード生成 */}
       <div className="grid gap-6 sm:grid-cols-2
         lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
@@ -1576,7 +1576,7 @@ const TaskGroupSection = ({
 
 ```typescript
       {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: グループ表示の閉じタグ */}
+      {/* グループ表示の閉じタグ */}
       </div>
     </div>
   );
@@ -1589,7 +1589,7 @@ const TaskGroupSection = ({
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
-// 完成版: 画面の状態
+// 画面の状態
 export default function MyTasksPage() {
   const [activeTab, setActiveTab] =
     useState<TaskStatus | 'all'>('all');
@@ -1611,7 +1611,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: サーバーからの取得
+// サーバーからの取得
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     api.auth.getCurrentUser.useQuery();
   const { data: projects } =
@@ -1637,7 +1637,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: プロジェクトごとの自分のロール
+// プロジェクトごとの自分のロール
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = currentUser?.id;
@@ -1662,7 +1662,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 編集と削除の可否
+// 編集と削除の可否
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -1688,7 +1688,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 記録の成功と保存の通信
+// 記録の成功と保存の通信
   const handleTimeLogSuccess =
     useCallback(() => {
       utils.task.getAll.invalidate();
@@ -1707,7 +1707,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 削除の通信
+// 削除の通信
   const deleteMutation =
     api.task.delete.useMutation({
       onSuccess: () => {
@@ -1728,7 +1728,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 編集と削除のハンドラー
+// 編集と削除のハンドラー
   const handleEdit = (taskId: string) => {
     const task =
       tasks?.find((t) => t.id === taskId);
@@ -1750,7 +1750,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 保存の中身
+// 保存の中身
   const handleSubmit = (data: TaskFormData) => {
     if (data.id) {
       updateMutation.mutate({
@@ -1781,7 +1781,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 期限別の振り分け
+// 期限別の振り分け
   const groupedTasks = useMemo(() => {
     const overdue: typeof tasks = [];
     const today: typeof tasks = [];
@@ -1813,7 +1813,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 振り分けの結果とローディング
+// 振り分けの結果とローディング
     return { overdue, today, upcoming, noDueDate };
   }, [tasks]);
 
@@ -1832,7 +1832,7 @@ export default function MyTasksPage() {
 
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
-// 完成版: 画面の外枠と見出し
+// 画面の外枠と見出し
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -1847,7 +1847,7 @@ export default function MyTasksPage() {
 
 ```typescript
         {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: ステータスタブ */}
+        {/* ステータスタブ */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Tabs
             value={activeTab}
@@ -1875,7 +1875,7 @@ export default function MyTasksPage() {
 
 ```typescript
           {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-          {/* 完成版: プロジェクトの絞り込み */}
+          {/* プロジェクトの絞り込み */}
           <div className="ml-auto w-full sm:w-[200px]">
             <Select
               value={filterProject}
@@ -1905,7 +1905,7 @@ export default function MyTasksPage() {
 
 ```typescript
         {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 期限が近い2グループ */}
+        {/* 期限が近い2グループ */}
         <TaskGroupSection
           title="期限切れ"
           titleClassName="text-destructive"
@@ -1935,7 +1935,7 @@ export default function MyTasksPage() {
 
 ```typescript
         {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 急がない2グループ */}
+        {/* 急がない2グループ */}
         <TaskGroupSection
           title="今後の予定"
           tasks={groupedTasks.upcoming ?? []}
@@ -1963,7 +1963,7 @@ export default function MyTasksPage() {
 
 ```typescript
         {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 1件も無いときの案内 */}
+        {/* 1件も無いときの案内 */}
         {tasks && tasks.length === 0 && (
           <div className="flex flex-col
             items-center justify-center py-12
@@ -1980,7 +1980,409 @@ export default function MyTasksPage() {
 
 ```typescript
       {/* filepath: src/app/my-task/page.tsx（同じファイルの続き） */}
-      {/* 完成版: 2つのダイアログ */}
+      {/* 2つのダイアログ */}
+      <TaskDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleSubmit}
+        initialData={editingTask}
+        projects={projects ?? []}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            deleteMutation.mutate({
+              id: deleteTargetId,
+            });
+          }
+        }}
+        isPending={deleteMutation.isPending}
+      />
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/my-task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/my-task/page.tsx
+// 完成版: ファイル全体
+import type { TaskPriority }
+  from '@/lib/constant/priority';
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus, TASK_STATUS,
+  TASK_STATUS_LABELS, type TaskStatus,
+} from '@/lib/constant/status';
+import {
+  dateOnlyFromValue,
+  dateOnlyToUtcStartIso,
+  localDateOnly,
+} from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+const ACTIVE_STATUSES: TaskStatus[] = [
+  TASK_STATUS.TODO,
+  TASK_STATUS.IN_PROGRESS,
+  TASK_STATUS.IN_REVIEW,
+  TASK_STATUS.DONE,
+];
+const STATUS_TABS: {
+  label: string;
+  value: TaskStatus | 'all';
+}[] = [
+  { label: 'すべて', value: 'all' },
+  ...ACTIVE_STATUSES.map((status) => ({
+    label: TASK_STATUS_LABELS[status],
+    value: status,
+  })),
+];
+
+interface TaskGroupSectionProps {
+  title: string;
+  titleClassName?: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Date | null;
+    assignee: {
+      name: string | null;
+      email: string;
+      avatar: string | null;
+    } | null;
+    projectId: string;
+    timeSpentMinutes: number;
+  }>;
+
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onTimeLogSuccess: () => void;
+  canEditProject: (projectId: string) => boolean;
+  canDeleteProject: (projectId: string) => boolean;
+}
+
+const TaskGroupSection = ({
+  title, titleClassName,
+  tasks, onEdit, onDelete,
+  onTimeLogSuccess,
+  canEditProject, canDeleteProject,
+}: TaskGroupSectionProps) => {
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <h2 className={cn(
+        'text-xl font-semibold flex items-center gap-2',
+        titleClassName,
+      )}>
+        {title} ({tasks.length})
+      </h2>
+
+      <div className="grid gap-6 sm:grid-cols-2
+        lg:grid-cols-3 xl:grid-cols-4">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            id={task.id}
+            title={task.title}
+            description={task.description}
+            status={task.status}
+            priority={task.priority}
+            dueDate={task.dueDate}
+            assignee={task.assignee}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onTimeLogSuccess={onTimeLogSuccess}
+            canEdit={canEditProject(task.projectId)}
+            canDelete={canDeleteProject(task.projectId)}
+            timeSpentMinutes={task.timeSpentMinutes}
+          />
+        ))}
+
+      </div>
+    </div>
+  );
+};
+
+export default function MyTasksPage() {
+  const [activeTab, setActiveTab] =
+    useState<TaskStatus | 'all'>('all');
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] =
+    useState(false);
+  const [deleteTargetId, setDeleteTargetId] =
+    useState<string | null>(null);
+
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    api.auth.getCurrentUser.useQuery();
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: tasks, isLoading } =
+    api.task.getAll.useQuery(
+      {
+        assigneeId: currentUser?.id,
+        status: activeTab === 'all'
+          ? undefined : activeTab,
+        projectId: filterProject === 'all'
+          ? undefined : filterProject,
+      },
+      { enabled: !!currentUser },
+    );
+
+  const utils = api.useUtils();
+
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = currentUser?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, currentUser?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role
+        ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role
+        ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const handleTimeLogSuccess =
+    useCallback(() => {
+      utils.task.getAll.invalidate();
+    }, [utils.task.getAll]);
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
+      },
+      onError: (error) => {
+        toast.error(error.message
+          || 'タスクの削除に失敗しました');
+      },
+    });
+
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSubmit = (data: TaskFormData) => {
+    if (data.id) {
+      updateMutation.mutate({
+        id: data.id,
+        title: data.title,
+        description: data.description ?? null,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : null,
+        estimatedHours:
+          data.estimatedHours ?? null,
+        projectId: data.projectId,
+        assigneeId: data.assigneeId ?? null,
+        expectedUpdatedAt:
+          data.expectedUpdatedAt,
+      });
+    }
+  };
+
+  const groupedTasks = useMemo(() => {
+    const overdue: typeof tasks = [];
+    const today: typeof tasks = [];
+    const upcoming: typeof tasks = [];
+    const noDueDate: typeof tasks = [];
+    const todayKey = localDateOnly(new Date());
+
+    for (const t of tasks ?? []) {
+      if (!t.dueDate) {
+        noDueDate.push(t);
+        continue;
+      }
+
+      const dueDateKey = dateOnlyFromValue(t.dueDate);
+
+      if (dueDateKey === todayKey) {
+        today.push(t);
+      } else if (dueDateKey < todayKey) {
+        overdue.push(t);
+      } else {
+        upcoming.push(t);
+      }
+    }
+
+    return { overdue, today, upcoming, noDueDate };
+  }, [tasks]);
+
+  if (isCurrentUserLoading || isLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          マイタスク
+        </h1>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              if (v === 'all' || isTaskStatus(v))
+                setActiveTab(v);
+            }}
+            className="w-full sm:w-auto"
+          >
+            <TabsList>
+              {STATUS_TABS.map((tab) => (
+                <TabsTrigger
+                  key={tab.label}
+                  value={tab.value}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="ml-auto w-full sm:w-[200px]">
+            <Select
+              value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder="すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <TaskGroupSection
+          title="期限切れ"
+          titleClassName="text-destructive"
+          tasks={groupedTasks.overdue ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        <TaskGroupSection
+          title="今日が期限"
+          titleClassName="text-orange-500"
+          tasks={groupedTasks.today ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        <TaskGroupSection
+          title="今後の予定"
+          tasks={groupedTasks.upcoming ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        <TaskGroupSection
+          title="期限なし"
+          tasks={groupedTasks.noDueDate ?? []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onTimeLogSuccess={handleTimeLogSuccess}
+          canEditProject={canEditProject}
+          canDeleteProject={canDeleteProject}
+        />
+
+        {tasks && tasks.length === 0 && (
+          <div className="flex flex-col
+            items-center justify-center py-12
+            text-center text-muted-foreground">
+            <p>条件に合うタスクはありません</p>
+          </div>
+        )}
+      </div>
+
       <TaskDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

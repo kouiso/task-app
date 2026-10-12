@@ -1054,7 +1054,7 @@ console.log(readLoginForm(demoFormData));
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// 完成版: 'use client' と外部ライブラリの import
+// 'use client' と外部ライブラリの import
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -1073,7 +1073,7 @@ import { z } from 'zod';
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// 完成版: プロジェクト内の部品の import
+// プロジェクト内の部品の import
 import {
   Alert, AlertDescription, AlertTitle,
 } from '@/component/ui/alert';
@@ -1094,7 +1094,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// 完成版: バリデーションのルールと型
+// バリデーションのルールと型
 const loginSchema = z.object({
   email: z.string()
     .email('有効なメールアドレスを入力してください'),
@@ -1111,7 +1111,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 ```typescript
 // filepath: src/app/login/page.tsx
-// 完成版: 遷移先とエラーの置き場
+// 遷移先とエラーの置き場
 function LoginForm() {
   const searchParams = useSearchParams();
   const rawCallbackUrl =
@@ -1130,7 +1130,7 @@ function LoginForm() {
 
 ```typescript
 // filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: フォーム管理の道具
+// フォーム管理の道具
   const {
     register,
     handleSubmit,
@@ -1146,7 +1146,7 @@ function LoginForm() {
 
 ```typescript
 // filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: ログイン通信の登録
+// ログイン通信の登録
   const loginMutation =
     api.auth.login.useMutation({
       onSuccess: (data) => {
@@ -1171,7 +1171,7 @@ function LoginForm() {
 
 ```typescript
 // filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: 送信処理
+// 送信処理
   const onSubmit = async (
     data: LoginFormData
   ) => {
@@ -1186,7 +1186,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
 // filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: return の外枠と CardHeader
+// return の外枠と CardHeader
   return (
     <div className="flex min-h-screen
       items-center justify-center px-4">
@@ -1216,7 +1216,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
         {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
-        {/* 完成版: フォームの開始とサーバーエラーの帯 */}
+        {/* フォームの開始とサーバーエラーの帯 */}
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)}
             className="space-y-4">
@@ -1237,7 +1237,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
             {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
-            {/* 完成版: メールアドレス入力欄 */}
+            {/* メールアドレス入力欄 */}
             <div className="space-y-2">
               <Label htmlFor="email">
                 メールアドレス
@@ -1264,7 +1264,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
             {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
-            {/* 完成版: パスワード入力欄 */}
+            {/* パスワード入力欄 */}
             <div className="space-y-2">
               <Label htmlFor="password">
                 パスワード
@@ -1289,7 +1289,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
             {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
-            {/* 完成版: 送信ボタン */}
+            {/* 送信ボタン */}
             <Button
               type="submit"
               className="w-full bg-gradient-to-r
@@ -1309,7 +1309,7 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
             {/* filepath: src/app/login/page.tsx（同じファイルの続き） */}
-            {/* 完成版: 登録リンクと閉じタグ */}
+            {/* 登録リンクと閉じタグ */}
             <div className="text-center text-sm
               text-muted-foreground">
               アカウントをお持ちでない方は{' '}
@@ -1335,7 +1335,193 @@ Step 3 で仮に置いた `console.log` はここには残っていません。�
 
 ```typescript
 // filepath: src/app/login/page.tsx（同じファイルの続き）
-// 完成版: ページ本体
+// ページ本体
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen
+        items-center justify-center">
+        読み込み中...
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/login/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/login/page.tsx
+// 完成版: ファイル全体
+import {
+  Alert, AlertDescription, AlertTitle,
+} from '@/component/ui/alert';
+import { Button } from '@/component/ui/button';
+import {
+  Card, CardContent,
+  CardDescription, CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { isValidRedirectUrl } from '@/lib/redirect';
+import { api } from '@/trpc/react';
+
+const loginSchema = z.object({
+  email: z.string()
+    .email('有効なメールアドレスを入力してください'),
+  password: z.string()
+    .min(1, 'パスワードを入力してください'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const rawCallbackUrl =
+    searchParams?.get('callbackUrl')
+    || '/dashboard';
+  const callbackUrl =
+    isValidRedirectUrl(rawCallbackUrl)
+      ? rawCallbackUrl : '/dashboard';
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const loginMutation =
+    api.auth.login.useMutation({
+      onSuccess: (data) => {
+        toast.success(
+          `おかえりなさい、${data.user.name}さん`
+        );
+        window.location
+          .replace(callbackUrl);
+      },
+      onError: (error) => {
+        setError(
+          error.message
+          ?? 'ログイン中にエラーが発生しました'
+        );
+      },
+    });
+
+  const onSubmit = async (
+    data: LoginFormData
+  ) => {
+    setError(null);
+    loginMutation.mutate(data);
+  };
+
+  return (
+    <div className="flex min-h-screen
+      items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader
+          className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="rounded-full
+              bg-gradient-to-r from-blue-500
+              to-indigo-500 p-3 shadow-lg">
+              <Lock className="h-6 w-6
+                text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">
+            ログイン
+          </CardTitle>
+          <CardDescription>
+            アカウントにログインしてください
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>エラー</AlertTitle>
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                メールアドレス
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                autoComplete="email"
+                autoFocus
+                {...register('email')}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                パスワード
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r
+                from-blue-600 to-indigo-600
+                hover:from-blue-700
+                hover:to-indigo-700 shadow-md"
+              disabled={loginMutation.isPending}>
+              {loginMutation.isPending
+                ? 'ログイン中...'
+                : 'ログイン'}
+            </Button>
+
+            <div className="text-center text-sm
+              text-muted-foreground">
+              アカウントをお持ちでない方は{' '}
+              <Link
+                href="/register"
+                className="text-blue-600 underline
+                  underline-offset-4
+                  hover:text-blue-800">
+                こちら
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={

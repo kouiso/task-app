@@ -1209,7 +1209,7 @@ export function StatusActionButton({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: addTime の入力スキーマ
+// addTime の入力スキーマ
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
   minutesToAdd: z.number().int().min(0),
@@ -1222,7 +1222,7 @@ const taskTimeUpdateSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: addTime 手続き
+// addTime 手続き
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
     await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
 
@@ -1237,6 +1237,368 @@ const taskTimeUpdateSchema = z.object({
   }),
 ```
 
+完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: ファイル全体
+import { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import {
+  assertMemberPermission,
+  findTaskWithPermission,
+  getUserProjectIds,
+} from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: taskStatusSchema.default(TASK_STATUS.TODO),
+  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().cuid(),
+  assigneeId: z.string().cuid().optional(),
+});
+const taskUpdateSchema = z.object({
+  id: z.string().cuid(),
+  expectedUpdatedAt: z.string().datetime().optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).optional().nullable(),
+  actualHours: z.number().min(0).optional(),
+  projectId: z.string().cuid().optional(),
+  assigneeId: z.string().cuid().optional().nullable(),
+});
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+  );
+  if (lockedProjects.length === 0) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'プロジェクトが見つかりません',
+    });
+  }
+  const maxPosition = await tx.task.findFirst({
+    where: { projectId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  return (maxPosition?.position ?? -1) + 1;
+};
+async function assertTaskAssigneeBelongsToProject(
+  projectId: string,
+  assigneeId: string,
+): Promise<void> {
+  const member = await prisma.projectMember.findUnique({
+    where: {
+      userId_projectId: {
+        userId: assigneeId,
+        projectId,
+      },
+    },
+    select: { id: true },
+  });
+  if (!member) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: '担当者にはこのプロジェクトのメンバーを指定してください',
+    });
+  }
+}
+const taskTimeUpdateSchema = z.object({
+  id: z.string().cuid(),
+  minutesToAdd: z.number().int().min(0),
+});
+export const taskRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().cuid().optional(),
+          status: taskStatusSchema.optional(),
+          priority: taskPrioritySchema.optional(),
+          assigneeId: z.string().cuid().optional(),
+          limit: z.number().int().min(1).max(100).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.TaskWhereInput = {};
+      const limit = input?.limit ?? 100;
+      const offset = input?.offset ?? 0;
+      const projectIds = await getUserProjectIds(ctx.session.userId);
+      where.projectId = { in: projectIds };
+      if (input?.projectId) {
+        if (!projectIds.includes(input.projectId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'このプロジェクトへのアクセス権限がありません',
+          });
+        }
+        where.projectId = input.projectId;
+      }
+      if (input?.status) where.status = input.status;
+      if (input?.priority) where.priority = input.priority;
+      if (input?.assigneeId) where.assigneeId = input.assigneeId;
+      return await prisma.task.findMany({
+        where,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+        take: limit,
+        skip: offset,
+      });
+    }),
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          project: {
+            include: {
+              members: {
+                where: { userId: ctx.session.userId },
+              },
+            },
+          },
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+          comments: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'タスクが見つかりません',
+        });
+      }
+      assertMemberPermission(task.project.members);
+      return task;
+    }),
+  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
+    const project = await prisma.project.findUnique({
+      where: { id: input.projectId },
+      include: {
+        members: {
+          where: { userId: ctx.session.userId },
+        },
+      },
+    });
+    if (!project) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
+    assertMemberPermission(project.members, 'canEdit');
+    if (input.assigneeId) {
+      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+    }
+    return await prisma.$transaction(async (tx) => {
+      const createData: Prisma.TaskCreateInput = {
+        title: input.title,
+        status: input.status,
+        completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
+        priority: input.priority,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        position: await getNextTaskPosition(tx, input.projectId),
+        project: {
+          connect: { id: input.projectId },
+        },
+        createdBy: {
+          connect: { id: ctx.session.userId },
+        },
+      };
+      if (input.description !== undefined) {
+        createData.description = input.description;
+      }
+      if (input.estimatedHours !== undefined) {
+        createData.estimatedHours = input.estimatedHours;
+      }
+      if (input.assigneeId) {
+        createData.assignee = {
+          connect: { id: input.assigneeId },
+        };
+      }
+      return await tx.task.create({
+        data: createData,
+        include: {
+          project: true,
+          createdBy: {
+            select: USER_SELECT,
+          },
+          assignee: {
+            select: USER_SELECT,
+          },
+        },
+      });
+    });
+  }),
+  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, expectedUpdatedAt, ...data } = input;
+    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+    const updateData: Prisma.TaskUpdateInput = {};
+    if (data.title !== undefined) {
+      updateData.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.status !== existingTask.status) {
+        if (data.status === TASK_STATUS.DONE) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+      }
+    }
+    if (data.priority !== undefined) {
+      updateData.priority = data.priority;
+    }
+    if (data.estimatedHours !== undefined) {
+      updateData.estimatedHours = data.estimatedHours;
+    }
+    if (data.actualHours !== undefined) {
+      updateData.actualHours = data.actualHours;
+    }
+    if (data.dueDate !== undefined) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+    const isProjectChanging =
+      data.projectId !== undefined && data.projectId !== existingTask.projectId;
+    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    if (isProjectChanging) {
+      const destinationMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: targetProjectId,
+          },
+        },
+      });
+      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+      updateData.project = { connect: { id: targetProjectId } };
+    }
+    if (data.assigneeId !== undefined) {
+      if (data.assigneeId === null) {
+        updateData.assignee = { disconnect: true };
+      } else {
+        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
+        updateData.assignee = { connect: { id: data.assigneeId } };
+      }
+    } else if (isProjectChanging && existingTask.assigneeId) {
+      const assigneeStillMember = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: existingTask.assigneeId,
+            projectId: targetProjectId,
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigneeStillMember) {
+        updateData.assignee = { disconnect: true };
+      }
+    }
+    try {
+      // 比較と更新の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めて1回のクエリにまとめる
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+        return await tx.task.update({
+          where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
+          data: updateData,
+          include: {
+            project: true,
+            createdBy: {
+              select: USER_SELECT,
+            },
+            assignee: {
+              select: USER_SELECT,
+            },
+          },
+        });
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'タスクの内容が更新されています。' +
+            '最新の内容を再読み込みしてください',
+        });
+      }
+      throw err;
+    }
+  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await findTaskWithPermission(input.id, ctx.session.userId);
+      assertMemberPermission(task.project.members, 'canDelete');
+      await prisma.task.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+  addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+    return await prisma.task.update({
+      where: { id: input.id },
+      data: {
+        timeSpentMinutes: {
+          increment: input.minutesToAdd,
+        },
+      },
+    });
+  }),
+});
+```
+
 置き場所は Day 15 で書いた `delete` の直後です。合計の足し算をここへ集めたので画面側は増えたあとの数字を受け取るだけで済みます。`increment` を使うのは読み出してから書き戻す形だと2回の記録がほぼ同時に届いたときに片方が消えるからです。
 
 ### `src/component/task/time-log-dialog.tsx`
@@ -1245,7 +1607,7 @@ const taskTimeUpdateSchema = z.object({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: インポート
+// インポート
 'use client';
 
 import { zodResolver }
@@ -1270,7 +1632,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: バリデーションスキーマ
+// バリデーションスキーマ
 const timeLogSchema = z.object({
   hours: z.number().int().min(0),
   minutes: z.number().int().min(0).max(59),
@@ -1289,7 +1651,7 @@ type TimeLogFormData =
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: Props とフォームの初期化
+// Props とフォームの初期化
 interface TimeLogDialogProps {
   open: boolean;
   onClose: () => void;
@@ -1315,7 +1677,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 閉じる処理と通信
+// 閉じる処理と通信
   const handleClose = () => {
     reset();
     onClose();
@@ -1336,7 +1698,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: 送信ハンドラー
+// 送信ハンドラー
   const onSubmit = async (
     data: TimeLogFormData,
   ) => {
@@ -1363,7 +1725,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/time-log-dialog.tsx
-// 完成版: ダイアログの見出し
+// ダイアログの見出し
   return (
     <Dialog open={open}
       onOpenChange={handleClose}>
@@ -1384,7 +1746,7 @@ export function TimeLogDialog({
 
 ```typescript
         {/* filepath: src/component/task/time-log-dialog.tsx */}
-        {/* 完成版: 時間の入力欄 */}
+        {/* 時間の入力欄 */}
         <div className="flex gap-4">
           <div className="flex-1">
             <Label htmlFor="hours">時間</Label>
@@ -1407,7 +1769,7 @@ export function TimeLogDialog({
 
 ```typescript
           {/* filepath: src/component/task/time-log-dialog.tsx */}
-          {/* 完成版: 分の入力欄 */}
+          {/* 分の入力欄 */}
           <div className="flex-1">
             <Label htmlFor="minutes">分</Label>
             <Input id="minutes"
@@ -1430,7 +1792,152 @@ export function TimeLogDialog({
 
 ```typescript
         {/* filepath: src/component/task/time-log-dialog.tsx */}
-        {/* 完成版: フッターのボタン */}
+        {/* フッターのボタン */}
+        <DialogFooter>
+          <Button variant="outline"
+            onClick={handleClose}>
+            キャンセル
+          </Button>
+          <Button
+            onClick={handleSubmit(onSubmit)}
+            disabled={addTimeMutation.isPending}>
+            {addTimeMutation.isPending
+              ? '追加中...' : '時間を追加'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+完成版の `src/component/task/time-log-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/task/time-log-dialog.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/component/ui/dialog';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { api } from '@/trpc/react';
+
+const timeLogSchema = z.object({
+  hours: z.number().int().min(0),
+  minutes: z.number().int().min(0).max(59),
+}).refine(
+  (data) => data.hours * 60 + data.minutes > 0,
+  { message: '1分以上入力してください',
+    path: ['minutes'] },
+);
+type TimeLogFormData =
+  z.infer<typeof timeLogSchema>;
+
+interface TimeLogDialogProps {
+  open: boolean;
+  onClose: () => void;
+  taskId: string;
+  onSuccess?: () => void;
+}
+
+export function TimeLogDialog({
+  open, onClose, taskId, onSuccess,
+}: TimeLogDialogProps) {
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<TimeLogFormData>({
+    resolver: zodResolver(timeLogSchema),
+    defaultValues: { hours: 0, minutes: 0 },
+  });
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const addTimeMutation =
+    api.task.addTime.useMutation({
+      onSuccess: () => {
+        onSuccess?.();
+        handleClose();
+      },
+    });
+
+  const onSubmit = async (
+    data: TimeLogFormData,
+  ) => {
+    const totalMinutes =
+      data.hours * 60 + data.minutes;
+    try {
+      await addTimeMutation.mutateAsync({
+        id: taskId,
+        minutesToAdd: totalMinutes,
+      });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : '作業時間の追加に失敗しました',
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open}
+      onOpenChange={handleClose}>
+      <DialogContent className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>
+            作業時間の記録
+          </DialogTitle>
+          <DialogDescription>
+            タスクに作業時間を記録します
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label htmlFor="hours">時間</Label>
+            <Input id="hours"
+              inputMode="numeric"
+              {...register('hours',
+                { valueAsNumber: true })} />
+            {errors.hours && (
+              <p className="text-sm
+                text-destructive">
+                {errors.hours.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <Label htmlFor="minutes">分</Label>
+            <Input id="minutes"
+              inputMode="numeric"
+              {...register('minutes',
+                { valueAsNumber: true })} />
+            {errors.minutes && (
+              <p className="text-sm
+                text-destructive">
+                {errors.minutes.message}
+              </p>
+            )}
+          </div>
+        </div>
+
         <DialogFooter>
           <Button variant="outline"
             onClick={handleClose}>
@@ -1457,7 +1964,7 @@ export function TimeLogDialog({
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: インポート
+// インポート
 'use client';
 
 import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
@@ -1481,7 +1988,7 @@ import { TimeLogDialog } from './time-log-dialog';
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: 分を読みやすい形に直す関数
+// 分を読みやすい形に直す関数
 const formatMinutes = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
   const mins = Math.floor(minutes % 60);
@@ -1495,7 +2002,7 @@ const formatMinutes = (minutes: number) => {
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: Props の型
+// Props の型
 interface TaskCardProps {
   id: string;
   title: string;
@@ -1524,7 +2031,7 @@ interface TaskCardProps {
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: 関数の宣言と受け取り
+// 関数の宣言と受け取り
 export function TaskCard({
   id,
   title,
@@ -1549,7 +2056,7 @@ export function TaskCard({
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: 状態とカードのクリック
+// 状態とカードのクリック
   const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
   const overdue =
     isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
@@ -1567,7 +2074,7 @@ export function TaskCard({
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: 3つのボタンのハンドラー
+// 3つのボタンのハンドラー
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit(id);
@@ -1590,7 +2097,7 @@ export function TaskCard({
 
 ```typescript
 // filepath: src/component/task/task-card.tsx
-// 完成版: カードの外枠
+// カードの外枠
   return (
     <>
       <Card
@@ -1609,7 +2116,7 @@ export function TaskCard({
 
 ```typescript
         {/* filepath: src/component/task/task-card.tsx */}
-        {/* 完成版: タイトル */}
+        {/* タイトル */}
         <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
           <CardTitle
             className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
@@ -1638,7 +2145,7 @@ export function TaskCard({
 
 ```typescript
           {/* filepath: src/component/task/task-card.tsx */}
-          {/* 完成版: 編集ボタン */}
+          {/* 編集ボタン */}
           <div className="flex gap-0">
             {canEdit && (
               <Button
@@ -1659,7 +2166,7 @@ export function TaskCard({
 
 ```typescript
             {/* filepath: src/component/task/task-card.tsx */}
-            {/* 完成版: 削除ボタン */}
+            {/* 削除ボタン */}
             {canDelete && (
               <Button
                 variant="ghost"
@@ -1681,7 +2188,7 @@ export function TaskCard({
 
 ```typescript
         {/* filepath: src/component/task/task-card.tsx */}
-        {/* 完成版: 説明文とバッジ */}
+        {/* 説明文とバッジ */}
         <CardContent className="flex-1 flex flex-col gap-3">
           {description && (
             <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
@@ -1707,7 +2214,7 @@ export function TaskCard({
 
 ```typescript
           {/* filepath: src/component/task/task-card.tsx */}
-          {/* 完成版: 担当者 */}
+          {/* 担当者 */}
           <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
             <div className="flex justify-between items-center">
               {assignee ? (
@@ -1733,7 +2240,7 @@ export function TaskCard({
 
 ```typescript
               {/* filepath: src/component/task/task-card.tsx */}
-              {/* 完成版: 期限 */}
+              {/* 期限 */}
               {dueDate && (
                 <div
                   className={cn(
@@ -1759,7 +2266,7 @@ export function TaskCard({
 
 ```typescript
             {/* filepath: src/component/task/task-card.tsx */}
-            {/* 完成版: 合計作業時間と時間記録ボタン */}
+            {/* 合計作業時間と時間記録ボタン */}
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 合計作業時間: {formatMinutes(timeSpentMinutes)}
@@ -1788,7 +2295,245 @@ export function TaskCard({
 
 ```typescript
       {/* filepath: src/component/task/task-card.tsx */}
-      {/* 完成版: ダイアログの設置 */}
+      {/* ダイアログの設置 */}
+      {canEdit && (
+        <TimeLogDialog
+          open={timeLogDialogOpen}
+          onClose={() => setTimeLogDialogOpen(false)}
+          taskId={id}
+          onSuccess={onTimeLogSuccess}
+        />
+      )}
+    </>
+  );
+}
+```
+
+完成版の `src/component/task/task-card.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/task/task-card.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { AlertTriangle, CalendarDays, Clock, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
+import { formatDateOnly, isOverdue } from '@/lib/date';
+import { cn } from '@/lib/utils';
+import { StatusBadge } from './status-badge';
+import { TimeLogDialog } from './time-log-dialog';
+
+const formatMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.floor(minutes % 60);
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
+
+interface TaskCardProps {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: Date | null;
+  assignee?: {
+    name: string | null;
+    email: string;
+    avatar: string | null;
+  } | null;
+  timeSpentMinutes?: number;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onClick?: (id: string) => void;
+  onTimeLogSuccess?: (() => void) | undefined;
+  canEdit?: boolean;
+  canDelete?: boolean;
+}
+
+export function TaskCard({
+  id,
+  title,
+  description,
+  status,
+  priority,
+  dueDate,
+  assignee,
+  timeSpentMinutes = 0,
+  onEdit,
+  onDelete,
+  onClick,
+  onTimeLogSuccess,
+  canEdit = true,
+  canDelete = true,
+}: TaskCardProps) {
+
+  const [timeLogDialogOpen, setTimeLogDialogOpen] = useState(false);
+  const overdue =
+    isOverdue(dueDate) && status !== TASK_STATUS.DONE && status !== TASK_STATUS.CANCELLED;
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(id);
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(id);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(id);
+  };
+
+  const handleOpenTimeLog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTimeLogDialogOpen(true);
+  };
+
+  return (
+    <>
+      <Card
+        className={cn(
+          'transition-all h-full flex flex-col',
+          onClick && 'cursor-pointer hover:shadow-md',
+          overdue && 'border-destructive/60 bg-destructive/5',
+        )}
+        onClick={handleCardClick}
+      >
+
+        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+          <CardTitle
+            className="text-base font-semibold leading-none truncate max-w-[calc(100%-80px)]"
+            title={title}
+          >
+            {onClick ? (
+              <button
+                type="button"
+                className="w-full text-left truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCardClick();
+                }}
+              >
+                {title}
+              </button>
+            ) : (
+              title
+            )}
+          </CardTitle>
+
+          <div className="flex gap-0">
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleEdit}
+                aria-label="タスクを編集"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                aria-label="タスクを削除"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col gap-3">
+          {description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            <StatusBadge status={status} />
+            <Badge variant={getPriorityBadgeVariant(priority)}>
+              {TASK_PRIORITY_LABELS[priority]}
+            </Badge>
+            {overdue && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                期限切れ
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-auto pt-4 flex flex-col gap-3 border-t">
+            <div className="flex justify-between items-center">
+              {assignee ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {assignee.avatar && <AvatarImage src={assignee.avatar} alt="" />}
+                    <AvatarFallback className="text-[10px]">
+                      {(assignee.name || assignee.email || '?')[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                    {assignee.name || assignee.email}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">未割当</span>
+              )}
+
+              {dueDate && (
+                <div
+                  className={cn(
+                    'flex items-center gap-1 text-xs',
+                    overdue
+                      ? 'text-destructive font-semibold'
+                      : 'text-muted-foreground',
+                  )}
+                >
+                  <CalendarDays className="h-3 w-3" />
+                  <span>
+                    {overdue && <span className="sr-only">期限切れ </span>}
+                    {formatDateOnly(dueDate)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                合計作業時間: {formatMinutes(timeSpentMinutes)}
+              </p>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  onClick={handleOpenTimeLog}
+                  aria-label={`${title}の時間を記録`}
+                >
+                  <Clock className="mr-2 h-3 w-3" />
+                  時間記録
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {canEdit && (
         <TimeLogDialog
           open={timeLogDialogOpen}
@@ -1810,7 +2555,7 @@ export function TaskCard({
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: 記録の成功を受け取るハンドラー
+// 記録の成功を受け取るハンドラー
   const handleTimeLogSuccess = useCallback(() => {
     void utils.task.getAll.invalidate();
   }, [utils.task.getAll]);
@@ -1823,7 +2568,7 @@ export function TaskCard({
 ```typescript
                       <TaskCard
                         // filepath: src/app/task/page.tsx
-                        // 完成版: TaskCard へ渡す2つの props
+                        // TaskCard へ渡す2つの props
                         key={task.id}
                         id={task.id}
                         title={task.title}
@@ -1840,6 +2585,358 @@ export function TaskCard({
                         canEdit={canEditProject(task.projectId)}
                         canDelete={canDeleteProject(task.projectId)}
                       />
+```
+
+完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ファイル全体
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { api } from '@/trpc/react';
+function TaskPageContent() {
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [filterStatus, setFilterStatus] =
+    useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] =
+    useState<string | null>(null);
+  const [detailOpen, setDetailOpen] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen]
+    = useState(false);
+  const [deleteTargetId, setDeleteTargetId]
+    = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const taskIdParam =
+    searchParams.get('taskId');
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all'
+        ? undefined : filterProject,
+      status: filterStatus === 'all'
+        ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: session } =
+    api.auth.getSession.useQuery();
+  const utils = api.useUtils();
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [taskIdParam]);
+  const createMutation =
+    api.task.create.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        setDialogOpen(false);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const handleCreate = () => {
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+  const handleSubmit =
+    (data: TaskFormData) => {
+      if (data.id) {
+        updateMutation.mutate({
+          id: data.id,
+          title: data.title,
+          description:
+            data.description || null,
+          status: data.status,
+          priority: data.priority,
+          dueDate: data.dueDate
+            ? dateOnlyToUtcStartIso(data.dueDate)
+            : null,
+          estimatedHours:
+            data.estimatedHours ?? null,
+          projectId: data.projectId,
+          assigneeId:
+            data.assigneeId || null,
+          expectedUpdatedAt:
+            data.expectedUpdatedAt,
+        });
+        return;
+      }
+      if (!session?.user?.id) return;
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        projectId: data.projectId,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : undefined,
+        estimatedHours:
+          data.estimatedHours ?? undefined,
+        assigneeId:
+          data.assigneeId || undefined,
+      });
+    };
+  const handleTaskClick =
+    (taskId: string) => {
+      setSelectedTask(taskId);
+      setDetailOpen(true);
+    };
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full
+          sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger
+                aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder=
+                  "すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[200px]">
+            <Select value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all'
+                  || isTaskStatus(value))
+                  setFilterStatus(value);
+              }}>
+              <SelectTrigger>
+                <SelectValue placeholder=
+                  "すべてのステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのステータス
+                </SelectItem>
+                {Object.entries(
+                  TASK_STATUS_LABELS
+                ).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
+                      <TaskCard
+                        key={task.id}
+                        id={task.id}
+                        title={task.title}
+                        description={task.description}
+                        status={task.status}
+                        priority={task.priority}
+                        dueDate={task.dueDate}
+                        assignee={task.assignee}
+                        timeSpentMinutes={task.timeSpentMinutes}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleTaskClick}
+                        onTimeLogSuccess={handleTimeLogSuccess}
+                        canEdit={canEditProject(task.projectId)}
+                        canDelete={canDeleteProject(task.projectId)}
+                      />
+          )}
+        </div>
+        <TaskDetailDialog
+          open={detailOpen}
+          taskId={selectedTask}
+          onClose={handleDetailClose}
+        />
+        <TaskDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+          initialData={editingTask}
+          projects={projects ?? []}
+        />
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => {
+            if (deleteTargetId) {
+              deleteMutation.mutate(
+                { id: deleteTargetId }
+              );
+            }
+          }}
+          isPending={deleteMutation.isPending}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
+// 時間記録の成功後に一覧を取り直す
+// （useCallback は react から import）
+const handleTimeLogSuccess = useCallback(() => {
+  void utils.task.getAll.invalidate();
+}, [utils.task.getAll]);
 ```
 
 Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。

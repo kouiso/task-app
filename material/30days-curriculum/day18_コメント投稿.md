@@ -1125,7 +1125,7 @@ npm run dev
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts
-// 完成版: インポートと入力スキーマ
+// インポートと入力スキーマ
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { PermissionKey } from '@/lib/constant/roles';
@@ -1146,7 +1146,7 @@ const commentCreateSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: タスクと自分のメンバー行の取得
+// タスクと自分のメンバー行の取得
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
@@ -1170,7 +1170,7 @@ const findTaskAndAssertMembership = async (
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: 存在確認と権限確認
+// 存在確認と権限確認
   if (!task) {
     throw new TRPCError({
       code: 'NOT_FOUND',
@@ -1190,7 +1190,7 @@ const findTaskAndAssertMembership = async (
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: getByTaskId によるコメント一覧
+// getByTaskId によるコメント一覧
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
@@ -1215,7 +1215,90 @@ export const commentRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/comment.ts（同じファイルの続き）
-// 完成版: create によるコメントの保存
+// create によるコメントの保存
+  create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
+    await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
+
+    return await prisma.comment.create({
+      data: {
+        content: input.content,
+        taskId: input.taskId,
+        userId: ctx.session.userId,
+      },
+      include: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+    });
+  }),
+});
+```
+
+完成版の `src/server/api/routers/comment.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/comment.ts
+// 完成版: ファイル全体
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import type { PermissionKey } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { assertMemberPermission } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+const commentCreateSchema = z.object({
+  content: z.string().trim().min(1, 'コメント内容は必須です'),
+  taskId: z.string().cuid(),
+});
+
+const findTaskAndAssertMembership = async (
+  taskId: string,
+  userId: string,
+  permission?: PermissionKey,
+) => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: {
+        include: {
+          members: { where: { userId } },
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'タスクが見つかりません',
+    });
+  }
+
+  assertMemberPermission(task.project.members, permission);
+
+  return task;
+};
+
+export const commentRouter = createTRPCRouter({
+  getByTaskId: protectedProcedure
+    .input(z.object({ taskId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      await findTaskAndAssertMembership(input.taskId, ctx.session.userId);
+
+      return await prisma.comment.findMany({
+        where: { taskId: input.taskId },
+        include: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
   create: protectedProcedure.input(commentCreateSchema).mutation(async ({ ctx, input }) => {
     await findTaskAndAssertMembership(input.taskId, ctx.session.userId, 'canEdit');
 
@@ -1272,7 +1355,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// 完成版: ブラウザ側で動かす宣言と外部ライブラリ
+// ブラウザ側で動かす宣言と外部ライブラリ
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -1288,7 +1371,7 @@ import { z } from 'zod';
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の取り込み
+// プロジェクト内の部品の取り込み
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';
@@ -1315,7 +1398,7 @@ import { StatusBadge } from './status-badge';
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: props の型とコメント用スキーマ
+// props の型とコメント用スキーマ
 type TaskDetailDialogProps = {
   open: boolean;
   taskId: string | null;
@@ -1335,7 +1418,7 @@ type CommentFormValues = z.infer<typeof commentSchema>;
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: フォームとタスク詳細の取得
+// フォームとタスク詳細の取得
 export function TaskDetailDialog({
   open,
   taskId,
@@ -1369,7 +1452,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: 投稿の mutation と送信ハンドラー
+// 投稿の mutation と送信ハンドラー
   const createCommentMutation = api.comment.create.useMutation({
     onSuccess: () => {
       if (taskId) {
@@ -1394,7 +1477,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
-// 完成版: ダイアログの外枠と見出し
+// ダイアログの外枠と見出し
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
@@ -1415,7 +1498,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
         {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-        {/* 完成版: 説明とタスク情報の前半 */}
+        {/* 説明とタスク情報の前半 */}
         {taskDetail && (
           <div className="space-y-6">
             <div>
@@ -1445,7 +1528,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
               {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: 担当者の表示 */}
+              {/* 担当者の表示 */}
               <div>
                 <span className="text-muted-foreground block mb-1">担当者</span>
                 <div className="flex items-center gap-2">
@@ -1472,7 +1555,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
               {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: 期限とコメント欄の見出し */}
+              {/* 期限とコメント欄の見出し */}
               <div>
                 <span className="text-muted-foreground block mb-1">期限</span>
                 <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
@@ -1496,7 +1579,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
               {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: コメント一覧の枠と0件の案内 */}
+              {/* コメント一覧の枠と0件の案内 */}
               <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
                 {taskDetail.comments?.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
@@ -1511,7 +1594,7 @@ const canEditComments = !!taskDetail &&
 
 ```typescript
                 {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-                {/* 完成版: 1件ごとのアバター */}
+                {/* 1件ごとのアバター */}
                 {taskDetail.comments?.map((comment) => (
                   <div key={comment.id} className="flex gap-3 text-sm">
                     <Avatar className="h-8 w-8 mt-1">
@@ -1550,7 +1633,7 @@ flowchart TB
 
 ```typescript
                     {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-                    {/* 完成版: 名前と日時と本文 */}
+                    {/* 名前と日時と本文 */}
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">
@@ -1575,7 +1658,7 @@ flowchart TB
 
 ```typescript
               {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-              {/* 完成版: コメント投稿フォーム */}
+              {/* コメント投稿フォーム */}
               {canEditComments && (
               <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
                 <Textarea
@@ -1604,7 +1687,219 @@ flowchart TB
 
 ```typescript
             {/* filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き） */}
-            {/* 完成版: 末尾の閉じるボタン */}
+            {/* 末尾の閉じるボタン */}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button onClick={onClose}>閉じる</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+完成版の `src/component/task/task-detail-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/task/task-detail-dialog.tsx
+// 完成版: ファイル全体
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import { Separator } from '@/component/ui/separator';
+import { Textarea } from '@/component/ui/textarea';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { formatDateOnly } from '@/lib/date';
+import { api } from '@/trpc/react';
+import { StatusBadge } from './status-badge';
+
+type TaskDetailDialogProps = {
+  open: boolean;
+  taskId: string | null;
+  onClose: () => void;
+  canEditProject: (projectId: string) => boolean;
+};
+
+const commentSchema = z.object({
+  content: z.string().trim().min(1, 'コメントを入力してください'),
+});
+type CommentFormValues = z.infer<typeof commentSchema>;
+
+export function TaskDetailDialog({
+  open,
+  taskId,
+  onClose,
+  canEditProject,
+}: TaskDetailDialogProps) {
+  const commentForm = useForm<CommentFormValues>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
+
+  const utils = api.useUtils();
+
+  const { data: taskDetail } = api.task.getById.useQuery(
+    { id: taskId ?? '' },
+    { enabled: !!taskId },
+  );
+
+const canEditComments = !!taskDetail &&
+  canEditProject(taskDetail.projectId);
+
+  const createCommentMutation = api.comment.create.useMutation({
+    onSuccess: () => {
+      if (taskId) {
+        utils.task.getById.invalidate({ id: taskId });
+      }
+      commentForm.reset();
+    },
+  });
+
+  const handleCommentSubmit = (values: CommentFormValues) => {
+    if (!taskId || !canEditComments) return;
+    createCommentMutation.mutate({
+      content: values.content,
+      taskId,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl break-words">
+            {taskDetail?.title || 'タスク詳細'}
+          </DialogTitle>
+          <DialogDescription>
+            プロジェクト:{' '}
+            <span className="font-semibold text-foreground">{taskDetail?.project.name}</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        {taskDetail && (
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {taskDetail.description || '説明はありません。'}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground block mb-1">ステータス</span>
+                <StatusBadge status={taskDetail.status} />
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">優先度</span>
+                <Badge variant={getPriorityBadgeVariant(taskDetail.priority)}>
+                  {TASK_PRIORITY_LABELS[taskDetail.priority] ?? taskDetail.priority}
+                </Badge>
+              </div>
+
+              <div>
+                <span className="text-muted-foreground block mb-1">担当者</span>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    {taskDetail.assignee?.avatar && (
+                      <AvatarImage src={taskDetail.assignee.avatar} alt="" />
+                    )}
+                    <AvatarFallback className="text-[10px]">
+                      {(taskDetail.assignee?.name ||
+                        taskDetail.assignee?.email ||
+                        '?')[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>
+                    {taskDetail.assignee?.name || taskDetail.assignee?.email || '未割当'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-muted-foreground block mb-1">期限</span>
+                <span>{taskDetail.dueDate ? formatDateOnly(taskDetail.dueDate) : '期限なし'}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold">コメント</h3>
+                <Badge variant="secondary" className="rounded-full px-2">
+                  {taskDetail.comments?.length ?? 0}
+                </Badge>
+              </div>
+
+              <div className="space-y-4 mb-4 max-h-[200px] overflow-y-auto pr-2">
+                {taskDetail.comments?.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    コメントはまだありません。
+                  </p>
+                )}
+
+                {taskDetail.comments?.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 text-sm">
+                    <Avatar className="h-8 w-8 mt-1">
+                      {comment.user.avatar && <AvatarImage src={comment.user.avatar} alt="" />}
+                      <AvatarFallback>
+                        {(comment.user.name || comment.user.email || '?')[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {comment.user.name || comment.user.email || '?'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(comment.createdAt), 'yyyy/MM/dd HH:mm', {
+                            locale: ja,
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {canEditComments && (
+              <form onSubmit={commentForm.handleSubmit(handleCommentSubmit)} className="space-y-2">
+                <Textarea
+                  placeholder="コメントを追加..."
+                  aria-label="コメント本文"
+                  {...commentForm.register('content')}
+                  className="resize-none"
+                  rows={2}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!commentForm.watch('content').trim() || createCommentMutation.isPending}
+                  >
+                    {createCommentMutation.isPending ? '投稿中...' : 'コメント投稿'}
+                  </Button>
+                </div>
+              </form>
+              )}
+
             </div>
           </div>
         )}

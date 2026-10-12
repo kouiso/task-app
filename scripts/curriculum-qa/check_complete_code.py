@@ -109,6 +109,9 @@ KNOWN_DRIFT: dict[str, str] = {
     # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
     # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
     "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま",
+    # 教材の day25 完成版はサイドバー下部に AlertDialogTrigger 式のログアウト確認を持つ旧実装。
+    # src/ は後続の修正で別構成になっており、教材側は未追従
+    "src/component/layout/app-layout.tsx": "教材の完成版は AlertDialogTrigger 式ログアウト確認の旧実装。src/ は別構成へ改修済みで教材は未追従",
 }
 
 

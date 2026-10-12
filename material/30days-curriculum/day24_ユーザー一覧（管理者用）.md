@@ -1087,7 +1087,7 @@ npm run dev
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: import
+// import
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
@@ -1102,7 +1102,7 @@ import { USER_DETAIL_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getAll の入口と入力の定義
+// getAll の入口と入力の定義
 export const userRouter = createTRPCRouter({
   // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
   getAll: adminProcedure
@@ -1124,7 +1124,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: 絞り込みと取得
+// 絞り込みと取得
       if (input?.isActive !== undefined) {
         where.isActive = input.isActive;
       }
@@ -1146,6 +1146,82 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
+完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+const userUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    name: z.string().min(1, '名前を入力してください').optional(),
+    avatar: z.string().url().optional().nullable(),
+    role: z.nativeEnum(USER_ROLE).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    ({ name, avatar, role, isActive }) =>
+      name !== undefined || avatar !== undefined || role !== undefined || isActive !== undefined,
+    '更新する項目を1つ以上指定してください',
+  );
+const profileUpdateSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url().optional().nullable(),
+});
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: z
+    .string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+export const userRouter = createTRPCRouter({
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+      if (input?.role) {
+        where.role = input.role;
+      }
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+});
+```
+
 `isActive` の判定だけ `!== undefined` になっているのは`false` が意味を持つ値だからです。`if (input?.isActive)` と書くと無効なアカウントだけを見たいという指定が「指定なし」として捨てられます。`select` を書かずに `findMany` を呼ぶとパスワードのハッシュまで画面へ送られます。返してよい列を並べておけばテーブルに列を足したときも勝手に外へ出ません。
 
 ### `src/server/api/root.ts`
@@ -1154,7 +1230,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/root.ts
-// 完成版: import
+// import
 import { authRouter } from './routers/auth';
 import { commentRouter } from './routers/comment';
 import { projectRouter } from './routers/project';
@@ -1171,7 +1247,37 @@ import { createCallerFactory, createTRPCRouter } from './trpc';
 
 ```typescript
 // filepath: src/server/api/root.ts
-// 完成版: ルーターの登録と書き出し
+// ルーターの登録と書き出し
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+  user: userRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: ファイル全体
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { userRouter } from './routers/user';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   project: projectRouter,
@@ -1195,7 +1301,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { format } from 'date-fns';
@@ -1210,7 +1316,7 @@ import { useRouter } from 'next/navigation';
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: プロジェクト内の import
+// プロジェクト内の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -1236,7 +1342,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: ユーザー情報の取得
+// ユーザー情報の取得
 export default function UsersPage() {
   const router = useRouter();
 
@@ -1257,7 +1363,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx（続き）
-// 完成版: ユーザー一覧の取得
+// ユーザー一覧の取得
   const {
     data: users,
     isLoading: isUsersLoading,
@@ -1277,7 +1383,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx（続き）
-// 完成版: 取得状態の判定
+// 取得状態の判定
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
     isUsersError ? usersError : null,
@@ -1302,7 +1408,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: ローディング
+// ローディング
   if (requiredLoading && !authFailed && !forbidden) {
     return (
       <AppLayout>
@@ -1318,7 +1424,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx（続き）
-// 完成版: 初回取得エラー
+// 初回取得エラー
   if (hasFetchError && !hasRequiredData && !authFailed && !forbidden) {
     return (
       <AppLayout>
@@ -1344,7 +1450,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx（続き）
-// 完成版: 認証・権限エラー
+// 認証・権限エラー
   if (authFailed || forbidden || !isAdmin) {
     return (
       <AppLayout>
@@ -1372,7 +1478,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/app/user/page.tsx
-// 完成版: 前回の一覧を示す警告
+// 前回の一覧を示す警告
   return (
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
@@ -1395,7 +1501,7 @@ export default function UsersPage() {
 
 ```typescript
         {/* filepath: src/app/user/page.tsx（続き） */}
-        {/* 完成版: ページヘッダーと列の定義 */}
+        {/* ページヘッダーと列の定義 */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight">ユーザー管理</h1>
         </div>
@@ -1421,7 +1527,7 @@ export default function UsersPage() {
 
 ```typescript
               {/* filepath: src/app/user/page.tsx */}
-              {/* 完成版: 行の描画とバッジ */}
+              {/* 行の描画とバッジ */}
               <TableBody>
                 {users?.map((user) => (
                   <TableRow key={user.id}>
@@ -1449,7 +1555,7 @@ export default function UsersPage() {
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
-                    {/* 完成版: 登録日と詳細ボタン */}
+                    {/* 登録日と詳細ボタン */}
                     <TableCell>
                       {user.createdAt
                         ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
@@ -1476,7 +1582,7 @@ export default function UsersPage() {
 
 ```typescript
                         {/* filepath: src/app/user/page.tsx */}
-                        {/* 完成版: 編集ボタンとテーブルの閉じタグ */}
+                        {/* 編集ボタンとテーブルの閉じタグ */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1502,7 +1608,228 @@ export default function UsersPage() {
 
 ```typescript
         {/* filepath: src/app/user/page.tsx */}
-        {/* 完成版: 空状態と最後の閉じタグ */}
+        {/* 空状態と最後の閉じタグ */}
+        {users && users.length === 0 && (
+          <div className="text-center py-10 text-muted-foreground">
+            ユーザーが見つかりませんでした
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/user/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/user/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Eye, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { api } from '@/trpc/react';
+
+export default function UsersPage() {
+  const router = useRouter();
+
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+
+  const {
+    data: users,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+    isFetching: isUsersFetching,
+    error: usersError,
+    refetch: refetchUsers,
+  } = api.user.getAll.useQuery(undefined, {
+    enabled: isAdmin,
+    retry: shouldRetryQuery,
+  });
+
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUsersError ? usersError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const hasFetchError = isCurrentUserError || isUsersError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUsersError || users != null);
+  const requiredLoading = isCurrentUserLoading || (isAdmin && isUsersLoading);
+  const requiredFetching = isCurrentUserFetching || isUsersFetching;
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (isAdmin) void refetchUsers();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (hasFetchError && !hasRequiredData && !authFailed && !forbidden) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            ユーザー一覧を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button onClick={refetchRequiredData} disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (authFailed || forbidden || !isAdmin) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-6xl mt-8">
+          <Card>
+            <CardContent className="pt-6">
+              <h1 className="text-2xl font-bold mb-2">
+                {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
+              </h1>
+              <p className="text-muted-foreground mb-4">
+                {authFailed ? 'もう一度ログインしてください。' : 'この機能は管理者のみ利用できます'}
+              </p>
+              {authFailed && <Button onClick={() => router.push('/login')}>ログイン画面へ</Button>}
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー一覧を取得できませんでした。前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">ユーザー管理</h1>
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ユーザー</TableHead>
+                  <TableHead>メールアドレス</TableHead>
+                  <TableHead>ロール</TableHead>
+                  <TableHead>ステータス</TableHead>
+                  <TableHead>登録日</TableHead>
+                  <TableHead className="text-right">アクション</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users?.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
+                          <AvatarFallback>{user.name?.[0]?.toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <UserRoleBadge role={user.role} />
+                    </TableCell>
+                    <TableCell>
+                      <ActiveStatusBadge isActive={user.isActive} />
+                    </TableCell>
+                    <TableCell>
+                      {user.createdAt
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                            locale: ja,
+                          })
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/user/${user.id}`)}
+                          aria-label="詳細"
+                          title="詳細"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/user/${user.id}/edit`)}
+                          aria-label="編集"
+                          title="編集"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
         {users && users.length === 0 && (
           <div className="text-center py-10 text-muted-foreground">
             ユーザーが見つかりませんでした
@@ -1522,7 +1849,7 @@ export default function UsersPage() {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: 今日足した import
+// 今日足した import
 import { Users } from 'lucide-react';
 import { USER_ROLE } from '@/lib/constant/roles';
 ```
@@ -1533,7 +1860,7 @@ import { USER_ROLE } from '@/lib/constant/roles';
 
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx（menuItems.map の直後に追加） */}
-{/* 完成版: 今日足したリンク */}
+{/* 今日足したリンク */}
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -1554,6 +1881,226 @@ import { USER_ROLE } from '@/lib/constant/roles';
     </Link>
   </li>
 )}
+```
+
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+import { Users } from 'lucide-react';
+import { USER_ROLE }
+  from '@/lib/constant/roles';
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+{
+  text: 'レポート',
+  icon: <BarChart className="h-5 w-5" />,
+  path: '/report',
+},
+{
+  text: '検索',
+  icon: <Search className="h-5 w-5" />,
+  path: '/search',
+},
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+  {
+    text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report',
+  },
+];
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+  if (!session?.user) {
+    return null;
+  }
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+{session.user.role === USER_ROLE.ADMIN && (
+  <li>
+    <Link
+      href="/user"
+      className={cn(
+        'flex items-center gap-3 rounded-md ' +
+          'px-3 py-2 text-sm transition-colors',
+        pathname === '/user'
+          ? 'bg-sidebar-accent ' +
+            'text-sidebar-accent-foreground font-medium'
+          : 'text-sidebar-foreground/70 ' +
+            'hover:bg-sidebar-accent/50 ' +
+            'hover:text-sidebar-foreground',
+      )}
+    >
+      <Users className="h-5 w-5" />
+      ユーザー管理
+    </Link>
+  </li>
+)}
+        </nav>
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
 ```
 
 `条件 && (...)` は条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないと式の値は `false` になり、React は `false` を何も描かない値として扱います。一般ユーザーのサイドバーには空の行すら残りません。ただしこのリンクを消しても `/user` は開けます。他人のメールアドレスを守っているのは`user.ts` の `adminProcedure` のほうです。

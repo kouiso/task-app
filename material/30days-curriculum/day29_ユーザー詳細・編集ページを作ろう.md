@@ -2186,7 +2186,7 @@ submitUserEditForm(
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: import 群
+// import 群
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
@@ -2205,7 +2205,7 @@ import { USER_DETAIL_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: userUpdateSchema
+// userUpdateSchema
 const userUpdateSchema = z
   .object({
     id: z.string().cuid(),
@@ -2230,7 +2230,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getById の権限判定
+// getById の権限判定
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -2248,7 +2248,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getById が返す基本情報とプロジェクト
+// getById が返す基本情報とプロジェクト
       const user = await prisma.user.findUnique({
         where: { id: input.id },
         select: {
@@ -2274,7 +2274,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getById が返す担当タスク
+// getById が返す担当タスク
           assignedTasks: {
             select: {
               id: true,
@@ -2300,7 +2300,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getById の見つからない場合
+// getById の見つからない場合
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -2318,7 +2318,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: update の権限判定
+// update の権限判定
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
@@ -2337,7 +2337,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: 自分を更新するときの制限
+// 自分を更新するときの制限
     } else {
       if (data.role !== undefined || data.isActive !== undefined) {
         throw new TRPCError({
@@ -2354,7 +2354,7 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: 更新する項目の組み立て
+// 更新する項目の組み立て
     const updateData: Prisma.UserUpdateInput = {};
     if (data.name !== undefined) {
       updateData.name = data.name;
@@ -2376,7 +2376,142 @@ const userUpdateSchema = z
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: update の書き込みと戻り値
+// update の書き込みと戻り値
+    return await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+  }),
+```
+
+完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+
+const userUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    name: z.string().min(1, '名前を入力してください').optional(),
+    avatar: z.string().url().optional().nullable(),
+    role: z.nativeEnum(USER_ROLE).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    ({ name, avatar, role, isActive }) =>
+      name !== undefined ||
+      avatar !== undefined ||
+      role !== undefined ||
+      isActive !== undefined,
+    '更新する項目を1つ以上指定してください',
+  );
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'この操作を行う権限がありません',
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: input.id },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+          projects: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+            },
+          },
+
+          assignedTasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              dueDate: true,
+            },
+            where: {
+              status: {
+                notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
+              },
+            },
+            orderBy: { dueDate: 'asc' },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      return user;
+    }),
+
+  update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+
+    if (id !== ctx.session.userId) {
+      if (ctx.session.role !== USER_ROLE.ADMIN) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: '管理者権限が必要です',
+        });
+      }
+
+    } else {
+      if (data.role !== undefined || data.isActive !== undefined) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'roleとisActiveは変更できません',
+        });
+      }
+    }
+
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+
     return await prisma.user.update({
       where: { id },
       data: updateData,
@@ -2396,7 +2531,7 @@ const userUpdateSchema = z
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx
-// 完成版: 認証・認可の先行確認
+// 認証・認可の先行確認
 import { getTRPCErrorFromUnknown } from '@trpc/server';
 import { notFound, redirect } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -2425,7 +2560,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
-// 完成版: エラーごとの行き先
+// エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
     if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
@@ -2454,7 +2589,56 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
-// 完成版: client 部品への受け渡し
+// client 部品への受け渡し
+    throw error;
+  }
+
+  return <UserDetailClient userId={id} />;
+}
+```
+
+完成版の `src/app/user/[id]/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/user/[id]/page.tsx
+// 完成版: ファイル全体
+import { getTRPCErrorFromUnknown } from '@trpc/server';
+import { notFound, redirect } from 'next/navigation';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent } from '@/component/ui/card';
+import { trpc } from '@/trpc/server';
+import { UserDetailClient } from './user-detail-client';
+
+interface UserDetailPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserDetailPage({ params }: UserDetailPageProps) {
+  const { id } = await params;
+
+  try {
+    await trpc.user.getById({ id });
+  } catch (error) {
+    const trpcError = getTRPCErrorFromUnknown(error);
+    if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
+    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'FORBIDDEN') {
+      return (
+        <AppLayout>
+          <div className="container mx-auto max-w-6xl mt-8">
+            <Card>
+              <CardContent className="pt-6">
+                <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
+                <p className="text-muted-foreground">このユーザーを見る権限がありません</p>
+              </CardContent>
+            </Card>
+          </div>
+        </AppLayout>
+      );
+    }
     throw error;
   }
 
@@ -2470,7 +2654,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { format } from 'date-fns';
@@ -2485,7 +2669,7 @@ import { useRouter } from 'next/navigation';
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の import
+// プロジェクト内の部品の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { StatusBadge } from '@/component/task/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -2518,7 +2702,7 @@ import { api } from '@/trpc/react';
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: リトライ判定と props
+// リトライ判定と props
 const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
   httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
@@ -2534,7 +2718,7 @@ interface UserDetailClientProps {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 2つのデータ取得
+// 2つのデータ取得
 export function UserDetailClient({ userId }: UserDetailClientProps) {
   const router = useRouter();
 
@@ -2567,7 +2751,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: エラーの分類
+// エラーの分類
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
     isUserError ? userError : null,
@@ -2589,7 +2773,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 再取得と読み込み中の早期リターン
+// 再取得と読み込み中の早期リターン
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     void refetchUser();
@@ -2611,7 +2795,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面を出す条件
+// 拒否画面を出す条件
   if (
     authFailed ||
     forbidden ||
@@ -2628,7 +2812,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面のメッセージ
+// 拒否画面のメッセージ
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -2658,7 +2842,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
           {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 拒否画面のボタンの分岐 */}
+          {/* 拒否画面のボタンの分岐 */}
           <Button
             type="button"
             onClick={() => {
@@ -2686,7 +2870,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
             {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-            {/* 完成版: ボタンのラベルと拒否画面の閉じタグ */}
+            {/* ボタンのラベルと拒否画面の閉じタグ */}
             {authFailed
               ? 'ログイン画面へ'
               : forbidden
@@ -2710,7 +2894,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き）
-// 完成版: 権限フラグと画面の開始
+// 権限フラグと画面の開始
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
   const isOwnProfile = currentUser?.id === user.id;
 
@@ -2725,7 +2909,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
         {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 取得失敗の警告バナー */}
+        {/* 取得失敗の警告バナー */}
         {hasFetchError && (
           <div
             role="alert"
@@ -2751,7 +2935,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
         {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 戻るボタンとグリッドの開始 */}
+        {/* 戻るボタンとグリッドの開始 */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
@@ -2773,7 +2957,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムのアバターとバッジ */}
+                {/* 左カラムのアバターとバッジ */}
                 <div className="text-center mb-6">
                   <Avatar className="w-24 h-24 mx-auto mb-4">
                     {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
@@ -2796,7 +2980,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムのメールアドレス */}
+                {/* 左カラムのメールアドレス */}
                 <Separator className="my-4" />
 
                 <div className="space-y-4 text-sm">
@@ -2815,7 +2999,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                   {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: 左カラムの登録日 */}
+                  {/* 左カラムの登録日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2837,7 +3021,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                   {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: 左カラムの最終更新日 */}
+                  {/* 左カラムの最終更新日 */}
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -2861,7 +3045,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: 左カラムの編集ボタン */}
+                {/* 左カラムの編集ボタン */}
                 {(isAdmin || isOwnProfile) && (
                   <>
                     <Separator className="my-4" />
@@ -2882,7 +3066,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
           {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 参加プロジェクトのバッジ */}
+          {/* 参加プロジェクトのバッジ */}
           <div className="md:col-span-8 space-y-6">
             <Card>
               <CardHeader>
@@ -2910,7 +3094,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: プロジェクトが無い場合 */}
+                {/* プロジェクトが無い場合 */}
                 ) : (
                   <p className="text-muted-foreground text-sm">
                     参加しているプロジェクトはありません
@@ -2927,7 +3111,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
             {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-            {/* 完成版: 担当タスクの見出し */}
+            {/* 担当タスクの見出し */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">担当中のタスク</CardTitle>
@@ -2951,7 +3135,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                     {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                    {/* 完成版: タスク行 */}
+                    {/* タスク行 */}
                     <TableBody>
                       {user.assignedTasks.map((task) => (
                         <TableRow
@@ -2981,7 +3165,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
                 {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-                {/* 完成版: タスクが無い場合 */}
+                {/* タスクが無い場合 */}
                 ) : (
                   <div className="p-6 text-muted-foreground text-sm">
                     担当中のタスクはありません
@@ -2997,7 +3181,341 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
           {/* filepath: src/app/user/[id]/user-detail-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 全体の閉じタグ */}
+          {/* 全体の閉じタグ */}
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/user/[id]/user-detail-client.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/user/[id]/user-detail-client.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { AppLayout } from '@/component/layout/app-layout';
+import { StatusBadge } from '@/component/task/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Badge } from '@/component/ui/badge';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Separator } from '@/component/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/component/ui/table';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { getPriorityBadgeVariant } from '@/lib/badge-variant';
+import { TASK_PRIORITY_LABELS } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { formatDateOnly } from '@/lib/date';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { api } from '@/trpc/react';
+
+const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
+
+interface UserDetailClientProps {
+  userId: string;
+}
+
+export function UserDetailClient({ userId }: UserDetailClientProps) {
+  const router = useRouter();
+
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    isError: isUserError,
+    isFetching: isUserFetching,
+    error: userError,
+    refetch: refetchUser,
+  } = api.user.getById.useQuery(
+    { id: userId },
+    { enabled: userId.length > 0, retry: shouldRetryUserQuery },
+  );
+
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUserError ? userError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound = isUserError && httpStatusOf(userError) === 404;
+  const hasFetchError = isCurrentUserError || isUserError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUserError || user != null);
+  const requiredLoading = isCurrentUserLoading || isUserLoading;
+  const requiredFetching = isCurrentUserFetching || isUserFetching;
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    void refetchUser();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (
+    authFailed ||
+    forbidden ||
+    notFound ||
+    (hasFetchError && !hasRequiredData) ||
+    !currentUser ||
+    !user
+  ) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このユーザーを見る権限がありません'
+                : notFound
+                  ? 'ユーザーが見つかりません'
+                  : 'ユーザー情報を取得できませんでした'}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '管理者または本人のみ表示できます。'
+                : notFound
+                  ? '削除されたか、URLが正しくない可能性があります。'
+                  : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/dashboard');
+                return;
+              }
+              if (notFound) {
+                router.push(currentUser?.role === USER_ROLE.ADMIN ? '/user' : '/dashboard');
+                return;
+              }
+              refetchRequiredData();
+            }}
+            disabled={requiredFetching}
+          >
+            {authFailed
+              ? 'ログイン画面へ'
+              : forbidden
+                ? 'ダッシュボードへ'
+                : notFound
+                  ? currentUser?.role === USER_ROLE.ADMIN
+                    ? 'ユーザー一覧へ'
+                    : 'ダッシュボードへ'
+                  : '再読み込み'}
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === user.id;
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-6xl py-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー情報を取得できませんでした。前回取得時の内容です。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+          onClick={() => router.push('/user')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          ユーザー一覧に戻る
+        </Button>
+
+        <div className="grid gap-6 md:grid-cols-12">
+          <div className="md:col-span-4 space-y-6">
+            <Card>
+              <CardContent style={{ paddingTop: '2.5rem' }}>
+                <div className="text-center mb-6">
+                  <Avatar className="w-24 h-24 mx-auto mb-4">
+                    {user.avatar && <AvatarImage src={user.avatar} alt={user.name || ''} />}
+                    <AvatarFallback className="text-3xl">
+                      {user.name?.[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h2 className="text-xl font-bold mb-2 break-words">{user.name || user.email}</h2>
+                  <div className="flex justify-center gap-2 mb-4">
+                    <UserRoleBadge role={user.role} />
+                    <ActiveStatusBadge isActive={user.isActive} />
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">メールアドレス</p>
+                      <p>{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">登録日</p>
+                      <p>
+                        {user.createdAt
+                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
+                      <p>
+                        {user.updatedAt
+                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {(isAdmin || isOwnProfile) && (
+                  <>
+                    <Separator className="my-4" />
+                    <Button className="w-full" onClick={() => router.push(`/user/${user.id}/edit`)}>
+                      <Pencil className="mr-2 h-4 w-4" /> 編集
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-8 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">参加プロジェクト</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user.projects && user.projects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {user.projects.map((member) => (
+                      <Badge
+                        key={member.id}
+                        className="cursor-pointer hover:opacity-80 px-3 py-1 text-sm font-normal text-white"
+                        style={{ backgroundColor: member.project.color }}
+                        onClick={() => router.push(`/project?projectId=${member.project.id}`)}
+                      >
+                        {member.project.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    参加しているプロジェクトはありません
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">担当中のタスク</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {user.assignedTasks && user.assignedTasks.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>タイトル</TableHead>
+                        <TableHead>ステータス</TableHead>
+                        <TableHead>優先度</TableHead>
+                        <TableHead>期限</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {user.assignedTasks.map((task) => (
+                        <TableRow
+                          key={task.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/task?taskId=${task.id}`)}
+                        >
+                          <TableCell className="font-medium">{task.title}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={task.status} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                              {TASK_PRIORITY_LABELS[task.priority]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{task.dueDate ? formatDateOnly(task.dueDate) : '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-6 text-muted-foreground text-sm">
+                    担当中のタスクはありません
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -3014,7 +3532,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx
-// 完成版: 認証・認可の先行確認
+// 認証・認可の先行確認
 import { getTRPCErrorFromUnknown } from '@trpc/server';
 import { notFound, redirect } from 'next/navigation';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -3043,7 +3561,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
-// 完成版: エラーごとの行き先
+// エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
     if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
@@ -3072,7 +3590,56 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
-// 完成版: client 部品への受け渡し
+// client 部品への受け渡し
+    throw error;
+  }
+
+  return <UserEditClient userId={id} />;
+}
+```
+
+完成版の `src/app/user/[id]/edit/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/user/[id]/edit/page.tsx
+// 完成版: ファイル全体
+import { getTRPCErrorFromUnknown } from '@trpc/server';
+import { notFound, redirect } from 'next/navigation';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Card, CardContent } from '@/component/ui/card';
+import { trpc } from '@/trpc/server';
+import { UserEditClient } from './user-edit-client';
+
+interface UserEditPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function UserEditPage({ params }: UserEditPageProps) {
+  const { id } = await params;
+
+  try {
+    await trpc.user.getById({ id });
+  } catch (error) {
+    const trpcError = getTRPCErrorFromUnknown(error);
+    if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
+    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'FORBIDDEN') {
+      return (
+        <AppLayout>
+          <div className="container mx-auto max-w-md mt-8">
+            <Card>
+              <CardContent className="pt-6">
+                <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
+                <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
+              </CardContent>
+            </Card>
+          </div>
+        </AppLayout>
+      );
+    }
     throw error;
   }
 
@@ -3088,7 +3655,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -3106,7 +3673,7 @@ import { z } from 'zod';
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: プロジェクト内の部品の import
+// プロジェクト内の部品の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -3136,7 +3703,7 @@ import { api } from '@/trpc/react';
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: リトライ判定とロールの定数
+// リトライ判定とロールの定数
 const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
   httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
 
@@ -3150,7 +3717,7 @@ const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: zod スキーマと型
+// zod スキーマと型
 const userEditSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
@@ -3167,7 +3734,7 @@ type UserEditFormValues = z.infer<typeof userEditSchema>;
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: props と useForm の初期値
+// props と useForm の初期値
 interface UserEditClientProps {
   userId: string;
 }
@@ -3193,7 +3760,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 現在ユーザーの取得と権限フラグ
+// 現在ユーザーの取得と権限フラグ
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
@@ -3214,7 +3781,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 編集対象の取得
+// 編集対象の取得
   const {
     data: user,
     isLoading: isUserLoading,
@@ -3238,7 +3805,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 保存する mutation
+// 保存する mutation
   const utils = api.useUtils();
 
   const updateUser = api.user.update.useMutation({
@@ -3266,7 +3833,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: フォームへ値を流し込む useEffect
+// フォームへ値を流し込む useEffect
   useEffect(() => {
     if (user) {
       form.reset({
@@ -3286,7 +3853,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 送信する値の組み立て
+// 送信する値の組み立て
   const handleSubmit = (values: UserEditFormValues) => {
     updateUser.mutate({
       id: userId,
@@ -3305,7 +3872,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: エラーの分類
+// エラーの分類
   const queryErrors = [
     isCurrentUserError ? currentUserError : null,
     isUserError ? userError : null,
@@ -3327,7 +3894,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 再取得と読み込み中の早期リターン
+// 再取得と読み込み中の早期リターン
   const refetchRequiredData = () => {
     void refetchCurrentUser();
     if (canEditUser) void refetchUser();
@@ -3349,7 +3916,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 拒否画面の条件とメッセージ
+// 拒否画面の条件とメッセージ
   if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData) || !currentUser) {
     return (
       <AppLayout>
@@ -3380,7 +3947,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
           {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 拒否画面のボタンの分岐 */}
+          {/* 拒否画面のボタンの分岐 */}
           <Button
             type="button"
             onClick={() => {
@@ -3408,7 +3975,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
             {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-            {/* 完成版: ボタンのラベルと拒否画面の閉じタグ */}
+            {/* ボタンのラベルと拒否画面の閉じタグ */}
             {authFailed
               ? 'ログイン画面へ'
               : forbidden
@@ -3432,7 +3999,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 権限が無い場合の拒否画面
+// 権限が無い場合の拒否画面
   if (!canEditUser) {
     return (
       <AppLayout>
@@ -3456,7 +4023,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 編集対象のデータが無い場合
+// 編集対象のデータが無い場合
   if (!user) {
     return (
       <AppLayout>
@@ -3483,7 +4050,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き）
-// 完成版: 画面の開始と警告バナー
+// 画面の開始と警告バナー
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md mt-8 mb-8">
@@ -3512,7 +4079,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
         {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-        {/* 完成版: 戻るボタンとカードの枠 */}
+        {/* 戻るボタンとカードの枠 */}
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
@@ -3535,7 +4102,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
             {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-            {/* 完成版: フォームの開始とアバターのプレビュー */}
+            {/* フォームの開始とアバターのプレビュー */}
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="flex justify-center mb-6">
                 <Avatar className="w-24 h-24">
@@ -3554,7 +4121,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 名前の入力欄 */}
+              {/* 名前の入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前{' '}
@@ -3581,7 +4148,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: メールアドレスとアバターURLの入力欄 */}
+              {/* メールアドレスとアバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">メールアドレス</Label>
                 <Input id="email" value={user.email} disabled />
@@ -3607,7 +4174,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: ロール選択の入口 */}
+              {/* ロール選択の入口 */}
               {canManageAccount && (
                 <>
                   <div className="space-y-2">
@@ -3632,7 +4199,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
                       {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-                      {/* 完成版: ロールの選択肢 */}
+                      {/* ロールの選択肢 */}
                       <SelectContent>
                         {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
                           <SelectItem key={value} value={value}>
@@ -3651,7 +4218,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
                   {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-                  {/* 完成版: アクティブ状態の切り替え */}
+                  {/* アクティブ状態の切り替え */}
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="isActive"
@@ -3672,7 +4239,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 保存の失敗を残すアラート */}
+              {/* 保存の失敗を残すアラート */}
               {updateUser.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3689,7 +4256,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-              {/* 完成版: 送信ボタンとキャンセルボタン */}
+              {/* 送信ボタンとキャンセルボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={updateUser.isPending}>
                   {updateUser.isPending ? '更新中...' : '更新'}
@@ -3713,7 +4280,403 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```tsx
           {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}
-          {/* 完成版: 全体の閉じタグ */}
+          {/* 全体の閉じタグ */}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/user/[id]/edit/user-edit-client.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/app/user/[id]/edit/user-edit-client.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+import { AppLayout } from '@/component/layout/app-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Checkbox } from '@/component/ui/checkbox';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { isUserRole, USER_ROLE, USER_ROLE_LABELS } from '@/lib/constant/roles';
+import { httpStatusOf, isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-error';
+import { normalizeAvatarValue } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
+  httpStatusOf(error) !== 404 && shouldRetryQuery(failureCount, error);
+
+const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
+
+const userEditSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
+  role: z.enum(USER_ROLE_VALUES),
+  isActive: z.boolean(),
+});
+type UserEditFormValues = z.infer<typeof userEditSchema>;
+
+interface UserEditClientProps {
+  userId: string;
+}
+
+export function UserEditClient({ userId }: UserEditClientProps) {
+  const router = useRouter();
+
+  const form = useForm<UserEditFormValues>({
+    resolver: zodResolver(userEditSchema),
+    defaultValues: {
+      name: '',
+      avatar: '',
+      role: USER_ROLE.USER,
+      isActive: true,
+    },
+  });
+
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    isError: isCurrentUserError,
+    isFetching: isCurrentUserFetching,
+    error: currentUserError,
+    refetch: refetchCurrentUser,
+  } = api.auth.getCurrentUser.useQuery(undefined, { retry: shouldRetryQuery });
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === userId;
+  const canEditUser = isAdmin || isOwnProfile;
+  const canManageAccount = isAdmin && !isOwnProfile;
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    isError: isUserError,
+    isFetching: isUserFetching,
+    error: userError,
+    refetch: refetchUser,
+  } = api.user.getById.useQuery(
+    { id: userId },
+    {
+      enabled: !!currentUser && canEditUser && userId.length > 0,
+      retry: shouldRetryUserQuery,
+    },
+  );
+
+  const utils = api.useUtils();
+
+  const updateUser = api.user.update.useMutation({
+    onSuccess: async () => {
+      await Promise.allSettled([
+        utils.user.getById.invalidate({ id: userId }),
+        utils.user.getAll.invalidate(),
+        utils.auth.getCurrentUser.invalidate(),
+        utils.auth.getSession.invalidate(),
+      ]);
+      toast.success('ユーザー情報を更新しました');
+      router.push(`/user/${userId}`);
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name ?? '',
+        avatar: user.avatar ?? '',
+        role: user.role,
+        isActive: user.isActive,
+      });
+    }
+  }, [user, form]);
+
+  const handleSubmit = (values: UserEditFormValues) => {
+    updateUser.mutate({
+      id: userId,
+      name: values.name,
+      avatar: normalizeAvatarValue(values.avatar),
+      // 管理者でも本人編集時は role/isActive を送らない
+      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
+    });
+  };
+
+  const queryErrors = [
+    isCurrentUserError ? currentUserError : null,
+    isUserError ? userError : null,
+  ];
+  const authFailed = queryErrors.some(isAuthError);
+  const forbidden = queryErrors.some(isForbiddenError);
+  const notFound = isUserError && httpStatusOf(userError) === 404;
+  const hasFetchError = isCurrentUserError || isUserError;
+  const hasRequiredData =
+    (!isCurrentUserError || currentUser != null) && (!isUserError || user != null);
+  const requiredLoading = isCurrentUserLoading || (canEditUser && isUserLoading);
+  const requiredFetching = isCurrentUserFetching || isUserFetching;
+
+  const refetchRequiredData = () => {
+    void refetchCurrentUser();
+    if (canEditUser) void refetchUser();
+  };
+
+  if (requiredLoading && !authFailed && !forbidden && !notFound) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (authFailed || forbidden || notFound || (hasFetchError && !hasRequiredData) || !currentUser) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            {authFailed
+              ? 'ログインの有効期限が切れました'
+              : forbidden
+                ? 'このユーザーを編集する権限がありません'
+                : notFound
+                  ? 'ユーザーが見つかりません'
+                  : 'ユーザー情報を取得できませんでした'}
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {authFailed
+              ? 'もう一度ログインしてください。'
+              : forbidden
+                ? '管理者または本人のみ編集できます。'
+                : notFound
+                  ? '削除されたか、URLが正しくない可能性があります。'
+                  : '通信状況を確認して、再読み込みしてください。'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (authFailed) {
+                router.push('/login');
+                return;
+              }
+              if (forbidden) {
+                router.push('/dashboard');
+                return;
+              }
+              if (notFound) {
+                router.push(isAdmin ? '/user' : '/dashboard');
+                return;
+              }
+              refetchRequiredData();
+            }}
+            disabled={requiredFetching}
+          >
+            {authFailed
+              ? 'ログイン画面へ'
+              : forbidden
+                ? 'ダッシュボードへ'
+                : notFound
+                  ? isAdmin
+                    ? 'ユーザー一覧へ'
+                    : 'ダッシュボードへ'
+                  : '再読み込み'}
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!canEditUser) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-md mt-8">
+          <Card>
+            <CardContent className="pt-6">
+              <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
+              <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-base font-semibold text-foreground">
+            ユーザー情報を取得できませんでした
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            通信状況を確認して、再読み込みしてください。
+          </p>
+          <Button onClick={refetchRequiredData} disabled={requiredFetching}>
+            再読み込み
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        {hasFetchError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span>最新のユーザー情報を取得できませんでした。入力内容は保持されています。</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={refetchRequiredData}
+              disabled={requiredFetching}
+            >
+              再試行
+            </Button>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+          onClick={() => router.push(`/user/${userId}`)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          戻る
+        </Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>ユーザー編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="flex justify-center mb-6">
+                <Avatar className="w-24 h-24">
+                  {form.watch('avatar') && <AvatarImage src={form.watch('avatar')} alt="" />}
+                  <AvatarFallback className="text-2xl">
+                    {form.watch('name')?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Input
+                  id="name"
+                  aria-required="true"
+                  {...form.register('name')}
+                  disabled={updateUser.isPending}
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">メールアドレス</Label>
+                <Input id="email" value={user.email} disabled />
+                <p className="text-xs text-muted-foreground">メールアドレスは変更できません</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatar">アバターURL（任意）</Label>
+                <Input
+                  id="avatar"
+                  type="url"
+                  {...form.register('avatar')}
+                  disabled={updateUser.isPending}
+                  placeholder="https://example.com/avatar.png"
+                />
+              </div>
+
+              {canManageAccount && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">ロール</Label>
+                    <Select
+                      value={form.watch('role')}
+                      onValueChange={(value) => {
+                        if (isUserRole(value)) {
+                          form.setValue('role', value);
+                        }
+                      }}
+                      disabled={updateUser.isPending}
+                    >
+                      <SelectTrigger id="role">
+                        <SelectValue placeholder="ロールを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isActive"
+                      checked={form.watch('isActive')}
+                      onCheckedChange={(checked) => form.setValue('isActive', checked === true)}
+                      disabled={updateUser.isPending}
+                    />
+                    <Label htmlFor="isActive">アクティブ</Label>
+                  </div>
+                </>
+              )}
+
+              {updateUser.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>エラー</AlertTitle>
+                  <AlertDescription>{updateUser.error.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={updateUser.isPending}>
+                  {updateUser.isPending ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push(`/user/${userId}`)}
+                  disabled={updateUser.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>

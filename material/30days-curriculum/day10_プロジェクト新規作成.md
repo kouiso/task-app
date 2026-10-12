@@ -1014,7 +1014,7 @@ tRPCでは `mutation` の成功時に `invalidate()` を呼ぶ、この形を覚
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: import と作成用スキーマ
+// import と作成用スキーマ
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -1042,7 +1042,7 @@ Step 0 では `PROJECT_MEMBER_ROLE` を別の行で取り込みましたがこ�
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: getAll の入口と権限チェック
+// getAll の入口と権限チェック
 export const projectRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1072,7 +1072,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: getAll の検索条件
+// getAll の検索条件
       if (!input?.userId) {
         where.members = {
           some: { userId: ctx.session.userId },
@@ -1094,7 +1094,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: getAll が返すデータ
+// getAll が返すデータ
       return await prisma.project.findMany({
         where,
         include: {
@@ -1123,7 +1123,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: create の作成データ
+// create の作成データ
   create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
     const createData: Prisma.ProjectCreateInput = {
       name: input.name,
@@ -1145,7 +1145,124 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: create の保存と戻り値
+// create の保存と戻り値
+    if (input.description) {
+      createData.description = input.description;
+    }
+
+    return await prisma.project.create({
+      data: createData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: USER_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }),
+});
+```
+
+完成版の `src/server/api/routers/project.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
+import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_SELECT } from './_helpers/select';
+
+const projectCreateSchema = z.object({
+  name: z.string().min(1, 'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .default(DEFAULT_PROJECT_COLOR),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
+export const projectRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(
+      z
+        .object({
+          userId: z.string().cuid().optional(),
+          isArchived: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.ProjectWhereInput = {};
+
+      if (input?.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+
+      if (!input?.userId) {
+        where.members = {
+          some: { userId: ctx.session.userId },
+        };
+      } else {
+        where.members = {
+          some: { userId: input.userId },
+        };
+      }
+
+      if (input?.isArchived !== undefined) {
+        where.isArchived = input.isArchived;
+      }
+
+      return await prisma.project.findMany({
+        where,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: USER_SELECT,
+              },
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
+  create: protectedProcedure.input(projectCreateSchema).mutation(async ({ ctx, input }) => {
+    const createData: Prisma.ProjectCreateInput = {
+      name: input.name,
+      color: input.color,
+      startDate: input.startDate ? new Date(input.startDate) : null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      members: {
+        create: {
+          userId: ctx.session.userId,
+          role: PROJECT_MEMBER_ROLE.OWNER,
+        },
+      },
+    };
+
     if (input.description) {
       createData.description = input.description;
     }
@@ -1174,7 +1291,7 @@ export const projectRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: import
+// import
 'use client';
 
 import { useEffect } from 'react';
@@ -1205,7 +1322,7 @@ import { DEFAULT_PROJECT_COLOR }
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: Props とフォームデータの型
+// Props とフォームデータの型
 interface ProjectDialogProps {
   open: boolean;
   onClose: () => void;
@@ -1230,7 +1347,7 @@ export interface ProjectFormData {
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: zodスキーマと型
+// zodスキーマと型
 const projectFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1,
@@ -1251,7 +1368,7 @@ type ProjectFormValues =
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: 初期値を作る関数
+// 初期値を作る関数
 function buildProjectFormValues(
   initialData: ProjectFormData | undefined,
 ): ProjectFormValues {
@@ -1275,7 +1392,7 @@ function buildProjectFormValues(
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: useForm の設定と reset
+// useForm の設定と reset
 export function ProjectDialog({
   open, onClose, onSubmit, initialData,
 }: ProjectDialogProps) {
@@ -1306,7 +1423,7 @@ export function ProjectDialog({
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: 閉じる処理と送信データの組み立て
+// 閉じる処理と送信データの組み立て
   const handleClose = () => {
     reset();
     onClose();
@@ -1337,7 +1454,7 @@ export function ProjectDialog({
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
-// 完成版: ダイアログの外枠と見出し
+// ダイアログの外枠と見出し
   return (
     <Dialog open={open}
       onOpenChange={(isOpen) =>
@@ -1364,7 +1481,7 @@ export function ProjectDialog({
 
 ```typescript
         {/* filepath: src/component/project/project-dialog.tsx */}
-        {/* 完成版: プロジェクト名の入力欄 */}
+        {/* プロジェクト名の入力欄 */}
         <form onSubmit={
           handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
@@ -1394,7 +1511,7 @@ export function ProjectDialog({
 
 ```typescript
             {/* filepath: src/component/project/project-dialog.tsx */}
-            {/* 完成版: 説明欄とカラー欄 */}
+            {/* 説明欄とカラー欄 */}
             <div className="grid gap-2">
               <Label htmlFor="description">
                 説明
@@ -1426,7 +1543,7 @@ export function ProjectDialog({
 
 ```typescript
               {/* filepath: src/component/project/project-dialog.tsx */}
-              {/* 完成版: 開始日と終了日の欄 */}
+              {/* 開始日と終了日の欄 */}
               <div className="grid gap-2">
                 <Label htmlFor="startDate">
                   開始日
@@ -1455,7 +1572,232 @@ export function ProjectDialog({
 
 ```typescript
           {/* filepath: src/component/project/project-dialog.tsx */}
-          {/* 完成版: 足元のボタンと閉じタグ */}
+          {/* 足元のボタンと閉じタグ */}
+          <DialogFooter>
+            <Button type="button"
+              variant="outline"
+              onClick={handleClose}>
+              キャンセル
+            </Button>
+            <Button type="submit">
+              {initialData?.id
+                ? '更新' : '作成'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+完成版の `src/component/project/project-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/project/project-dialog.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useEffect } from 'react';
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/component/ui/dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+import { Textarea }
+  from '@/component/ui/textarea';
+import { DEFAULT_PROJECT_COLOR }
+  from '@/lib/constant/project';
+
+interface ProjectDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: ProjectFormData) => void;
+  initialData?:
+    ProjectFormData | undefined;
+}
+
+export interface ProjectFormData {
+  id?: string;
+  name: string;
+  description?: string;
+  color: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+const projectFormSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1,
+    'プロジェクト名は必須です'),
+  description: z.string().optional(),
+  color: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+type ProjectFormValues =
+  z.infer<typeof projectFormSchema>;
+
+function buildProjectFormValues(
+  initialData: ProjectFormData | undefined,
+): ProjectFormValues {
+  return {
+    id: initialData?.id,
+    name: initialData?.name ?? '',
+    description:
+      initialData?.description ?? '',
+    color: initialData?.color
+      ?? DEFAULT_PROJECT_COLOR,
+    startDate:
+      initialData?.startDate ?? '',
+    endDate: initialData?.endDate ?? '',
+  };
+}
+
+export function ProjectDialog({
+  open, onClose, onSubmit, initialData,
+}: ProjectDialogProps) {
+  const {
+    register, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
+    resolver: zodResolver(
+      projectFormSchema),
+    defaultValues:
+      buildProjectFormValues(initialData),
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset(
+      buildProjectFormValues(initialData)
+    );
+  }, [initialData, open, reset]);
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleFormSubmit =
+    (data: ProjectFormValues) => {
+      const submitData: ProjectFormData = {
+        ...(data.id !== undefined
+          && { id: data.id }),
+        name: data.name,
+        color: data.color,
+        ...(data.description
+          && { description:
+            data.description }),
+        ...(data.startDate
+          && { startDate: data.startDate }),
+        ...(data.endDate
+          && { endDate: data.endDate }),
+      };
+      onSubmit(submitData);
+    };
+
+  return (
+    <Dialog open={open}
+      onOpenChange={(isOpen) =>
+        !isOpen && handleClose()}>
+      <DialogContent
+        className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData?.id
+              ? 'プロジェクト編集'
+              : 'プロジェクト作成'}
+          </DialogTitle>
+          <DialogDescription>
+            {initialData?.id
+              ? 'プロジェクトの詳細を更新します。'
+              : '新しいプロジェクトを作成します。'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={
+          handleSubmit(handleFormSubmit)}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">
+                プロジェクト名
+              </Label>
+              <Input id="name"
+                placeholder=
+                  "プロジェクト名を入力"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
+                {...register('name')} />
+              {errors.name && (
+                <p id="name-error"
+                  className=
+                  "text-sm text-destructive">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">
+                説明
+              </Label>
+              <Textarea
+                id="description"
+                placeholder=
+                  "プロジェクトの説明..."
+                rows={4}
+                {...register('description')}
+              />
+            </div>
+            <div className=
+              "grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="color">
+                  カラー
+                </Label>
+                <Input id="color"
+                  type="color"
+                  className="h-10"
+                  {...register('color')} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">
+                  開始日
+                </Label>
+                <Input id="startDate"
+                  type="date"
+                  {...register('startDate')}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">
+                  終了日
+                </Label>
+                <Input id="endDate"
+                  type="date"
+                  {...register('endDate')}
+                />
+              </div>
+            </div>
+          </div>
+
           <DialogFooter>
             <Button type="button"
               variant="outline"
@@ -1482,7 +1824,7 @@ export function ProjectDialog({
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: React と画面の部品の import
+// React と画面の部品の import
 'use client';
 
 import { Plus } from 'lucide-react';
@@ -1504,7 +1846,7 @@ import {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: UI部品と定数の import
+// UI部品と定数の import
 import { Button }
   from '@/component/ui/button';
 import { Label }
@@ -1526,7 +1868,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: state とデータ取得
+// state とデータ取得
 function ProjectPageContent() {
   const [showArchived, setShowArchived] =
     useState(false);
@@ -1549,7 +1891,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 作成 mutation とボタンのハンドラー
+// 作成 mutation とボタンのハンドラー
   const createMutation =
     api.project.create.useMutation({
       onSuccess: () => {
@@ -1579,7 +1921,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 送信ハンドラーと読み込み中の表示
+// 送信ハンドラーと読み込み中の表示
   const handleSubmit = (
     data: ProjectFormData
   ) => {
@@ -1605,7 +1947,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
-// 完成版: 読み込み中の表示
+// 読み込み中の表示
   if (projectsLoading) {
     return (
       <AppLayout>
@@ -1621,7 +1963,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: ページ見出しと操作エリア
+// ページ見出しと操作エリア
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -1653,7 +1995,7 @@ function ProjectPageContent() {
 
 ```typescript
             {/* filepath: src/app/project/page.tsx */}
-            {/* 完成版: 新規作成ボタンとグリッドの開始 */}
+            {/* 新規作成ボタンとグリッドの開始 */}
             <Button onClick={handleCreate}>
               <Plus
                 className="mr-2 h-4 w-4" />
@@ -1685,7 +2027,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: プロジェクトカードの描画
+// プロジェクトカードの描画
               return (
                 <ProjectCard
                   key={project.id}
@@ -1716,7 +2058,7 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: 空状態とダイアログの配置
+// 空状態とダイアログの配置
             ) : (
               <div className="col-span-full
                 flex flex-col items-center
@@ -1746,7 +2088,193 @@ function ProjectPageContent() {
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: ページのエクスポート
+// ページのエクスポート
+export default function ProjectPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <ProjectPageContent />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/project/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/project/page.tsx
+// 完成版: ファイル全体
+import { Button }
+  from '@/component/ui/button';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import { Switch }
+  from '@/component/ui/switch';
+import { TASK_STATUS }
+  from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { api } from '@/trpc/react';
+
+function ProjectPageContent() {
+  const [showArchived, setShowArchived] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+
+  const {
+    data: projects,
+    isLoading: projectsLoading,
+  } = api.project.getAll.useQuery({
+    isArchived: showArchived,
+  });
+
+  const utils = api.useUtils();
+
+  const createMutation =
+    api.project.create.useMutation({
+      onSuccess: () => {
+        void utils.project.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (projectId: string) => {
+    void projectId;
+  };
+  const handleDelete = (projectId: string) => {
+    void projectId;
+  };
+  const handleProjectClick = (id: string) => {
+    void id;
+  };
+
+  const handleSubmit = (
+    data: ProjectFormData
+  ) => {
+    createMutation.mutate({
+      name: data.name,
+      description: data.description,
+      color: data.color,
+      startDate: data.startDate
+        ? dateOnlyToUtcStartIso(
+            data.startDate)
+        : undefined,
+      endDate: data.endDate
+        ? dateOnlyToUtcStartIso(
+            data.endDate)
+        : undefined,
+    });
+  };
+
+  if (projectsLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold
+            tracking-tight">
+            プロジェクト
+          </h1>
+          <div className="flex items-center
+            gap-4">
+            <div className="flex
+              items-center space-x-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={
+                  setShowArchived} />
+              <Label
+                htmlFor="show-archived">
+                アーカイブ表示
+              </Label>
+            </div>
+
+            <Button onClick={handleCreate}>
+              <Plus
+                className="mr-2 h-4 w-4" />
+              新規プロジェクト
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {projects && projects.length > 0
+            ? (projects.map((project) => {
+              // キャンセル済みは進捗の母数に含めない
+              let taskCount = 0;
+              let doneCount = 0;
+              for (const t of project.tasks ?? []) {
+                if (t.status === TASK_STATUS.CANCELLED)
+                  continue;
+                taskCount++;
+                if (t.status === TASK_STATUS.DONE)
+                  doneCount++;
+              }
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  description={
+                    project.description}
+                  color={project.color}
+                  memberCount={
+                    project.members?.length
+                      ?? 0}
+                  taskStats={{
+                    total: taskCount,
+                    done: doneCount }}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onClick={
+                    handleProjectClick}
+                  isArchived={
+                    project.isArchived}
+                />);
+            })
+
+            ) : (
+              <div className="col-span-full
+                flex flex-col items-center
+                justify-center py-12
+                text-center
+                text-muted-foreground">
+                <p>プロジェクトが見つかりません。</p>
+                <p>最初のプロジェクトを作成しましょう！</p>
+              </div>
+            )}
+        </div>
+
+        <ProjectDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+
 export default function ProjectPage() {
   return (
     <Suspense

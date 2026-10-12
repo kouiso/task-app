@@ -700,7 +700,7 @@ const statusData =
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 画面部品の取り込み
+// 画面部品の取り込み
 'use client';
 
 import {
@@ -725,7 +725,7 @@ import {
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 色とラベルの定数、通信の入口
+// 色とラベルの定数、通信の入口
 import {
   isTaskPriority,
   TASK_PRIORITY_COLORS,
@@ -747,7 +747,7 @@ const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 取得と表示用の値づくり
+// 取得と表示用の値づくり
 export default function ReportPage() {
   const { data: overview, isLoading } =
     api.report.getOverview.useQuery();
@@ -769,7 +769,7 @@ export default function ReportPage() {
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 円グラフへ渡す2つの配列
+// 円グラフへ渡す2つの配列
   const statusData =
     overview?.statusData.map((entry) => ({
       ...entry,
@@ -797,7 +797,7 @@ export default function ReportPage() {
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: return の外枠と見出し
+// return の外枠と見出し
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -818,7 +818,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 統計カード（タスク数・完了率） */}
+        {/* 統計カード（タスク数・完了率） */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -847,7 +847,7 @@ export default function ReportPage() {
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 統計カード（作業時間の合計と平均） */}
+          {/* 統計カード（作業時間の合計と平均） */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -875,7 +875,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: ステータス円グラフの枠 */}
+        {/* ステータス円グラフの枠 */}
         <div className="grid grid-cols-1
           md:grid-cols-2 gap-6">
           <Card>
@@ -904,7 +904,7 @@ export default function ReportPage() {
 
 ```typescript
                       {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-                      {/* 完成版: ステータス円グラフの色と閉じタグ */}
+                      {/* ステータス円グラフの色と閉じタグ */}
                       {statusData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -931,7 +931,7 @@ export default function ReportPage() {
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 優先度円グラフの枠 */}
+          {/* 優先度円グラフの枠 */}
           <Card>
             <CardHeader>
               <CardTitle>優先度別タスク</CardTitle>
@@ -958,7 +958,7 @@ export default function ReportPage() {
 
 ```typescript
                       {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-                      {/* 完成版: 優先度円グラフの色と閉じタグ */}
+                      {/* 優先度円グラフの色と閉じタグ */}
                       {priorityData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -986,7 +986,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: プロジェクト統計テーブルの見出し */}
+        {/* プロジェクト統計テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>プロジェクト統計</CardTitle>
@@ -1015,7 +1015,7 @@ export default function ReportPage() {
 
 ```typescript
               {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-              {/* 完成版: プロジェクト統計テーブルの行 */}
+              {/* プロジェクト統計テーブルの行 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -1041,7 +1041,242 @@ export default function ReportPage() {
 
 ```typescript
             {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-            {/* 完成版: 閉じタグと関数の終わり */}
+            {/* 閉じタグと関数の終わり */}
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/report/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: ファイル全体
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+
+  const statusData =
+    overview?.statusData.map((entry) => ({
+      ...entry,
+      name: isTaskStatus(entry.key)
+        ? TASK_STATUS_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  const priorityData =
+    overview?.priorityData.map((entry) => ({
+      ...entry,
+      name: isTaskPriority(entry.key)
+        ? TASK_PRIORITY_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl
+            font-bold tracking-tight">
+            レポート・統計
+          </h1>
+          <p className="text-muted-foreground">
+            プロジェクトの進捗とタスクの状況を確認できます。
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1
+          md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+
+                      {statusData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskStatus(entry.key)
+                              ? TASK_STATUS_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={priorityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+
+                      {priorityData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskPriority(entry.key)
+                              ? TASK_PRIORITY_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.completedTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+
             </Table>
           </CardContent>
         </Card>

@@ -1126,7 +1126,7 @@ export function ReportContent() {
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-// 完成版: インポート
+// インポート
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
@@ -1141,7 +1141,7 @@ import { getUserProjectIds } from './_helpers/permission';
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: getOverview の入口と空のときの戻り値
+// getOverview の入口と空のときの戻り値
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
     const projectIds = await getUserProjectIds(ctx.session.userId);
@@ -1173,7 +1173,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 集計の土台となる条件
+// 集計の土台となる条件
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
@@ -1197,7 +1197,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: Promise.all の受け取り
+// Promise.all の受け取り
     const [
       projects,
       totalTasks,
@@ -1222,7 +1222,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: プロジェクトと件数の集計・前半
+// プロジェクトと件数の集計・前半
       prisma.project.findMany({
         where: { id: { in: projectIds }, isArchived: false },
         select: { id: true, name: true },
@@ -1251,7 +1251,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 件数の集計・後半と作業時間の合計
+// 件数の集計・後半と作業時間の合計
       prisma.task.count({
         where: {
           ...projectScope,
@@ -1276,7 +1276,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 直近のタスクとステータス別の集計
+// 直近のタスクとステータス別の集計
       prisma.task.findMany({
         where: activeTasksFilter,
         select: {
@@ -1303,7 +1303,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 優先度別とプロジェクト別の集計
+// 優先度別とプロジェクト別の集計
       prisma.task.groupBy({
         by: ['priority'],
         where: activeTasksFilter,
@@ -1334,7 +1334,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 割合と平均の計算
+// 割合と平均の計算
     const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
     const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -1348,7 +1348,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: プロジェクト別の集計の対応表
+// プロジェクト別の集計の対応表
     const doneCountByProject = new Map(
       projectDoneGroups.map((group) => [group.projectId, group._count._all]),
     );
@@ -1369,7 +1369,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 戻り値の前半
+// 戻り値の前半
     return {
       totalProjects: projects.length,
       totalTasks,
@@ -1399,7 +1399,202 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: projectStats の組み立て
+// projectStats の組み立て
+      projectStats: projects.map((project) => {
+        const taskStats = taskStatsByProject.get(project.id) ?? {
+          totalTasks: 0,
+          totalTimeSpent: 0,
+        };
+        const completedTaskCount = doneCountByProject.get(project.id) ?? 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          totalTasks: taskStats.totalTasks,
+          completedTasks: completedTaskCount,
+          progress:
+            taskStats.totalTasks > 0 ? (completedTaskCount / taskStats.totalTasks) * 100 : 0,
+          totalTimeHours: taskStats.totalTimeSpent / 60,
+        };
+      }),
+    };
+  }),
+});
+```
+
+完成版の `src/server/api/routers/report.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/report.ts
+// 完成版: ファイル全体
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+
+export const reportRouter = createTRPCRouter({
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    const projectIds = await getUserProjectIds(ctx.session.userId);
+
+    if (projectIds.length === 0) {
+      return {
+        totalProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
+        completionRate: 0,
+        totalTimeSpent: 0,
+        averageTimePerTask: 0,
+        recentTasks: [],
+        statusData: [],
+        priorityData: [],
+        projectStats: [],
+      };
+    }
+
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、
+    // プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、
+    // CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+
+    const [
+      projects,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      totalTimeAggregate,
+      recentTasks,
+      statusGroups,
+      priorityGroups,
+      projectTaskGroups,
+      projectDoneGroups,
+    ] = await Promise.all([
+
+      prisma.project.findMany({
+        where: { id: { in: projectIds }, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.count({ where: activeTasksFilter }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
+      prisma.task.aggregate({
+        where: activeTasksFilter,
+        _sum: { timeSpentMinutes: true },
+      }),
+
+      prisma.task.findMany({
+        where: activeTasksFilter,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+
+      prisma.task.groupBy({
+        by: ['priority'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+        _sum: { timeSpentMinutes: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
+    const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const doneCountByProject = new Map(
+      projectDoneGroups.map((group) => [group.projectId, group._count._all]),
+    );
+    const taskStatsByProject = new Map(
+      projectTaskGroups.map((group) => [
+        group.projectId,
+        {
+          totalTasks: group._count._all,
+          totalTimeSpent: group._sum.timeSpentMinutes ?? 0,
+        },
+      ]),
+    );
+
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      completionRate,
+      totalTimeSpent,
+      averageTimePerTask,
+      recentTasks,
+      statusData: statusGroups.map((group) => ({
+        key: group.status,
+        value: group._count._all,
+      })),
+      priorityData: priorityGroups.map((group) => ({
+        key: group.priority,
+        value: group._count._all,
+      })),
+
       projectStats: projects.map((project) => {
         const taskStats = taskStatsByProject.get(project.id) ?? {
           totalTasks: 0,
@@ -1432,7 +1627,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/root.ts
-// 完成版: ルーターの取り込み
+// ルーターの取り込み
 import { authRouter } from './routers/auth';
 import { commentRouter } from './routers/comment';
 import { projectRouter } from './routers/project';
@@ -1448,7 +1643,35 @@ import { createCallerFactory, createTRPCRouter } from './trpc';
 
 ```typescript
 // filepath: src/server/api/root.ts（同じファイルの続き）
-// 完成版: 手続きの一覧表
+// 手続きの一覧表
+export const appRouter = createTRPCRouter({
+  auth: authRouter,
+  project: projectRouter,
+  task: taskRouter,
+  search: searchRouter,
+  comment: commentRouter,
+  report: reportRouter,
+});
+
+export type AppRouter = typeof appRouter;
+
+export const createCaller = createCallerFactory(appRouter);
+```
+
+完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/root.ts
+// 完成版: ファイル全体
+import { authRouter } from './routers/auth';
+import { commentRouter } from './routers/comment';
+import { projectRouter } from './routers/project';
+import { reportRouter } from './routers/report';
+import { searchRouter } from './routers/search';
+import { taskRouter } from './routers/task';
+import { createCallerFactory, createTRPCRouter } from './trpc';
+
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   project: projectRouter,
@@ -1473,7 +1696,7 @@ export const createCaller = createCallerFactory(appRouter);
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 画面の import
+// 画面の import
 'use client';
 
 import { AppLayout }
@@ -1499,7 +1722,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: データ取得と表示用の値
+// データ取得と表示用の値
 export default function ReportPage() {
   const { data: overview, isLoading } =
     api.report.getOverview.useQuery();
@@ -1529,7 +1752,7 @@ export default function ReportPage() {
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: JSX — 見出し
+// JSX — 見出し
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -1553,7 +1776,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — 統計カードの前半2枚 */}
+        {/* JSX — 統計カードの前半2枚 */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4
           gap-4">
@@ -1585,7 +1808,7 @@ export default function ReportPage() {
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-          {/* 完成版: JSX — 統計カードの後半2枚 */}
+          {/* JSX — 統計カードの後半2枚 */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1615,7 +1838,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — テーブルの見出し */}
+        {/* JSX — テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>
@@ -1647,7 +1870,7 @@ export default function ReportPage() {
 
 ```typescript
               {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-              {/* 完成版: JSX — テーブルの行・前半 */}
+              {/* JSX — テーブルの行・前半 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -1671,7 +1894,158 @@ export default function ReportPage() {
 
 ```typescript
                     {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-                    {/* 完成版: JSX — テーブルの行・後半と閉じタグ */}
+                    {/* JSX — テーブルの行・後半と閉じタグ */}
+                    <TableCell
+                      className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/report/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+import { api } from '@/trpc/react';
+
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl
+            font-bold tracking-tight">
+            レポート・統計
+          </h1>
+          <p className=
+            "text-muted-foreground">
+            プロジェクトの進捗とタスクの状況を確認できます。
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4
+          gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell
+                      className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell
+                      className="text-right">
+                      {stat.completedTasks}
+                    </TableCell>
+
                     <TableCell
                       className="text-right">
                       {stat.progress.toFixed(1)}%</TableCell>
@@ -1703,7 +2077,7 @@ Day 08 で作った長いファイルなので今日触った2か所だけを載
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: アイコンの取り込み
+// アイコンの取り込み
 import {
   BarChart,
   ClipboardList,
@@ -1721,7 +2095,7 @@ import {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: Day 20 までに並べたメニュー項目
+// Day 20 までに並べたメニュー項目
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -1749,7 +2123,7 @@ const menuItems: MenuItem[] = [
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
-// 完成版: 検索と、今日足したレポート
+// 検索と、今日足したレポート
   {
     text: '検索',
     icon: <Search className="h-5 w-5" />,
@@ -1761,6 +2135,212 @@ const menuItems: MenuItem[] = [
     path: '/report',
   },
 ];
+```
+
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+import {
+  BarChart,
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Search,
+} from 'lucide-react';
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+{
+  text: 'レポート',
+  icon: <BarChart className="h-5 w-5" />,
+  path: '/report',
+},
+{
+  text: '検索',
+  icon: <Search className="h-5 w-5" />,
+  path: '/search',
+},
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+  {
+    text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report',
+  },
+];
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+  if (!session?.user) {
+    return null;
+  }
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
 ```
 
 末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 13・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて綴りがずれるとメニューは出るのに押した先が404になります。
