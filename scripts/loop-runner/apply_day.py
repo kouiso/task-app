@@ -1010,6 +1010,9 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
     in_block_comment = False
     for l in lines:
         if not l.strip():
+            # テンプレート内の空行は文字列の中身なので、直前の行へ畳んで残す
+            if tpl and tpl[-1] == "`" and out:
+                out[-1] += l + "\n"
             continue
         buf: list[str] = []
         i, n = 0, len(l)
@@ -1062,6 +1065,10 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
                     tpl.pop()
             buf.append(c)
             i += 1
+        # テンプレート内の改行も文字列の中身。区切りなしで連結する
+        # _blob_locate で `a\nb` と `ab` が同一視されないよう残す
+        if tpl and tpl[-1] == "`":
+            buf.append("\n")
         out.append("".join(buf))
         # ' と " は行を跨げないので行末で未閉鎖なら状態をリセットする
         quote = None
@@ -1755,7 +1762,12 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
         new_raw.append(group)
 
     def frag_group(j: int, existing: Optional[list[str]]) -> list[str]:
+        nonlocal pend
         k = j - span
+        if k > 0:
+            # 断片内部の空行配置は断片原文が持つ。置き換えで消える既存行の
+            # 空行まで前置するとテンプレート内に改行が増える
+            pend = []
         if k == 0 and existing is not None:
             # 断片先頭行の前の空行は既存ファイル側の配置を保つ
             return existing[:-1] + frag_groups[0][-1:]

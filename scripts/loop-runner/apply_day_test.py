@@ -575,7 +575,8 @@ class Issue630Fixes(unittest.TestCase):
         # 継続行の空白が潰れて「適用済み」を誤認する（issue #630）
         lines = ["const t = `head", "  a   b  ", "tail`;", "const x = 1;"]
         blob = ad._norm_blob(lines)
-        self.assertEqual(blob[1], "  a   b  ")
+        # テンプレート内の改行も中身なので行末に残る
+        self.assertEqual(blob[1], "  a   b  \n")
         self.assertEqual(blob[3], "constx=1;")
 
     def test_insert_past_comment_semicolon_in_import(self):
@@ -946,6 +947,59 @@ export const t = `head ${"a b"} xy`;
             self.assertEqual(
                 body, "export const a = 1;\n"
                       "export const t = `head\n\n  new  \ntail`;\n", body)
+
+    def test_replace_does_not_double_blank_lines_inside_fragment(self):
+        # 置き換えで消える既存行の前の空行と断片側の空行を重ねて書かない。
+        # 重ねるとテンプレート文字列に改行が増える
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export const t = `head\n"
+                "\n"
+                "old\n"
+                "tail`;\n"))
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `head\n"
+                "\n"
+                "  new  \n"
+                "tail`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n"
+                      "export const t = `head\n\n  new  \ntail`;\n", body)
+
+    def test_template_newline_change_is_applied(self):
+        # テンプレート内の改行の有無は文字列の中身の違い。
+        # 空白無視ブロブ照合で「適用済み」として飛ばさない
+        self.assertNotEqual(
+            "".join(ad._norm_blob(["const t = `a", "b`;"])),
+            "".join(ad._norm_blob(["const t = `ab`;"])))
+        self.assertNotEqual(
+            "".join(ad._norm_blob(["const t = `a", "", "b`;"])),
+            "".join(ad._norm_blob(["const t = `a", "b`;"])))
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const t = `ab`;\n")
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `a\n"
+                "b`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\nexport const t = `a\nb`;\n", body)
 
     def test_core_match_repair_does_not_insert_meta_comment(self):
         # 先頭の位置指示コメントを除いた本体が既存と一致する修復経路では、
