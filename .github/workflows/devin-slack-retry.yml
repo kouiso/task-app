@@ -23,4 +23,7 @@ jobs:
     # 可変ブランチ参照に secrets を渡すと参照先更新で漏洩し得るため不変 SHA で固定。
     # 中央実装 PR#14 の HEAD。main マージ後に @main へ切替える
     uses: kouiso/ritmo-devin/.github/workflows/devin-slack-retry-reusable.yml@3bb10481528a5383dbc27a3dd9706f6ff98edde7
-    secrets: inherit
+    secrets:
+      RITMO_DEVIN_AUTOMATION_PRIVATE_KEY: ${{ secrets.RITMO_DEVIN_AUTOMATION_PRIVATE_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
