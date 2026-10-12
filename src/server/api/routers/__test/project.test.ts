@@ -339,6 +339,33 @@ describe('projectRouter', () => {
       expect(kept.assigneeId).toBe(target.id);
     });
 
+    it('DONE/CANCELLEDタスクの担当者は完了実績として残る', async () => {
+      const { owner, project, caller } = await setupProjectWithActor('OWNER');
+      const target = await createTestUser({ email: 'rm-done@example.com' });
+      await addMember(project.id, target.id, 'MEMBER');
+      const done = await createTestTask(project.id, owner.id, {
+        assigneeId: target.id,
+        status: 'DONE',
+      });
+      const cancelled = await createTestTask(project.id, owner.id, {
+        assigneeId: target.id,
+        status: 'CANCELLED',
+      });
+      const open = await createTestTask(project.id, owner.id, { assigneeId: target.id });
+
+      await caller.project.removeMember({ projectId: project.id, userId: target.id });
+
+      // 完了実績の担当者は残し、未完了タスクだけ解除される
+      const doneKept = await prisma.task.findUniqueOrThrow({ where: { id: done.id } });
+      const cancelledKept = await prisma.task.findUniqueOrThrow({
+        where: { id: cancelled.id },
+      });
+      const openCleared = await prisma.task.findUniqueOrThrow({ where: { id: open.id } });
+      expect(doneKept.assigneeId).toBe(target.id);
+      expect(cancelledKept.assigneeId).toBe(target.id);
+      expect(openCleared.assigneeId).toBeNull();
+    });
+
     it('MEMBERはメンバー削除を拒否される', async () => {
       const { project, caller } = await setupProjectWithActor('MEMBER');
       const target = await createTestUser({ email: 'rm-by-member@example.com' });

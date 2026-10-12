@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
@@ -94,6 +95,25 @@ describe('userRouter', () => {
       const ids = result.assignedTasks.map((t) => t.id);
       expect(ids).toContain(visible.id);
       expect(ids).toHaveLength(1);
+    });
+
+    it('プロジェクト退会後は本人呼び出しでも担当タスクが返らない', async () => {
+      // issue #624 の再現経路: removeMember → 退会者本人が user.getById
+      const owner = await createTestUser({ email: uniqueEmail('u-rm-owner') });
+      const member = await createTestUser({ email: uniqueEmail('u-rm-member') });
+      const project = await createTestProject(owner.id);
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: member.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, owner.id, { assigneeId: member.id });
+
+      const ownerCaller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+      await ownerCaller.project.removeMember({ projectId: project.id, userId: member.id });
+
+      const memberCaller = await createAuthenticatedCaller(member.id, member.email, member.role);
+      const result = await memberCaller.user.getById({ id: member.id });
+      expect(result.assignedTasks.map((t) => t.id)).not.toContain(task.id);
+      expect(result.assignedTasks).toHaveLength(0);
     });
 
     it('ADMINには他ユーザーの担当タスクが所属問わず返る', async () => {

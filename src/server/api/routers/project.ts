@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
 import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
@@ -430,11 +431,14 @@ export const projectRouter = createTRPCRouter({
         });
 
         // 退会後も担当タスクが残ると退会者側からタスク情報が読め続けるため、
-        // 同じトランザクションでこのプロジェクト内の担当を外して整合を取る
+        // 同じトランザクションでこのプロジェクト内の担当を外して整合を取る。
+        // DONE/CANCELLED は完了実績の担当者記録として残す（getById の assignedTasks は
+        // もともと DONE/CANCELLED を返さないので、消しても漏えい対策にならず実績だけ失われる）
         await tx.task.updateMany({
           where: {
             projectId: input.projectId,
             assigneeId: input.userId,
+            status: { notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] },
           },
           data: { assigneeId: null },
         });
