@@ -1614,7 +1614,7 @@ export function AuthGuard({
 
 ## 完成コード全体
 
-今日は7つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 1 から Step 5 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は7つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は各ファイルの最後にある全文のブロックでファイルを置き換えてください。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。上から順に読めばStep 1 から Step 5 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1632,7 +1632,7 @@ export function AuthGuard({
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: インポートと鍵の組み立て
+// インポートと鍵の組み立て
 import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 import type { UserRole } from './constant/roles';
@@ -1651,7 +1651,7 @@ function getKey(): Uint8Array {
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: 型定義と定数
+// 型定義と定数
 export interface SessionPayload {
   userId: string;
   email: string;
@@ -1675,7 +1675,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: 型ガード
+// 型ガード
 function isSessionPayload(
   payload: JWTPayload,
 ): payload is JWTPayload & SessionPayload {
@@ -1694,7 +1694,7 @@ function isSessionPayload(
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: signSessionToken — トークンの発行
+// signSessionToken — トークンの発行
 export async function signSessionToken(
   payload: SessionPayload,
 ): Promise<string> {
@@ -1719,7 +1719,7 @@ export async function signSessionToken(
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: verifySessionToken — トークンの検証
+// verifySessionToken — トークンの検証
 export async function verifySessionToken(
   token: string,
 ): Promise<SessionPayload | null> {
@@ -1747,7 +1747,7 @@ export async function verifySessionToken(
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: Cookie への保存
+// Cookie への保存
 export async function saveSessionCookie(
   token: string,
 ): Promise<void> {
@@ -1770,7 +1770,7 @@ export async function saveSessionCookie(
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: createSession — 発行と保存の連結
+// createSession — 発行と保存の連結
 export async function createSession(
   user: SessionUser,
 ): Promise<string> {
@@ -1796,7 +1796,7 @@ export async function createSession(
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: getSession と deleteSession
+// getSession と deleteSession
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -1819,7 +1819,151 @@ export async function deleteSession(): Promise<void> {
 
 ```typescript
 // filepath: src/lib/session.ts
-// 完成版: verifySession — 画面向けの形へ変換
+// verifySession — 画面向けの形へ変換
+export async function verifySession(): Promise<SessionUser | null> {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.userId,
+    email: session.email,
+    role: session.role,
+  };
+}
+```
+
+完成版の `src/lib/session.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/lib/session.ts
+// 完成版: ファイル全体
+import { type JWTPayload, jwtVerify, SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import type { UserRole } from './constant/roles';
+import { env } from './env';
+
+function getKey(): Uint8Array {
+  const SECRET_KEY = env.JWT_SECRET;
+  const encoded = new TextEncoder().encode(SECRET_KEY);
+  return new Uint8Array(encoded);
+}
+
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+  exp: number;
+}
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+const COOKIE_NAME = 'session';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7日間
+
+function isSessionPayload(
+  payload: JWTPayload,
+): payload is JWTPayload & SessionPayload {
+  return (
+    typeof payload['userId'] === 'string' &&
+    typeof payload['email'] === 'string' &&
+    typeof payload['role'] === 'string' &&
+    typeof payload['exp'] === 'number'
+  );
+}
+
+export async function signSessionToken(
+  payload: SessionPayload,
+): Promise<string> {
+  const jwtPayload: Record<string, unknown> = {
+    userId: payload.userId,
+    email: payload.email,
+    role: payload.role,
+    exp: payload.exp,
+  };
+
+  return await new SignJWT(jwtPayload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(getKey());
+}
+
+export async function verifySessionToken(
+  token: string,
+): Promise<SessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ['HS256'],
+    });
+
+    if (!isSessionPayload(payload)) {
+      console.error('Invalid session payload structure');
+      return null;
+    }
+
+    return payload;
+  } catch {
+    console.error('Failed to verify session token');
+    return null;
+  }
+}
+
+export async function saveSessionCookie(
+  token: string,
+): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure:
+      process.env['NODE_ENV'] === 'production'
+      && process.env['PLAYWRIGHT_TEST'] !== '1',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+
+export async function createSession(
+  user: SessionUser,
+): Promise<string> {
+  const expiresAt =
+    Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE;
+  const payload: SessionPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    exp: expiresAt,
+  };
+
+  const token = await signSessionToken(payload);
+  await saveSessionCookie(token);
+
+  return token;
+}
+
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return await verifySessionToken(token);
+}
+export async function deleteSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+}
+
 export async function verifySession(): Promise<SessionUser | null> {
   const session = await getSession();
 
@@ -1843,7 +1987,7 @@ export async function verifySession(): Promise<SessionUser | null> {
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 完成版: インポートとコンテキスト
+// インポートとコンテキスト
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
@@ -1873,7 +2017,7 @@ export type Context = Awaited<
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 完成版: initTRPC の初期化
+// initTRPC の初期化
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
@@ -1897,7 +2041,7 @@ const t = initTRPC.context<Context>().create({
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 完成版: ログイン確認の前半
+// ログイン確認の前半
 const isAuthenticated = t.middleware(
   async ({ ctx, next }) => {
     if (!ctx.session?.userId) {
@@ -1923,7 +2067,7 @@ const isAuthenticated = t.middleware(
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 完成版: ログイン確認の後半
+// ログイン確認の後半
     if (!currentUser) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
@@ -1955,7 +2099,112 @@ const isAuthenticated = t.middleware(
 
 ```typescript
 // filepath: src/server/api/trpc.ts
-// 完成版: 管理者チェックと4種類の入口
+// 管理者チェックと4種類の入口
+const isAdmin = t.middleware(async ({ ctx, next }) => {
+  if (ctx.session?.role !== USER_ROLE.ADMIN) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: '管理者権限が必要です',
+    });
+  }
+
+  return next({ ctx });
+});
+export const createTRPCRouter = t.router;
+export const publicProcedure = t.procedure;
+export const protectedProcedure =
+  t.procedure.use(isAuthenticated);
+export const adminProcedure =
+  t.procedure.use(isAuthenticated).use(isAdmin);
+export const createCallerFactory = t.createCallerFactory;
+```
+
+完成版の `src/server/api/trpc.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/trpc.ts
+// 完成版: ファイル全体
+import { initTRPC, TRPCError } from '@trpc/server';
+import superjson from 'superjson';
+import { ZodError } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
+
+export const createTRPCContext = async (
+  opts: { headers: Headers },
+) => {
+  const session = await getSession();
+
+  return {
+    session,
+    ...opts,
+  };
+};
+
+export type Context = Awaited<
+  ReturnType<typeof createTRPCContext>
+>;
+
+const t = initTRPC.context<Context>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        zodError:
+          error.cause instanceof ZodError
+            ? error.cause.flatten()
+            : null,
+      },
+    };
+  },
+});
+
+const isAuthenticated = t.middleware(
+  async ({ ctx, next }) => {
+    if (!ctx.session?.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ログインが必要です',
+      });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!currentUser) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーが見つかりません',
+      });
+    }
+
+    if (!currentUser.isActive) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'このアカウントは無効化されています',
+      });
+    }
+    return next({
+      ctx: {
+        session: {
+          ...ctx.session,
+          role: currentUser.role,
+        },
+      },
+    });
+  },
+);
+
 const isAdmin = t.middleware(async ({ ctx, next }) => {
   if (ctx.session?.role !== USER_ROLE.ADMIN) {
     throw new TRPCError({
@@ -2015,7 +2264,7 @@ Prisma に「どの列を返すか」を渡すための定型をまとめたフ�
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: インポート
+// インポート
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -2038,7 +2287,7 @@ import { USER_DETAIL_SELECT } from './_helpers/select';
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: 入力スキーマ
+// 入力スキーマ
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(1, 'パスワードを入力してください'),
@@ -2062,7 +2311,7 @@ const registerSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: 想定外エラーの受け皿
+// 想定外エラーの受け皿
 function handleUnexpectedError(context: string, error: unknown): never {
   console.error('[auth] unexpected error', { context, error });
   throw new TRPCError({
@@ -2079,7 +2328,7 @@ function handleUnexpectedError(context: string, error: unknown): never {
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: login — 回数制限の確認
+// login — 回数制限の確認
 export const authRouter = createTRPCRouter({
   login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
     const ip = extractClientIp(ctx.headers);
@@ -2100,7 +2349,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: login — ユーザーの取得
+// login — ユーザーの取得
     try {
       const user = await prisma.user.findUnique({
         where: { email: input.email },
@@ -2122,7 +2371,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: login — 照合と有効判定
+// login — 照合と有効判定
 
       const isPasswordValid = await bcrypt.compare(input.password, user.password);
       if (!isPasswordValid) {
@@ -2152,7 +2401,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: login — セッション発行と戻り値
+// login — セッション発行と戻り値
       const sessionUser: SessionUser = {
         id: user.id,
         email: user.email,
@@ -2182,7 +2431,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: login — 例外の仕分け
+// login — 例外の仕分け
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       handleUnexpectedError('ログイン処理', error);
@@ -2196,7 +2445,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: register — 重複チェックとハッシュ化
+// register — 重複チェックとハッシュ化
   register: publicProcedure
     .input(registerSchema)
     .mutation(async ({ input }) => {
@@ -2224,7 +2473,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: register — 作成とセッション発行
+// register — 作成とセッション発行
         const user = await prisma.user.create({
           data: {
             email: input.email,
@@ -2249,7 +2498,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: register — 戻り値と例外
+// register — 戻り値と例外
         return {
           user: {
             id: user.id,
@@ -2272,7 +2521,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: logout と getSession
+// logout と getSession
   logout: publicProcedure.mutation(async () => {
     await deleteSession();
     return { success: true };
@@ -2302,7 +2551,7 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: getCurrentUser — 取得
+// getCurrentUser — 取得
   getCurrentUser: protectedProcedure.query(
     async ({ ctx }) => {
       const user = await prisma.user.findUnique({
@@ -2327,7 +2576,234 @@ export const authRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/auth.ts
-// 完成版: getCurrentUser — 判定と締め
+// getCurrentUser — 判定と締め
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      return user;
+    },
+  ),
+});
+```
+
+完成版の `src/server/api/routers/auth.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/auth.ts
+// 完成版: ファイル全体
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import {
+  checkLoginRateLimit,
+  extractClientIp,
+  rateLimitToTRPCError,
+  recordLoginSuccess,
+} from '@/lib/rate-limit';
+import { createSession, deleteSession, type SessionUser } from '@/lib/session';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+
+const loginSchema = z.object({
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  password: z.string().min(1, 'パスワードを入力してください'),
+});
+const registerSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  password: z
+    .string()
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+
+function handleUnexpectedError(context: string, error: unknown): never {
+  console.error('[auth] unexpected error', { context, error });
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `${context}中にエラーが発生しました。時間をおいてお試しください。`,
+    cause: error,
+  });
+}
+
+export const authRouter = createTRPCRouter({
+  login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
+    const ip = extractClientIp(ctx.headers);
+
+    // brute force 対策: 直近 15 分の失敗回数を
+    // email 単独 / email×IP / IP 単独の3軸で rate-limit。
+    // checkLoginRateLimit は許可と同時に失敗行を先取りで記録する
+    // （成功時は recordLoginSuccess が削除）
+    const limitResult = await checkLoginRateLimit(input.email, ip);
+    if (!limitResult.allowed) {
+      throw rateLimitToTRPCError(limitResult);
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (!user?.password) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、
+        // ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
+
+
+      const isPasswordValid = await bcrypt.compare(input.password, user.password);
+      if (!isPasswordValid) {
+        // 失敗は checkLoginRateLimit が先取りで記録済みのため、
+        // ここでは追加記録しない
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'メールアドレスまたはパスワードが正しくありません',
+        });
+      }
+
+      if (!user.isActive) {
+        // 無効判定はパスワード照合が通ったあとに行う。
+        // 先に判定すると、正しいパスワードを知らなくても
+        // 「無効化されたアカウントが存在する」ことを
+        // 列挙できてしまうため。
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      const sessionUser: SessionUser = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      // セッション発行の前に成功記録を確定させる。
+      // 順序が逆だと、記録の失敗で 500 を返す一方で
+      // 認証済みセッションだけが残るため。
+      await recordLoginSuccess(input.email, ip);
+      await createSession(sessionUser);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+        },
+      };
+
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      handleUnexpectedError('ログイン処理', error);
+    }
+  }),
+
+  register: publicProcedure
+    .input(registerSchema)
+    .mutation(async ({ input }) => {
+      try {
+        const existing = await prisma.user.findUnique({
+          where: { email: input.email },
+        });
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'このメールアドレスは既に登録されています',
+          });
+        }
+
+        const hashedPassword = await bcrypt.hash(
+          input.password,
+          10,
+        );
+
+        const user = await prisma.user.create({
+          data: {
+            email: input.email,
+            name: input.name,
+            password: hashedPassword,
+            role: USER_ROLE.USER,
+            isActive: true,
+          },
+        });
+        const sessionUser: SessionUser = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+
+        await createSession(sessionUser);
+
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        handleUnexpectedError('ユーザー登録処理', error);
+      }
+    }),
+
+  logout: publicProcedure.mutation(async () => {
+    await deleteSession();
+    return { success: true };
+  }),
+
+  getSession: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.session) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: USER_DETAIL_SELECT,
+    });
+
+    if (!user?.isActive) {
+      return null;
+    }
+
+    return { user };
+  }),
+
+  getCurrentUser: protectedProcedure.query(
+    async ({ ctx }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.session.userId },
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
       if (!user.isActive) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -2396,7 +2872,7 @@ export { handler as GET, handler as POST };
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: インポートと公開パス
+// インポートと公開パス
 import { jwtVerify } from 'jose/jwt/verify';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isValidRedirectUrl } from '@/lib/redirect';
@@ -2419,7 +2895,7 @@ function isPublicPath(pathname: string): boolean {
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: 戻り先の検証と鍵
+// 戻り先の検証と鍵
 
 function isValidCallbackPath(path: string): boolean {
   return (
@@ -2443,7 +2919,7 @@ function getJwtSecret(): Uint8Array {
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: 素通りさせる2つの経路
+// 素通りさせる2つの経路
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -2465,7 +2941,7 @@ export async function middleware(request: NextRequest) {
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: Cookie が無い場合
+// Cookie が無い場合
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   // Cookie なし → ログインへリダイレクト
@@ -2487,7 +2963,7 @@ Cookie が無ければログイン画面へ送ります。このとき `callback
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: JWT の検証
+// JWT の検証
   // JWT 検証
   try {
     await jwtVerify(token, getJwtSecret(), {
@@ -2510,7 +2986,94 @@ Cookie が無ければログイン画面へ送ります。このとき `callback
 
 ```typescript
 // filepath: src/middleware.ts
-// 完成版: 適用範囲の指定
+// 適用範囲の指定
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};
+```
+
+完成版の `src/middleware.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/middleware.ts
+// 完成版: ファイル全体
+import { jwtVerify } from 'jose/jwt/verify';
+import { type NextRequest, NextResponse } from 'next/server';
+import { isValidRedirectUrl } from '@/lib/redirect';
+
+const COOKIE_NAME = 'session';
+
+const PUBLIC_PATHS = ['/login', '/register'];
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (path) =>
+      pathname === path
+      || pathname.startsWith(`${path}/`),
+  );
+}
+
+
+function isValidCallbackPath(path: string): boolean {
+  return (
+    isValidRedirectUrl(path)
+    && !path.includes('://')
+  );
+}
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env['JWT_SECRET'];
+  if (!secret) {
+    throw new Error('JWT_SECRET is not set');
+  }
+  return new TextEncoder().encode(secret);
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 公開ページはスキップ
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // tRPC エンドポイントはスキップ
+  // （tRPC 層の protectedProcedure で認証を担保）
+  if (pathname.startsWith('/api/trpc')) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+
+  // Cookie なし → ログインへリダイレクト
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set(
+      'callbackUrl',
+      isValidCallbackPath(pathname)
+        ? pathname
+        : '/dashboard',
+    );
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // JWT 検証
+  try {
+    await jwtVerify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
+    });
+    return NextResponse.next();
+  } catch {
+    // 無効なトークン: Cookie 削除してログインへ
+    const loginUrl = new URL('/login', request.url);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete(COOKIE_NAME);
+    return response;
+  }
+}
+
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico).*)',

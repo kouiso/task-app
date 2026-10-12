@@ -2224,7 +2224,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。3画面ぶんの断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 13 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は5つのファイルを触りました。3画面ぶんの断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は各ファイルの最後にある全文のブロックでファイルを置き換えてください。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。上から順に読めばStep 0 から Step 13 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2234,7 +2234,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 | `src/app/profile/change-password/page.tsx` | パスワード変更の画面 | Step 6 から Step 8 |
 | `src/app/profile/edit/page.tsx` | プロフィール編集の画面 | Step 11 から Step 13 |
 
-`app-layout.tsx` は Day 08 で作った長いファイルなので今日書き換えた3か所だけを載せます。それ以外の行は Day 08 のまま触りません。
+`app-layout.tsx` は Day 08 で作った長いファイルなので今日書き換えた3か所を先に載せます。そのあとの全文には前の日までに書いた行もそのまま入っています。
 
 ### `src/server/api/routers/user.ts`
 
@@ -2242,7 +2242,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: import
+// import
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
@@ -2260,7 +2260,7 @@ Day 24 から4つの名前を追加しました。`protectedProcedure` は既存
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: 2つの入力スキーマ
+// 2つの入力スキーマ
 const profileUpdateSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -2285,7 +2285,7 @@ const changePasswordSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getAll の入口と入力の定義
+// getAll の入口と入力の定義
 export const userRouter = createTRPCRouter({
   // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
   getAll: adminProcedure
@@ -2307,7 +2307,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: getAll の絞り込みと取得
+// getAll の絞り込みと取得
       if (input?.isActive !== undefined) {
         where.isActive = input.isActive;
       }
@@ -2334,7 +2334,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: updateProfile のメール重複チェック
+// updateProfile のメール重複チェック
   updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.userId;
 
@@ -2361,7 +2361,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: updateProfile の更新
+// updateProfile の更新
     const updateData: Prisma.UserUpdateInput = {
       name: input.name,
       email: input.email,
@@ -2386,7 +2386,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: updateProfile のセッション再発行
+// updateProfile のセッション再発行
     if (input.email !== ctx.session.email) {
       await createSession({
         id: updatedUser.id,
@@ -2405,7 +2405,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: changePassword の入口と存在チェック
+// changePassword の入口と存在チェック
   changePassword: protectedProcedure
     .input(changePasswordSchema)
     .mutation(async ({ ctx, input }) => {
@@ -2430,7 +2430,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: changePassword の状態と照合
+// changePassword の状態と照合
       if (!user.isActive) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -2454,7 +2454,165 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/user.ts
-// 完成版: changePassword の保存
+// changePassword の保存
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true, message: 'パスワードを変更しました' };
+    }),
+});
+```
+
+完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/user.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/session';
+import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
+import { USER_DETAIL_SELECT } from './_helpers/select';
+
+const profileUpdateSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url().optional().nullable(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: z
+    .string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+
+export const userRouter = createTRPCRouter({
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+
+      if (input?.role) {
+        where.role = input.role;
+      }
+
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
+  updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.session.userId;
+
+    if (input.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: input.email,
+          id: { not: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に使用されています',
+        });
+      }
+    }
+
+    const updateData: Prisma.UserUpdateInput = {
+      name: input.name,
+      email: input.email,
+    };
+    if (input.avatar !== undefined) {
+      updateData.avatar = input.avatar;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+
+    if (input.email !== ctx.session.email) {
+      await createSession({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      });
+    }
+
+    return updatedUser;
+  }),
+
+  changePassword: protectedProcedure
+    .input(changePasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.userId;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { password: true, isActive: true },
+      });
+
+      if (!user?.password) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: '現在のパスワードが正しくありません',
+        });
+      }
+
       const hashedPassword = await bcrypt.hash(input.newPassword, 10);
 
       await prisma.user.update({
@@ -2475,7 +2633,7 @@ export const userRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { format } from 'date-fns';
@@ -2491,7 +2649,7 @@ import { useEffect } from 'react';
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// 完成版: プロジェクト内の import
+// プロジェクト内の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -2509,7 +2667,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// 完成版: データ取得と表示の前判定
+// データ取得と表示の前判定
 export default function ProfilePage() {
   const router = useRouter();
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
@@ -2535,7 +2693,7 @@ export default function ProfilePage() {
 
 ```typescript
 // filepath: src/app/profile/page.tsx
-// 完成版: ページの外枠とアバター
+// ページの外枠とアバター
   return (
     <AppLayout>
       <div className="container mx-auto max-w-2xl space-y-6 py-8">
@@ -2561,7 +2719,7 @@ export default function ProfilePage() {
 
 ```typescript
               {/* filepath: src/app/profile/page.tsx */}
-              {/* 完成版: 名前とバッジ */}
+              {/* 名前とバッジ */}
               <div className="flex-1">
                 <h1 className="text-2xl font-bold">
                   {currentUser.name}
@@ -2582,7 +2740,7 @@ export default function ProfilePage() {
 
 ```typescript
             {/* filepath: src/app/profile/page.tsx */}
-            {/* 完成版: メールアドレスの行 */}
+            {/* メールアドレスの行 */}
             <Separator />
 
             <div className="space-y-4">
@@ -2603,7 +2761,7 @@ export default function ProfilePage() {
 
 ```typescript
               {/* filepath: src/app/profile/page.tsx */}
-              {/* 完成版: 登録日の行 */}
+              {/* 登録日の行 */}
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                   <Calendar className="w-5 h-5 text-primary" />
@@ -2627,7 +2785,7 @@ export default function ProfilePage() {
 
 ```typescript
               {/* filepath: src/app/profile/page.tsx */}
-              {/* 完成版: 最終更新日の行 */}
+              {/* 最終更新日の行 */}
               <div className="flex items-start gap-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                   <Calendar className="w-5 h-5 text-primary" />
@@ -2652,7 +2810,7 @@ export default function ProfilePage() {
 
 ```typescript
             {/* filepath: src/app/profile/page.tsx */}
-            {/* 完成版: 編集とパスワード変更のボタン */}
+            {/* 編集とパスワード変更のボタン */}
             <Separator />
 
             <div className="flex flex-col gap-3">
@@ -2676,7 +2834,157 @@ export default function ProfilePage() {
 
 ```typescript
               {/* filepath: src/app/profile/page.tsx */}
-              {/* 完成版: 管理者向けのボタンと閉じタグ */}
+              {/* 管理者向けのボタンと閉じタグ */}
+              {currentUser.role === USER_ROLE.ADMIN && (
+                <Button variant="outline" className="w-full" onClick={() => router.push('/user')}>
+                  <Shield className="w-4 h-4 mr-2" />
+                  ユーザー管理
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/profile/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/profile/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Calendar, Edit, Lock, Mail, Shield, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+import { AppLayout } from '@/component/layout/app-layout';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { Separator } from '@/component/ui/separator';
+import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { api } from '@/trpc/react';
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
+
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isLoading, router]);
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-2xl space-y-6 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>プロフィール</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex gap-4">
+              <Avatar className="w-20 h-20 rounded-lg">
+                {currentUser.avatar && (
+                  <AvatarImage src={currentUser.avatar} alt="" className="object-cover" />
+                )}
+                <AvatarFallback className="rounded-lg bg-primary/10">
+                  <User className="w-10 h-10 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">
+                  {currentUser.name}
+                </h1>
+                <div className="flex gap-2 mt-2">
+                  {currentUser.role === USER_ROLE.ADMIN && (
+                    <UserRoleBadge role={currentUser.role} />
+                  )}
+                  <ActiveStatusBadge isActive={currentUser.isActive} />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                  <Mail className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">メールアドレス</p>
+                  <p className="text-base">{currentUser.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">登録日</p>
+                  <p className="text-base">
+                    {currentUser.createdAt
+                      ? format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })
+                      : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">最終更新日</p>
+                  <p className="text-base">
+                    {currentUser.updatedAt
+                      ? format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })
+                      : '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex flex-col gap-3">
+              <Button className="w-full" onClick={() => router.push('/profile/edit')}>
+                <Edit className="w-4 h-4 mr-2" />
+                プロフィール編集
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push('/profile/change-password')}
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                パスワード変更
+              </Button>
+
               {currentUser.role === USER_ROLE.ADMIN && (
                 <Button variant="outline" className="w-full" onClick={() => router.push('/user')}>
                   <Shield className="w-4 h-4 mr-2" />
@@ -2702,7 +3010,7 @@ export default function ProfilePage() {
 
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx */}
-{/* 完成版: サイドバーのユーザー情報 */}
+{/* サイドバーのユーザー情報 */}
 <Link
   href="/profile"
   className="mb-3 flex items-center gap-3
@@ -2719,7 +3027,7 @@ export default function ProfilePage() {
 
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx */}
-{/* 完成版: モバイル用のナビゲーション */}
+{/* モバイル用のナビゲーション */}
 <div className="flex min-w-0 flex-1 flex-col">
   <nav className="flex gap-2 overflow-x-auto
     border-b p-2 md:hidden">
@@ -2746,7 +3054,7 @@ export default function ProfilePage() {
 
 ```typescript
     {/* filepath: src/component/layout/app-layout.tsx */}
-    {/* 完成版: 本文の枠 */}
+    {/* 本文の枠 */}
     <Link href="/profile"
       className="whitespace-nowrap
         rounded-md px-3 py-2 text-sm">
@@ -2759,6 +3067,238 @@ export default function ProfilePage() {
 </div>
 ```
 
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search,
+  BarChart,
+  Users
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+import { USER_ROLE } from '@/lib/constant/roles';
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+  {
+    text: 'レポート',
+    icon: <BarChart className="h-5 w-5" />,
+    path: '/report',
+  },
+];
+
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+{session.user.role === USER_ROLE.ADMIN && (
+  <li>
+    <Link
+      href="/user"
+      className={cn(
+        'flex items-center gap-3 rounded-md ' +
+          'px-3 py-2 text-sm transition-colors',
+        pathname === '/user'
+          ? 'bg-sidebar-accent ' +
+            'text-sidebar-accent-foreground font-medium'
+          : 'text-sidebar-foreground/70 ' +
+            'hover:bg-sidebar-accent/50 ' +
+            'hover:text-sidebar-foreground',
+      )}
+    >
+      <Users className="h-5 w-5" />
+      ユーザー管理
+    </Link>
+  </li>
+)}
+          </ul>
+        </nav>
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
+```
+
 `<main>` の `flex-1` は上のナビゲーションが使った分を除いた残りの高さを本文が受け取るという指定です。`overflow-y-auto` は本文が長いときに本文の中だけをスクロールさせます。これが無いとページ全体が伸び、狭い画面ではメニューが上へ流れて見えなくなります。
 
 ### `src/app/profile/change-password/page.tsx`
@@ -2767,7 +3307,7 @@ export default function ProfilePage() {
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -2784,7 +3324,7 @@ import { z } from 'zod';
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: プロジェクト内の import
+// プロジェクト内の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
@@ -2800,7 +3340,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: スキーマの前半
+// スキーマの前半
 const changePasswordCurrentSchema = z.object({
   currentPassword: z.string()
     .min(1, '現在のパスワードを入力してください'),
@@ -2822,7 +3362,7 @@ const changePasswordPasswordSchema = changePasswordCurrentSchema.extend({
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: スキーマの後半と型
+// スキーマの後半と型
 const changePasswordBaseSchema = changePasswordPasswordSchema.extend({
   confirmPassword: z.string()
     .min(1, '確認用パスワードを入力してください'),
@@ -2845,7 +3385,7 @@ type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: useForm の初期化
+// useForm の初期化
 export default function ChangePasswordPage() {
   const router = useRouter();
 
@@ -2865,7 +3405,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: 更新処理の設定
+// 更新処理の設定
   const changePassword = api.user.changePassword.useMutation({
     onSuccess: () => {
       toast.success('パスワードを変更しました');
@@ -2883,7 +3423,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
-// 完成版: 送信ハンドラーとページの外枠
+// 送信ハンドラーとページの外枠
   const handleSubmit = (values: ChangePasswordFormValues) => {
     changePassword.mutate({
       currentPassword: values.currentPassword,
@@ -2908,7 +3448,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
               {/* filepath: src/app/profile/change-password/page.tsx */}
-              {/* 完成版: 現在のパスワードの入力欄 */}
+              {/* 現在のパスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
                   現在のパスワード
@@ -2933,7 +3473,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
               {/* filepath: src/app/profile/change-password/page.tsx */}
-              {/* 完成版: 新しいパスワードの入力欄 */}
+              {/* 新しいパスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="newPassword">
                   新しいパスワード
@@ -2961,7 +3501,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
               {/* filepath: src/app/profile/change-password/page.tsx */}
-              {/* 完成版: 確認用パスワードの入力欄 */}
+              {/* 確認用パスワードの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
                   新しいパスワード（確認）
@@ -2986,7 +3526,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
               {/* filepath: src/app/profile/change-password/page.tsx */}
-              {/* 完成版: サーバーエラーの表示 */}
+              {/* サーバーエラーの表示 */}
               {changePassword.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3002,7 +3542,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
               {/* filepath: src/app/profile/change-password/page.tsx */}
-              {/* 完成版: 送信とキャンセルのボタン */}
+              {/* 送信とキャンセルのボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={changePassword.isPending}>
                   {changePassword.isPending ? '変更中...' : '変更'}
@@ -3025,7 +3565,184 @@ export default function ChangePasswordPage() {
 
 ```typescript
             {/* filepath: src/app/profile/change-password/page.tsx */}
-            {/* 完成版: 閉じタグ */}
+            {/* 閉じタグ */}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/profile/change-password/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/profile/change-password/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
+import { AppLayout } from '@/component/layout/app-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Label } from '@/component/ui/label';
+import { PasswordInput } from '@/component/ui/password-input';
+import { api } from '@/trpc/react';
+
+const changePasswordCurrentSchema = z.object({
+  currentPassword: z.string()
+    .min(1, '現在のパスワードを入力してください'),
+});
+
+const changePasswordPasswordSchema = changePasswordCurrentSchema.extend({
+  newPassword: z.string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+
+const changePasswordBaseSchema = changePasswordPasswordSchema.extend({
+  confirmPassword: z.string()
+    .min(1, '確認用パスワードを入力してください'),
+});
+
+const changePasswordSchema = changePasswordBaseSchema.refine(
+  (data) => data.newPassword === data.confirmPassword,
+  {
+    message: 'パスワードが一致しません',
+    path: ['confirmPassword'],
+  },
+);
+
+type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
+export default function ChangePasswordPage() {
+  const router = useRouter();
+
+  const form = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  });
+
+  const changePassword = api.user.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success('パスワードを変更しました');
+      router.push('/profile');
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'パスワードの変更に失敗しました');
+    },
+  });
+
+  const handleSubmit = (values: ChangePasswordFormValues) => {
+    changePassword.mutate({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
+  };
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>パスワード変更</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">
+                  現在のパスワード
+                  <span className="text-destructive">*</span>
+                </Label>
+                <PasswordInput
+                  id="currentPassword"
+                  {...form.register('currentPassword')}
+                  disabled={changePassword.isPending}
+                />
+                {form.formState.errors.currentPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.currentPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">
+                  新しいパスワード
+                  <span className="text-destructive">*</span>
+                </Label>
+                <PasswordInput
+                  id="newPassword"
+                  {...form.register('newPassword')}
+                  disabled={changePassword.isPending}
+                />
+                <p className="text-sm text-muted-foreground">
+                  8文字以上で、大文字・小文字・数字・特殊文字をそれぞれ1文字以上含めてください
+                </p>
+                {form.formState.errors.newPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.newPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  新しいパスワード（確認）
+                  <span className="text-destructive">*</span>
+                </Label>
+                <PasswordInput
+                  id="confirmPassword"
+                  {...form.register('confirmPassword')}
+                  disabled={changePassword.isPending}
+                />
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              {changePassword.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>エラー</AlertTitle>
+                  <AlertDescription>{changePassword.error.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={changePassword.isPending}>
+                  {changePassword.isPending ? '変更中...' : '変更'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push('/profile')}
+                  disabled={changePassword.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+
             </form>
           </CardContent>
         </Card>
@@ -3043,7 +3760,7 @@ export default function ChangePasswordPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: 外部ライブラリの import
+// 外部ライブラリの import
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -3061,7 +3778,7 @@ import { z } from 'zod';
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: プロジェクト内の import
+// プロジェクト内の import
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
@@ -3080,7 +3797,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: スキーマと型
+// スキーマと型
 const profileEditSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -3096,7 +3813,7 @@ type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: useForm の初期化
+// useForm の初期化
 export default function ProfileEditPage() {
   const router = useRouter();
   const utils = api.useUtils();
@@ -3117,7 +3834,7 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: データ取得と更新処理
+// データ取得と更新処理
   const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
 
   const updateProfile = api.user.updateProfile.useMutation({
@@ -3142,7 +3859,7 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: サーバーデータの反映
+// サーバーデータの反映
   useEffect(() => {
     if (currentUser) {
       form.reset({
@@ -3160,7 +3877,7 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: 送信ハンドラーとローディング
+// 送信ハンドラーとローディング
   const handleSubmit = (values: ProfileEditFormValues) => {
     updateProfile.mutate({
       ...values,
@@ -3179,7 +3896,7 @@ export default function ProfileEditPage() {
 
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
-// 完成版: ページの外枠とアバタープレビュー
+// ページの外枠とアバタープレビュー
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md mt-8 mb-8">
@@ -3205,7 +3922,7 @@ export default function ProfileEditPage() {
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}
-              {/* 完成版: 名前の入力欄 */}
+              {/* 名前の入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="name">
                   名前
@@ -3230,7 +3947,7 @@ export default function ProfileEditPage() {
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}
-              {/* 完成版: メールアドレスの入力欄 */}
+              {/* メールアドレスの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="email">
                   メールアドレス
@@ -3256,7 +3973,7 @@ export default function ProfileEditPage() {
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}
-              {/* 完成版: アバターURLの入力欄 */}
+              {/* アバターURLの入力欄 */}
               <div className="space-y-2">
                 <Label htmlFor="avatar">アバターURL（任意）</Label>
                 <Input
@@ -3291,7 +4008,7 @@ export default function ProfileEditPage() {
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}
-              {/* 完成版: サーバーエラーの表示 */}
+              {/* サーバーエラーの表示 */}
               {updateProfile.error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -3307,7 +4024,7 @@ export default function ProfileEditPage() {
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}
-              {/* 完成版: 送信とキャンセルのボタン */}
+              {/* 送信とキャンセルのボタン */}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
                   {updateProfile.isPending ? '更新中...' : '更新'}
@@ -3330,7 +4047,200 @@ export default function ProfileEditPage() {
 
 ```typescript
             {/* filepath: src/app/profile/edit/page.tsx */}
-            {/* 完成版: 閉じタグ */}
+            {/* 閉じタグ */}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/profile/edit/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/profile/edit/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
+import { AppLayout } from '@/component/layout/app-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
+import { Button } from '@/component/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/component/ui/card';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import { normalizeAvatarValue } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+const profileEditSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url('有効なURLを入力してください').or(z.literal('')),
+});
+
+type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
+
+export default function ProfileEditPage() {
+  const router = useRouter();
+  const utils = api.useUtils();
+
+  const form = useForm<ProfileEditFormValues>({
+    resolver: zodResolver(profileEditSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      avatar: '',
+    },
+  });
+
+  const { data: currentUser, isLoading } = api.auth.getCurrentUser.useQuery();
+
+  const updateProfile = api.user.updateProfile.useMutation({
+    onSuccess: async () => {
+      await Promise.allSettled([
+        utils.auth.getCurrentUser.invalidate(),
+        utils.auth.getSession.invalidate(),
+      ]);
+      toast.success('プロフィールを更新しました');
+      router.push('/profile');
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(error.message ?? 'プロフィールの更新に失敗しました');
+    },
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      form.reset({
+        name: currentUser.name ?? '',
+        email: currentUser.email ?? '',
+        avatar: currentUser.avatar ?? '',
+      });
+    }
+  }, [currentUser, form]);
+
+  const handleSubmit = (values: ProfileEditFormValues) => {
+    updateProfile.mutate({
+      ...values,
+      avatar: normalizeAvatarValue(values.avatar),
+    });
+  };
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto max-w-md mt-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>プロフィール編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form noValidate onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="flex justify-center mb-6">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={form.watch('avatar')} alt="" />
+                  <AvatarFallback className="text-2xl">
+                    {form.watch('name')?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  名前
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  {...form.register('name')}
+                  disabled={updateProfile.isPending}
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  メールアドレス
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...form.register('email')}
+                  disabled={updateProfile.isPending}
+                />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatar">アバターURL（任意）</Label>
+                <Input
+                  id="avatar"
+                  type="url"
+                  aria-invalid={form.formState.errors.avatar
+                    ? 'true' : 'false'}
+                  {...form.register('avatar')}
+                  disabled={updateProfile.isPending}
+                  placeholder="https://example.com/avatar.png"
+                />
+                <p className="text-sm text-muted-foreground">
+                  画像のURLを入力してください
+                </p>
+
+                {form.formState.errors.avatar && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.avatar.message}
+                  </p>
+                )}
+              </div>
+
+              {updateProfile.error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>エラー</AlertTitle>
+                  <AlertDescription>{updateProfile.error.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="w-full" disabled={updateProfile.isPending}>
+                  {updateProfile.isPending ? '更新中...' : '更新'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push('/profile')}
+                  disabled={updateProfile.isPending}
+                >
+                  キャンセル
+                </Button>
+              </div>
+
             </form>
           </CardContent>
         </Card>
