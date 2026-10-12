@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""check_complete_section_fences.py の退行テスト。
+
+止めるもの（完成コード節に権威記述が2つある形、`完成版` の抜粋だけで終わる形）と、
+止めてはいけないもの（抜粋 + 末尾の全ファイル listing、見出しごとに分けた全体版、
+Step 節の断片、本文で断った抜粋）の両方を置く。件数まで照合するのは、
+1件に縮んでも緑になる検査の弱まりを見逃さないため。
+"""
+
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from check_complete_section_fences import UNIT_MARKER, check_file  # noqa: E402
+
+LAYOUT = "src/component/layout/app-layout.tsx"
+PAGE = "src/app/task/page.tsx"
+TASK_ROUTER = "src/server/api/routers/task.ts"
+
+WHOLE_PAGE = (
+    "// 完成版: ファイル全体\n'use client';\n\nimport { useState } from 'react';\n\n"
+    "export default function Page() {\n  const [open, setOpen] = useState(false);\n"
+    "  return <button onClick={() => setOpen(!open)} />;\n}"
+)
+
+
+def block(target: str, body: str, note: str = "", lang: str = "typescript") -> str:
+    return f"```{lang}\n// filepath: {target}{note}\n{body}\n```\n\n"
+
+
+def unit(target: str, body: str) -> str:
+    return f"{UNIT_MARKER}\n" + block(target, body)
+
+
+def day(step: str, complete: str) -> str:
+    return f"# Day\n\n## 実装ステップ\n\n{step}## 完成コード全体\n\n{complete}## 今日のまとめ\n\n本文です。\n"
+
+
+CASES: list[tuple[str, str, str, int]] = [
+    (
+        "抜粋の目印を外して末尾に全ファイル listing を置いた形（PR #637 の是正後）は通す",
+        "day20_x.md",
+        day(
+            block(PAGE, "  const [open, setOpen] = useState(false);"),
+            block(PAGE, "// 取り込み\n'use client';\n\nimport { useState } from 'react';")
+            + block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
+    (
+        "全ファイル listing と `完成版:` 付きの抜粋が並ぶ形は抜粋の数だけ止める",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 完成版: 取り込み\n'use client';\n\nimport { useState } from 'react';")
+            + block(PAGE, "// 完成形: 状態\n  const [open, setOpen] = useState(false);")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        2,
+    ),
+    (
+        "全ファイル listing が2件ある形は止める",
+        "day20_x.md",
+        day("", unit(PAGE, WHOLE_PAGE) + unit(PAGE, WHOLE_PAGE)),
+        1,
+    ),
+    (
+        "全ファイル listing の後ろに同じファイルのフェンスが続く形は止める",
+        "day20_x.md",
+        day(
+            "",
+            unit(PAGE, WHOLE_PAGE)
+            + block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);"),
+        ),
+        1,
+    ),
+    (
+        "完成版の目印付き抜粋だけで終わる形（day20 app-layout.tsx の reject の形）は止める",
+        "day20_x.md",
+        day(
+            block(LAYOUT, "  { text: '検索', path: '/search' },"),
+            block(LAYOUT, "// 完成版: アイコンの import\nimport { Search } from 'lucide-react';")
+            + block(LAYOUT, "{/* 完成版: メニュー項目 */}\n  { text: '検索', path: '/search' },"),
+        ),
+        1,
+    ),
+    (
+        "目印の無い断片だけが並び完全なファイルにならない形も止める",
+        "day20_x.md",
+        day(
+            "",
+            block(LAYOUT, "import { Search } from 'lucide-react';")
+            + block(LAYOUT, "  { text: '検索', path: '/search' },"),
+        ),
+        1,
+    ),
+    (
+        "見出しごとに分けて載せた全体版が完全なファイルになる形（day11 project.ts の形）は通す",
+        "day11_x.md",
+        day(
+            "",
+            block(PAGE, "// 完成版: 取り込み\n'use client';\n\nimport { useState } from 'react';")
+            + block(
+                PAGE,
+                "// 完成版: 画面\nexport default function Page() {\n"
+                "  const [open, setOpen] = useState(false);\n  return <div />;\n}",
+                note="（同じファイルの続き）",
+            ),
+        ),
+        0,
+    ),
+    (
+        "目印なしの先頭版と続きで完全なファイルになる形（day11 query-error.ts の形）は通す",
+        "day11_x.md",
+        day(
+            "",
+            block("src/lib/query-error.ts", "import { TRPCClientError } from '@trpc/client';")
+            + block(
+                "src/lib/query-error.ts",
+                "export const isNotFound = (e: unknown) => e instanceof TRPCClientError;",
+                note="（同じファイルの続き）",
+            ),
+        ),
+        0,
+    ),
+    (
+        "Step 節の目印付き抜粋は完成コード節の外なので見ない",
+        "day20_x.md",
+        day(
+            block(LAYOUT, "// 完成版: アイコンの import\nimport { Search } from 'lucide-react';")
+            + block(LAYOUT, "{/* 完成版: メニュー項目 */}\n  { text: '検索', path: '/search' },"),
+            block(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
+    (
+        "コード例の中の `## ` 行で節を切らない（後ろの抜粋も節の中として見る）",
+        "day20_x.md",
+        day(
+            "",
+            "```text\n## main\n```\n\n"
+            + block(LAYOUT, "// 完成版: アイコンの import\nimport { Search } from 'lucide-react';")
+            + block(LAYOUT, "{/* 完成版: メニュー項目 */}\n  { text: '検索', path: '/search' },"),
+        ),
+        1,
+    ),
+    (
+        "例外マーカーの無い `完成版: ファイル全体` は listing と見なさず目印付き抜粋として扱う",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);")
+            + block(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "本文で断った抜粋（DECLARED_EXCERPTS の day28 task.ts）は通す",
+        "day28_x.md",
+        day(
+            "",
+            block(TASK_ROUTER, "// 完成版: 一括操作で使う import\nimport { z } from 'zod';")
+            + block(TASK_ROUTER, "// 完成版: bulkDelete\n  bulkDelete: protectedProcedure,"),
+        ),
+        0,
+    ),
+    (
+        "DECLARED_EXCERPTS の登録先が全ファイル listing へ統合されたら登録が古いとして止める",
+        "day28_x.md",
+        day(
+            "",
+            block(TASK_ROUTER, "// 一括操作で使う import\nimport { z } from 'zod';")
+            + unit(
+                TASK_ROUTER,
+                "// 完成版: ファイル全体\nimport { z } from 'zod';\n\n"
+                "export const taskRouter = createTRPCRouter({});",
+            ),
+        ),
+        1,
+    ),
+    (
+        "フェンスが1つだけで目印も無いファイルは二重記述になりようがないので見ない",
+        "day20_x.md",
+        day("", block(LAYOUT, "  { text: '検索', path: '/search' },")),
+        0,
+    ),
+]
+
+
+def run_case(name: str, text: str) -> int:
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / name
+        path.write_text(text, encoding="utf-8")
+        return len(check_file(path))
+
+
+def main_test() -> int:
+    failed = 0
+    for title, name, text, want in CASES:
+        got = run_case(name, text)
+        if got != want:
+            failed += 1
+            print(f"❌ {title}: 検出 {got} 件（期待は {want} 件）")
+        else:
+            print(f"✅ {title}")
+    if failed:
+        print(f"❌ {failed} 件失敗")
+        return 1
+    print(f"✅ 全 {len(CASES)} 件パス")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main_test())
