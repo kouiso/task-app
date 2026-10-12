@@ -9,10 +9,14 @@ Gate B で実際に起きた2系統の破綻を固定する:
 """
 
 import json
+import os
+import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import apply_day as ad  # noqa: E402
@@ -1211,6 +1215,111 @@ class Pr635LateReviewFixes(unittest.TestCase):
         _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
                                    [[l] for l in frag])
         self.assertEqual(end, 5)
+
+
+def _find_esbuild() -> Optional[str]:
+    repo = Path(__file__).resolve().parents[2]
+    for p in (os.environ.get("APPLY_DAY_ESBUILD"),
+              str(repo / "node_modules" / ".bin" / "esbuild"),
+              shutil.which("esbuild")):
+        if p and Path(p).exists():
+            return p
+    return None
+
+
+class EofBlankLineFixes(unittest.TestCase):
+    """ファイル末尾の空行が最後の行グループに混ざって、置き換え対象の
+    旧コード行が書き込みに残る退行の回帰テスト。"""
+
+    PREFIX = ("export const a = 1;\nexport const b = 2;\n"
+              "export const c = 3;\n")
+
+    def _apply(self, oracle_body: str, target_body: str, md_body: str,
+               esbuild: Optional[str]) -> tuple[str, list[str]]:
+        env = {k: v for k, v in os.environ.items()
+               if k != "APPLY_DAY_ESBUILD"}
+        if esbuild:
+            env["APPLY_DAY_ESBUILD"] = esbuild
+        with tempfile.TemporaryDirectory() as td, \
+                mock.patch.dict(os.environ, env, clear=True), \
+                mock.patch.object(ad.shutil, "which", return_value=None):
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", oracle_body)
+            write(target, "src/a.ts", target_body)
+            md = write(root, "day.md", md_body)
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            return (target / "src/a.ts").read_text(), s
+
+    def _check(self, oracle_body: str, target_body: str, md_body: str,
+               expected: str) -> None:
+        # esbuild 無しは構造検査だけ、有りは parse 検証まで通ることを見る
+        found = _find_esbuild()
+        for use in (False, True):
+            with self.subTest(esbuild=use):
+                if use and found is None:
+                    self.skipTest("esbuild not found")
+                body, s = self._apply(oracle_body, target_body, md_body,
+                                      found if use else None)
+                self.assertEqual(body, expected, body)
+                self.assertEqual(s, [])
+
+    def test_replace_final_declaration_with_trailing_eof_blanks(self):
+        self._check(
+            self.PREFIX + 'export const label = "new";\n',
+            self.PREFIX + 'export const label = "old";\n\n',
+            "```typescript\n// filepath: src/a.ts（label の宣言を書き直す）\n"
+            'export const label = "new";\n```\n',
+            self.PREFIX + 'export const label = "new";\n\n')
+
+    def test_append_after_final_line_with_trailing_eof_blanks(self):
+        # 断片先頭行が既存の最終行と一致する時も、その行を二重に書かない
+        self._check(
+            self.PREFIX + "export const d = 4;\n",
+            self.PREFIX + "\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const c = 3;\nexport const d = 4;\n```\n",
+            self.PREFIX + "export const d = 4;\n\n")
+
+    def test_whitespace_repair_of_final_line_with_trailing_eof_blanks(self):
+        # 行末空白だけが違う最終行の修復でも旧行を残さない
+        self._check(
+            self.PREFIX,
+            self.PREFIX[:-1] + "  \n\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const c = 3;\n```\n",
+            self.PREFIX + "\n")
+
+    def test_replace_after_deleting_final_line_keeps_one_declaration(self):
+        # 最終行を消した置き換えの後に残る空行も、次の断片の置き換えで
+        # 旧行を残す原因にならない
+        cur = ["export const p = 1;", "export const b = 2;", "",
+               "export const c = 3;"]
+        parts = [
+            ad.Part(cont=False,
+                    body="export const p = 10;\nexport const b = 2;",
+                    kansei=False, unmarked=False, prose="",
+                    directive=ad.Directive(
+                        "range", ("export const p", "export const c"))),
+            ad.Part(cont=False, body="export const b = 20;", kansei=False,
+                    unmarked=False, prose="",
+                    directive=ad.Directive("replace_decl", ("b",))),
+        ]
+        res, gaps = ad.splice_parts(ad.norm(cur), cur, parts, ad.norm(cur),
+                                    "src/a.ts", "d1")
+        self.assertEqual(gaps, [])
+        self.assertIsNotNone(res)
+        self.assertEqual(res[1], ["export const p = 10;",
+                                  "export const b = 20;", ""])
+
+    def test_detach_trailing_blanks_keeps_code_line_last(self):
+        raw = [["a"], ["", "b", "", " "]]
+        self.assertEqual(ad._detach_trailing_blanks(raw), ["", " "])
+        self.assertEqual(raw, [["a"], ["", "b"]])
+        # 空行だけ残ったグループは対応する norm 行が無いので取り除く
+        raw = [["a"], ["", ""]]
+        self.assertEqual(ad._detach_trailing_blanks(raw), ["", ""])
+        self.assertEqual(raw, [["a"]])
 
 
 if __name__ == "__main__":
