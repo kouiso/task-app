@@ -4,10 +4,11 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
 
-# 同一 workflow・同 ref の二重起動を潰す
+# 同じイベント種別の連続起動だけ潰す。opened/reopened の assign-author は1回きりなので、
+# synchronize 等の別 action でキャンセルされると二度と走らない。action を group に含める
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.action }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

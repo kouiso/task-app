@@ -8,15 +8,14 @@ on:
 # 同一 workflow・同 ref の二重起動を潰す
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check-quality:
     name: Post-merge quality check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # draft ガード。merged==true なら draft ではあり得ないため挙動は不変
-    if: github.event.pull_request.draft != true && github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     permissions:
       contents: read
       checks: read
