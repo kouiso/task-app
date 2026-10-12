@@ -1290,6 +1290,28 @@ class EofBlankLineFixes(unittest.TestCase):
             "export const c = 3;\n```\n",
             self.PREFIX + "\n")
 
+    def test_replace_after_deleting_final_line_keeps_one_declaration(self):
+        # 最終行を消した置き換えの後に残る空行も、次の断片の置き換えで
+        # 旧行を残す原因にならない
+        cur = ["export const p = 1;", "export const b = 2;", "",
+               "export const c = 3;"]
+        parts = [
+            ad.Part(cont=False,
+                    body="export const p = 10;\nexport const b = 2;",
+                    kansei=False, unmarked=False, prose="",
+                    directive=ad.Directive(
+                        "range", ("export const p", "export const c"))),
+            ad.Part(cont=False, body="export const b = 20;", kansei=False,
+                    unmarked=False, prose="",
+                    directive=ad.Directive("replace_decl", ("b",))),
+        ]
+        res, gaps = ad.splice_parts(ad.norm(cur), cur, parts, ad.norm(cur),
+                                    "src/a.ts", "d1")
+        self.assertEqual(gaps, [])
+        self.assertIsNotNone(res)
+        self.assertEqual(res[1], ["export const p = 10;",
+                                  "export const b = 20;", ""])
+
     def test_detach_trailing_blanks_keeps_code_line_last(self):
         raw = [["a"], ["", "b", "", " "]]
         self.assertEqual(ad._detach_trailing_blanks(raw), ["", " "])
