@@ -9,6 +9,7 @@ jobs:
   check-quality:
     name: Post-merge quality check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event.pull_request.merged == true
     permissions:
       contents: read
