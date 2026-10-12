@@ -111,6 +111,7 @@ class SectionFence(NamedTuple):
     block: Block
     labeled: bool
     whole: bool
+    line_numbers: tuple[int, ...]
 
 
 def section_range(text: str) -> tuple[int, int] | None:
@@ -132,12 +133,29 @@ def section_range(text: str) -> tuple[int, int] | None:
     return (start, last + 1) if start is not None else None
 
 
+def _content_line_numbers(text_lines: list[str], block: Block) -> tuple[int, ...]:
+    """block.lines の各行が教材ファイルの何行目かを返す。
+
+    filepath 行は lines から外されており、ブロックの1行目とは限らないので、
+    フェンスの開きから順に突き合わせて位置を取り直す。
+    """
+    numbers: list[int] = []
+    i = block.lineno
+    for line in block.lines:
+        while text_lines[i] != line:
+            i += 1
+        numbers.append(i + 1)
+        i += 1
+    return tuple(numbers)
+
+
 def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
     """完成コード節のフェンスを書き込み先ごとに、現れた順で返す。"""
     span = section_range(text)
     if span is None:
         return {}
     start, end = span
+    text_lines = text.split("\n")
     out: dict[str, list[SectionFence]] = {}
     for block in iter_blocks(text, source):
         if not start < block.lineno < end:
@@ -147,7 +165,8 @@ def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
         head = next((line for line in block.lines if line.strip()), "")
         labeled = bool(FINAL_LABEL.match(head))
         whole = bool(WHOLE_FILE.match(head))
-        out.setdefault(block.target, []).append(SectionFence(block, labeled, whole))
+        numbers = _content_line_numbers(text_lines, block)
+        out.setdefault(block.target, []).append(SectionFence(block, labeled, whole, numbers))
     return out
 
 
@@ -166,12 +185,12 @@ def missing_excerpt_lines(
     body = _squash("\n".join(listing.block.lines))
     missing: list[tuple[int, str]] = []
     for part in parts:
-        for offset, line in enumerate(part.block.lines, start=1):
+        for lineno, line in zip(part.line_numbers, part.block.lines):
             stripped = line.strip()
             if not stripped or EXCERPT_SKIP.match(stripped):
                 continue
             if _squash(stripped).rstrip(",") not in body:
-                missing.append((part.block.lineno + offset, stripped))
+                missing.append((lineno, stripped))
     return missing
 
 
