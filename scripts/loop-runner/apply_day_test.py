@@ -1116,6 +1116,16 @@ class Pr635LateReviewFixes(unittest.TestCase):
         lines = ["export const a = 1; // note", "export const b = 2;"]
         self.assertEqual(ad.find_decl_end(lines, 0), 0)
 
+    def test_decl_end_keeps_url_in_template_and_jsx_text(self):
+        # 複数行テンプレートや JSX テキストの `https://` はコメントではない。
+        # コメント扱いで終端を見失うと置き換えで次の宣言が消える
+        tpl = ["const s = `", "  see https://example.com`;",
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl, 0), 1)
+        jsx = ['export const L = () => <a href="/x">https://example.com</a>;',
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(jsx, 0), 0)
+
     def test_splice_into_whitespace_only_file(self):
         # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む
         body, s = self._apply(

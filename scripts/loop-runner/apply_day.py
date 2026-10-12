@@ -508,9 +508,12 @@ def find_decl_end(lines: Sequence[str], start: int) -> int:
         depth += s.count("{") + s.count("(") + s.count("[")
         depth -= s.count("}") + s.count(")") + s.count("]")
         # 行末の // コメントを終端判定に含めると `x = 1; // note` の宣言が
-        # 終わらず、置き換えで後続の宣言まで消える
-        stripped = _code_text(lines[j]).rstrip()
-        last = stripped[-1:] if stripped else ""
+        # 終わらず、置き換えで後続の宣言まで消える。ただし _code_text は
+        # 複数行テンプレートや JSX テキスト内の `https://` もコメントとみなす
+        # ため、原文の行末が終端記号ならそちらを優先する
+        raw_last = lines[j].rstrip()[-1:]
+        last = (raw_last if raw_last and raw_last in ";,)}]>"
+                else _code_text(lines[j]).rstrip()[-1:])
         nxt = lines[j + 1].strip() if j + 1 < len(lines) else ""
         if depth <= 0 and last and last in ";,)}]>":
             if not nxt.startswith((".", "=>", "?", ":")):
