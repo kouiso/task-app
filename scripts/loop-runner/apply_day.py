@@ -1741,11 +1741,13 @@ def _diff_start(before: list[str], after: list[str]) -> int:
     return min(len(before), len(after))
 
 
-def _raw_groups(raw_lines: list[str]) -> list[list[str]]:
+def _raw_groups(raw_lines: list[str]) -> tuple[list[list[str]], list[str]]:
     """生行を「空行でない1行 + その直前の連続空行」のグループに分ける。
 
-    照合用の norm 行1つに対応する書き込み単位。末尾に残った空行は
-    最後のグループへ畳み込む。"""
+    照合用の norm 行1つに対応する書き込み単位。戻り値は
+    (グループ, 最後の空行でない行より後ろの空行)。末尾の空行を最後の
+    グループへ畳み込むと「グループ末尾 = コード行」が崩れ、置き換えで
+    消すはずの旧コード行が先頭空行として残るため別に返す。"""
     groups: list[list[str]] = []
     pend: list[str] = []
     for l in raw_lines:
@@ -1754,12 +1756,26 @@ def _raw_groups(raw_lines: list[str]) -> list[list[str]]:
             continue
         groups.append(pend + [l])
         pend = []
-    if pend:
-        if groups:
-            groups[-1] += pend
-        else:
-            groups.append(pend)
-    return groups
+    return groups, pend
+
+
+def _detach_trailing_blanks(raw: list[list[str]]) -> list[str]:
+    """最後のグループ末尾に付いた空行を取り外して返す。
+
+    最後の行を消す置き換えでは、その行の先頭空行が直前のグループ末尾へ
+    付け替えられる。残すと次の断片で「グループ末尾 = コード行」が崩れる。"""
+    if not raw:
+        return []
+    last = raw[-1]
+    k = len(last)
+    while k and not last[k - 1].strip():
+        k -= 1
+    tail = last[k:]
+    if k:
+        raw[-1] = last[:k]
+    else:
+        raw.pop()
+    return tail
 
 
 def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
@@ -1874,12 +1890,11 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
     無関係なテンプレートリテラル内の空行・行末空白まで壊れるため（issue #630）。"""
     gaps: list[dict] = []
     out = list(cur_norm)
-    raw = _raw_groups(cur_raw)
-    # 空白行だけのファイルは norm 行を持たないが _raw_groups は空行だけの
-    # グループを1つ作る。対応する norm 行が無く、残すと先頭に追加した
-    # 断片（#! など）の前に空行が入るため、空ファイルとして扱う
-    if not out and len(raw) == 1:
-        raw = []
+    raw, eof_blanks = _raw_groups(cur_raw)
+    # 空白行だけのファイルの空行は、残すと先頭に追加した断片（#! など）の
+    # 前に空行が入るため、空ファイルとして扱う
+    if not raw:
+        eof_blanks = []
     if len(raw) != len(out):
         return None, [{"day": tag, "path": path,
                        "reason": "raw-norm-mismatch"}]
@@ -1937,7 +1952,7 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         if not fl_write:
             continue
         # fl_ins（norm・空行無し）と同じ対応順の生行グループ
-        frag_groups = _raw_groups(fl_write)
+        frag_groups, _ = _raw_groups(fl_write)
         # retag はプレースホルダー行自体を区切りに使うため、
         # フィルタ無しの原文断片を別途渡す（norm 版の fl だと中身が失われる）
         fl_raw = part.body.split("\n")
@@ -2031,6 +2046,7 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
             if res is not None:
                 raw, last_end = _splice_raw(raw, out, res,
                                             fl_ins, frag_groups)
+                eof_blanks = _detach_trailing_blanks(raw) + eof_blanks
                 out = res
                 continue
             gaps.append({"day": tag, "path": path,
@@ -2073,8 +2089,9 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         # 挿入位置の記録は「書き込んだ側」の長さで進める。
         # norm 後の長さだと断片中の空行分ずれて次の断片が文の途中へ入る
         raw, last_end = _splice_raw(raw, out, res, fl_ins, frag_groups)
+        eof_blanks = _detach_trailing_blanks(raw) + eof_blanks
         out = res
-    flat_out = [l for g in raw for l in g]
+    flat_out = [l for g in raw for l in g] + eof_blanks
     return (out, flat_out), gaps
 
 
