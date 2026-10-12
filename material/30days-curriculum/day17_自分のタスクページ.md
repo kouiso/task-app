@@ -2012,6 +2012,28 @@ export default function MyTasksPage() {
 ```typescript
 // filepath: src/app/my-task/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useCallback, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import {
+  PageLoadingSpinner,
+} from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import {
+  Tabs, TabsList, TabsTrigger,
+} from '@/component/ui/tabs';
+
 import type { TaskPriority }
   from '@/lib/constant/priority';
 import {

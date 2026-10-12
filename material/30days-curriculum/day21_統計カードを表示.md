@@ -1660,7 +1660,6 @@ export const createCaller = createCallerFactory(appRouter);
 
 完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
 // filepath: src/server/api/root.ts
 // 完成版: ファイル全体
@@ -2143,6 +2142,21 @@ const menuItems: MenuItem[] = [
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search,
+  BarChart
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2157,30 +2171,13 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import {
-  BarChart,
-  ClipboardList,
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-  Search,
-} from 'lucide-react';
+
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
-{
-  text: 'レポート',
-  icon: <BarChart className="h-5 w-5" />,
-  path: '/report',
-},
-{
-  text: '検索',
-  icon: <Search className="h-5 w-5" />,
-  path: '/search',
-},
+
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -2213,6 +2210,7 @@ const menuItems: MenuItem[] = [
     path: '/report',
   },
 ];
+
 export function AppLayout({
   children,
 }: {
@@ -2222,8 +2220,10 @@ export function AppLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
+
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
@@ -2235,11 +2235,13 @@ export function AppLayout({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
+
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -2247,6 +2249,7 @@ export function AppLayout({
       </div>
     );
   }
+
   if (!session?.user) {
     return null;
   }

@@ -3945,6 +3945,46 @@ export default function SearchPage() {
 ```typescript
 // filepath: src/app/search/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { Search } from 'lucide-react';
+import {
+  useRouter, useSearchParams,
+} from 'next/navigation';
+import {
+  Suspense, useCallback, useEffect,
+  useMemo, useState,
+} from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Card, CardContent,
+} from '@/component/ui/card';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import { Separator }
+  from '@/component/ui/separator';
+
 import {
   isTaskPriority,
   TASK_PRIORITY_LABELS,
@@ -4680,6 +4720,20 @@ const menuItems: MenuItem[] = [
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -4694,24 +4748,13 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import {
-  ClipboardList,
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-  Search,
-} from 'lucide-react';
+
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
-{
-  text: '検索',
-  icon: <Search className="h-5 w-5" />,
-  path: '/search',
-},
+
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -4739,6 +4782,7 @@ const menuItems: MenuItem[] = [
     path: '/search',
   },
 ];
+
 export function AppLayout({
   children,
 }: {
@@ -4748,8 +4792,10 @@ export function AppLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
+
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
@@ -4761,11 +4807,13 @@ export function AppLayout({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
+
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -4773,6 +4821,7 @@ export function AppLayout({
       </div>
     );
   }
+
   if (!session?.user) {
     return null;
   }
@@ -4999,6 +5048,35 @@ Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDi
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
 import {
   hasPermission, isProjectMemberRole,
   type ProjectMemberRole,
@@ -5013,8 +5091,7 @@ import { dateOnlyToUtcStartIso }
 import { taskToFormData }
   from '@/lib/task-form';
 import { api } from '@/trpc/react';
-import { useRouter, useSearchParams }
-  from 'next/navigation';
+
 function TaskPageContent() {
   const [filterProject, setFilterProject] =
     useState<string>('all');
@@ -5033,61 +5110,9 @@ function TaskPageContent() {
   const [deleteTargetId, setDeleteTargetId]
     = useState<string | null>(null);
   const searchParams = useSearchParams();
-import { useRouter, useSearchParams }
-  from 'next/navigation';
-const searchParams = useSearchParams();
-const router = useRouter();
-const taskIdParam = searchParams.get('taskId');
-const isEditLink =
-  searchParams.get('edit') === 'true';
-const { data: linkedTask } =
-  api.task.getById.useQuery(
-    { id: taskIdParam ?? '' },
-    { enabled: !!taskIdParam && isEditLink },
-  );
-useEffect(() => {
-  if (taskIdParam && !isEditLink) {
-    setSelectedTask(taskIdParam);
-    setDetailOpen(true);
-  }
-}, [isEditLink, taskIdParam]);
-const router = useRouter();
-const taskIdParam = searchParams.get('taskId');
-const isEditLink =
-  searchParams.get('edit') === 'true';
-const { data: linkedTask } =
-  api.task.getById.useQuery(
-    { id: taskIdParam ?? '' },
-    { enabled: !!taskIdParam && isEditLink },
-  );
-const closeTaskDialog = () => {
-  setDialogOpen(false);
-  setEditingTask(undefined);
-  if (!isEditLink) return;
-  const params = new URLSearchParams(
-    searchParams.toString(),
-  );
-  params.delete('taskId');
-  params.delete('edit');
-  const query = params.toString();
-  router.replace(
-    query ? `/task?${query}` : '/task',
-  );
-};
-useEffect(() => {
-  if (!isEditLink || !linkedTask) return;
-  setEditingTask(
-    taskToFormData(linkedTask),
-  );
-  setDetailOpen(false);
-  setDialogOpen(true);
-}, [isEditLink, linkedTask]);
-useEffect(() => {
-  if (taskIdParam && !isEditLink) {
-    setSelectedTask(taskIdParam);
-    setDetailOpen(true);
-  }
-}, [isEditLink, taskIdParam]);
+  const taskIdParam =
+    searchParams.get('taskId');
+
   const {
     data: tasks,
     isLoading: tasksLoading,
@@ -5105,6 +5130,11 @@ useEffect(() => {
   const { data: session } =
     api.auth.getSession.useQuery();
   const utils = api.useUtils();
+// 時間記録の成功後に一覧を取り直す
+// （useCallback は react から import）
+const handleTimeLogSuccess = useCallback(() => {
+  void utils.task.getAll.invalidate();
+}, [utils.task.getAll]);
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -5128,6 +5158,7 @@ useEffect(() => {
     },
     [myRoleByProject],
   );
+
   const canDeleteProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -5141,28 +5172,29 @@ useEffect(() => {
       setDetailOpen(true);
     }
   }, [taskIdParam]);
-const createMutation =
-  api.task.create.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      closeTaskDialog();
-    },
-  });
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      if (selectedTask) {
-        utils.task.getById.invalidate(
-          { id: selectedTask }
-        );
-      }
-      closeTaskDialog();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const createMutation =
+    api.task.create.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        setDialogOpen(false);
+      },
+    });
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        setDialogOpen(false);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   const deleteMutation =
     api.task.delete.useMutation({
       onSuccess: () => {
@@ -5176,6 +5208,7 @@ const updateMutation =
     setEditingTask(undefined);
     setDialogOpen(true);
   };
+
   const handleEdit = (taskId: string) => {
     const task =
       tasks?.find((t) => t.id === taskId);
@@ -5184,6 +5217,7 @@ const updateMutation =
       setDialogOpen(true);
     }
   };
+
   const handleDelete = (taskId: string) => {
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
@@ -5238,6 +5272,7 @@ const updateMutation =
     setDetailOpen(false);
     setSelectedTask(null);
   };
+
   if (tasksLoading) {
     return (
       <AppLayout>
@@ -5311,34 +5346,8 @@ const updateMutation =
           xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                id={task.id}
-                title={task.title}
-                description={task.description}
-                status={task.status}
-                priority={task.priority}
-                dueDate={task.dueDate}
-                assignee={task.assignee}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onClick={handleTaskClick}
-                canEdit={canEditProject(task.projectId)}
-                canDelete={canDeleteProject(task.projectId)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full flex
-              flex-col items-center
-              justify-center py-12
-              text-center
-              text-muted-foreground">
-              <p>タスクが見つかりません。</p>
-              {filterProject === 'all' && filterStatus === 'all' && (
-                <p>最初のタスクを作成しましょう！</p>
-              )}
-            </div>
                       <TaskCard
+                        // 完成版: TaskCard へ渡す2つの props
                         key={task.id}
                         id={task.id}
                         title={task.title}
@@ -5355,13 +5364,18 @@ const updateMutation =
                         canEdit={canEditProject(task.projectId)}
                         canDelete={canDeleteProject(task.projectId)}
                       />
-<TaskDialog
-  open={dialogOpen}
-  onClose={closeTaskDialog}
-  onSubmit={handleSubmit}
-  initialData={editingTask}
-  projects={projects ?? []}
-/>
+            ))
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
           )}
         </div>
 {/* 権限判定を詳細ダイアログへ渡す */}
@@ -5371,6 +5385,7 @@ const updateMutation =
   onClose={handleDetailClose}
   canEditProject={canEditProject}
 />
+
         <TaskDialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
@@ -5394,6 +5409,7 @@ const updateMutation =
     </AppLayout>
   );
 }
+
 export default function TaskPage() {
   return (
     <Suspense
@@ -5402,11 +5418,6 @@ export default function TaskPage() {
     </Suspense>
   );
 }
-// 時間記録の成功後に一覧を取り直す
-// （useCallback は react から import）
-const handleTimeLogSuccess = useCallback(() => {
-  void utils.task.getAll.invalidate();
-}, [utils.task.getAll]);
 ```
 
 Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTaskDialog}` へ替えた箇所です。

@@ -1153,43 +1153,12 @@ export const userRouter = createTRPCRouter({
 // filepath: src/server/api/routers/user.ts
 // 完成版: ファイル全体
 import type { Prisma } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
-import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
-import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
-const userUpdateSchema = z
-  .object({
-    id: z.string().cuid(),
-    name: z.string().min(1, '名前を入力してください').optional(),
-    avatar: z.string().url().optional().nullable(),
-    role: z.nativeEnum(USER_ROLE).optional(),
-    isActive: z.boolean().optional(),
-  })
-  .refine(
-    ({ name, avatar, role, isActive }) =>
-      name !== undefined || avatar !== undefined || role !== undefined || isActive !== undefined,
-    '更新する項目を1つ以上指定してください',
-  );
-const profileUpdateSchema = z.object({
-  name: z.string().min(1, '名前を入力してください'),
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  avatar: z.string().url().optional().nullable(),
-});
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
-  newPassword: z
-    .string()
-    .min(8, '新しいパスワードは8文字以上で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
-    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
-    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
-    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
-});
+
 export const userRouter = createTRPCRouter({
   // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
   getAll: adminProcedure
@@ -1203,12 +1172,15 @@ export const userRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const where: Prisma.UserWhereInput = {};
+
       if (input?.isActive !== undefined) {
         where.isActive = input.isActive;
       }
+
       if (input?.role) {
         where.role = input.role;
       }
+
       return await prisma.user.findMany({
         where,
         select: {
@@ -1265,7 +1237,6 @@ export const createCaller = createCallerFactory(appRouter);
 
 完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
 // filepath: src/server/api/root.ts
 // 完成版: ファイル全体
@@ -1889,6 +1860,22 @@ import { USER_ROLE } from '@/lib/constant/roles';
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search,
+  BarChart,
+  Users
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1903,24 +1890,14 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { Users } from 'lucide-react';
-import { USER_ROLE }
-  from '@/lib/constant/roles';
+import { USER_ROLE } from '@/lib/constant/roles';
+
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
-{
-  text: 'レポート',
-  icon: <BarChart className="h-5 w-5" />,
-  path: '/report',
-},
-{
-  text: '検索',
-  icon: <Search className="h-5 w-5" />,
-  path: '/search',
-},
+
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -1953,6 +1930,7 @@ const menuItems: MenuItem[] = [
     path: '/report',
   },
 ];
+
 export function AppLayout({
   children,
 }: {
@@ -1962,8 +1940,10 @@ export function AppLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
+
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
@@ -1975,11 +1955,13 @@ export function AppLayout({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
+
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1987,6 +1969,7 @@ export function AppLayout({
       </div>
     );
   }
+
   if (!session?.user) {
     return null;
   }
@@ -2022,7 +2005,6 @@ export function AppLayout({
                 </Link>
               </li>
             ))}
-          </ul>
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -2043,6 +2025,7 @@ export function AppLayout({
     </Link>
   </li>
 )}
+          </ul>
         </nav>
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">

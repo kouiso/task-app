@@ -2276,6 +2276,18 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
 // 完成版: ファイル全体
+'use client';
+import { formatDateOnly } from '@/lib/date';
+import { useState } from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+
 import {
   Select, SelectContent,
   SelectItem, SelectTrigger,
@@ -2862,6 +2874,25 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
 ```typescript
 // filepath: src/app/report/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+
 import {
   isTaskPriority,
   TASK_PRIORITY_COLORS,

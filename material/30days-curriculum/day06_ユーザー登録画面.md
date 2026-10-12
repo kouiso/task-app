@@ -1184,6 +1184,16 @@ export default function RegisterPage() {
 ```typescript
 // filepath: src/app/register/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import {
   Alert, AlertDescription, AlertTitle,
 } from '@/component/ui/alert';

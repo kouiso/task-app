@@ -1356,6 +1356,17 @@ export default function LoginPage() {
 ```typescript
 // filepath: src/app/login/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
 import {
   Alert, AlertDescription, AlertTitle,
 } from '@/component/ui/alert';

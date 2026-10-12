@@ -1188,6 +1188,19 @@ export function AppLayout({
 ```tsx
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
 import {
   AlertDialog,
   AlertDialogAction,

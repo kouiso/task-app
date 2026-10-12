@@ -2593,6 +2593,35 @@ export function TaskCard({
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
 import {
   hasPermission, isProjectMemberRole,
   type ProjectMemberRole,
@@ -2607,6 +2636,7 @@ import { dateOnlyToUtcStartIso }
 import { taskToFormData }
   from '@/lib/task-form';
 import { api } from '@/trpc/react';
+
 function TaskPageContent() {
   const [filterProject, setFilterProject] =
     useState<string>('all');
@@ -2627,6 +2657,7 @@ function TaskPageContent() {
   const searchParams = useSearchParams();
   const taskIdParam =
     searchParams.get('taskId');
+
   const {
     data: tasks,
     isLoading: tasksLoading,
@@ -2644,6 +2675,11 @@ function TaskPageContent() {
   const { data: session } =
     api.auth.getSession.useQuery();
   const utils = api.useUtils();
+// 時間記録の成功後に一覧を取り直す
+// （useCallback は react から import）
+const handleTimeLogSuccess = useCallback(() => {
+  void utils.task.getAll.invalidate();
+}, [utils.task.getAll]);
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -2667,6 +2703,7 @@ function TaskPageContent() {
     },
     [myRoleByProject],
   );
+
   const canDeleteProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -2687,6 +2724,7 @@ function TaskPageContent() {
         setDialogOpen(false);
       },
     });
+
   const updateMutation =
     api.task.update.useMutation({
       onSuccess: () => {
@@ -2715,6 +2753,7 @@ function TaskPageContent() {
     setEditingTask(undefined);
     setDialogOpen(true);
   };
+
   const handleEdit = (taskId: string) => {
     const task =
       tasks?.find((t) => t.id === taskId);
@@ -2723,6 +2762,7 @@ function TaskPageContent() {
       setDialogOpen(true);
     }
   };
+
   const handleDelete = (taskId: string) => {
     setDeleteTargetId(taskId);
     setDeleteDialogOpen(true);
@@ -2777,6 +2817,7 @@ function TaskPageContent() {
     setDetailOpen(false);
     setSelectedTask(null);
   };
+
   if (tasksLoading) {
     return (
       <AppLayout>
@@ -2850,34 +2891,8 @@ function TaskPageContent() {
           xl:grid-cols-4">
           {tasks && tasks.length > 0 ? (
             tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                id={task.id}
-                title={task.title}
-                description={task.description}
-                status={task.status}
-                priority={task.priority}
-                dueDate={task.dueDate}
-                assignee={task.assignee}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onClick={handleTaskClick}
-                canEdit={canEditProject(task.projectId)}
-                canDelete={canDeleteProject(task.projectId)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full flex
-              flex-col items-center
-              justify-center py-12
-              text-center
-              text-muted-foreground">
-              <p>タスクが見つかりません。</p>
-              {filterProject === 'all' && filterStatus === 'all' && (
-                <p>最初のタスクを作成しましょう！</p>
-              )}
-            </div>
                       <TaskCard
+                        // 完成版: TaskCard へ渡す2つの props
                         key={task.id}
                         id={task.id}
                         title={task.title}
@@ -2894,6 +2909,18 @@ function TaskPageContent() {
                         canEdit={canEditProject(task.projectId)}
                         canDelete={canDeleteProject(task.projectId)}
                       />
+            ))
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
           )}
         </div>
         <TaskDetailDialog
@@ -2901,6 +2928,7 @@ function TaskPageContent() {
           taskId={selectedTask}
           onClose={handleDetailClose}
         />
+
         <TaskDialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
@@ -2924,6 +2952,7 @@ function TaskPageContent() {
     </AppLayout>
   );
 }
+
 export default function TaskPage() {
   return (
     <Suspense
@@ -2932,11 +2961,6 @@ export default function TaskPage() {
     </Suspense>
   );
 }
-// 時間記録の成功後に一覧を取り直す
-// （useCallback は react から import）
-const handleTimeLogSuccess = useCallback(() => {
-  void utils.task.getAll.invalidate();
-}, [utils.task.getAll]);
 ```
 
 Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。

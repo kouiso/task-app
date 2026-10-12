@@ -1707,6 +1707,14 @@ flowchart TB
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Badge } from '@/component/ui/badge';
 import { Button } from '@/component/ui/button';

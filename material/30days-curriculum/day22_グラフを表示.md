@@ -1057,6 +1057,23 @@ export default function ReportPage() {
 ```typescript
 // filepath: src/app/report/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+
 import {
   isTaskPriority,
   TASK_PRIORITY_COLORS,

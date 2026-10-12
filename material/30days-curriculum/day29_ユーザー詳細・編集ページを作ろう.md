@@ -2399,11 +2399,11 @@ import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
-import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createSession } from '@/lib/session';
 import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
+import { TASK_STATUS } from '@/lib/constant/status';
 
 const userUpdateSchema = z
   .object({
@@ -2422,16 +2422,64 @@ const userUpdateSchema = z
     '更新する項目を1つ以上指定してください',
   );
 
+const profileUpdateSchema = z.object({
+  name: z.string().min(1, '名前を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
+  avatar: z.string().url().optional().nullable(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+  newPassword: z
+    .string()
+    .min(8, '新しいパスワードは8文字以上で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含める必要があります')
+    .regex(/[a-z]/, 'パスワードには小文字を含める必要があります')
+    .regex(/[0-9]/, 'パスワードには数字を含める必要があります')
+    .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
+});
+
+export const userRouter = createTRPCRouter({
+  // 共通処理がDBの最新ロールで管理者判定を済ませるため、ここでは再確認しません
+  getAll: adminProcedure
+    .input(
+      z
+        .object({
+          isActive: z.boolean().optional(),
+          role: z.nativeEnum(USER_ROLE).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const where: Prisma.UserWhereInput = {};
+      if (input?.isActive !== undefined) {
+        where.isActive = input.isActive;
+      }
+
+      if (input?.role) {
+        where.role = input.role;
+      }
+
+      return await prisma.user.findMany({
+        where,
+        select: {
+          ...USER_DETAIL_SELECT,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
+      // 本人またはADMINのみ他ユーザーの詳細情報にアクセス可能
       if (ctx.session.userId !== input.id && ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'この操作を行う権限がありません',
         });
       }
-
       const user = await prisma.user.findUnique({
         where: { id: input.id },
         select: {
@@ -2449,7 +2497,6 @@ const userUpdateSchema = z
               },
             },
           },
-
           assignedTasks: {
             select: {
               id: true,
@@ -2467,7 +2514,6 @@ const userUpdateSchema = z
           },
         },
       });
-
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -2477,19 +2523,19 @@ const userUpdateSchema = z
 
       return user;
     }),
-
   update: protectedProcedure.input(userUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
     if (id !== ctx.session.userId) {
+      // 他ユーザーを更新する場合はセッションのroleでADMIN判定
       if (ctx.session.role !== USER_ROLE.ADMIN) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: '管理者権限が必要です',
         });
       }
-
     } else {
+      // 自分のプロフィール更新の場合、roleとisActiveは変更不可
       if (data.role !== undefined || data.isActive !== undefined) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -2497,7 +2543,6 @@ const userUpdateSchema = z
         });
       }
     }
-
     const updateData: Prisma.UserUpdateInput = {};
     if (data.name !== undefined) {
       updateData.name = data.name;
@@ -2511,7 +2556,6 @@ const userUpdateSchema = z
     if (data.isActive !== undefined) {
       updateData.isActive = data.isActive;
     }
-
     return await prisma.user.update({
       where: { id },
       data: updateData,
@@ -2521,6 +2565,91 @@ const userUpdateSchema = z
       },
     });
   }),
+  updateProfile: protectedProcedure.input(profileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.session.userId;
+
+    if (input.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: input.email,
+          id: { not: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'このメールアドレスは既に使用されています',
+        });
+      }
+    }
+    const updateData: Prisma.UserUpdateInput = {
+      name: input.name,
+      email: input.email,
+    };
+    if (input.avatar !== undefined) {
+      updateData.avatar = input.avatar;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        ...USER_DETAIL_SELECT,
+        updatedAt: true,
+      },
+    });
+    if (input.email !== ctx.session.email) {
+      await createSession({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      });
+    }
+
+    return updatedUser;
+  }),
+  changePassword: protectedProcedure
+    .input(changePasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.userId;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { password: true, isActive: true },
+      });
+
+      if (!user?.password) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        });
+      }
+      if (!user.isActive) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このアカウントは無効化されています',
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(input.currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: '現在のパスワードが正しくありません',
+        });
+      }
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true, message: 'パスワードを変更しました' };
+    }),
+});
 ```
 
 更新した中身をそのまま返しているので画面側は保存の直後に新しい値を持てます。もう一度取りに行く必要がありません。`updatedAt` を含めているのは詳細ページの最終更新日をこの値で描き替えられるようにするためです。ここで全列を返さず `select` で絞るのは`getById` と返す形をそろえて画面側の型を1つに保つためです。

@@ -3191,6 +3191,26 @@ export function TaskDialog({
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { useEffect, useRef } from 'react';
+import { Controller, useForm }
+  from 'react-hook-form';
+import { z } from 'zod';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Dialog, DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/component/ui/dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
@@ -4081,6 +4101,29 @@ export default function TaskPage() {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { Button }
+  from '@/component/ui/button';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,

@@ -2856,6 +2856,14 @@ export default function ProfilePage() {
 ```typescript
 // filepath: src/app/profile/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Calendar, Edit, Lock, Mail, Shield, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 import { AppLayout } from '@/component/layout/app-layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';
 import { Button } from '@/component/ui/button';
@@ -3065,6 +3073,22 @@ export default function ProfilePage() {
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search,
+  BarChart,
+  Users
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -3079,24 +3103,14 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import { Users } from 'lucide-react';
-import { USER_ROLE }
-  from '@/lib/constant/roles';
+import { USER_ROLE } from '@/lib/constant/roles';
+
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
-{
-  text: 'レポート',
-  icon: <BarChart className="h-5 w-5" />,
-  path: '/report',
-},
-{
-  text: '検索',
-  icon: <Search className="h-5 w-5" />,
-  path: '/search',
-},
+
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -3129,6 +3143,7 @@ const menuItems: MenuItem[] = [
     path: '/report',
   },
 ];
+
 export function AppLayout({
   children,
 }: {
@@ -3138,8 +3153,10 @@ export function AppLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
+
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
@@ -3151,11 +3168,13 @@ export function AppLayout({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
+
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -3163,17 +3182,11 @@ export function AppLayout({
       </div>
     );
   }
+
   if (!session?.user) {
     return null;
   }
   return (
-<Link
-  href="/profile"
-  className="mb-3 flex items-center gap-3
-    rounded-md px-2 py-2
-    hover:bg-sidebar-accent"
->
-</Link>
     <div className="flex h-screen bg-background">
       {/* サイドバー */}
       <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
@@ -3205,7 +3218,6 @@ export function AppLayout({
                 </Link>
               </li>
             ))}
-          </ul>
 {session.user.role === USER_ROLE.ADMIN && (
   <li>
     <Link
@@ -3226,6 +3238,7 @@ export function AppLayout({
     </Link>
   </li>
 )}
+          </ul>
         </nav>
         {/* ユーザー情報 + ログアウト */}
         <div className="border-t border-sidebar-border p-4">
@@ -3233,34 +3246,6 @@ export function AppLayout({
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
               {session.user.name?.[0] || 'U'}
             </div>
-<div className="flex min-w-0 flex-1 flex-col">
-  <nav className="flex gap-2 overflow-x-auto
-    border-b p-2 md:hidden">
-    {menuItems.map((item) => (
-      <Link key={item.path}
-        href={item.path}
-        className="whitespace-nowrap
-          rounded-md px-3 py-2 text-sm">
-        {item.text}
-      </Link>
-    ))}
-    {session.user.role === USER_ROLE.ADMIN && (
-      <Link href="/user"
-        className="whitespace-nowrap
-          rounded-md px-3 py-2 text-sm">
-        ユーザー管理
-      </Link>
-    )}
-    <Link href="/profile"
-      className="whitespace-nowrap
-        rounded-md px-3 py-2 text-sm">
-      プロフィール
-    </Link>
-  </nav>
-  <main className="flex-1 overflow-y-auto p-6">
-    {children}
-  </main>
-</div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-sidebar-foreground">
                 {session.user.name}
@@ -3596,6 +3581,15 @@ export default function ChangePasswordPage() {
 ```typescript
 // filepath: src/app/profile/change-password/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
@@ -4069,6 +4063,16 @@ export default function ProfileEditPage() {
 ```typescript
 // filepath: src/app/profile/edit/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
 import { AppLayout } from '@/component/layout/app-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/component/ui/avatar';

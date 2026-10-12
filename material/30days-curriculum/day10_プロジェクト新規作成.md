@@ -2105,6 +2105,20 @@ export default function ProjectPage() {
 ```typescript
 // filepath: src/app/project/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { ProjectCard }
+  from '@/component/project/project-card';
+import {
+  ProjectDialog,
+  type ProjectFormData,
+} from
+  '@/component/project/project-dialog';
+
 import { Button }
   from '@/component/ui/button';
 import { Label }

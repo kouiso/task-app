@@ -1675,6 +1675,19 @@ const menuItems: MenuItem[] = [
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1689,18 +1702,13 @@ import {
 import { Button } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
-import {
-  ClipboardList,
-  FolderOpen,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-} from 'lucide-react';
+
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
+
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -1723,6 +1731,7 @@ const menuItems: MenuItem[] = [
     path: '/task',
   },
 ];
+
 export function AppLayout({
   children,
 }: {
@@ -1732,8 +1741,10 @@ export function AppLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
+
   const { data: session, isLoading } =
     api.auth.getSession.useQuery();
+
   const logoutMutation = api.auth.logout.useMutation({
     onSuccess: async () => {
       await queryClient.cancelQueries();
@@ -1745,11 +1756,13 @@ export function AppLayout({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
   useEffect(() => {
     if (hasMounted && !isLoading && !session) {
       router.push('/login');
     }
   }, [hasMounted, isLoading, session, router]);
+
   if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1757,6 +1770,7 @@ export function AppLayout({
       </div>
     );
   }
+
   if (!session?.user) {
     return null;
   }
@@ -2146,6 +2160,15 @@ export default function TaskPage() {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 完成版: ファイル全体
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { AppLayout } from '@/component/layout/app-layout';
+import { TaskCard } from '@/component/task/task-card';
+import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+
 import {
   Select,
   SelectContent,
@@ -2303,6 +2326,7 @@ function TaskPageContent() {
           ) : (
 
             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              {/* 完成版: 0件のときの表示と詳細ダイアログ */}
               <p>タスクが見つかりません。</p>
               {filterProject === 'all' && filterStatus === 'all' && (
     <p>最初のタスクを作成しましょう！</p>
