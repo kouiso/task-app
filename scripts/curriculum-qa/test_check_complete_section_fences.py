@@ -148,11 +148,21 @@ CASES: list[tuple[str, str, str, int]] = [
         1,
     ),
     (
-        "例外マーカーの無い `完成版: ファイル全体` は listing と見なさず目印付き抜粋として扱う",
-        "day20_x.md",
+        "例外マーカーの付かない短い listing も全ファイル listing として扱う（day21 root.ts の形）",
+        "day21_x.md",
         day(
             "",
             block(PAGE, "// 状態\n  const [open, setOpen] = useState(false);")
+            + block(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
+    (
+        "マーカーの無い短い listing の前に `完成版:` 付きの抜粋が残っていれば止める",
+        "day21_x.md",
+        day(
+            "",
+            block(PAGE, "// 完成版: 状態\n  const [open, setOpen] = useState(false);")
             + block(PAGE, WHOLE_PAGE),
         ),
         1,

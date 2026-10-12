@@ -18,8 +18,10 @@ day20・day21 の `app-layout.tsx` も同じ形で reject されていた。
 
 完成コード節の中で、書き込み先ファイルごとに次を見る。
 
-1. 全ファイル listing（直前に complete-copy-unit の例外マーカーがあり、1行目が
-   `// 完成版: ファイル全体` のフェンス）がある場合
+1. 全ファイル listing（1行目が `// 完成版: ファイル全体` のフェンス）がある場合
+   25 行を超える listing には complete-copy-unit の例外マーカーが付くが、
+   短い listing にマーカーを付けると `check_step_length.py` が「不要」として落とす。
+   なので listing かどうかはマーカーではなく目印の文言で見分ける。
    - listing は1件だけで、そのファイルの最後のフェンスであること
    - ほかのフェンスに `完成版:` / `完成形:` の目印が残っていないこと
    目印付きの抜粋と listing が並ぶと、権威記述が2つになる。
@@ -111,21 +113,12 @@ def section_range(text: str) -> tuple[int, int] | None:
     return (start, last + 1) if start is not None else None
 
 
-def preceded_by_unit_marker(lines: list[str], fence_lineno: int) -> bool:
-    """フェンスのすぐ上（空行を飛ばした最初の行）が complete-copy-unit の例外マーカーか。"""
-    for i in range(fence_lineno - 2, -1, -1):
-        if lines[i].strip():
-            return lines[i].strip() == UNIT_MARKER
-    return False
-
-
 def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
     """完成コード節のフェンスを書き込み先ごとに、現れた順で返す。"""
     span = section_range(text)
     if span is None:
         return {}
     start, end = span
-    lines = text.split("\n")
     out: dict[str, list[SectionFence]] = {}
     for block in iter_blocks(text, source):
         if not start < block.lineno < end:
@@ -134,11 +127,7 @@ def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
             continue
         head = next((line for line in block.lines if line.strip()), "")
         labeled = bool(FINAL_LABEL.match(head))
-        whole = (
-            labeled
-            and WHOLE_FILE in head
-            and preceded_by_unit_marker(lines, block.lineno)
-        )
+        whole = labeled and WHOLE_FILE in head
         out.setdefault(block.target, []).append(SectionFence(block, labeled, whole))
     return out
 
@@ -236,8 +225,8 @@ def main(argv: list[str]) -> int:
             print(f"  {f.source}:{f.lineno} — {f.target}: {f.message}")
         print()
         print("  完成コード節では1ファイルにつき権威記述を1つだけ置きます。")
-        print("  Step で書き足したファイルは、抜粋の `完成版:` を外して末尾に次の形の listing を置きます:")
-        print(f"    {UNIT_MARKER}")
+        print("  Step で書き足したファイルは、抜粋の `完成版:` を外して末尾に次の形の listing を置きます")
+        print(f"  （25 行を超える listing には直前に {UNIT_MARKER} を付けます）:")
         print("    // filepath: <path>")
         print("    // 完成版: ファイル全体")
         return 1
