@@ -1,5 +1,5 @@
-# Devin 起動リクエストの定期リトライ（薄型 caller）。
-# 実体は kouiso/ritmo-devin の reusable workflow（中央実装・MAX_TRIES=3）。
+# Devin 起動リクエストの定期リトライ。
+# リポ毎に同じ実装を抱えると修正が点在するため、正本は ritmo-devin の reusable 側に寄せる
 name: Devin Slack Retry
 
 on:
@@ -12,7 +12,13 @@ on:
 jobs:
   retry-devin:
     name: Retry pending Devin triggers
-    # 起動トリガのラベルは `devin`。無関係なラベル付与では走らせない
+    # caller 側で付与しないと reusable 側の issues: write が既定 read-only トークンで効かない
+    permissions:
+      issues: write
+      contents: read
+    # ラベル起動・定期・手動が重なっても同一リポでは直列化し二重起動を防ぐ
+    concurrency: devin-slack-retry
+    # 起動トリガのラベルは `devin`。devin-queued は次回 sweep まで待機させる設計のため対象外
     if: github.event_name != 'issues' || github.event.label.name == 'devin'
     # 可変ブランチ参照に secrets を渡すと参照先更新で漏洩し得るため不変 SHA で固定。
     # 中央実装 PR#14 の HEAD。main マージ後に @main へ切替える
