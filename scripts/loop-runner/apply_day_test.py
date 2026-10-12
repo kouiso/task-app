@@ -1072,5 +1072,146 @@ export const trailingDeclarationTwo = 2;
         self.assertEqual(res, base)
 
 
+class Pr635LateReviewFixes(unittest.TestCase):
+    """PR#635 マージ直前に付いたレビュー指摘の回帰テスト。"""
+
+    def _apply(self, oracle_body: str, target_body: str, md_body: str,
+               runs: int = 1) -> tuple[str, list[list[str]]]:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", oracle_body)
+            write(target, "src/a.ts", target_body)
+            md = write(root, "day.md", md_body)
+            skipped = []
+            for r in range(runs):
+                _w, s = ad.apply_day(md, target, oracle_dir=oracle,
+                                     tag=f"d{r}")
+                skipped.append(s)
+            return (target / "src/a.ts").read_text(), skipped
+
+    def test_comment_only_fragment_rerun_is_idempotent(self):
+        # コメントだけの断片は再適用で重複させない
+        body, _s = self._apply(
+            "export const a = 1;\n", "export const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(body, "export const a = 1;\n// marker\n", body)
+
+    def test_inline_comment_only_change_is_applied(self):
+        # 行末コメントだけが違う断片を適用済みと誤認せず、
+        # 置き換えで後続の宣言も消さない
+        oracle = ("export const a = 1; // new\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "export const a = 1; // old\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1; // new\n```\n")
+        self.assertEqual(body, oracle, body)
+        self.assertEqual(s, [[]])
+
+    def test_commented_out_code_is_not_present(self):
+        # `// 説明` + 次行のコードの断片を、コードまでコメントアウトされた
+        # 1行と同じとみなして飛ばさない
+        oracle = ("// explanation\nexport const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "// explanation export const a = 1;\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "// explanation\nexport const a = 1;\n```\n")
+        self.assertIn("\nexport const a = 1;\n", body)
+        self.assertEqual(s, [[]])
+
+    def test_decl_end_ignores_trailing_line_comment(self):
+        lines = ["export const a = 1; // note", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(lines, 0), 0)
+
+    def test_decl_end_keeps_url_in_template_and_jsx_text(self):
+        # 複数行テンプレートや JSX テキストの `https://` はコメントではない。
+        # コメント扱いで終端を見失うと置き換えで次の宣言が消える
+        tpl = ["const s = `", "  see https://example.com`;",
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl, 0), 1)
+        jsx = ['export const L = () => <a href="/x">https://example.com</a>;',
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(jsx, 0), 0)
+        # テンプレート内の `value; // literal` で宣言を終えない
+        tpl2 = ["const s = `", "value; // literal", "tail`;",
+                "const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl2, 0), 2)
+        # 行末で開いた /* */ が次行で閉じるまでは宣言の内側
+        blk = ["export const a = 1; /* note", " more */", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(blk, 0), 1)
+
+    def test_splice_into_whitespace_only_file(self):
+        # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む。
+        # 先頭に追加でも断片の前に空行を残さない（#! が先頭に来なくなる）
+        oracle = ("export const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\nexport const d = 4;\n")
+        for where in ("末尾に追加", "先頭に追加"):
+            body, s = self._apply(
+                oracle, "   \n\n",
+                f"```typescript\n// filepath: src/a.ts（{where}）\n"
+                "export const a = 1;\n```\n")
+            self.assertEqual(body, "export const a = 1;\n", (where, body))
+            self.assertEqual(s, [[]], where)
+
+    def test_code_fragment_present_across_existing_comment(self):
+        # コードだけの断片は既存側の間にコメントが挟まっていても適用済み。
+        # 見失うと宣言置き換えで b が二重定義になる
+        target = ("export const a = 1;\n// keep\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            "export const a = 1;\nexport const b = 2;\nexport const c = 3;\n"
+            "export const d = 4;\n",
+            target,
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1;\nexport const b = 2;\n```\n")
+        self.assertEqual(body, target, body)
+        self.assertEqual(s, [[]])
+
+    def test_comment_only_fragment_inside_block_comment_is_applied(self):
+        # 外側の /* */ の中身として同じ文字列があっても適用済みとしない
+        body, _s = self._apply(
+            "export const a = 1;\n",
+            "/*\n// marker\n*/\nexport const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(
+            body, "/*\n// marker\n*/\nexport const a = 1;\n// marker\n", body)
+
+    def test_splice_raw_end_covers_whole_fragment(self):
+        # 断片の先頭・末尾が既存行と equal でも、終端は断片全体の後ろを返す。
+        # 最初の変更区間の終端を返すと後続の閉じ断片が断片内部へ入る
+        out = ["<div>", "<Widget>", "<a />", "</Widget>"]
+        res = ["<div>", "<Widget>", "<b />", "</Widget>"]
+        frag = ["<Widget>", "<b />", "</Widget>"]
+        raw = [[l] for l in out]
+        new_raw, end = ad._splice_raw(raw, out, res, frag,
+                                      [[l] for l in frag])
+        self.assertEqual([l for g in new_raw for l in g], res)
+        self.assertEqual(end, 4)
+
+    def test_splice_raw_end_picks_written_occurrence(self):
+        # 断片と同じ並びが既存側にもある時は、変更区間と重なる側を終端にする
+        out = ["A", "B", "A"]
+        res = ["A", "B", "A", "B", "A", "B"]
+        frag = ["A", "B", "A", "B"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 6)
+        # 変更区間が断片の出現と揃わない時も、前後が out と一致する
+        # 最初の出現（先頭の A の直後への挿入）を書き込み位置にする
+        out = ["A", "A", "B", "A", "A"]
+        res = ["A", "A", "B", "A", "B", "A", "B", "A", "A"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 5)
+
+
 if __name__ == "__main__":
     unittest.main()

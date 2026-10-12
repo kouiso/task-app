@@ -503,14 +503,30 @@ def find_decl_end(lines: Sequence[str], start: int) -> int:
     """宣言ブロックの終了行。メソッドチェーン(.foo( や => の継続を読み飛ばす。"""
     depth = 0
     j = start
+    # 行末の // コメントを終端判定に含めると `x = 1; // note` の宣言が
+    # 終わらず、置き換えで後続の宣言まで消える。コメントの除去は複数行
+    # テンプレートの状態を持ち回る _mask_code で行う（テンプレート内の
+    # `a; // b` をコメントとみなすと宣言が途中で終わる）。JSX テキスト内の
+    # `https://` もコメントとみなされるため、原文の行末が終端記号ならそちらを優先する。
+    # 次行が /* */ の途中から始まる行は、コメントが閉じるまで終端にしない
+    masked, nested = _mask_code_with_state(lines[start:])
+    prev_code_last = ""
     while j < len(lines):
         s = _strip_for_depth(lines[j])
         depth += s.count("{") + s.count("(") + s.count("[")
         depth -= s.count("}") + s.count(")") + s.count("]")
-        stripped = lines[j].rstrip()
-        last = stripped[-1:] if stripped else ""
+        raw_last = lines[j].rstrip()[-1:]
+        code_last = masked[j - start].rstrip()[-1:]
+        if code_last:
+            prev_code_last = code_last
+        elif nested[j - start]:
+            # /* */ の続きだけの行は、コメントが始まる前のコードの終端を引き継ぐ
+            code_last = prev_code_last
+        last = (raw_last if raw_last and raw_last in ";,)}]>"
+                else code_last)
         nxt = lines[j + 1].strip() if j + 1 < len(lines) else ""
-        if depth <= 0 and last and last in ";,)}]>":
+        nxt_nested = j + 1 - start < len(nested) and nested[j + 1 - start]
+        if depth <= 0 and last and last in ";,)}]>" and not nxt_nested:
             if not nxt.startswith((".", "=>", "?", ":")):
                 return j
         if depth < 0:
@@ -686,10 +702,18 @@ def _mask_code(lines: Sequence[str]) -> list[str]:
     /* */ も行を跨いで状態を維持する。' と " は行を跨げないため
     行末で未閉鎖なら状態をリセットする。
     走査結果は元の行と同じ長さなので列位置をそのまま使える。"""
+    return _mask_code_with_state(lines)[0]
+
+
+def _mask_code_with_state(lines: Sequence[str]) -> tuple[list[str], list[bool]]:
+    """_mask_code の結果と、各行が /* */ かテンプレートリテラルの内側から
+    始まるかのフラグを返す。"""
     out: list[str] = []
+    nested: list[bool] = []
     quote: Optional[str] = None
     in_block = False
     for l in lines:
+        nested.append(in_block or quote == "`")
         buf: list[str] = []
         i, n = 0, len(l)
         while i < n:
@@ -731,7 +755,7 @@ def _mask_code(lines: Sequence[str]) -> list[str]:
         # ' と " は行を跨げないので行末で未閉鎖なら状態をリセットする
         if quote in ("'", '"'):
             quote = None
-    return out
+    return out, nested
 
 
 # 静的な import 宣言だけを拾う。`import(`（動的 import）や
@@ -996,13 +1020,15 @@ def _variants_for_match(fl: list[str]) -> list[list[str]]:
     return variants
 
 
-def _norm_blob(lines: Sequence[str]) -> list[str]:
+def _norm_blob(lines: Sequence[str], keep_comments: bool = False) -> list[str]:
     """コード上の空白だけ潰した照合用の行リスト。
     文字列リテラル内の空白は内容なので残す。全部潰すと `"a b"` → `"ab"`
     の変更を適用済みと誤認する（issue #630）。テンプレートリテラルは行を
     跨ぐため引用状態と `${}` のブレース深さを行間で持ち回る。
     `${}` の中に文字列やテンプレートが入れ子になっても外側のテンプレート
-    状態を失わないよう、テンプレートの文脈はスタックで持つ。"""
+    状態を失わないよう、テンプレートの文脈はスタックで持つ。
+    keep_comments は冪等判定用。コメントも空白だけ潰して残し、
+    コメントだけが違う断片を適用済みと誤認しないようにする。"""
     out: list[str] = []
     quote: Optional[str] = None  # ' / " の文字列内
     # 要素は "`"（テンプレート文字列部）か int（その `${}` 内のブレース深さ）
@@ -1021,8 +1047,12 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
             if in_block_comment:
                 if c == "*" and i + 1 < n and l[i + 1] == "/":
                     in_block_comment = False
+                    if keep_comments:
+                        buf.append("*/")
                     i += 2
                     continue
+                if keep_comments and not c.isspace():
+                    buf.append(c)
                 i += 1
                 continue
             if quote or (tpl and tpl[-1] == "`"):
@@ -1048,9 +1078,16 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
                 continue
             if c == "/" and i + 1 < n:
                 if l[i + 1] == "/":
+                    if keep_comments:
+                        # 行コメントは行末で終わる。区切りを残さないと
+                        # `// a` + 次行のコードと、コードまでコメントアウト
+                        # された1行 `// a code` が同じブロブになる
+                        buf.append(re.sub(r"\s+", "", l[i:]) + "\x00")
                     break
                 if l[i + 1] == "*":
                     in_block_comment = True
+                    if keep_comments:
+                        buf.append("/*")
                     i += 2
                     continue
             if c in "'\"":
@@ -1093,10 +1130,12 @@ def _match_keys(line: str) -> list[str]:
     return [a, b] if a != b else [a]
 
 
-def _blob_locate(base_nb: list[str], frag_lines: list[str]) -> int:
+def _blob_locate(base_nb: list[str], frag_lines: list[str],
+                 keep_comments: bool = False) -> int:
     """空白無視の文字列ブロブ照合で oracle 内の行位置を返す。
-    教材と完成版コードで行の折り返しが違っていても内容が一致すれば見つかる。"""
-    vb = "".join(_norm_blob(frag_lines))
+    教材と完成版コードで行の折り返しが違っていても内容が一致すれば見つかる。
+    keep_comments は base_nb を作った _norm_blob と揃える。"""
+    vb = "".join(_norm_blob(frag_lines, keep_comments))
     if len(vb) < 10:
         return -1
     # 検索側は行をまたいで結合する。区切り記号を挟むと断片の行折り返し差を
@@ -1742,17 +1781,29 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
     # 断片が res 内に連続して書き込まれている位置。SequenceMatcher は断片の
     # 先頭行などを既存行との equal として扱うことがあり、変更区間だけで
     # 断片行を数えると対応がずれて正規化行が書き込まれるため、断片全体の
-    # 位置で対応させる。変更区間と重なる出現だけを書き込み位置とみなす
+    # 位置で対応させる。断片が繰り返し現れる時は、out の連続区間1つを
+    # 断片へ置き換えれば res になる出現（前後が out と一致する出現）の
+    # 最初を選ぶ。SequenceMatcher の変更区間は繰り返しのある所では
+    # 書き込み位置と別の場所を指すことがある。そうした出現が無い時だけ
+    # 変更区間と最も多く重なる出現を使う
     span = -1
     m = len(frag_norm)
     changed = [(j1, j2) for op, _i1, _i2, j1, j2 in opcodes
                if op != "equal" and j1 < j2]
     if m:
+        best = 0
         for p in range(len(res) - m + 1):
-            if res[p:p + m] == frag_norm and any(
-                    j1 < p + m and p < j2 for j1, j2 in changed):
+            if res[p:p + m] != frag_norm:
+                continue
+            tail = len(res) - p - m
+            if (len(out) - tail >= p and res[:p] == out[:p]
+                    and res[p + m:] == out[len(out) - tail:]):
                 span = p
                 break
+            ov = sum(max(0, min(j2, p + m) - max(j1, p))
+                     for j1, j2 in changed)
+            if ov > best:
+                span, best = p, ov
 
     def emit(group: list[str]) -> None:
         nonlocal pend
@@ -1803,6 +1854,11 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
             new_raw[-1] += pend
         else:
             new_raw.append(pend)
+    # 断片の先頭や末尾が既存行と equal 扱いになると最初の変更区間は断片の
+    # 途中で終わる。続く閉じ断片を断片の内側へ入れないよう、断片全体の
+    # 終端を優先する
+    if span >= 0:
+        return new_raw, span + m
     return new_raw, (first_change_end
                      if first_change_end is not None else len(res))
 
@@ -1819,6 +1875,11 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
     gaps: list[dict] = []
     out = list(cur_norm)
     raw = _raw_groups(cur_raw)
+    # 空白行だけのファイルは norm 行を持たないが _raw_groups は空行だけの
+    # グループを1つ作る。対応する norm 行が無く、残すと先頭に追加した
+    # 断片（#! など）の前に空行が入るため、空ファイルとして扱う
+    if not out and len(raw) == 1:
+        raw = []
     if len(raw) != len(out):
         return None, [{"day": tag, "path": path,
                        "reason": "raw-norm-mismatch"}]
@@ -1888,23 +1949,46 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
         #（位置コメントや行折り返し差で一致しないだけの再適用を防ぐ）
         strip_i = leading_meta_lines(fl_ins)
         fl_core = fl_ins[strip_i:] if strip_i else fl_ins
+        # 冪等判定ではコメントも内容として比べる。落とすと `// old` → `// new`
+        # のようなコメントだけの書き換えを適用済みと誤認して黙って飛ばす。
+        # コメントを持たない変形はコメントを落とした比較を使う。既存側の
+        # 間に挟まったコメントで一致を見失わず、コメントアウトされた
+        # コードの文字列にも一致しない
+        out_nb_c = _norm_blob(out, keep_comments=True)
         out_nb = _norm_blob(out)
+
+        def _blob_present(v: list[str]) -> bool:
+            if _norm_blob(v, keep_comments=True) == _norm_blob(v):
+                return _blob_locate(out_nb, v) >= 0
+            return _blob_locate(out_nb_c, v, keep_comments=True) >= 0
+
         # 空白吸収ブロブ一致は冪等判定には使えるが、指示つき断片では
         # 文字列リテラル内の空白差を「適用済み」と誤認するため除外する
         present_norm = (find_in(out, fl_ins) >= 0
                         or (fl_core and find_in(out, fl_core) >= 0)
                         or (not part.directive
-                            and any(_blob_locate(out_nb, v) >= 0
+                            and any(_blob_present(v)
                                     for v in _variants_for_match(fl_ins))))
         # 正規化は空行・行末空白を消すため、空白だけが違う壊れた baseline を
         # 「適用済み」と見逃す。原文で存在する時だけスキップする（issue #630）。
         # 比較は変化し続ける現在のファイル内容（raw 全体）に対し行境界つきで行い、
         # /* */ や // の中に置かれた見掛け上の一致は適用済みと数えない
         flat = [l for g in raw for l in g]
-        noncode = _noncode_line_flags(flat)
+        masked, nested = _mask_code_with_state(flat)
+        noncode = [not ml.strip() for ml in masked]
+        # コメントだけの断片はコメント自体が書き込む中身なので、一致区間が
+        # コメント行だけでも適用済みとして数える。ただし外側の /* */ や
+        # テンプレートの中身として現れた同じ文字列は適用済みではない
+        frag_has_code = not all(_noncode_line_flags(fl_write))
+
+        def _counts_as_present(s: int, e: int) -> bool:
+            if frag_has_code:
+                return not all(noncode[s:e])
+            return s < len(nested) and not nested[s]
+
         m = len(fl_write)
         verbatim = any(
-            flat[k:k + m] == fl_write and not all(noncode[k:k + m])
+            flat[k:k + m] == fl_write and _counts_as_present(k, k + m)
             for k in range(len(flat) - m + 1))
         if verbatim:
             continue  # 冪等: 既に存在する断片はスキップ（完成版参照や再適用）
@@ -1929,7 +2013,7 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
             # 修復せず、通常の splice 経路で実際のコード位置へ書き込む
             s0 = sum(len(g) for g in raw[:i])
             e0 = s0 + sum(len(g) for g in raw[i:i + hit])
-            if not all(noncode[s0:e0]):
+            if _counts_as_present(s0, e0):
                 # 先頭行の前の空行は既存ファイル側を保ち、以降は断片原文を使う
                 fg = ([raw[i][:-1] + seg_groups[0][-1:]]
                       + [list(g) for g in seg_groups[1:]])
