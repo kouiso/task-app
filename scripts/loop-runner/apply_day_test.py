@@ -562,6 +562,131 @@ class Issue630Fixes(unittest.TestCase):
         joined = "\n".join(new)
         self.assertIn("head\n\n  indented line  \ntail", joined)
 
+    def test_blob_keeps_multiline_template_whitespace(self):
+        # テンプレートリテラルは行を跨ぐ。行ごとに引用状態をリセットすると
+        # 継続行の空白が潰れて「適用済み」を誤認する（issue #630）
+        lines = ["const t = `head", "  a   b  ", "tail`;", "const x = 1;"]
+        blob = ad._norm_blob(lines)
+        self.assertEqual(blob[1], "  a   b  ")
+        self.assertEqual(blob[3], "constx=1;")
+
+    def test_insert_past_comment_semicolon_in_import(self):
+        # 複数行 import 内の `// keep A;` のようなコメント末尾の ';' で
+        # 文末判定を誤ってはいけない
+        cur = [
+            "import {",
+            "  A,",
+            "  // keep A;",
+            "} from 'lib';",
+            "",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        self.assertTrue(
+            joined.index("import { C } from 'other';")
+            > joined.index("} from 'lib';"))
+
+    def test_insert_past_import_attribute_block(self):
+        # `import ... from 'x' with { ... };` の属性ブロック途中にも入らない
+        cur = [
+            "import data from './d.json' with {",
+            "  type: 'json'",
+            "};",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        self.assertTrue(
+            joined.index("import { C } from 'other';") > joined.index("};"))
+
+    def test_apply_day_preserves_existing_whitespace(self):
+        # splice は無関係な箇所の空行・行末空白・テンプレート内空白を
+        # 原文のまま残す（issue #630）
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            oracle_body = "export const a = 1;\nexport const b = 2;"
+            write(oracle, "src/a.ts", oracle_body + "\n")
+            dest_body = (
+                "export const a = 1;\n"
+                "\n"
+                "export const t = `head\n"
+                "\n"
+                "  indented line  \n"
+                "tail`;\n"
+                "export const b = 2;   \n")
+            write(target, "src/a.ts", dest_body)
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（末尾に追加）
+export const c = 3;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn("export const c = 3;", body)
+            self.assertIn("export const a = 1;\n\nexport const t = `head\n\n  indented line  \ntail`;\nexport const b = 2;   \n", body)
+
+    def test_verbatim_different_fragment_repairs_baseline(self):
+        # 正規化済みでは一致するが原文が違う断片（空行の欠落等）は
+        # 「適用済み」とせず原文へ修復する（issue #630）
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            oracle_body = "export const a = 1;\n\nexport const b = 2;"
+            write(oracle, "src/a.ts", oracle_body + "\n")
+            write(target, "src/a.ts", "export const a = 1;\nexport const b = 2;\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+export const a = 1;
+
+export const b = 2;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn("export const a = 1;\n\nexport const b = 2;", body)
+            self.assertEqual(body.count("export const b = 2;"), 1)
+
+    def test_squash_keeps_literal_whitespace(self):
+        # _squash はコード側の空白だけ潰し、リテラル中身は保持する。
+        # _oracle_pos 等の照合でリテラル入り行が oracle と不一致になるのを防ぐ
+        self.assertEqual(ad._squash("  x = 'a b';"), "x='a b';")
+        self.assertEqual(ad._squash("if (a && b)"), "if(a&&b)")
+        self.assertEqual(ad._squash(""), "")
+
+    def test_oracle_pos_matches_wrapped_fragment_line(self):
+        # oracle が1行表記・断片が複数行表記でも、断片行が oracle 行の
+        # 部分文字列として見つかれば位置を返す（day20 app-layout 型）
+        base = ad.norm("""export function L() {
+  const menuItems = [
+    { text: 'a', icon: <A className="h-5 w-5" />, path: '/a' },
+    { text: '検索', icon: <Search className="h-5 w-5" />, path: '/search' },
+  ];
+}
+""".split("\n"))
+        fl = ["  {", "    text: '検索',",
+              '    icon: <Search className="h-5 w-5" />,',
+              "    path: '/search',", "  },"]
+        self.assertGreaterEqual(ad._oracle_pos(base, fl), 0)
+
+    def test_literal_fragment_insert_needs_expression_container(self):
+        # 裸 `{...}` 断片の文レベル挿入は構文エラーになるため拒否する
+        cur = ad.norm("""interface MenuItem {
+  text: string;
+}
+const menuItems = [
+  { text: 'a' },
+];
+""".split("\n"))
+        frag = ["{", "  text: '検索',", "},"]
+        # interface 直後の文位置（index 3）は拒否
+        self.assertFalse(ad._literal_fragment_insert_ok(cur, frag, 3))
+        # 配列内（index 5）は許可
+        self.assertTrue(ad._literal_fragment_insert_ok(cur, frag, 5))
+
 
 if __name__ == "__main__":
     unittest.main()
