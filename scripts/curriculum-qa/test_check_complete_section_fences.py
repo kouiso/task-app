@@ -263,6 +263,36 @@ CASES: list[tuple[str, str, str, int]] = [
         1,
     ),
     (
+        "副作用だけの import は引用符の違いを差にせず、取り込み元で照合する",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 取り込み\nimport './globals.css';")
+            + unit(PAGE, WHOLE_PAGE.replace("import { useState }", 'import "./globals.css";\nimport { useState }')),
+        ),
+        0,
+    ),
+    (
+        "`import.meta` は import 文として読まず、行として照合する",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 開発時の再読み込み\nimport.meta.hot?.accept();\nimport { useState } from 'react';")
+            + unit(PAGE, WHOLE_PAGE.replace("\nexport", "\nimport.meta.hot?.accept();\n\nexport")),
+        ),
+        0,
+    ),
+    (
+        "複数行の import の途中にあるコメントの `from '…'` を文の終わりと読まない",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 取り込み\nimport { // from 'preact'\n  useState, // from 'preact/hooks'\n} from 'react';")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
+    (
         "断片の import の取り込み元が listing と違えば止める",
         "day20_x.md",
         day(

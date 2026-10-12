@@ -37,8 +37,8 @@
 | --- | --- | --- |
 | `check_complete_section_fences.py material/30days-curriculum/` | 9 件検出（6 の後） | 検出 0 |
 | 同上を 4 の修正前（`3ca1c9d`）に実行 | - | day20 task/page・day25 app-layout を検出 |
-| `test_check_complete_section_fences.py` | - | 32/32 パス（6 の後） |
-| 検査本体の変異 14 種（字句の区切りを外す・import 照合を外す・最初の節だけ見る・行数照合を外すなど） | - | 14 種ともテストが失敗して検出 |
+| `test_check_complete_section_fences.py` | - | 35/35 パス（6 の後） |
+| 検査本体の変異 18 種（字句の区切りを外す・import 照合を外す・`import.meta` を import と読む・最初の節だけ見る・行数照合を外すなど） | - | 18 種ともテストが失敗して検出 |
 | `check_quality.sh material/30days-curriculum/` | ALL CHECKS PASS | ALL CHECKS PASS |
 | `check_complete_code.py material/30days-curriculum/` | - | 一致 23 / 未登録の差分 0 |
 | loop-runner unittest（apply_day_test / verify_day_test） | 58 OK | 58 OK |

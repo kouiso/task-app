@@ -87,7 +87,7 @@ FINAL_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形](?:（[^）]*）)?[:
 SHAPE_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成形(?:（[^）]*）)?[:：]")
 WHOLE_FILE = re.compile(r"^\s*(?://|\{/\*)\s*完成版[:：]\s*ファイル全体\s*(?:\*/\})?\s*$")
 EXCERPT_SKIP = re.compile(r"^(?://|/\*|\*|\{/\*|\.\.\.|…)")
-IMPORT_START = re.compile(r"^\s*import\b(?!\s*\()")
+IMPORT_START = re.compile(r"^\s*import\b(?!\s*[.(])")
 IMPORT_END = re.compile(r"""(?:\bfrom\s*|^\s*import\s*)(['"])([^'"]+)\1""")
 TOKEN_SEP = "\x00"
 
@@ -241,12 +241,13 @@ def import_statements(lines: list[str], numbers: tuple[int, ...]) -> list[Import
             i += 1
             continue
         # `} from` と取り込み元を別の行に折ることがあるので、行を足しながら文の終わりを探す。
+        # 行内コメントの `from '…'` を文の終わりと読まないよう、コメントは外してから探す。
         j = i
-        text = lines[i].strip()
+        text = strip_comments(lines[i]).strip()
         end = IMPORT_END.search(text)
         while end is None and j + 1 < len(lines):
             j += 1
-            text += " " + lines[j].strip()
+            text += " " + strip_comments(lines[j]).strip()
             end = IMPORT_END.search(text)
         if end is None:
             break
@@ -281,8 +282,9 @@ def missing_excerpt_lines(
             in_import.update(stmt.indexes)
             lacking = stmt.names - listing_imports.get(stmt.module, set())
             if stmt.module not in listing_imports or lacking:
-                shown = ", ".join(sorted(lacking)) or stmt.module
-                missing.append((stmt.lineno, f"import {shown} from '{stmt.module}'"))
+                names = ", ".join(sorted(lacking))
+                shown = f"'{stmt.module}' から取り込む {names}" if names else f"import '{stmt.module}'"
+                missing.append((stmt.lineno, shown))
         for index, (lineno, line) in enumerate(zip(part.line_numbers, lines)):
             stripped = line.strip()
             if index in in_import or not stripped or EXCERPT_SKIP.match(stripped):
