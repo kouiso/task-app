@@ -17,8 +17,8 @@ jobs:
     # 定期・手動が重なっても同一リポでは直列化し二重起動を防ぐ
     concurrency: devin-slack-retry
     # 可変ブランチ参照に secrets を渡すと参照先更新で漏洩し得るため不変 SHA で固定。
-    # 中央実装 PR#14 の HEAD(942e000)。main マージ後に @main へ切替える
-    uses: kouiso/ritmo-devin/.github/workflows/devin-slack-retry-reusable.yml@019fbea340a5196a1c96fba9400fcf9c07a96f0e
+    # 中央実装 PR#14 の HEAD。main マージ後に @main へ切替える
+    uses: kouiso/ritmo-devin/.github/workflows/devin-slack-retry-reusable.yml@982bd0c15962895643ff48fe92d8198b3d6d6271
     secrets:
       RITMO_DEVIN_AUTOMATION_PRIVATE_KEY: ${{ secrets.RITMO_DEVIN_AUTOMATION_PRIVATE_KEY }}
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
