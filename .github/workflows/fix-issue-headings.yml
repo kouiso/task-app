@@ -6,6 +6,7 @@ on:
 jobs:
   fix-headings:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       issues: write
     steps:

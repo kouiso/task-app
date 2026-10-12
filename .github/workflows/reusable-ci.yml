@@ -31,6 +31,7 @@ jobs:
     # Blacksmith runners (blacksmith-*vcpu-ubuntu-*) were queuing indefinitely
     # from 2026-05-21 onwards; tracked in issue #177.
     runs-on: ${{ vars.RUNNER_LINUX }}
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine

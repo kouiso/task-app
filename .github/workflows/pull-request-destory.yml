@@ -22,6 +22,7 @@ jobs:
       pull-requests: 'write'
 
     runs-on: ${{ vars.RUNNER_LINUX }}
+    timeout-minutes: 15
 
     steps:
       - name: Google Auth
