@@ -17,6 +17,7 @@ jobs:
   auto-label-branch:
     name: Label based on branch name
     runs-on: ${{ vars.RUNNER_LINUX }}
+    timeout-minutes: 15
     steps:
       - name: Add label based on branch name
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -74,6 +75,7 @@ jobs:
   auto-label-files:
     name: Label based on changed files
     runs-on: ${{ vars.RUNNER_LINUX }}
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write

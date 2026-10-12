@@ -66,6 +66,7 @@ jobs:
   environment-setup:
     name: Environment Setup Test
     runs-on: ${{ vars.RUNNER_LINUX }}
+    timeout-minutes: 15
     needs: zip-export
     steps:
       - name: Download ZIP artifact
