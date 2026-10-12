@@ -1,25 +1,39 @@
-# Devin 起動リクエストの定期リトライ（sweep 専用）。ラベル即時起動は devin-slack-trigger 側だけが担い、本 workflow は concurrency で sweep 同士を直列化する。trigger との同時実行自体は起こり得るため、重複起動の抑止は中央側が issue ラベルと状態マーカーを再読して行う。
-# リポ毎に同じ実装を抱えると修正が点在するため、正本は ritmo-devin の reusable 側に寄せる
+# Devin 起動リクエストの定期リトライ。
+# - devin-queued ラベルの issue を定期実行で起動（容量制限時のキュー）
+# - Slack 投稿/Devin 起動が失敗した issue (devin-waiting) を同じスレッドに再投稿
+#   元スレッドへの返信が失敗した場合は新規スレッドで再投稿する
 name: Devin Slack Retry
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: devin-slack-retry
+  cancel-in-progress: false
 
 jobs:
   retry-devin:
     name: Retry pending Devin triggers
-    # caller 側で付与しないと reusable 側の issues: write が既定 read-only トークンで効かない
-    permissions:
-      issues: write
-      contents: read
-    # 定期・手動が重なっても同一リポでは直列化し二重起動を防ぐ
-    concurrency: devin-slack-retry
-    # 可変ブランチ参照に secrets を渡すと参照先更新で漏洩し得るため不変 SHA で固定。
-    # 中央実装 PR#14 の HEAD。main マージ後に @main へ切替える
-    uses: kouiso/ritmo-devin/.github/workflows/devin-slack-retry-reusable.yml@982bd0c15962895643ff48fe92d8198b3d6d6271
-    secrets:
-      RITMO_DEVIN_AUTOMATION_PRIVATE_KEY: ${{ secrets.RITMO_DEVIN_AUTOMATION_PRIVATE_KEY }}
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Sweep queued and pending triggers
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          DEVIN_USER_ID: ${{ vars.SLACK_DEVIN_USER_ID }}
+          DEVIN_MODE: ${{ vars.DEVIN_MODE }}
+          TRIGGER_LABEL: devin
+        with:
+          script: |
+            const relay = require('./.github/scripts/devin-slack-relay.js');
+            await relay.sweep({ github, context, core });
