@@ -507,17 +507,26 @@ def find_decl_end(lines: Sequence[str], start: int) -> int:
     # 終わらず、置き換えで後続の宣言まで消える。コメントの除去は複数行
     # テンプレートの状態を持ち回る _mask_code で行う（テンプレート内の
     # `a; // b` をコメントとみなすと宣言が途中で終わる）。JSX テキスト内の
-    # `https://` もコメントとみなされるため、原文の行末が終端記号ならそちらを優先する
-    masked = _mask_code(lines[start:])
+    # `https://` もコメントとみなされるため、原文の行末が終端記号ならそちらを優先する。
+    # 次行が /* */ の途中から始まる行は、コメントが閉じるまで終端にしない
+    masked, nested = _mask_code_with_state(lines[start:])
+    prev_code_last = ""
     while j < len(lines):
         s = _strip_for_depth(lines[j])
         depth += s.count("{") + s.count("(") + s.count("[")
         depth -= s.count("}") + s.count(")") + s.count("]")
         raw_last = lines[j].rstrip()[-1:]
+        code_last = masked[j - start].rstrip()[-1:]
+        if code_last:
+            prev_code_last = code_last
+        elif nested[j - start]:
+            # /* */ の続きだけの行は、コメントが始まる前のコードの終端を引き継ぐ
+            code_last = prev_code_last
         last = (raw_last if raw_last and raw_last in ";,)}]>"
-                else masked[j - start].rstrip()[-1:])
+                else code_last)
         nxt = lines[j + 1].strip() if j + 1 < len(lines) else ""
-        if depth <= 0 and last and last in ";,)}]>":
+        nxt_nested = j + 1 - start < len(nested) and nested[j + 1 - start]
+        if depth <= 0 and last and last in ";,)}]>" and not nxt_nested:
             if not nxt.startswith((".", "=>", "?", ":")):
                 return j
         if depth < 0:

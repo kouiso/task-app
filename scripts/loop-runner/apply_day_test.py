@@ -1143,6 +1143,9 @@ class Pr635LateReviewFixes(unittest.TestCase):
         tpl2 = ["const s = `", "value; // literal", "tail`;",
                 "const b = 2;"]
         self.assertEqual(ad.find_decl_end(tpl2, 0), 2)
+        # 行末で開いた /* */ が次行で閉じるまでは宣言の内側
+        blk = ["export const a = 1; /* note", " more */", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(blk, 0), 1)
 
     def test_splice_into_whitespace_only_file(self):
         # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む。
