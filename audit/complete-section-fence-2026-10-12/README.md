@@ -23,15 +23,22 @@
    `check_quality.sh` と `material-gate.yml` に組み込んだ。listing が1件だけで最後にあること、
    `完成版:` 付きの抜粋が並ばないこと、listing 単体がファイル全体であること、listing の前の
    断片の各行が listing に入っていることを見る。4 の2件はこの検査で検出できる。
+6. PR 上の自動レビュー（Codex・CodeRabbit）の指摘を受けて検査を締めた。断片と listing の照合を
+   空白を潰した部分文字列から字句の並びへ変え（`= 1` が `= 10` に一致しない、文字列の中の空白を
+   潰さない）、断片の import が取り込む名前と取り込み元を listing の import と照合し、
+   `## 完成コード全体` が2つある場合も全部の節を見るようにした。目印は `build_day_snapshots.py` が
+   読む `完成版` だけを認め、`完成形:` は誤りとして落とす。完成コード節に断片が1つだけ置かれた形も
+   完全なファイルでなければ落とす。`LISTING_DIVERGES` には listing に無い断片の行数（day28 は 10 行）を
+   持たせ、数が変わったら落とす。教材側の変更は無い。
 
 ## 検証結果
 
 | 検査 | main `5a4ef12` | この PR |
 | --- | --- | --- |
-| `check_complete_section_fences.py material/30days-curriculum/` | 10 件検出 | 検出 0 |
+| `check_complete_section_fences.py material/30days-curriculum/` | 9 件検出（6 の後） | 検出 0 |
 | 同上を 4 の修正前（`3ca1c9d`）に実行 | - | day20 task/page・day25 app-layout を検出 |
-| `test_check_complete_section_fences.py` | - | 23/23 パス |
-| 検査本体の変異 8 種（分岐削除・目印の正規表現縮小など） | - | 8 種とも テストが失敗して検出 |
+| `test_check_complete_section_fences.py` | - | 32/32 パス（6 の後） |
+| 検査本体の変異 14 種（字句の区切りを外す・import 照合を外す・最初の節だけ見る・行数照合を外すなど） | - | 14 種ともテストが失敗して検出 |
 | `check_quality.sh material/30days-curriculum/` | ALL CHECKS PASS | ALL CHECKS PASS |
 | `check_complete_code.py material/30days-curriculum/` | - | 一致 23 / 未登録の差分 0 |
 | loop-runner unittest（apply_day_test / verify_day_test） | 58 OK | 58 OK |
@@ -53,6 +60,11 @@
   import し、断片とも実装が違う。新しい検査では `LISTING_DIVERGES` に理由つきで登録した。
 - Gate B の再生では、`root.ts` が day07 以降 main でも解析できない形に崩れる。
   apply_day の終了コードは 0 なので、終了コードだけでは検出できない。
+- `is_complete_file` は構文の正しさまでは見ない近似である。構文は `--verify` の tsc と
+  Gate B の esbuild 解析で確かめており、この検査には TypeScript のパーサーを入れていない。
+- day10 `project/page.tsx` の listing が `projectsError` を扱わない点と、day29 の自分のプロフィールで
+  「ユーザー一覧に戻る」が管理者専用の `/user` へ向く点は、main の日次スナップショットと `src/` でも同じで、
+  この PR の変更で生じたものではない。
 
 ## ファイル
 

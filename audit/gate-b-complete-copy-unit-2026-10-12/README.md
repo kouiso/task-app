@@ -24,7 +24,16 @@ issue #631 対応として、`material/30days-curriculum/` の `## 完成コー�
 `python3 apply_day.py <md> app --tag dayNN --ledger ledger.jsonl` で適用し、
 各日終了ごとに git commit して逐次 baseline を再現した。
 
-## 結果サマリ
+## 走行の区別
+
+この文書には2系統の走行が出てくる。数字を読むときはどちらの走行かを確かめること。
+
+| 走行 | 対象コミット | 見たもの | 記録 |
+| --- | --- | --- | --- |
+| A | PR #637 の `82c9f83` | apply_day の終了コードだけ | この文書の「結果サマリ」、`ledger.jsonl` |
+| B | `3ca1c9d`（listing 作り直し後）と `78021e5`（day20・day25 修正後） | 終了コードに加え、listing の esbuild 解析・日次スナップショットとの突き合わせ・tsc | 下の「追記」、`audit/complete-section-fence-2026-10-12/` |
+
+## 結果サマリ（走行 A）
 
 - 30日分すべて end-to-end で完走（exit=0、途中停止なし）。対象日の splice reject 0 件。
 - `check_complete_code.py` もパス（一致 22 / 例外登録 17 / 対象外 10 /
@@ -37,7 +46,7 @@ issue #631 対応として、`material/30days-curriculum/` の `## 完成コー�
 
 - `ledger.jsonl` — 全日の適用レコード（日付・ファイル・結果・ギャップ）
 
-## 追記: listing 中身の再生成（同日）
+## 追記: listing 中身の再生成（同日、走行 B）
 
 上の「30日分すべて完走」は apply_day の終了コードだけを見た結果で、listing の中身が
 型検査・ビルドを通るかは確かめていなかった。追加の検査で次が分かったため、listing を作り直した。

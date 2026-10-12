@@ -28,12 +28,16 @@ day20・day21 の `app-layout.tsx` も同じ形で reject されていた。
    `build_day_snapshots.py` は目印付きの並びを1つの版として連結するので、
    listing と抜粋の中身が二重に入ったファイルを組み立ててしまう。
    - listing 単体がファイル全体になっていること（`is_complete_file`）
-   - listing の前に並べた断片の各行が listing の中にあること（空白は無視）
+   - listing の前に並べた断片の各行が、listing のトークン列の中に連続して現れること
    目印の文言は手で書けるので、中身が途中で切れた listing や、その日の変更を
    含まない前日の版でも構造だけなら通ってしまう。day25 `app-layout.tsx` の
    listing が前日の版のままで、断片で示したプロフィールへの入口を欠いていた。
-   断片の import 行は listing 側で1つの import にまとめ直すので照合しない。
-   listing が断片と別の実装を載せている既知の箇所は LISTING_DIVERGES に理由つきで登録する。
+   トークンで比べるのは、`= 1` が `= 10` の一部として一致したり、文字列の中の
+   空白の違いを見落としたりしないため。行の折り返しと字下げの違いは差にしない。
+   断片の import 文は listing 側で1つの import にまとめ直すので行では照合せず、
+   取り込む名前がすべて listing の同じモジュールの import にあることを見る。
+   listing が断片と別の実装を載せている既知の箇所は LISTING_DIVERGES に、
+   理由と「listing に無い断片の行数」を添えて登録する。行数が変わったら落とす。
 2. listing が無い場合
    - そのファイルのフェンスを順に連結すると1つの完全なファイルになること
      （`is_complete_file`）。day11 `project.ts` のように、ファイル全体を
@@ -43,12 +47,24 @@ day20・day21 の `app-layout.tsx` も同じ形で reject されていた。
      本文で「今日足した部分だけを載せる」と断っている意図的な抜粋だけを
      DECLARED_EXCERPTS に理由つきで登録して通す。
 
-フェンスが1つだけで目印も無いファイルは二重記述になりようがないので見ない。
+フェンスが1つだけで目印も無いファイルも同じ規則で見る。完成コード節に断片が1つだけ
+置かれると、読者はそれをファイル全体と読んで貼り付け、既存の中身を消してしまう。
+
+目印は `完成版` だけを認める。`build_day_snapshots.py` は `完成形:` を目印として
+読まないので、`// 完成形: ファイル全体` と書くと検査は listing と見なすのに
+スナップショットは別の版として扱い、二重記述が素通りする。`完成形:` の目印は
+それ自体を誤りとして落とす。
+
+`## 完成コード全体` の見出しが1ファイルに2つあっても、すべての節を見る。
 
 ## 見ないもの
 
 Step 節のフェンスどうしの重なりはこの検査の対象外である。Step の断片は後の日の版へ
 差し込まれる部品で、重なり自体は教材の設計どおりのことがある。
+
+`is_complete_file` は先頭の構文・export・括弧の収支を見る近似で、TypeScript として
+構文が正しいかまでは見ない。構文の正しさは `build_day_snapshots.py --verify` の
+tsc と Gate B のパーサーが受け持つ。
 """
 
 from __future__ import annotations
@@ -61,14 +77,19 @@ from typing import NamedTuple
 sys.path.insert(0, str(Path(__file__).parent))
 
 from build_day_snapshots import is_complete_file  # noqa: E402
+from check_complete_code import TOKEN, strip_comments  # noqa: E402
 from curriculum_blocks import CODE_LANGS, Block, day_number, iter_blocks  # noqa: E402
 from markdown_scan import fence_states  # noqa: E402
 
 SECTION_TITLE = "## 完成コード全体"
 UNIT_MARKER = "<!-- code-block-length-exception: complete-copy-unit -->"
 FINAL_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形](?:（[^）]*）)?[:：]")
-WHOLE_FILE = re.compile(r"^\s*(?://|\{/\*)\s*完成[版形][:：]\s*ファイル全体\s*(?:\*/\})?\s*$")
-EXCERPT_SKIP = re.compile(r"^(?://|/\*|\*|\{/\*|import\b|\.\.\.|…)")
+SHAPE_LABEL = re.compile(r"^\s*(?://|\{/\*)\s*完成形(?:（[^）]*）)?[:：]")
+WHOLE_FILE = re.compile(r"^\s*(?://|\{/\*)\s*完成版[:：]\s*ファイル全体\s*(?:\*/\})?\s*$")
+EXCERPT_SKIP = re.compile(r"^(?://|/\*|\*|\{/\*|\.\.\.|…)")
+IMPORT_START = re.compile(r"^\s*import\b(?!\s*\()")
+IMPORT_END = re.compile(r"""(?:\bfrom\s*|^\s*import\s*)(['"])([^'"]+)\1""")
+TOKEN_SEP = "\x00"
 
 # 本文で抜粋だと断っている完成コード節の記述。キーは (日, 書き込み先)、値は「なぜ抜粋でよいか」。
 # 理由を書けない抜粋は全ファイル listing へ統合する。登録した記述が完全な
@@ -84,14 +105,16 @@ DECLARED_EXCERPTS: dict[tuple[int, str], str] = {
     ),
 }
 
-# listing が断片と別の実装を載せている既知の箇所。キーは (日, 書き込み先)、値は理由。
-# 断片の行がすべて listing に入ったら「登録が古い」として落とす。
-LISTING_DIVERGES: dict[tuple[int, str], str] = {
+# listing が断片と別の実装を載せている既知の箇所。キーは (日, 書き込み先)、
+# 値は (理由, listing に無い断片の行数)。行数を持つのは、登録した箇所に新しいずれが
+# 足されても素通りしないようにするため。数が変わったら登録を見直す。
+LISTING_DIVERGES: dict[tuple[int, str], tuple[str, int]] = {
     (28, "src/app/task/page.tsx"): (
         "listing は PR #622 で src/ の実装を載せたもので、断片とは変数名（task と t）と"
         "一括ハンドラーの判定（canCompleteSelected と selectedTaskList.length > 0）が違う。"
         "Day 28 時点で存在しない `@/lib/task-filter-query` も import しており、"
-        "day28 スナップショットの tsc が通らない。listing を Day 28 の Step に合わせ直すまでの登録"
+        "day28 スナップショットの tsc が通らない。listing を Day 28 の Step に合わせ直すまでの登録",
+        10,
     ),
 }
 
@@ -114,23 +137,26 @@ class SectionFence(NamedTuple):
     line_numbers: tuple[int, ...]
 
 
-def section_range(text: str) -> tuple[int, int] | None:
-    """完成コード節の (見出しの行番号, 次の h2 の行番号) を返す。行番号は1始まり。
+def section_ranges(text: str) -> list[tuple[int, int]]:
+    """完成コード節ごとの (見出しの行番号, 次の h2 の行番号) を返す。行番号は1始まり。
 
     コード例の中の `## ...` を節の境界と読まないよう、フェンスの外の行だけを見る。
     """
+    spans: list[tuple[int, int]] = []
     start: int | None = None
     last = 0
     for lineno, line, state, _fence in fence_states(text):
         last = lineno
-        if state != "outside":
+        if state != "outside" or not line.startswith("## "):
             continue
-        if start is None:
-            if line.rstrip() == SECTION_TITLE:
-                start = lineno
-        elif line.startswith("## "):
-            return start, lineno
-    return (start, last + 1) if start is not None else None
+        if start is not None:
+            spans.append((start, lineno))
+            start = None
+        if line.rstrip() == SECTION_TITLE:
+            start = lineno
+    if start is not None:
+        spans.append((start, last + 1))
+    return spans
 
 
 def _content_line_numbers(text_lines: list[str], block: Block) -> tuple[int, ...]:
@@ -151,14 +177,13 @@ def _content_line_numbers(text_lines: list[str], block: Block) -> tuple[int, ...
 
 def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
     """完成コード節のフェンスを書き込み先ごとに、現れた順で返す。"""
-    span = section_range(text)
-    if span is None:
+    spans = section_ranges(text)
+    if not spans:
         return {}
-    start, end = span
     text_lines = text.split("\n")
     out: dict[str, list[SectionFence]] = {}
     for block in iter_blocks(text, source):
-        if not start < block.lineno < end:
+        if not any(start < block.lineno < end for start, end in spans):
             continue
         if not block.is_writing_target or block.lang not in CODE_LANGS:
             continue
@@ -170,8 +195,67 @@ def section_fences(text: str, source: str) -> dict[str, list[SectionFence]]:
     return out
 
 
-def _squash(text: str) -> str:
-    return re.sub(r"\s+", "", text)
+def _line_tokens(line: str) -> list[str]:
+    # 行ごとに切ってから字句に分ける。複数行にまたがるテンプレート文字列を
+    # 断片側と listing 側で同じ切り方にそろえるため、ファイル全体では字句に分けない。
+    return TOKEN.findall(strip_comments(line))
+
+
+def _joined(tokens: list[str]) -> str:
+    return TOKEN_SEP + TOKEN_SEP.join(tokens) + TOKEN_SEP
+
+
+class ImportStmt(NamedTuple):
+    """断片または listing の中の1つの import 文。"""
+
+    lineno: int
+    indexes: tuple[int, ...]
+    module: str
+    names: frozenset[str]
+
+
+def _import_names(clause: str) -> frozenset[str]:
+    """`import` と `from` の間から、取り込んだローカル名を取り出す。"""
+    clause = re.sub(r"^\s*type\s+", "", clause)
+    names: set[str] = set()
+    braces = re.search(r"\{([^}]*)\}", clause)
+    if braces:
+        for spec in braces.group(1).split(","):
+            spec = re.sub(r"^\s*type\s+", "", spec).strip()
+            if spec:
+                names.add(spec.split(" as ")[-1].strip())
+        clause = clause[: braces.start()] + clause[braces.end() :]
+    for spec in clause.split(","):
+        spec = spec.strip()
+        if spec:
+            names.add(spec.split(" as ")[-1].strip())
+    return frozenset(names)
+
+
+def import_statements(lines: list[str], numbers: tuple[int, ...]) -> list[ImportStmt]:
+    """行の並びから import 文を拾う。複数行にまたがる import も1文として扱う。"""
+    stmts: list[ImportStmt] = []
+    i = 0
+    while i < len(lines):
+        if not IMPORT_START.match(lines[i]):
+            i += 1
+            continue
+        # `} from` と取り込み元を別の行に折ることがあるので、行を足しながら文の終わりを探す。
+        j = i
+        text = lines[i].strip()
+        end = IMPORT_END.search(text)
+        while end is None and j + 1 < len(lines):
+            j += 1
+            text += " " + lines[j].strip()
+            end = IMPORT_END.search(text)
+        if end is None:
+            break
+        clause = re.sub(r"^import\b", "", text[: end.start()]).strip()
+        stmts.append(
+            ImportStmt(numbers[i], tuple(range(i, j + 1)), end.group(2), _import_names(clause))
+        )
+        i = j + 1
+    return stmts
 
 
 def missing_excerpt_lines(
@@ -179,17 +263,34 @@ def missing_excerpt_lines(
 ) -> list[tuple[int, str]]:
     """listing の前の断片のうち、listing に見当たらない行を (行番号, 行) で返す。
 
-    listing 側は行の折り返しや字下げが断片と違うことがあるので空白を潰して部分一致で見る。
-    断片の末尾要素はカンマを持たずに切れることがあるので、行末のカンマは外して探す。
+    行の折り返しや字下げは listing 側で変わることがあるので、断片の1行の字句が
+    listing の字句列の中に連続して現れるかで見る。断片の末尾要素はカンマを持たずに
+    切れることがあるので、行末のカンマは外して探す。import 文は名前の集合で照合する。
     """
-    body = _squash("\n".join(listing.block.lines))
+    listing_lines = listing.block.lines
+    body = _joined([t for line in listing_lines for t in _line_tokens(line)])
+    listing_imports: dict[str, set[str]] = {}
+    for stmt in import_statements(listing_lines, listing.line_numbers):
+        listing_imports.setdefault(stmt.module, set()).update(stmt.names)
+
     missing: list[tuple[int, str]] = []
     for part in parts:
-        for lineno, line in zip(part.line_numbers, part.block.lines):
+        lines = part.block.lines
+        in_import: set[int] = set()
+        for stmt in import_statements(lines, part.line_numbers):
+            in_import.update(stmt.indexes)
+            lacking = stmt.names - listing_imports.get(stmt.module, set())
+            if stmt.module not in listing_imports or lacking:
+                shown = ", ".join(sorted(lacking)) or stmt.module
+                missing.append((stmt.lineno, f"import {shown} from '{stmt.module}'"))
+        for index, (lineno, line) in enumerate(zip(part.line_numbers, lines)):
             stripped = line.strip()
-            if not stripped or EXCERPT_SKIP.match(stripped):
+            if index in in_import or not stripped or EXCERPT_SKIP.match(stripped):
                 continue
-            if _squash(stripped).rstrip(",") not in body:
+            tokens = _line_tokens(stripped)
+            if tokens and tokens[-1] == ",":
+                tokens = tokens[:-1]
+            if tokens and _joined(tokens) not in body:
                 missing.append((lineno, stripped))
     return missing
 
@@ -209,18 +310,25 @@ def check_listing_content(
                     "（先頭の構文・export・括弧の収支のどれかが崩れている）")
         )
     missing = missing_excerpt_lines(fences[:-1], listing)
-    diverges = (day, target) in LISTING_DIVERGES
-    if missing and not diverges:
-        lineno, line = missing[0]
-        findings.append(
-            Finding(source, lineno, target,
-                    f"listing の前の断片に listing に無い行が {len(missing)} 行ある"
-                    f"（最初: `{line}`）。その日の変更を listing へ反映する")
-        )
-    elif diverges and not missing:
+    registered = LISTING_DIVERGES.get((day, target))
+    if registered is None:
+        if missing:
+            lineno, line = missing[0]
+            findings.append(
+                Finding(source, lineno, target,
+                        f"listing の前の断片に listing に無い行が {len(missing)} 行ある"
+                        f"（最初: `{line}`）。その日の変更を listing へ反映する")
+            )
+    elif not missing:
         findings.append(
             Finding(source, listing.block.lineno, target,
                     "LISTING_DIVERGES に登録があるが断片はすべて listing に入っている（登録が古い）")
+        )
+    elif len(missing) != registered[1]:
+        findings.append(
+            Finding(source, missing[0][0], target,
+                    f"LISTING_DIVERGES に登録した listing に無い断片の行数は {registered[1]} 行だが、"
+                    f"いまは {len(missing)} 行ある（ずれが変わったので登録を見直す）")
         )
     return findings
 
@@ -229,6 +337,18 @@ def check_target(
     day: int, target: str, fences: list[SectionFence], source: str
 ) -> list[Finding]:
     """1つの書き込み先について、完成コード節の記述が1つの権威に収まっているかを見る。"""
+    findings: list[Finding] = [
+        Finding(source, f.block.lineno, target,
+                "`完成形:` は build_day_snapshots が目印として読まない（`完成版:` に直す）")
+        for f in fences
+        if SHAPE_LABEL.match(next((line for line in f.block.lines if line.strip()), ""))
+    ]
+    return findings + _check_authority(day, target, fences, source)
+
+
+def _check_authority(
+    day: int, target: str, fences: list[SectionFence], source: str
+) -> list[Finding]:
     wholes = [f for f in fences if f.whole]
     labeled_parts = [f for f in fences if f.labeled and not f.whole]
     declared = (day, target) in DECLARED_EXCERPTS
@@ -260,9 +380,6 @@ def check_target(
             )
         findings.extend(check_listing_content(day, target, fences, source))
         return findings
-
-    if len(fences) == 1 and not labeled_parts:
-        return []
 
     complete = is_complete_file([f.block for f in fences])
     if complete:

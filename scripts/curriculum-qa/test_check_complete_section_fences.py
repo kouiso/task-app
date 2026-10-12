@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_complete_section_fences import UNIT_MARKER, check_file  # noqa: E402
+from check_complete_section_fences import UNIT_MARKER, WHOLE_FILE, check_file  # noqa: E402
 
 LAYOUT = "src/component/layout/app-layout.tsx"
 PAGE = "src/app/task/page.tsx"
@@ -24,6 +24,9 @@ WHOLE_PAGE = (
     "export default function Page() {\n  const [open, setOpen] = useState(false);\n"
     "  return <button onClick={() => setOpen(!open)} />;\n}"
 )
+
+# day28 page.tsx の登録行数（10 行）と同じ数だけ listing に無い行を持つ断片。
+DIVERGED_LINES = "// 一括完了\n" + "\n".join(f"  ifSelected{i}();" for i in range(1, 11))
 
 
 def block(target: str, body: str, note: str = "", lang: str = "typescript") -> str:
@@ -56,9 +59,16 @@ CASES: list[tuple[str, str, str, int]] = [
         day(
             "",
             block(PAGE, "// 完成版: 取り込み\n'use client';\n\nimport { useState } from 'react';")
-            + block(PAGE, "// 完成形: 状態\n  const [open, setOpen] = useState(false);")
+            + block(PAGE, "// 完成版: 状態\n  const [open, setOpen] = useState(false);")
             + unit(PAGE, WHOLE_PAGE),
         ),
+        2,
+    ),
+    (
+        "`完成形:` の目印は build_day_snapshots が読まないので、目印の誤りと"
+        "（先頭がコメントのまま残り）ファイル全体にならないことの2件で止める",
+        "day20_x.md",
+        day("", unit(PAGE, WHOLE_PAGE.replace("完成版", "完成形"))),
         2,
     ),
     (
@@ -192,10 +202,75 @@ CASES: list[tuple[str, str, str, int]] = [
         1,
     ),
     (
-        "フェンスが1つだけで目印も無いファイルは二重記述になりようがないので見ない",
+        "フェンスが1つだけで目印も無い断片も、完全なファイルにならなければ止める",
         "day20_x.md",
         day("", block(LAYOUT, "  { text: '検索', path: '/search' },")),
+        1,
+    ),
+    (
+        "フェンスが1つだけで目印も無く、完全なファイルになっていれば通す",
+        "day20_x.md",
+        day("", block(PAGE, WHOLE_PAGE.split("\n", 1)[1])),
         0,
+    ),
+    (
+        "`## 完成コード全体` が2つあれば2つ目の節の抜粋も止める",
+        "day20_x.md",
+        day("", unit(PAGE, WHOLE_PAGE))
+        + "## 完成コード全体\n\n"
+        + block(LAYOUT, "// 完成版: アイコンの import\nimport { Search } from 'lucide-react';")
+        + block(LAYOUT, "{/* 完成版: メニュー項目 */}\n  { text: '検索', path: '/search' },"),
+        1,
+    ),
+    (
+        "断片の `= 1` を listing の `= 10` の一部として一致させない（字句の境界で見る）",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 上限\n    limit: 1,")
+            + unit(PAGE, WHOLE_PAGE.replace("  return", "  const page = {\n    limit: 10,\n  };\n  return")),
+        ),
+        1,
+    ),
+    (
+        "文字列の中の空白の違いは断片との違いとして数える",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 見出し\n  const title = 'タスク 一覧';")
+            + unit(PAGE, WHOLE_PAGE.replace("  return", "  const title = 'タスク一覧';\n  return")),
+        ),
+        1,
+    ),
+    (
+        "断片の import が取り込む名前を listing の import が欠いていれば止める",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 取り込み\nimport { useEffect, useState } from 'react';")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "副作用だけの import（取り込む名前が無い）も listing に無ければ止める",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 取り込み\nimport './globals.css';")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "断片の import の取り込み元が listing と違えば止める",
+        "day20_x.md",
+        day(
+            "",
+            block(PAGE, "// 取り込み\nimport { useState } from 'preact/hooks';")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
     ),
     (
         "DECLARED_EXCERPTS の登録先が listing なしで完全なファイルになったら登録が古いとして止める",
@@ -258,11 +333,14 @@ CASES: list[tuple[str, str, str, int]] = [
             "",
             block(LAYOUT, "// アイコン\nimport { Search } from 'lucide-react';")
             + block(LAYOUT, "// アイコン（折り返し）\nimport {\n  Search,\n} from 'lucide-react';")
+            + block(LAYOUT, "// アイコン（取り込み元も折り返し）\nimport {\n  type LucideIcon,\n} from\n  'lucide-react';")
             + block(LAYOUT, "// メニュー\n  {\n    text: '検索',\n    path: '/search'\n  }")
+            + block(LAYOUT, "// 末尾の要素（断片だけカンマ付き）\n  'b',")
             + unit(
                 LAYOUT,
-                "// 完成版: ファイル全体\nimport {\n  LayoutDashboard,\n  Search\n} from 'lucide-react';\n\n"
-                "export const menuItems = [\n  {\n    text: '検索',\n    path: '/search',\n  },\n];",
+                "// 完成版: ファイル全体\nimport {\n  LayoutDashboard,\n  type LucideIcon,\n  Search\n} from 'lucide-react';\n\n"
+                "export const menuItems = [\n  {\n    text: '検索',\n    path: '/search',\n  },\n];\n\n"
+                "export const extra = [\n  'a',\n  'b'\n];",
             ),
         ),
         0,
@@ -272,10 +350,20 @@ CASES: list[tuple[str, str, str, int]] = [
         "day28_x.md",
         day(
             "",
-            block(PAGE, "// 一括完了\n  if (canCompleteSelected) {\n  }")
+            block(PAGE, DIVERGED_LINES)
             + unit(PAGE, WHOLE_PAGE),
         ),
         0,
+    ),
+    (
+        "LISTING_DIVERGES の登録先で listing に無い断片の行数が変われば止める",
+        "day28_x.md",
+        day(
+            "",
+            block(PAGE, DIVERGED_LINES + "\n  ifSelected11();")
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
     ),
     (
         "LISTING_DIVERGES の登録先で断片がすべて listing に入ったら登録が古いとして止める",
@@ -299,6 +387,10 @@ def run_case(name: str, text: str) -> int:
 
 def main_test() -> int:
     failed = 0
+    # build_day_snapshots が目印と読むのは `完成版` だけなので、listing の目印もそれに限る。
+    if WHOLE_FILE.match("// 完成形: ファイル全体"):
+        failed += 1
+        print("❌ `完成形: ファイル全体` を全ファイル listing の目印として受け付けている")
     for title, name, text, want in CASES:
         got = run_case(name, text)
         if got != want:
