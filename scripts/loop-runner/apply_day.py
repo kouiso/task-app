@@ -1000,10 +1000,13 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
     """コード上の空白だけ潰した照合用の行リスト。
     文字列リテラル内の空白は内容なので残す。全部潰すと `"a b"` → `"ab"`
     の変更を適用済みと誤認する（issue #630）。テンプレートリテラルは行を
-    跨ぐため引用状態と `${}` のブレース深さを行間で持ち回る。"""
+    跨ぐため引用状態と `${}` のブレース深さを行間で持ち回る。
+    `${}` の中に文字列やテンプレートが入れ子になっても外側のテンプレート
+    状態を失わないよう、テンプレートの文脈はスタックで持つ。"""
     out: list[str] = []
-    quote: Optional[str] = None
-    depth = 0  # テンプレート内 ${} のブレース深さ
+    quote: Optional[str] = None  # ' / " の文字列内
+    # 要素は "`"（テンプレート文字列部）か int（その `${}` 内のブレース深さ）
+    tpl: list[str | int] = []
     in_block_comment = False
     for l in lines:
         if not l.strip():
@@ -1019,19 +1022,22 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
                     continue
                 i += 1
                 continue
-            if quote and not (quote == "`" and depth > 0):
+            if quote or (tpl and tpl[-1] == "`"):
                 # 文字列内容は空白も内容なのでそのまま残す
                 buf.append(c)
                 if c == "\\" and i + 1 < n:
                     buf.append(l[i + 1])
                     i += 2
                     continue
-                if quote == "`" and c == "$" and i + 1 < n and l[i + 1] == "{":
+                if quote:
+                    if c == quote:
+                        quote = None
+                elif c == "$" and i + 1 < n and l[i + 1] == "{":
                     buf.append("{")
-                    depth = 1
+                    tpl.append(1)
                     i += 1
-                elif c == quote:
-                    quote = None
+                elif c == "`":
+                    tpl.pop()
                 i += 1
                 continue
             if c.isspace():
@@ -1044,22 +1050,21 @@ def _norm_blob(lines: Sequence[str]) -> list[str]:
                     in_block_comment = True
                     i += 2
                     continue
-            if c in "'\"`":
+            if c in "'\"":
                 quote = c
-                buf.append(c)
-                i += 1
-                continue
-            if depth:
-                if c == "{":
-                    depth += 1
-                elif c == "}":
-                    depth -= 1
+            elif c == "`":
+                tpl.append("`")
+            elif tpl and c == "{":
+                tpl[-1] += 1
+            elif tpl and c == "}":
+                tpl[-1] -= 1
+                if tpl[-1] == 0:
+                    tpl.pop()
             buf.append(c)
             i += 1
         out.append("".join(buf))
         # ' と " は行を跨げないので行末で未閉鎖なら状態をリセットする
-        if quote in ("'", '"'):
-            quote = None
+        quote = None
     return out
 
 
@@ -1462,6 +1467,7 @@ def element_region_replace(cur: list[str], base_lines: list[str],
                 acc += len(b) + 1
                 if acc > pos:
                     hits.append(i)
+                    break
             break
     if len(hits) < 2:
         return None
@@ -1721,10 +1727,25 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
     消える行が所有していた先頭空行は次の行へ付け替えて消えないようにする。
     戻り値は (新しい raw グループ, res 上の変更終端 index)。"""
     sm = difflib.SequenceMatcher(None, out, res, autojunk=False)
+    opcodes = sm.get_opcodes()
     new_raw: list[list[str]] = []
     pend: list[str] = []
     fp = 0
     first_change_end: Optional[int] = None
+    # 断片が res 内に連続して書き込まれている位置。SequenceMatcher は断片の
+    # 先頭行などを既存行との equal として扱うことがあり、変更区間だけで
+    # 断片行を数えると対応がずれて正規化行が書き込まれるため、断片全体の
+    # 位置で対応させる。変更区間と重なる出現だけを書き込み位置とみなす
+    span = -1
+    m = len(frag_norm)
+    changed = [(j1, j2) for op, _i1, _i2, j1, j2 in opcodes
+               if op != "equal" and j1 < j2]
+    if m:
+        for p in range(len(res) - m + 1):
+            if res[p:p + m] == frag_norm and any(
+                    j1 < p + m and p < j2 for j1, j2 in changed):
+                span = p
+                break
 
     def emit(group: list[str]) -> None:
         nonlocal pend
@@ -1733,10 +1754,21 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
             pend = []
         new_raw.append(group)
 
-    for op, i1, i2, j1, j2 in sm.get_opcodes():
+    def frag_group(j: int, existing: Optional[list[str]]) -> list[str]:
+        k = j - span
+        if k == 0 and existing is not None:
+            # 断片先頭行の前の空行は既存ファイル側の配置を保つ
+            return existing[:-1] + frag_groups[0][-1:]
+        return list(frag_groups[k])
+
+    for op, i1, i2, j1, j2 in opcodes:
         if op == "equal":
             for k in range(i1, i2):
-                emit(list(raw[k]))
+                j = j1 + (k - i1)
+                if span >= 0 and span <= j < span + m:
+                    emit(frag_group(j, raw[k]))
+                else:
+                    emit(list(raw[k]))
             continue
         if first_change_end is None:
             first_change_end = j2
@@ -1744,7 +1776,12 @@ def _splice_raw(raw: list[list[str]], out: list[str], res: list[str],
             pend.extend(raw[i1][:-1])
         for j in range(j1, j2):
             rline = res[j]
-            if fp < len(frag_norm) and rline == frag_norm[fp]:
+            if span >= 0:
+                if span <= j < span + m:
+                    emit(frag_group(j, None))
+                else:
+                    emit([rline])
+            elif fp < len(frag_norm) and rline == frag_norm[fp]:
                 emit(list(frag_groups[fp]))
                 fp += 1
             else:
@@ -1865,23 +1902,28 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
             # baseline。find_in で位置が取れるならその場で原文断片へ
             # 置き換えて修復する。取れない緩い一致は従来どおりスキップ
             i = find_in(out, fl_ins)
-            hit = len(fl_ins)
+            off = 0
             if i < 0 and fl_core:
                 i = find_in(out, fl_core)
-                hit = len(fl_core)
+                off = strip_i
             if i < 0:
                 continue
+            # 本体だけが一致した場合は先頭の位置指示コメントを書き込まない。
+            # 教材用のコメントがファイルへ紛れ込むため
+            seg = fl_ins[off:]
+            seg_groups = frag_groups[off:]
+            hit = len(seg)
             # 一致区間が /* */ や // の内側なら「適用済み」の見掛け一致なので
             # 修復せず、通常の splice 経路で実際のコード位置へ書き込む
             s0 = sum(len(g) for g in raw[:i])
             e0 = s0 + sum(len(g) for g in raw[i:i + hit])
             if not all(noncode[s0:e0]):
-                # 照合側の行数は norm 一致区間に合わせ、
-                # 書き込み側は断片全体（メタ行含む）の生行グループを使う
-                fg = [raw[i][:-1] + frag_groups[0]] + frag_groups[1:]
-                out = out[:i] + fl_ins + out[i + hit:]
+                # 先頭行の前の空行は既存ファイル側を保ち、以降は断片原文を使う
+                fg = ([raw[i][:-1] + seg_groups[0][-1:]]
+                      + [list(g) for g in seg_groups[1:]])
+                out = out[:i] + seg + out[i + hit:]
                 raw = raw[:i] + fg + raw[i + hit:]
-                last_end = i + len(fl_ins)
+                last_end = i + hit
                 continue
         if part.directive:
             res = apply_directive(out, part.directive, fl_ins)

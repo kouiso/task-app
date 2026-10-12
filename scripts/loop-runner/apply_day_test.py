@@ -893,6 +893,130 @@ export const c = 3;
                 "export const t = `head\n\n  spaced   \ntail`;\n"
                 "export const b = 2;", body)
 
+    def test_blob_keeps_template_state_across_interpolated_string(self):
+        # `${"a b"}` の内側の文字列が閉じた後も外側のテンプレート状態を保つ。
+        # 失うと残りのテンプレート文字列の空白がコード扱いで潰れる
+        blob = ad._norm_blob(['const t = `head ${"a b"} x y`;'])
+        self.assertEqual(blob, ['constt=`head ${"a b"} x y`;'])
+        blob = ad._norm_blob(["const t = `a ${f(`in ${'q r'} s`)} t u`;"])
+        self.assertEqual(blob, ["constt=`a ${f(`in ${'q r'} s`)} t u`;"])
+
+    def test_template_text_change_after_interpolation_is_applied(self):
+        # 補間内の文字列の後ろにあるテンプレート文字列の空白差を
+        # 「適用済み」と誤認して書き換えを飛ばさない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                'export const t = `head ${"a b"} x y`;\n'))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+export const t = `head ${"a b"} xy`;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn('export const t = `head ${"a b"} xy`;', body)
+            self.assertNotIn("x y`", body)
+
+    def test_replace_keeps_fragment_raw_after_unchanged_first_line(self):
+        # 先頭行が既存宣言と同じでも、後続の変更行は断片原文
+        # （テンプレート内の空行・行末空白）で書き込む
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export const t = `head\n"
+                "old\n"
+                "tail`;\n"))
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `head\n"
+                "\n"
+                "  new  \n"
+                "tail`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n"
+                      "export const t = `head\n\n  new  \ntail`;\n", body)
+
+    def test_core_match_repair_does_not_insert_meta_comment(self):
+        # 先頭の位置指示コメントを除いた本体が既存と一致する修復経路では、
+        # 教材用のコメント行をファイルへ持ち込まない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            # 断片がファイル全体を覆うと listing 書き込みになるため、
+            # splice 経路を通すよう断片外の行を置く
+            rest = "export function helper() {\n  return 42;\n}\n"
+            write(oracle, "src/a.ts",
+                  "export const a = 1;\n\nexport const b = 2;\n" + rest)
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const b = 2;\n" + rest)
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+// b を a の直後に追加
+export const a = 1;
+
+export const b = 2;
+```
+""")
+            w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            self.assertEqual(w, ["SPLICE src/a.ts (1 parts)"])
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n\nexport const b = 2;\n" + rest,
+                body)
+
+    def test_element_region_maps_each_hit_to_one_line(self):
+        # 一致行ごとに1つの oracle 行だけを記録する。以降の全行を
+        # 記録すると領域終端がファイル末尾になり、無関係な祖先要素を選ぶ
+        base = ad.norm("""export function L() {
+  return (
+    <ul>
+      <li className="item-one-long-class">
+        <span>first label text here</span>
+      </li>
+      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>second extra text here</em>
+      </li>
+    </ul>
+  );
+}
+export const trailingDeclarationOne = 1;
+export const trailingDeclarationTwo = 2;
+""".split("\n"))
+        cur = ad.norm("""export function L() {
+  return (
+    <ul>
+      <li className="item-one-long-class">
+        <span>first label text here</span>
+      </li>
+      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>old extra text</em>
+      </li>
+    </ul>
+  );
+}
+export const trailingDeclarationOne = 1;
+export const trailingDeclarationTwo = 2;
+""".split("\n"))
+        fl = ad.norm("""      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>second extra text here</em>
+      </li>""".split("\n"))
+        res = ad.element_region_replace(cur, base, fl)
+        self.assertEqual(res, base)
+
 
 if __name__ == "__main__":
     unittest.main()
