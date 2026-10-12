@@ -1,0 +1,147 @@
+# 3ca1c9d: build_day_snapshots.py --all --verify
+day01: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day02: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day03: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day04: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day05: ツリー OK（78 ファイル） Prisma生成 OK tsc OK build OK
+day06: ツリー OK（79 ファイル） Prisma生成 OK tsc OK build OK
+day07: ツリー OK（86 ファイル） Prisma生成 OK tsc OK build OK
+day08: ツリー OK（89 ファイル） Prisma生成 OK tsc OK build OK
+day09: ツリー OK（91 ファイル） Prisma生成 OK tsc OK build OK
+day10: ツリー OK（92 ファイル） Prisma生成 OK tsc OK build OK
+day11: ツリー OK（93 ファイル） Prisma生成 OK tsc OK build OK
+day12: ツリー OK（93 ファイル） Prisma生成 OK tsc OK build OK
+day13: ツリー OK（95 ファイル） Prisma生成 OK tsc OK build OK
+day14: ツリー OK（97 ファイル） Prisma生成 OK tsc OK build OK
+day15: ツリー OK（97 ファイル） Prisma生成 OK tsc OK build OK
+day16: ツリー OK（99 ファイル） Prisma生成 OK tsc OK build OK
+day17: ツリー OK（100 ファイル） Prisma生成 OK tsc OK build OK
+day18: ツリー OK（102 ファイル） Prisma生成 OK tsc OK build OK
+day19: ツリー OK（102 ファイル） Prisma生成 OK tsc OK build OK
+day20: ツリー OK（104 ファイル） Prisma生成 OK tsc OK build OK
+day21: ツリー OK（106 ファイル） Prisma生成 OK tsc OK build OK
+day22: ツリー OK（106 ファイル） Prisma生成 OK tsc OK build OK
+day23: ツリー OK（107 ファイル） Prisma生成 OK tsc OK build OK
+day24: ツリー OK（109 ファイル） Prisma生成 OK tsc OK build OK
+day25: ツリー OK（112 ファイル） Prisma生成 OK tsc OK build OK
+day26: ツリー OK（119 ファイル） Prisma生成 OK tsc OK build OK
+day27: ツリー OK（120 ファイル） Prisma生成 OK tsc OK build OK
+day28: ツリー OK（120 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+day29: ツリー OK（124 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+day30: ツリー OK（124 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T163725.332391Z-60e61f3a1721.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+❌ ツリー構築・Prisma生成・型検査・ビルドのどれかが通らない 3 日
+exit=1
+
+# 78021e5: build_day_snapshots.py --day N --verify
+day16: ツリー OK（99 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T163822.810241Z-d59647d62824.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+day20: ツリー OK（104 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T163901.136985Z-bcddd35e9b6e.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+day24: ツリー OK（109 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T163946.194964Z-2702479db14e.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+day25: ツリー OK（112 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T164034.292298Z-aeb34db08171.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+day26: ツリー OK（119 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T164125.354764Z-0643329f41b8.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+day27: ツリー OK（120 ファイル） Prisma生成 OK tsc OK build OK
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T164215.849482Z-f75103e67ca5.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+✅ 1 日ぶんを組み立てました
+
+# a0f72d0 (same listings as 3ca1c9d): first --all --verify run, next/font fetch failures
+day01: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day02: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day03: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day04: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day05: ツリー OK（78 ファイル） Prisma生成 OK tsc OK build OK
+day06: ツリー OK（79 ファイル） Prisma生成 OK tsc OK build OK
+day07: ツリー OK（86 ファイル） Prisma生成 OK tsc OK build OK
+day08: ツリー OK（89 ファイル） Prisma生成 OK tsc OK build NG
+    Failed to compile.
+    An error occurred in `next/font`.
+    TypeError: Cannot read properties of null (reading '1')
+day09: ツリー OK（91 ファイル） Prisma生成 OK tsc OK build OK
+day10: ツリー OK（92 ファイル） Prisma生成 OK tsc OK build OK
+day11: ツリー OK（93 ファイル） Prisma生成 OK tsc OK build NG
+    Failed to compile.
+    An error occurred in `next/font`.
+    TypeError: Cannot read properties of null (reading '1')
+day12: ツリー OK（93 ファイル） Prisma生成 OK tsc OK build OK
+day13: ツリー OK（95 ファイル） Prisma生成 OK tsc OK build OK
+day14: ツリー OK（97 ファイル） Prisma生成 OK tsc OK build NG
+    Failed to compile.
+    An error occurred in `next/font`.
+    TypeError: Cannot read properties of null (reading '1')
+day15: ツリー OK（97 ファイル） Prisma生成 OK tsc OK build OK
+day16: ツリー OK（99 ファイル） Prisma生成 OK tsc OK build OK
+day17: ツリー OK（100 ファイル） Prisma生成 OK tsc OK build OK
+day18: ツリー OK（102 ファイル） Prisma生成 OK tsc OK build OK
+day19: ツリー OK（102 ファイル） Prisma生成 OK tsc OK build OK
+day20: ツリー OK（104 ファイル） Prisma生成 OK tsc OK build OK
+day21: ツリー OK（106 ファイル） Prisma生成 OK tsc OK build OK
+day22: ツリー OK（106 ファイル） Prisma生成 OK tsc OK build NG
+    Failed to compile.
+    An error occurred in `next/font`.
+    TypeError: Cannot read properties of null (reading '1')
+day23: ツリー OK（107 ファイル） Prisma生成 OK tsc OK build NG
+    Failed to compile.
+    An error occurred in `next/font`.
+    TypeError: Cannot read properties of null (reading '1')
+day24: ツリー OK（109 ファイル） Prisma生成 OK tsc OK build OK
+day25: ツリー OK（112 ファイル） Prisma生成 OK tsc OK build OK
+day26: ツリー OK（119 ファイル） Prisma生成 OK tsc OK build OK
+day27: ツリー OK（120 ファイル） Prisma生成 OK tsc OK build OK
+day28: ツリー OK（120 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+day29: ツリー OK（124 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+day30: ツリー OK（124 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/task/page.tsx(37,8): error TS2307: Cannot find module '@/lib/task-filter-query' or its corresponding type declarations.
+    src/app/task/page.tsx(590,12): error TS2741: Property 'canEditProject' is missing in type '{ open: boolean; taskId: string | null; onClose: () => void; }' but r
+    Failed to compile.
+    Module not found: Can't resolve '@/lib/task-filter-query'
+    > Build failed because of webpack errors
+不変の実行記録を書き出しました: dist/day-snapshots/result/20261012T161442.254132Z-70e674177b44.json
+結果を書き出しました: doc/review-handoff/day-snapshots-result.md
+❌ ツリー構築・Prisma生成・型検査・ビルドのどれかが通らない 8 日
+  day08 は tsc が通ってビルドだけ落ちています。DB の不在では説明できないので、prerender か server/client 境界を疑ってください
+  day11 は tsc が通ってビルドだけ落ちています。DB の不在では説明できないので、prerender か server/client 境界を疑ってください
+  day14 は tsc が通ってビルドだけ落ちています。DB の不在では説明できないので、prerender か server/client 境界を疑ってください
+  day22 は tsc が通ってビルドだけ落ちています。DB の不在では説明できないので、prerender か server/client 境界を疑ってください
+  day23 は tsc が通ってビルドだけ落ちています。DB の不在では説明できないので、prerender か server/client 境界を疑ってください
+exit=1
