@@ -6,10 +6,10 @@ main マージ解決後の最終コミット 29a549e6 で material/30days-curric
 
 ## 実行方法
 
-- 基線:  —  と同じ手順で再構築
-  （create-next-app@15.5.24 +  配布物 + package.json/tsconfig/
+- 基線: `/tmp/gateb-app` — `scripts/scaffold-from-scratch.sh` と同じ手順で再構築
+  （create-next-app@15.5.24 + `scripts/_*` 配布物 + package.json/tsconfig/
   biome.json/.env.example の scaffold 設定。npm install・DB は適用対象外のため省略）。
-- 実行: 、各日 git commit。
+- 実行: `python3 scripts/loop-runner/apply_day.py <md> /tmp/gateb-app --tag dayNN --ledger ledger.jsonl`、各日 git commit。
 
 ## 結果サマリ（gateb-summary.log）
 
@@ -17,11 +17,11 @@ main マージ解決後の最終コミット 29a549e6 で material/30days-curric
 - 前回 audit（マージ前 HEAD）では day01/20/21 が exit=3 の部分適用だったが、
   マージで持ち込んだ main の修復経路（norm一致・原文差分の修復）と
   散在スキップの順序整理で全て完走に改善した。
-- 性能退行の件:  の先頭注記領域限定は維持、
+- 性能退行の件: `_scan_variants` の先頭注記領域限定は維持、
   30日トータル 7 秒（退行前の 113 秒問題は解消済み）。
 
 ## ファイル
 
--  — 各日の apply 実行ログ
--  — 適用レジャー
--  — 実行結果サマリ
+- `apply-dayNN.log` — 各日の apply 実行ログ
+- `ledger.jsonl` — 適用レジャー
+- `gateb-summary.log` — 実行結果サマリ

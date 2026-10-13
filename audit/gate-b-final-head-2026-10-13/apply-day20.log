@@ -1,0 +1,7 @@
+[apply_day] day20_タスク検索機能.md (tag=day20)
+  ✅ WRITE  src/server/api/routers/search.ts (kansei-run)
+  ✅ WRITE  src/app/search/loading.tsx (kansei-run)
+  ✅ WRITE  src/component/layout/app-layout.tsx (kansei-run)
+  ✅ WRITE  src/app/search/page.tsx (kansei-run)
+  ✅ WRITE  src/app/task/page.tsx (kansei-run)
+  → 5 files written
