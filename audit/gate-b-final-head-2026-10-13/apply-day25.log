@@ -1,0 +1,7 @@
+[apply_day] day25_プロフィール編集.md (tag=day25)
+  ✅ WRITE  src/server/api/routers/user.ts (kansei-run)
+  ✅ WRITE  src/app/profile/page.tsx (kansei-run)
+  ✅ WRITE  src/component/layout/app-layout.tsx (kansei-run)
+  ✅ WRITE  src/app/profile/change-password/page.tsx (kansei-run)
+  ✅ WRITE  src/app/profile/edit/page.tsx (kansei-run)
+  → 5 files written

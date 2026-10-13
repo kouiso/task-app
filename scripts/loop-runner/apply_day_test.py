@@ -505,7 +505,633 @@ export const c = 3;
         close_idx = joined.index("        ],")
         self.assertTrue(a_idx < b_idx < close_idx)
 
-    def test_splice_success_gaps_reach_skipped(self):
+    def test_splice_strips_kansei_label_lines(self):
+        # codex SUGGEST: SPLICE 経路でも `// 完成版:` ラベル行が
+        # 挿入ペイロードに混入しないことを固定する
+        cur = ["export const taskRouter = router({",
+               "  getAll: publicProcedure.query(() => []),",
+               "});"]
+        parts = [ad.Part(
+            cont=False, body="// 完成版: 追加分\n  del: publicProcedure.mutation(() => null),",
+            kansei=True, unmarked=False, prose="",
+            directive=ad.Directive("append_end", ()))]
+        res, _gaps = ad.splice_parts(cur, cur, parts, cur, "src/a.ts", "d1")
+        self.assertIsNotNone(res)
+        self.assertNotIn("完成版", "\n".join(res[1]))
+
+
+class ApplyExpectRoleTest(unittest.TestCase):
+    """```lang apply path=... / ```lang expect path=... 役割タグ記法。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.target = root / "app"
+        self.oracle = root / "oracle"
+        self.ledger = root / "ledger.jsonl"
+        self.target.mkdir(); self.oracle.mkdir()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _run(self, md: str):
+        md_path = write(Path(self.tmp.name), "dayX.md", md)
+        return ad.apply_day(md_path, self.target, oracle_dir=self.oracle,
+                            tag="dayX", ledger_path=self.ledger)
+
+    def test_apply_role_tag_with_path(self):
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue(written)
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+
+    def test_expect_ok_is_recorded(self):
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
+
+    def test_expect_mismatch_restores_baseline(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        write(self.oracle, "src/a.ts", "export const a = 2;\n")
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+export const b = 99;
+```
+""")
+        # 不一致 = そのファイルは適用前状態へ戻り、skip として記録される
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+        self.assertTrue(any("expect mismatch" in s for s in skipped), skipped)
+
+    def test_expect_without_apply_is_flagged(self):
+        _w, skipped = self._run("""```typescript expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("expect without apply" in s for s in skipped),
+                        skipped)
+
+    def test_apply_expect_combined_is_invalid(self):
+        # ` ```lang apply expect ` の併記は複合役割として廃止。
+        # 同じ本文を適用してから自分と突合する自己比較は何も検算しない
+        # ため、適用も検算もしない invalid 扱いにする（#631）。
+        _w, skipped = self._run("""```typescript apply expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+        self.assertFalse((self.target / "src/a.ts").exists())
+
+    def test_apply_then_expect_verifies(self):
+        # 分離後の形: Step 断片は apply で適用し、完成版は別の expect
+        # フェンスで照合する。一致すれば expect-ok が記録される。
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual((self.target / "src/a.ts").read_text(),
+                         "export const a = 1;\n")
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
+
+    def test_new_file_listing_must_include_first_fragment_head(self):
+        # day13型: 「完成版: 途中から」の再掲が kansei-run として選ばれると
+        # 先頭断片の 'use client' / import が静かに欠ける。
+        # 先頭断片の冒頭行を含まない候補は新規ファイルでは採用しない。
+        md = """```typescript
+// filepath: src/a.ts
+'use client';
+import { A } from './a';
+```
+
+```typescript
+// filepath: src/a.ts
+// 完成版: 途中から
+export const b = 2;
+```
+"""
+        md_path = write(Path(self.tmp.name), "dayY.md", md)
+        ad.apply_day(md_path, self.target, oracle_dir=self.oracle, tag="d1")
+        body = (self.target / "src/a.ts").read_text()
+        self.assertTrue(body.startswith("'use client';"), body[:120])
+
+    def test_new_file_starting_with_bare_function(self):
+        # day11型: query-error.ts は 'use client' も import も無い
+        # `function ...` 宣言で始まる正規のファイル。先頭行の白リストが
+        # import/export/コメント系だけだと正当な新規ファイルを拒否する。
+        written, skipped = self._run("""```typescript
+// filepath: src/lib/q.ts
+function isRecord(v: unknown): boolean {
+  return typeof v === 'object';
+}
+export function useIt(v: unknown): boolean {
+  return isRecord(v);
+}
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue((self.target / "src/lib/q.ts").exists())
+
+    def test_path_value_does_not_bleed_into_role(self):
+        # `path=src/expect.ts` の値中の "expect" を役割と誤認すると、
+        # apply 断片が検算オラクルに化けて別ファイルを壊す（codex 指摘）。
+        written, skipped = self._run("""```typescript apply path=src/expect.ts
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertTrue((self.target / "src/expect.ts").exists())
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertNotIn({"path": "src/expect.ts", "mode": "expect-ok"},
+                         rec["applied"])
+
+    def test_unsafe_apply_path_is_invalid_not_inherited(self):
+        # `apply path=src/../../evil.ts` を直前フェンスの続きとして
+        # 前のファイルへ混入させない（codex 指摘）。
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript apply path=src/../../evil.ts
+const injected = true;
+```
+""")
+        self.assertFalse((self.target / "src/a.ts")
+                         .read_text().__contains__("injected"))
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+
+    def test_expect_only_fence_needs_info_path(self):
+        # expect の検算先は info の path= のみ。本文の // filepath: では
+        # 契約対象にならない（lint と同じ規則）。
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect
+// filepath: src/a.ts
+export const a = 1;
+```
+""")
+        self.assertTrue(any("invalid tagged fence" in s for s in skipped),
+                        skipped)
+
+    def test_expect_compares_blank_lines(self):
+        # norm() は空行を吸収するが完成版契約は厳密。空行を落とした
+        # 生成物は oracle と一致しない（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text(
+            "export const a = 1;\nexport const b = 2;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+
+export const b = 2;
+```
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
+    def test_multiple_expects_all_verified(self):
+        # 同一対象の expect が2本あれば全件に一致する必要がある。
+        # 後勝ち上書きだと矛盾する契約が黙って通る（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 2;
+```
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
+    def test_string_literal_filepath_survives(self):
+        # 文字列リテラル中の "filepath: ..." は目印ではない。
+        # 行を消すと適用側・オラクル側の両方でコードが欠落し、
+        # expect が欠落を検出できなくなる（codex 指摘）。
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const marker = "filepath: src/other.ts";
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertIn('marker = "filepath: src/other.ts"',
+                      (self.target / "src/a.ts").read_text())
+
+    def test_splice_keeps_existing_blank_lines_for_expect(self):
+        # splice の行列は空行を落とすが、既存ファイルの空行は
+        # 出力に復元する。落としたままだと厳密 expect が正当な
+        # 断片更新まで巻き戻す（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text(
+            "export const a = 1;\n\nexport const b = 2;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const b = 3;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+
+export const b = 3;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const a = 1;\n\nexport const b = 3;\n",
+                         (self.target / "src/a.ts").read_text())
+
+    def test_expect_catches_wrong_step_fragment(self):
+        # Step の apply 断片が教材の記述ミスで完成版と違う時、
+        # 検算は別フェンスの expect が担う。不一致でそのファイルを
+        # baseline の状態へ戻す（複合役割はこれを検出できなかった）。
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+export const a = 2;
+```
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+        self.assertFalse((self.target / "src/a.ts").exists())
+
+    def test_template_literal_filepath_preserved(self):
+        # テンプレートリテラル内の `// filepath:` 行は文字列の中身。
+        # 剥がすと成果物の実行時値が変わるのにオラクル側も同じ行が
+        # 消えて expect をすり抜ける（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_full_listing_replaces_and_expect_verifies(self):
+        # 既存ファイルの全量置換は `完成版` ラベル付き apply で行い、
+        # 置換結果は別の expect で照合する。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        written, skipped = self._run("""```typescript apply path=src/a.ts
+// 完成版: ファイル全体
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const a = 1;\nexport const b = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+        rec = json.loads(self.ledger.read_text().splitlines()[-1])
+        self.assertIn({"path": "src/a.ts", "mode": "expect-ok"},
+                      rec["applied"])
+
+    def test_backtick_inside_normal_string_does_not_open_template(self):
+        # 通常の文字列内のバッククォート（`"`"`）はテンプレート開始では
+        # ない。それで内側判定がずれると、本物のテンプレート内にある
+        # 目印風行が剥がれて検算をすり抜ける（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
+export const tick = "`";
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_kansei_label_inside_template_preserved(self):
+        # テンプレート内の `// 完成版:` 行も文字列の中身。
+        # 剥がすと成果物が変わるのにオラクル側も同じ行が消える
+        #（codex 指摘）。
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
+export const message = `
+// 完成版: keep this text
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// 完成版: keep this text",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_tilde_fence_expect_is_verified(self):
+        # `~~~` フェンスも lint と同じく契約として解釈する。
+        # runner だけが読み落とすと不一致の契約が検算も記録も
+        # されない（codex 指摘）。
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+~~~typescript expect path=src/a.ts
+export const a = 99;
+~~~
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
+    def test_triple_quoted_string_marker_preserved(self):
+        # 三重引用符は通常引用符より先に判定する（先に " が掴まると
+        # 残りの "" が別の文字列として消費されて外側判定がずれる）
+        _w, skipped = self._run('''```python apply path=scripts/a.py
+message = """
+// filepath: src/example.ts
+hello
+"""
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "scripts/a.py").read_text())
+
+    def test_backtick_inside_interp_string_keeps_template_open(self):
+        # ${"..."} 内のバッククォートは外側テンプレートを閉じない
+        body = 'export const m = `${"`"}\n// filepath: x\nhello\n`;'
+        self.assertIn("// filepath: x", ad.strip_fp(body))
+        self.assertIn("// filepath: x", ad._expect_body(body))
+
+    def test_regex_backtick_does_not_open_template(self):
+        # 正規表現リテラル内のバッククォートは区切りではない
+        _w, skipped = self._run('''```typescript apply path=src/a.ts
+export const tick = /`/;
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_slashslash_comment_with_backtick_keeps_string_markers(self):
+        # 行途中コメント内のバッククォートで文字列状態が反転すると、
+        # 実テンプレート内の // filepath: 行が本文とオラクルの両方から
+        # 欠落したまま検算を通る（適用結果が静かに変わる）
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
+export const a = 1; // ` はテンプレートの区切り
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
+    def test_unclosed_expect_fence_is_still_verified(self):
+        # 閉じないまま終端した expect フェンスも契約として扱う。
+        # 捨てると不一致の契約が検算されずに通る
+        (self.target / "src").mkdir(parents=True, exist_ok=True)
+        (self.target / "src/a.ts").write_text("export const a = 1;\n")
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+~~~typescript expect path=src/a.ts
+export const a = 99;
+""")
+        self.assertTrue(any("expect mismatch" in s for s in skipped),
+                        skipped)
+
+    def test_role_token_requires_standalone_word(self):
+        # `meta=expect` のような属性値の語は役割ではない。
+        # expect 扱いされると対象が契約として登録され、
+        # apply なしの検算だけが残る
+        parts, expects, invalid = ad.collect_parts(
+            "```tsx meta=expect path=src/a.ts\n"
+            "// filepath: src/a.ts\nexport const a = 1;\n```\n")
+        self.assertEqual({}, expects)
+        # path=src/expect.ts の値の中の語も役割ではない
+        _p2, expects2, _i2 = ad.collect_parts(
+            "```ts apply path=src/expect.ts\nexport const a = 1;\n```\n")
+        self.assertEqual({}, expects2)
+
+    def test_apply_without_target_is_not_appended_to_previous(self):
+        # apply を名乗るのに対象を持たないフェンスは、
+        # 直前ファイルへの追記扱いにすると別ファイルへ混入する
+        parts, _e, invalid = ad.collect_parts(
+            "```ts apply path=src/a.ts\nexport const a = 1;\n```\n\n"
+            "```ts apply\nexport const leak = 2;\n```\n")
+        self.assertEqual(
+            ["export const a = 1;"],
+            [p.body for p in parts["src/a.ts"]])
+        self.assertTrue(invalid)
+
+    def test_completed_listing_wins_when_first_part_is_continuation(self):
+        # 先頭の part が続き注記の断片でも、完成版リスティングの頭を
+        # ファイルの先頭として採用できる（続き断片の頭で弾かれない）
+        _w, skipped = self._run("""```ts
+// filepath: src/a.ts（続き）
+export const mid = 2;
+```
+
+```ts apply path=src/a.ts
+export const top = 1;
+export const mid = 2;
+```
+""")
+        self.assertFalse(skipped, skipped)
+        self.assertEqual("export const top = 1;\nexport const mid = 2;\n",
+                         (self.target / "src/a.ts").read_text())
+
+    def test_backtick_inside_line_comment_does_not_open_template(self):
+        # `// テンプレートは ` で始まります` のようなコメント中の
+        # バッククォートでテンプレートが開いてしまうと、文字列内の
+        # // filepath: 行まで消える
+        self.assertEqual(
+            "// テンプレートは ` で始まります\n"
+            "const a = `\n// filepath: x\n`;",
+            ad.strip_fp(
+                "// テンプレートは ` で始まります\n"
+                "const a = `\n// filepath: x\n`;"))
+
+    def test_backtick_inside_block_comment_does_not_open_template(self):
+        # 複数行 /* */ コメント内のバッククォートでテンプレート状態が
+        # 反転すると、文字列内の // filepath: 行が消える
+        self.assertEqual(
+            "/*\nテンプレートの区切りは `\n*/\n"
+            "const a = `\n// filepath: x\n`;",
+            ad.strip_fp(
+                "/*\nテンプレートの区切りは `\n*/\n"
+                "const a = `\n// filepath: x\n`;"))
+
+    def test_slashslash_jsx_text_variant_keeps_later_template_markers(self):
+        # JSXテキストの // 以降にある実テンプレートも正しく開く。
+        # コメント解釈とリテラル解釈の両候補を追跡し、
+        # 文字列内側の可能性がある行は剥がさない
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
+export const el = <div>// text</div>;
+export const message = `
+// filepath: src/example.ts
+hello
+`;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
+    def test_backslash_line_continuation_keeps_string_markers(self):
+        # "..."\ の行継続文字列の中身にある // filepath: は
+        # 文字列の一部なので剥がさない
+        _w, skipped = self._run('''```tsx apply path=src/a.ts
+export const message = "\\
+// filepath: src/example.ts\\
+hello";
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.ts").read_text())
+
+    def test_marker_line_inside_jsx_children_is_kept(self):
+        # <pre>...</pre> の子要素にある // filepath: 行は
+        # JSX テキスト（画面表示される中身）なので剥がさない
+        _w, skipped = self._run('''```tsx apply path=src/a.tsx
+export const el = <pre>
+// filepath: src/example.ts
+hello
+</pre>;
+```
+''')
+        self.assertFalse(skipped, skipped)
+        self.assertIn("// filepath: src/example.ts",
+                      (self.target / "src/a.tsx").read_text())
+
+    def test_expect_body_strips_marker_lines(self):
+        # expect 本体の // filepath: / // 完成版: 行は比較対象から外れる
+        _w, skipped = self._run("""```typescript apply path=src/a.ts
+export const a = 1;
+```
+
+```typescript expect path=src/a.ts
+// filepath: src/a.ts
+// 完成版: ファイル全体
+export const a = 1;
+```
+""")
+        self.assertFalse(skipped, skipped)
+
+
+class CliExitCodeTest(unittest.TestCase):
+    """codex SUGGEST: CLI 終了コードを直接検証する（部分適用 = 非ゼロ）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.target = root / "app"
+        self.oracle = root / "oracle"
+        self.target.mkdir(); self.oracle.mkdir()
+        self.script = Path(ad.__file__).resolve()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _cli(self, md_body: str):
+        md = write(Path(self.tmp.name), "day5.md", md_body)
+        import subprocess
+        return subprocess.run(
+            [sys.executable, str(self.script), str(md), str(self.target),
+             "--oracle", str(self.oracle)],
+            capture_output=True, text=True)
+
+    def test_exit_0_on_clean_apply(self):
+        r = self._cli("""```typescript
+// filepath: src/a.ts
+export const a = 1;
+```
+""")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_exit_3_on_partial_apply(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        r = self._cli("""```typescript
+// filepath: src/a.ts
+export const a = 1;
+```
+
+```typescript
+// filepath: src/ghost.ts （router の中に追加）
+const g = 1;
+```
+""")
+        # src/ghost.ts は挿入位置指示つきの断片のみ → 新規作成不可で skip → exit 3
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+
+    def test_exit_3_on_expect_mismatch(self):
+        write(self.target, "src/a.ts", "export const a = 1;\n")
+        r = self._cli("""```typescript apply path=src/a.ts
+export const a = 1;
+export const b = 2;
+```
+
+```typescript expect path=src/a.ts
+export const a = 1;
+export const b = 99;
+```
+""")
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+
+    def test_exit_3_when_nothing_written_but_skips(self):
+        # skipped が非空なら書き込み0件でも exit 3（codex 指摘:
+        # 「0件書き込み+skip → exit 2」の順序では skip 扱いと矛盾する）。
+        r = self._cli("""```typescript expect path=src/b.ts
+export const b = 1;
+```
+""")
+        # expect-without-apply のみ → 書き込み0 + skip非空 → 3
+        self.assertEqual(r.returncode, 3, r.stdout + r.stderr)
+
+
         # splice 成功でも置けなかった kansei 断片が skipped に残り、
         # exit 判定と ledger から漏れない
         with tempfile.TemporaryDirectory() as td:

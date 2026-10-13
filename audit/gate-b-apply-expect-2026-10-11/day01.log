@@ -1,0 +1,6 @@
+[apply_day] day01_開発環境を整えて、初めてのアプリを動かそう.md (tag=day01)
+  ✅ WRITE  .env.example (listing-run)
+  ✅ WRITE  src/app/globals.css (listing-run)
+  ✅ WRITE  src/app/page.tsx (listing-run-divergent)
+  ✅ WRITE  src/app/dashboard/page.tsx (listing-run)
+  → 4 files written

@@ -1,0 +1,6 @@
+[apply_day] day24_ユーザー一覧（管理者用）.md (tag=day24)
+  ✅ WRITE  src/server/api/routers/user.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (kansei-run)
+  ✅ WRITE  src/app/user/page.tsx (listing-run)
+  ✅ SPLICE src/component/layout/app-layout.tsx (4 parts)
+  → 4 files written
