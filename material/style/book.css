@@ -126,7 +126,12 @@ h6 {
 
 /* 見出しの直下の行内コードは帯を消して見出し色にそろえる（issue #474 直し1）。
    等幅の書体は残す。 */
-h1 > code, h2 > code, h3 > code, h4 > code, h5 > code, h6 > code {
+h1 > code,
+h2 > code,
+h3 > code,
+h4 > code,
+h5 > code,
+h6 > code {
   --vs-prism--background: transparent;
   --vs-prism--color: var(--book-head);
 }
