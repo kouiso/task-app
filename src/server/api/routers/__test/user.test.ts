@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { prisma } from '../../../../lib/prisma';
 import {
   createAuthenticatedCaller,
   createTestCaller,
+  createTestProject,
+  createTestTask,
   createTestUser,
 } from '../../../../test/helpers';
 
@@ -76,6 +79,52 @@ describe('userRouter', () => {
       await expect(caller.user.getById({ id: NON_EXISTENT_ID })).rejects.toThrow(
         'ユーザーが見つかりません',
       );
+    });
+
+    it('所属プロジェクトの担当タスクだけが返る', async () => {
+      const user = await createTestUser({ email: uniqueEmail('u-task-in') });
+      const other = await createTestUser({ email: uniqueEmail('u-task-out') });
+      const mine = await createTestProject(user.id);
+      const theirs = await createTestProject(other.id);
+      const visible = await createTestTask(mine.id, user.id, { assigneeId: user.id });
+      // 退会済み・他人プロジェクト側の担当は本人チェックを通っても返してはいけない
+      await createTestTask(theirs.id, other.id, { assigneeId: user.id });
+
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      const result = await caller.user.getById({ id: user.id });
+      const ids = result.assignedTasks.map((t) => t.id);
+      expect(ids).toContain(visible.id);
+      expect(ids).toHaveLength(1);
+    });
+
+    it('プロジェクト退会後は本人呼び出しでも担当タスクが返らない', async () => {
+      // issue #624 の再現経路: removeMember → 退会者本人が user.getById
+      const owner = await createTestUser({ email: uniqueEmail('u-rm-owner') });
+      const member = await createTestUser({ email: uniqueEmail('u-rm-member') });
+      const project = await createTestProject(owner.id);
+      await prisma.projectMember.create({
+        data: { projectId: project.id, userId: member.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, owner.id, { assigneeId: member.id });
+
+      const ownerCaller = await createAuthenticatedCaller(owner.id, owner.email, owner.role);
+      await ownerCaller.project.removeMember({ projectId: project.id, userId: member.id });
+
+      const memberCaller = await createAuthenticatedCaller(member.id, member.email, member.role);
+      const result = await memberCaller.user.getById({ id: member.id });
+      expect(result.assignedTasks.map((t) => t.id)).not.toContain(task.id);
+      expect(result.assignedTasks).toHaveLength(0);
+    });
+
+    it('ADMINには他ユーザーの担当タスクが所属問わず返る', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-task-adm') });
+      const owner = await createTestUser({ email: uniqueEmail('u-task-own') });
+      const project = await createTestProject(owner.id);
+      const task = await createTestTask(project.id, owner.id, { assigneeId: target.id });
+
+      const result = await caller.user.getById({ id: target.id });
+      expect(result.assignedTasks.map((t) => t.id)).toContain(task.id);
     });
   });
 
