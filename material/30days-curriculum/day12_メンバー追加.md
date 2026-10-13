@@ -295,7 +295,24 @@ const projectMemberSchema = z.object({
 
 #### 0-3. removeMember（最後のOWNERは消せない）
 
-`addMember` の下に追加します。`removeMember` は「OWNER の人数を数える」「メンバーを消す」「その人の担当タスクを外す」を1つの手続きの中で行います。途中で止まると片方だけ実行された状態が残るので、全体を `prisma.$transaction` で囲みます。まず入力の形と、プロジェクトの行を押さえる処理です。
+`addMember` の下に追加します。`removeMember` は「OWNER の人数を数える」「メンバーを消す」「その人の担当タスクを外す」を1つの手続きの中で行います。途中で止まると片方だけ実行された状態が残ります。そこで全体を `prisma.$transaction` で囲みます。先に `project.ts` の import を2か所直します。1つ目は既存の `import type { Prisma }` の行の**書き換え**です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （既存の import type { Prisma } from '@prisma/client'; を
+// この行に置き換える）
+import { Prisma } from '@prisma/client';
+```
+
+`Prisma.sql` を型ではなく値として呼ぶので、`type` を外した通常の import にします。2つ目は `PROJECT_MEMBER_ROLE` を取り込んでいる行の下への**追加**です。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// （@/lib/constant/roles の import の下に追加する）
+import { TASK_STATUS } from '@/lib/constant/status';
+```
+
+`TASK_STATUS` は担当を外すタスクの状態を判定するために使います。import を直したら、入力の形とプロジェクトの行をロックする処理から書きます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -308,18 +325,19 @@ const projectMemberSchema = z.object({
     )
     .mutation(async ({ ctx, input }) => {
       return await prisma.$transaction(async (tx) => {
-        // プロジェクト行をロックして、OWNERの削除・降格を同じプロジェクト内で直列化する。
-        // ロックなしだとOWNERが2人のときに双方の削除が人数2を見て通り、OWNERが0人になる経路がある。
+        // プロジェクト行をロックして、OWNERの削除・降格を直列化する。
+        // ロックなしだとOWNERが2人のときに双方の削除が人数2を見て通り、
+        // OWNERが0人になる経路がある。
         await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
         );
 ```
 
-`$transaction` の中では `prisma` の代わりに引数の `tx` を使います。`tx` で行った読み書きは1つのまとまりになり、途中で例外が出ると全部取り消されます。
+`$transaction` の中では `prisma` の代わりに引数の `tx` を使います。`tx` で行った読み書きは1つのまとまりになります。途中で例外が出ると全部取り消されます。
 
-`FOR UPDATE` は、同じプロジェクトの行を使う別のリクエストを、このトランザクションが終わるまで待たせる DB のロックです。Prisma にこのロックを取るメソッドがないため `$queryRaw` で SQL を直接書きます。`"projects"` は `schema.prisma` の `@@map("projects")` で決まった実際のテーブル名で、モデル名の `Project` とは別物です。`${input.projectId}` は `Prisma.sql` がパラメータとして渡すので、文字列連結で SQL を組み立てる書き方にはなりません。
+`FOR UPDATE` は同じ行を `FOR UPDATE`・`UPDATE`・`DELETE` で取りに来る別の処理を、このトランザクションが終わるまで待たせる DB のロックです。普通の `SELECT` は待たされません。Prisma にこのロックを取るメソッドがないので `$queryRaw` で SQL を直接書きます。`"projects"` は `schema.prisma` の `@@map("projects")` で決まった実際のテーブル名で、モデル名の `Project` とは別物です。`${input.projectId}` は `Prisma.sql` がパラメータとして渡すので、文字列連結で SQL を組み立てる書き方にはなりません。
 
-ロックが要る理由は OWNER が2人いるときの同時削除です。ロックがないと2つのリクエストがどちらも「OWNER は2人いる」と数えて削除を通し、書き終えたときには OWNER が0人になります。ロックがあれば後から来た側は待たされ、先の削除が終わったあとに「OWNER は1人」と数えて止まります。
+ロックが要る理由は OWNER が2人いるときの同時削除です。ロックがないと2つのリクエストがどちらも「OWNER は2人いる」と数えて削除を通します。書き終えたときには OWNER が0人になります。ロックがあれば後から来た側は待たされます。先の削除が終わったあとに「OWNER は1人」と数えて止まります。
 
 ```mermaid
 sequenceDiagram
@@ -333,7 +351,7 @@ sequenceDiagram
     B->>B: OWNER 1人と数えて止まる
 ```
 
-時間は上から下へ進みます。2本目は先の削除が終わるまで数え始められないので、数える時点の人数が必ず最新になります。
+時間は上から下へ進みます。2本目は先の削除が終わるまで数え始められません。そのため数える時点の人数が必ず最新になります。
 
 続けて自分の権限を確認します。
 
@@ -351,7 +369,7 @@ sequenceDiagram
         assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-削除でも、最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので `canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますが、このチェックはボタンの有無とは関係なく毎回動きます。ロックを取ったあとに権限を読むので、読んだ時点の権限が削除の完了まで変わらない点もロックの効果です。
+削除でも最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので `canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますが、このチェックはボタンの有無とは関係なく毎回動きます。ロックを取ったあとに権限を読むので、読んだ時点の権限が削除の完了まで変わりません。
 
 続けて削除対象のメンバーが実際に存在するかを確認します。
 
@@ -374,7 +392,7 @@ sequenceDiagram
         }
 ```
 
-自分の権限と削除対象の存在を確認できたら、`addMember` と同じ2段階チェックです。1段階目は「自分にメンバーを削除する権限があるか」（`canManageMembers`）、2段階目は「削除対象が OWNER なら自分も OWNER か」です。`canManageMembers` があっても OWNER の削除だけは別に確認します。
+自分の権限と削除対象の存在を確認できたら `addMember` と同じ2段階チェックです。1段階目は「自分にメンバーを削除する権限があるか」（`canManageMembers`）、2段階目は「削除対象が OWNER なら自分も OWNER か」です。`canManageMembers` があっても OWNER の削除だけは別に確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -391,7 +409,7 @@ sequenceDiagram
         }
 ```
 
-`canManageMembers` を持つ ADMIN は普通のメンバーを削除できますが、OWNER を削除できてしまうと ADMIN が邪魔なオーナーを外して実質的にプロジェクトを乗っ取れます。削除対象が OWNER のときだけ、削除する側も OWNER であることを確認します。
+`canManageMembers` を持つ ADMIN は普通のメンバーを削除できます。OWNER まで削除できてしまうと ADMIN が邪魔なオーナーを外して実質的にプロジェクトを乗っ取れます。削除対象が OWNER のときだけ削除する側も OWNER であることを確認します。
 
 続けて削除してよいかの最終チェックです。削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
 
@@ -430,16 +448,17 @@ sequenceDiagram
         });
 ```
 
-`delete` にも `userId_projectId` を渡すので、消えるのは「このプロジェクトの、このユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。
+`delete` にも `userId_projectId` を渡すので消えるのは「このプロジェクトのこのユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残ります。外された人も他のプロジェクトではこれまで通り作業できます。
 
-メンバーから外れた人に、このプロジェクトのタスクの担当が残ったままになる点が次の問題です。外した人が担当のまま残ると、その人のユーザー詳細ページ（Day 29 で作ります）から、もう所属していないプロジェクトのタスクが読めてしまいます。同じトランザクションの中で担当を外します。
+メンバーから外れた人に、このプロジェクトのタスクの担当が残る問題が次です。担当が残ると Day 29 で作るユーザー詳細ページから、もう所属していないプロジェクトのタスクが読めてしまいます。同じトランザクションの中で担当を外します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-        // 退会後も担当タスクが残ると退会者側からタスク情報が読め続けるため、
-        // 同じトランザクションでこのプロジェクト内の担当を外して整合を取る。
-        // DONE/CANCELLED は完了実績の担当者記録として残す（getById の assignedTasks は
-        // もともと DONE/CANCELLED を返さないので、消しても漏えい対策にならず実績だけ失われる）
+        // 退会後も担当が残るとタスク情報が退会者側から読め続けるため、
+        // 同じトランザクションでこのプロジェクト内の担当を外す。
+        // DONE/CANCELLED は完了実績の担当者記録として残す。
+        // user.getById の assignedTasks はもともとこの2つを返さないので、
+        // 消しても漏えい対策にならず実績だけが失われる。
         await tx.task.updateMany({
           where: {
             projectId: input.projectId,
@@ -454,7 +473,7 @@ sequenceDiagram
     }),
 ```
 
-`updateMany` の `where` が3つの条件を持つ理由は次のとおりです。`projectId` で絞るのは、外された人が他のプロジェクトで持っている担当まで消さないためです。`status` に `notIn` を使って完了と中止を除くのは、終わったタスクの担当者を実績として残すためです。完了済みのタスクは `getById` が返さないので、担当を外しても情報の漏れは減らず、実績だけが失われます。`delete` と `updateMany` が同じトランザクションにあるため、メンバーだけ消えて担当が残る状態は起きません。
+`updateMany` の `where` は3つの条件を持ちます。`projectId` で絞るのは外された人が他のプロジェクトで持っている担当を消さないためです。`status` の `notIn` で完了と中止を除くのは終わったタスクの担当者を実績として残すためです。完了済みのタスクは Day 29 の `user.getById` が担当タスクとして返さないので、担当を外しても漏れる情報は減りません。実績だけが失われます。`delete` と `updateMany` が同じまとまりにあるので、メンバーだけ消えて担当が残る状態は起きません。
 
 最後の `return { success: true }` は削除には返せる中身が無いための返事です。Step 6 で書く画面側はこれを受け取った時点で `getById` を取り直し、消えたメンバーが一覧から居なくなったことを表示へ反映します。
 
@@ -462,7 +481,7 @@ sequenceDiagram
 
 `removeMember` の下に追加します。`ProjectDetailView` の中にはメンバーのロールを変えるセレクトボックスがあります。これは Step 2 で書く `handleUpdateMemberRole` から呼ばれ、その先でこの `updateMemberRole` procedure を叩きます。先にサーバー側の手続きを用意して Step 2 のクライアント側とつなげます。
 
-最初に、`removeMember` と同じ形でトランザクションとプロジェクト行のロックを置きます。
+最初に `removeMember` と同じ形でトランザクションとプロジェクト行のロックを置きます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -476,16 +495,18 @@ sequenceDiagram
     )
     .mutation(async ({ ctx, input }) => {
       return await prisma.$transaction(async (tx) => {
-        // removeMember と同じくプロジェクト行をロックして、OWNER人数の確認と更新を直列化する。
-        // 異なる経路（削除・降格）が同じロックを取ることで、どの順でも最後のOWNERが残る。
+        // removeMember と同じくプロジェクト行をロックして、
+        // OWNER人数の確認と更新を直列化する。
+        // 異なる経路（削除・降格）が同じロックを取ることで、
+        // どの順でも最後のOWNERが残る。
         await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
         );
 ```
 
-ロールの降格も OWNER を減らす操作です。`removeMember` だけがロックを取っても、降格と削除が同時に届くと、それぞれが「OWNER は2人いる」と数えて両方通ります。削除と降格が同じ行のロックを取り合えば、どちらが先でも後の側が最新の人数を数えるので、最後の OWNER が必ず残ります。
+ロールの降格も OWNER を減らす操作です。`removeMember` だけがロックを取っても、降格と削除が同時に届くとそれぞれが「OWNER は2人いる」と数えて両方通ります。削除と降格が同じ行のロックを取り合えば、どちらが先でも後の側が最新の人数を数えます。そのため最後の OWNER が残ります。
 
-続けて自分の権限と、対象メンバーの存在を確認します。
+続けて自分の権限を確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -501,7 +522,7 @@ sequenceDiagram
         assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-権限の確認を `removeMember` と同じく、ロックを取ったあとに置いています。権限を読んでから更新するまでの間に、自分の権限が変えられる隙間をなくすためです。続けて対象メンバーが実在するかを確認します。
+権限の確認を `removeMember` と同じくロックを取ったあとに置いています。権限を読んでから更新するまでの間に自分の権限が変えられる隙間をなくすためです。続けて対象メンバーが実在するかを確認します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -568,9 +589,9 @@ sequenceDiagram
         }
 ```
 
-この `count` はロックを取ったあとの `$transaction` の中で数えています。数えるところから書き換えるところまでが1つのまとまりで、同じプロジェクトを触る他のリクエストはロックが外れるまで待たされます。そのため、数えた人数と書き換え後の人数がずれません。
+この `count` はロックを取ったあとの `$transaction` の中で数えています。数えるところから書き換えるところまでが1つのまとまりです。同じ行にロックを取りに来る他のリクエストはロックが外れるまで待たされるので、数えた人数と書き換え後の人数がずれません。
 
-唯一の OWNER を他のロールに降格させるとプロジェクトを削除・アーカイブできる人がいなくなります。名前の変更やメンバー追加は ADMIN でもできますが、OWNER 専用の操作は代行できません。チェックを通ったら更新します。
+唯一の OWNER を他のロールに降格させるとプロジェクトを削除・アーカイブできる人がいなくなります。名前の変更やメンバー追加は ADMIN でもできます。OWNER 専用の操作は代行できません。チェックを通ったら更新します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -2000,14 +2021,15 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
     )
     .mutation(async ({ ctx, input }) => {
       return await prisma.$transaction(async (tx) => {
-        // プロジェクト行をロックして、OWNERの削除・降格を同じプロジェクト内で直列化する。
-        // ロックなしだとOWNERが2人のときに双方の削除が人数2を見て通り、OWNERが0人になる経路がある。
+        // プロジェクト行をロックして、OWNERの削除・降格を直列化する。
+        // ロックなしだとOWNERが2人のときに双方の削除が人数2を見て通り、
+        // OWNERが0人になる経路がある。
         await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
         );
 ```
 
-`removeMember` は全体を `prisma.$transaction` で囲み、最初にプロジェクトの行を `FOR UPDATE` でロックします。OWNER が2人いるときの同時削除で OWNER が0人にならないよう、同じプロジェクトを触るリクエストを1つずつ順に処理させるためです。ロックを取るメソッドは Prisma にないので `$queryRaw` で SQL を書き、`${input.projectId}` は `Prisma.sql` がパラメータとして渡します。
+`removeMember` は全体を `prisma.$transaction` で囲み、最初にプロジェクトの行を `FOR UPDATE` でロックします。OWNER が2人いるときの同時削除で OWNER が0人にならないようにするためです。ロックを取るメソッドは Prisma にないので `$queryRaw` で SQL を書き、`${input.projectId}` は `Prisma.sql` がパラメータとして渡します。
 
 **removeMember の権限確認**:
 
@@ -2070,7 +2092,7 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
         }
 ```
 
-ADMIN は普通のメンバーを外せますが、OWNER まで外せると邪魔なオーナーを排除して実質的にプロジェクトを奪えます。削除対象が OWNER のときだけ、削除する側も OWNER かを確かめます。
+ADMIN は普通のメンバーを外せます。OWNER まで外せると邪魔なオーナーを排除して実質的にプロジェクトを奪えます。削除対象が OWNER のときだけ削除する側も OWNER かを確かめます。
 
 **removeMember の最後のオーナーの保護**:
 
@@ -2094,7 +2116,7 @@ ADMIN は普通のメンバーを外せますが、OWNER まで外せると邪�
         }
 ```
 
-OWNER が0人になるとプロジェクトの削除とアーカイブを実行できません。名前の変更やメンバー追加は ADMIN にも許可されています。数えるのは対象が OWNER のときだけなので、MEMBER や VIEWER の削除ではこの問い合わせをしません。ロックを取ったあとの `tx` で数えるので、同時に届いた別の削除が数え終わる前にここへ来ることはありません。
+OWNER が0人になるとプロジェクトの削除とアーカイブを実行できません。名前の変更やメンバー追加は ADMIN にも許可されています。数えるのは対象が OWNER のときだけなので、MEMBER や VIEWER の削除ではこの問い合わせをしません。ロックを取ったあとの `tx` で数えるので、別の削除が先に終わっていれば最新の人数が見えます。
 
 **removeMember の削除**:
 
@@ -2118,10 +2140,11 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 ```typescript
 // filepath: src/server/api/routers/project.ts
 // 完成版: removeMember の担当解除
-        // 退会後も担当タスクが残ると退会者側からタスク情報が読め続けるため、
-        // 同じトランザクションでこのプロジェクト内の担当を外して整合を取る。
-        // DONE/CANCELLED は完了実績の担当者記録として残す（getById の assignedTasks は
-        // もともと DONE/CANCELLED を返さないので、消しても漏えい対策にならず実績だけ失われる）
+        // 退会後も担当が残るとタスク情報が退会者側から読め続けるため、
+        // 同じトランザクションでこのプロジェクト内の担当を外す。
+        // DONE/CANCELLED は完了実績の担当者記録として残す。
+        // user.getById の assignedTasks はもともとこの2つを返さないので、
+        // 消しても漏えい対策にならず実績だけが失われる。
         await tx.task.updateMany({
           where: {
             projectId: input.projectId,
@@ -2136,7 +2159,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
     }),
 ```
 
-メンバーから外れた人の担当タスクが残ると、その人側からもう所属していないプロジェクトのタスクが読めてしまいます。そこで同じトランザクションの中で担当を外します。`projectId` で絞るのは他のプロジェクトの担当を消さないため、`notIn` で完了と中止を除くのは完了実績の担当者を残すためです。`delete` と `updateMany` が同じまとまりにあるので、メンバーだけ消えて担当が残る状態は起きません。返す中身が無いので `{ success: true }` を返し、画面側は受け取った時点で `getById` を取り直します。
+メンバーから外れた人の担当タスクが残ると Day 29 のユーザー詳細ページからもう所属していないプロジェクトのタスクが読めてしまいます。そこで同じトランザクションの中で担当を外します。`projectId` で絞るのは他のプロジェクトの担当を消さないためです。`notIn` で完了と中止を除くのは完了実績の担当者を残すためです。完了済みのタスクは `user.getById` が返さないので、担当を外しても漏れる情報は減りません。`delete` と `updateMany` が同じまとまりにあるので、メンバーだけ消えて担当が残る状態は起きません。返す中身が無いので `{ success: true }` を返し、画面側は受け取った時点で `getById` を取り直します。
 
 **updateMemberRole の入力とロック**:
 
@@ -2153,14 +2176,16 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
     )
     .mutation(async ({ ctx, input }) => {
       return await prisma.$transaction(async (tx) => {
-        // removeMember と同じくプロジェクト行をロックして、OWNER人数の確認と更新を直列化する。
-        // 異なる経路（削除・降格）が同じロックを取ることで、どの順でも最後のOWNERが残る。
+        // removeMember と同じくプロジェクト行をロックして、
+        // OWNER人数の確認と更新を直列化する。
+        // 異なる経路（削除・降格）が同じロックを取ることで、
+        // どの順でも最後のOWNERが残る。
         await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
         );
 ```
 
-ロール変更も OWNER を減らす操作なので、`removeMember` と同じ行のロックを取ります。削除と降格が同じロックを取り合えば、どちらが先でも後の側が最新の人数を数え、最後の OWNER が残ります。
+ロール変更も OWNER を減らす操作なので `removeMember` と同じ行のロックを取ります。削除と降格が同じロックを取り合えば、どちらが先でも後の側が最新の人数を数え、最後の OWNER が残ります。
 
 **updateMemberRole の権限確認**:
 
@@ -2179,7 +2204,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-権限の確認も、ロックを取ったあとで行います。権限を読んでから更新するまでの間に、権限が変えられる隙間をなくすためです。
+権限の確認も、ロックを取ったあとで行います。権限を読んでから更新するまでの間に権限が変えられる隙間をなくすためです。
 
 **updateMemberRole の対象確認**:
 
@@ -2251,7 +2276,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-`count` はロックを取ったあとの `$transaction` の中で数えています。同じプロジェクトを触る他のリクエストはロックが外れるまで待たされるので、数えた人数と書き換え後の人数がずれません。
+`count` はロックを取ったあとの `$transaction` の中で数えています。同じ行にロックを取りに来る他のリクエストはロックが外れるまで待たされるので、数えた人数と書き換え後の人数がずれません。
 
 **updateMemberRole の更新**:
 
@@ -3244,7 +3269,7 @@ npm run build
 | 「プロジェクト唯一のオーナーは削除できません」 | オーナーが1人だけのプロジェクトからそのオーナーを外そうとした | 画面ではオーナー行の削除ボタンが常に無効なのでこの操作はできません。API を直接呼ばれたときに備えたサーバー側の防波堤です |
 | キャッシュが更新されない | `invalidate()` の呼び忘れ | `onSuccess` で `getById.invalidate()` を確認する |
 | 「この操作を実行する権限がありません」 | MEMBER/VIEWERで管理操作を試行 | OWNER/ADMINアカウントでログインする |
-| `@prisma/client` からインポートエラー | インポート先の間違い | `@/lib/constant/roles` からインポートする |
+| ロールの定数が `@prisma/client` から取れない | ロールの定数は `roles.ts` で定義している | ロールの定数と型は `@/lib/constant/roles` から取り込む（`Prisma.sql` を使う `Prisma` だけが `@prisma/client` から） |
 
 ## 今日学んだ用語
 
@@ -3253,6 +3278,9 @@ npm run build
 | ロール | ユーザーに割り当てられた権限レベル（OWNER/ADMIN/MEMBER/VIEWER） |
 | 型ガード | 値の型を実行時に安全に判定する関数。`as` キャストより安全 |
 | mutation（ミューテーション） | データを変更するAPI呼び出し。レストランで「注文を送る」のような操作 |
+| トランザクション | 複数の読み書きを1つのまとまりにして、途中で失敗したら全部取り消す仕組み |
+| ロック（`FOR UPDATE`） | 同じ行に触れようとする別の処理を、終わるまで待たせる DB の仕組み |
+| `$queryRaw` | Prisma のメソッドで書けない SQL を直接実行する入口。値は `Prisma.sql` がパラメータとして渡す |
 | canManageMembers | メンバー追加・削除、ロール変更、プロジェクト更新ができる権限（OWNER/ADMINが持つ） |
 | canArchive | アーカイブ / アーカイブ解除ができる権限（OWNERだけが持つ） |
 | 二重防御 | フロントエンド（UI制御）とバックエンド（API制御）の両方で権限チェックすること |
