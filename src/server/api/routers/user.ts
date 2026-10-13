@@ -90,6 +90,7 @@ export const userRouter = createTRPCRouter({
           ...USER_DETAIL_SELECT,
           createdAt: true,
           updatedAt: true,
+          // projects は membership 行からの取得のため削除済みメンバーには返らない
           projects: {
             include: {
               project: {
@@ -113,6 +114,15 @@ export const userRouter = createTRPCRouter({
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
