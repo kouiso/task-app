@@ -115,7 +115,8 @@ KNOWN_DRIFT: dict[str, str] = {
     "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従",
     # #634 のセキュリティ修正で src/ の user.getById の assignedTasks に
     # 「呼び出し元が所属するプロジェクトのタスクだけ」の絞り込みが入った。
-    # 教材 day29 の完成版は絞り込み前のまま。教材追従（PDF 再生成が要る）待ち
+    # 教材 day29 の完成版は絞り込み前のまま。教材追従（PDF 再生成が要る）は #655 で行い、
+    # 終わったらこの登録を消す
     "src/server/api/routers/user.ts": "src/ は #634 で assignedTasks を呼び出し元の所属プロジェクトに絞る。教材 day29 の完成版は未追従",
 }
 
