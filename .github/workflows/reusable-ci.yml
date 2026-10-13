@@ -26,11 +26,9 @@ on:
 
 jobs:
   setup:
-    # Runner is configured via the RUNNER_LINUX repository variable.
-    # Set to 'ubuntu-latest' (GitHub-hosted) for reliability.
-    # Blacksmith runners (blacksmith-*vcpu-ubuntu-*) were queuing indefinitely
-    # from 2026-05-21 onwards; tracked in issue #177.
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    # 公開リポなので標準ランナーは無料。Blacksmith は 2026-05-21 以降キューで待ち続けたため
+    # (#177)、変数経由をやめて固定している。
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
       postgres:

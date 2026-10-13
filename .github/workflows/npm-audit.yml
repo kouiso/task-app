@@ -19,7 +19,7 @@ permissions:
 jobs:
   audit:
     name: npm audit
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
