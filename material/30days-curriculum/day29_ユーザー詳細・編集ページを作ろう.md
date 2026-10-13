@@ -207,6 +207,21 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -214,7 +229,7 @@ const userUpdateSchema = z
       });
 ```
 
-`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+`where` の後半は、見ている人によって返すタスクを変えます。ADMIN は全件を見られますが、それ以外の人は自分が所属するプロジェクトのタスクだけです。この絞り込みがないと、プロジェクトを抜けた後も、そのプロジェクトのタスクの題名と期限が自分の詳細ページに表示され続けます。`members: { some: { userId: ctx.session.userId } }` は、メンバー一覧に自分が入っているプロジェクトのタスクだけを残す条件です。ADMIN は全件を見られる仕様なので、空のオブジェクトを展開して条件を足しません。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -2287,6 +2302,24 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。
+
+**getById が返す担当タスクの所属絞り込み**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// getById が返す担当タスクの所属絞り込み
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -2294,7 +2327,7 @@ const userUpdateSchema = z
       });
 ```
 
-完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
+ADMIN 以外の人には、自分が所属するプロジェクトのタスクだけを返します。この条件がないと、プロジェクトを抜けた後も、そのプロジェクトのタスクの題名と期限が自分の詳細ページに残ります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
 
 **getById の見つからない場合**:
 
@@ -2509,6 +2542,15 @@ export const userRouter = createTRPCRouter({
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
