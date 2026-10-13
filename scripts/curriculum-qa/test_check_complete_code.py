@@ -151,17 +151,17 @@ def token_cases() -> int:
 
 
 def tracking_cases() -> int:
-    """既知ドリフトの登録は、直す場所と消す条件を辿れるよう Issue 番号を必ず持つ。"""
-    issue_ref = re.compile(r"#\d+")
+    """既知ドリフトの登録は、直す場所と消す条件を辿れるよう「追跡: #数字」を必ず持つ。"""
+    issue_ref = re.compile(r"追跡:\s*#\d+")
     failed = 0
     for path, reason in check_complete_code.KNOWN_DRIFT.items():
         if not issue_ref.search(reason):
             failed += 1
-            print(f"  ❌ KNOWN_DRIFT の {path} に追跡 Issue の番号（#数字）がない")
+            print(f"  ❌ KNOWN_DRIFT の {path} に「追跡: #数字」がない（経緯の参照 #446 などでは追跡先にならない）")
     for key, (reason, _lines) in check_complete_section_fences.LISTING_DIVERGES.items():
         if not issue_ref.search(reason):
             failed += 1
-            print(f"  ❌ LISTING_DIVERGES の {key} に追跡 Issue の番号（#数字）がない")
+            print(f"  ❌ LISTING_DIVERGES の {key} に「追跡: #数字」がない（経緯の参照 #446 などでは追跡先にならない）")
     return failed
 
 
