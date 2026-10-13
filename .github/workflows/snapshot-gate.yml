@@ -34,7 +34,7 @@ name: 写経ビルド検査
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
   # npm の推移的依存と runner の Node 版はリポジトリの差分に現れん。
   # pdf-book-full.yml と同じ理屈で、週次で回して初めて分かる。
   # 月曜 04:00 JST（PDF週次の1時間後。runner の取り合いを避ける）
