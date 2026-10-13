@@ -6,7 +6,8 @@ name: Devin Slack Retry
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    # 10分毎だと無言の issue がある限り 1日144回起動する。6時間毎で足りる
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   retry-devin:
     name: Retry pending Devin triggers
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout

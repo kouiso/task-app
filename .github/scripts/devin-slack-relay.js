@@ -11,8 +11,8 @@ const MARKER_RE = /<!-- devin-slack-triggered([^>]*)-->/;
 const SESSION_URL_RE = /https:\/\/(?:[\w-]+\.)*devin\.ai\/sessions\/[0-9a-f]+/;
 const FAILURE_RE =
   /Failed to create Devin|Failed to start|Failed to launch|couldn'?t start|could not start|unable to start|error creating session/i;
-const MAX_TRIES = 36; // 10分間隔で約6時間
-const STALE_TRIGGER_TRIES = 6; // 起動要求後に Devin の返信が無いまま許容する sweep 回数(約1時間)
+const MAX_TRIES = 4; // 6時間間隔で約1日。無言のまま回し続けて Actions と Slack を無駄に叩かんため打ち切る
+const STALE_TRIGGER_TRIES = 2; // 起動要求後に Devin の返信が無いまま許容する sweep 回数(約12時間)
 
 const STATUS_LABELS = {
   queued: 'Queued',
@@ -664,7 +664,7 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
         issue,
         { ts: marker?.ts, status: 'failed', tries },
         cfg,
-        '再試行回数の上限に達しました',
+        'Devin 応答なし。再試行回数の上限に達したため打ち切りました。ラベルを付け直してください',
       );
       return;
     }

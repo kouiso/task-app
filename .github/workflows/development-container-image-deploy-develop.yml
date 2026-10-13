@@ -22,7 +22,7 @@ jobs:
       id-token: 'write'
       packages: 'write'
 
-    runs-on: ${{ vars.RUNNER_LINUX }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
