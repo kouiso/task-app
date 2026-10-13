@@ -214,7 +214,8 @@ const userUpdateSchema = z
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
               // 退会後も担当タスクが見え続けるのを防ぐため、
-              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
               ...(ctx.session.role === USER_ROLE.ADMIN
                 ? {}
                 : {
@@ -2312,7 +2313,8 @@ const userUpdateSchema = z
 // filepath: src/server/api/routers/user.ts
 // getById が返す担当タスクの所属絞り込み
               // 退会後も担当タスクが見え続けるのを防ぐため、
-              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
               ...(ctx.session.role === USER_ROLE.ADMIN
                 ? {}
                 : {
@@ -2543,7 +2545,8 @@ export const userRouter = createTRPCRouter({
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
               // 退会後も担当タスクが見え続けるのを防ぐため、
-              // 呼び出し元が所属するプロジェクトのタスクに絞る（ADMINは全件見られる既存仕様を維持）
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
               ...(ctx.session.role === USER_ROLE.ADMIN
                 ? {}
                 : {
