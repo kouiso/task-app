@@ -128,5 +128,16 @@ jobs:
           # 気付かん。snapshot-gate.yml と同じく warn にして空振りを見えるようにする
           if-no-files-found: warn
 
+      - name: 組んだ36冊のPDFを残す
+        # 目視検査（Gate C）は組んだPDF本体を見る必要がある。ログだけでは頁を開けないため、
+        # 検査より前に dist/pdf を artifact にする。検査が落ちても、落ちた紙面を開いて原因を見られる
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pdf-book-pdfs
+          path: dist/pdf/*.pdf
+          retention-days: 3
+          if-no-files-found: warn
+
       - name: 出力を検査
         run: make book-pdf-verify
