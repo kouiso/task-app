@@ -23,6 +23,7 @@ jobs:
       packages: 'write'
 
     runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    timeout-minutes: 45
 
     steps:
       - name: Checkout

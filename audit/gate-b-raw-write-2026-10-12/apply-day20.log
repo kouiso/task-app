@@ -1,0 +1,10 @@
+[apply_day] day20_タスク検索機能.md (tag=day20)
+  ✅ WRITE  src/server/api/routers/search.ts (kansei-run)
+  ✅ WRITE  src/app/search/loading.tsx (kansei-run)
+  ✅ WRITE  src/app/search/page.tsx (kansei-run)
+  ✅ SPLICE src/app/task/page.tsx (11 parts)
+  (skipped 2 blocks)
+  ⚠️  splice rejected, baseline kept: src/component/layout/app-layout.tsx
+  ⚠️  gap:fragment-not-in-baseline-or-anchor-ambiguous:src/component/layout/app-layout.tsx
+  → 4 files written
+  ❌ 2 block(s) not applied — partial apply is a fail

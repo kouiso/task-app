@@ -1246,7 +1246,7 @@ Prisma の `select` / `include` でまとめて取れないかを考えます。
 
 ## 完成コード全体
 
-今日は3つのファイルを触りました。サーバーへ手続きを1本足し、新しいページを1枚作り、すでにあるページへリンクを1つ差し込む、という3方向の作業が混ざっています。どこへ何を貼ったか分からなくなった場合は以下のコードで各ファイルを丸ごと置き換えてください。ファイルごとに、上から順に読めば Step 0 から Step 6 で書いた断片がどう1つにまとまったかを確かめられます。
+今日は3つのファイルを触りました。サーバーへ手続きを1本足し、新しいページを1枚作り、すでにあるページへリンクを1つ差し込む、という3方向の作業が混ざっています。どこへ何を貼ったか分からなくなった場合は各ファイルの見出しの下にある最後のブロックでファイルを丸ごと置き換えてください。ファイルごとに、上から順に読めば Step 0 から Step 6 で書いた断片がどう1つにまとまったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1260,7 +1260,7 @@ Prisma の `select` / `include` でまとめて取れないかを考えます。
 
 ```typescript
 // filepath: src/server/api/routers/report.ts
-// 完成版: import 群
+// import 群
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
@@ -1277,7 +1277,7 @@ Day 21 の時点では4つの import だけでした。今日足したのは `TR
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: getOverview の入口
+// getOverview の入口
 export const reportRouter = createTRPCRouter({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
     const projectIds = await getUserProjectIds(ctx.session.userId);
@@ -1307,7 +1307,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 集計範囲を決める2つの条件
+// 集計範囲を決める2つの条件
     // アーカイブ済みプロジェクトのタスクは集計対象外にし、
     // プロジェクト数・統計との整合を取る。
     const projectScope = {
@@ -1329,7 +1329,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 12個の集計結果を受け取る
+// 12個の集計結果を受け取る
     const [
       projects,
       totalTasks,
@@ -1352,7 +1352,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: プロジェクト一覧と件数の集計
+// プロジェクト一覧と件数の集計
       prisma.project.findMany({
         where: { id: { in: projectIds }, isArchived: false },
         select: { id: true, name: true },
@@ -1379,7 +1379,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 残りの件数と作業時間の合計
+// 残りの件数と作業時間の合計
       prisma.task.count({
         where: {
           ...projectScope,
@@ -1404,7 +1404,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 直近5件とステータス・優先度の集計
+// 直近5件とステータス・優先度の集計
       prisma.task.findMany({
         where: activeTasksFilter,
         select: {
@@ -1434,7 +1434,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: プロジェクト別の集計2本
+// プロジェクト別の集計2本
       prisma.task.groupBy({
         by: ['projectId'],
         where: activeTasksFilter,
@@ -1458,7 +1458,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 合計値の計算と辞書づくり
+// 合計値の計算と辞書づくり
     const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
     const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -1483,7 +1483,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 画面へ返す値の前半
+// 画面へ返す値の前半
     return {
       totalProjects: projects.length,
       totalTasks,
@@ -1511,7 +1511,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: プロジェクト別統計と getOverview の締め
+// プロジェクト別統計と getOverview の締め
       projectStats: projects.map((project) => {
         const taskStats = taskStatsByProject.get(project.id) ?? {
           totalTasks: 0,
@@ -1539,7 +1539,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: getWeeklyReport の入力検証と権限確認
+// getWeeklyReport の入力検証と権限確認
   getWeeklyReport: protectedProcedure
     .input(
       z.object({
@@ -1564,7 +1564,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 週バケットの上端と下端
+// 週バケットの上端と下端
       const targetUserId = input.userId ?? ctx.session.userId;
       const now = new Date();
       // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
@@ -1587,7 +1587,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 対象タスクをまとめて取る
+// 対象タスクをまとめて取る
       const where = {
         status: TASK_STATUS.DONE,
         completedAt: { gte: startDate, lte: now },
@@ -1612,7 +1612,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 週ごとの箱づくりとステータス別件数
+// 週ごとの箱づくりとステータス別件数
       const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
         const weekStart = new Date(startDate);
         weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
@@ -1641,7 +1641,294 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/report.ts（同じファイルの続き）
-// 完成版: 優先度別件数と返す値
+// 優先度別件数と返す値
+          byPriority: Object.fromEntries(
+            Object.values(TASK_PRIORITY).map((priority) => [
+              priority,
+              weekTasks.filter((t) => t.priority === priority).length,
+            ]),
+          ),
+        };
+      });
+
+      return {
+        weeks: input.weeks,
+        startDate: startDate.toISOString(),
+        endDate: now.toISOString(),
+        weeklyData,
+        totalCompleted: tasks.length,
+      };
+    }),
+});
+```
+
+完成版の `src/server/api/routers/report.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/report.ts
+// 完成版: ファイル全体
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { TASK_PRIORITY } from '@/lib/constant/priority';
+import { USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+
+export const reportRouter = createTRPCRouter({
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    const projectIds = await getUserProjectIds(ctx.session.userId);
+
+    if (projectIds.length === 0) {
+      return {
+        totalProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        inReviewTasks: 0,
+        todoTasks: 0,
+        completionRate: 0,
+        totalTimeSpent: 0,
+        averageTimePerTask: 0,
+        recentTasks: [],
+        statusData: [],
+        priorityData: [],
+        projectStats: [],
+      };
+    }
+
+    // アーカイブ済みプロジェクトのタスクは集計対象外にし、
+    // プロジェクト数・統計との整合を取る。
+    const projectScope = {
+      projectId: { in: projectIds },
+      project: { isArchived: false },
+    } as const;
+
+    // ダッシュボードの「アクティブな作業」を母数とするため、
+    // CANCELLED は集計から除外する。
+    const activeTasksFilter = {
+      ...projectScope,
+      NOT: { status: TASK_STATUS.CANCELLED },
+    } as const;
+
+    const [
+      projects,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      totalTimeAggregate,
+      recentTasks,
+      statusGroups,
+      priorityGroups,
+      projectTaskGroups,
+      projectDoneGroups,
+    ] = await Promise.all([
+
+      prisma.project.findMany({
+        where: { id: { in: projectIds }, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.task.count({ where: activeTasksFilter }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_PROGRESS,
+        },
+      }),
+
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.IN_REVIEW,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.TODO,
+        },
+      }),
+      prisma.task.aggregate({
+        where: activeTasksFilter,
+        _sum: { timeSpentMinutes: true },
+      }),
+
+      prisma.task.findMany({
+        where: activeTasksFilter,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+      prisma.task.groupBy({
+        by: ['priority'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+      }),
+
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeTasksFilter,
+        _count: { _all: true },
+        _sum: { timeSpentMinutes: true },
+      }),
+      prisma.task.groupBy({
+        by: ['projectId'],
+        where: {
+          ...projectScope,
+          status: TASK_STATUS.DONE,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const totalTimeSpent = totalTimeAggregate._sum.timeSpentMinutes ?? 0;
+    const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const doneCountByProject = new Map(
+      projectDoneGroups.map((group) => [group.projectId, group._count._all]),
+    );
+    const taskStatsByProject = new Map(
+      projectTaskGroups.map((group) => [
+        group.projectId,
+        {
+          totalTasks: group._count._all,
+          totalTimeSpent: group._sum.timeSpentMinutes ?? 0,
+        },
+      ]),
+    );
+
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      inReviewTasks,
+      todoTasks,
+      completionRate,
+      totalTimeSpent,
+      averageTimePerTask,
+      recentTasks,
+      statusData: statusGroups.map((group) => ({
+        key: group.status,
+        value: group._count._all,
+      })),
+      priorityData: priorityGroups.map((group) => ({
+        key: group.priority,
+        value: group._count._all,
+      })),
+
+      projectStats: projects.map((project) => {
+        const taskStats = taskStatsByProject.get(project.id) ?? {
+          totalTasks: 0,
+          totalTimeSpent: 0,
+        };
+        const completedTaskCount = doneCountByProject.get(project.id) ?? 0;
+
+        return {
+          id: project.id,
+          name: project.name,
+          totalTasks: taskStats.totalTasks,
+          completedTasks: completedTaskCount,
+          progress:
+            taskStats.totalTasks > 0 ? (completedTaskCount / taskStats.totalTasks) * 100 : 0,
+          totalTimeHours: taskStats.totalTimeSpent / 60,
+        };
+      }),
+    };
+  }),
+
+  getWeeklyReport: protectedProcedure
+    .input(
+      z.object({
+        weeks: z.number().int().min(1).max(12).default(4),
+        userId: z.string().cuid().optional(),
+      }).default({}),
+    )
+    .query(async ({ ctx, input }) => {
+      if (input.userId && input.userId !== ctx.session.userId) {
+        if (ctx.session.role !== USER_ROLE.ADMIN) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+      }
+
+      const targetUserId = input.userId ?? ctx.session.userId;
+      const now = new Date();
+      // 週バケットは「今日で終わる直近7日間」を最終週として7日刻みで遡る。
+      // 旧実装は最終週が「今日0時〜現在」だけの進行中バケットで、「4週間」表示の
+      // 実カバー範囲が3週間+今日に縮んでいた。排他的上端を
+      // 明日0時に固定した完全な7日バケット×weeks本にすることで、ラベル・週平均の
+      // 分母と実際の集計範囲が一致し、範囲内タスクは必ずいずれかの週に入る。
+      // 日付ラベルは toISOString()（UTC）で出すため、バケット境界も UTC で刻む。
+      // ローカル時刻メソッドで刻むと、JST などのサーバーでラベルが1日ずれる。
+      const rangeEnd = new Date(now);
+      rangeEnd.setUTCHours(0, 0, 0, 0);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1);
+      const startDate = new Date(rangeEnd);
+      startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
+
+      const where = {
+        status: TASK_STATUS.DONE,
+        completedAt: { gte: startDate, lte: now },
+        assigneeId: targetUserId,
+        project: { members: { some: { userId: targetUserId } } },
+      };
+
+      const tasks = await prisma.task.findMany({
+        where,
+        select: {
+          id: true,
+          completedAt: true,
+          status: true,
+          priority: true,
+        },
+      });
+
+      const weeklyData = Array.from({ length: input.weeks }, (_, i) => {
+        const weekStart = new Date(startDate);
+        weekStart.setUTCDate(weekStart.getUTCDate() + i * 7);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+        const weekTasks = tasks.filter(
+          (task) => task.completedAt && task.completedAt >= weekStart && task.completedAt < weekEnd,
+        );
+
+        return {
+          week: `${i + 1}週目`,
+          weekStart: weekStart.toISOString().split('T')[0],
+          totalCompleted: weekTasks.length,
+          byStatus: Object.fromEntries(
+            Object.values(TASK_STATUS).map((status) => [
+              status,
+              weekTasks.filter((t) => t.status === status).length,
+            ]),
+          ),
+
           byPriority: Object.fromEntries(
             Object.values(TASK_PRIORITY).map((priority) => [
               priority,
@@ -1670,7 +1957,7 @@ export const reportRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx
-// 完成版: 日付とページ枠の取り込み
+// 日付とページ枠の取り込み
 'use client';
 import { formatDateOnly } from '@/lib/date';
 import { useState } from 'react';
@@ -1690,7 +1977,7 @@ import { PageLoadingSpinner }
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 選択欄とグラフ部品の取り込み
+// 選択欄とグラフ部品の取り込み
 import {
   Select, SelectContent,
   SelectItem, SelectTrigger,
@@ -1716,7 +2003,7 @@ Recharts から取り込む10個のうち、`CartesianGrid`・`XAxis`・`YAxis`�
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 関数の入口とデータ取得
+// 関数の入口とデータ取得
 export default function WeeklyReportPage() {
   const [weeks, setWeeks] = useState('4');
 
@@ -1738,7 +2025,7 @@ export default function WeeklyReportPage() {
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: グラフへ渡す2つの配列
+// グラフへ渡す2つの配列
   const chartData =
     reportData?.weeklyData.map((week) => ({
       name: week.week,
@@ -1765,7 +2052,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 ```typescript
 // filepath: src/app/report/weekly/page.tsx（同じファイルの続き）
-// 完成版: 見出しの行
+// 見出しの行
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -1782,7 +2069,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 週数の選択欄 */}
+          {/* 週数の選択欄 */}
           <div className="w-[150px]">
             <Select
               value={weeks}
@@ -1812,7 +2099,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 ```typescript
         {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 完了タスク合計のカード */}
+        {/* 完了タスク合計のカード */}
         <div className="grid grid-cols-1
           md:grid-cols-3 gap-4">
           <Card>
@@ -1834,7 +2121,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 週平均のカード */}
+          {/* 週平均のカード */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1859,7 +2146,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 対象期間のカード */}
+          {/* 対象期間のカード */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -1882,7 +2169,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
         {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 週別完了タスク数の折れ線グラフ */}
+        {/* 週別完了タスク数の折れ線グラフ */}
         <div className="grid grid-cols-1
           lg:grid-cols-2 gap-6">
           <Card className="col-span-1 lg:col-span-2">
@@ -1913,7 +2200,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 高・緊急の完了タスク数の棒グラフ */}
+          {/* 高・緊急の完了タスク数の棒グラフ */}
           <Card>
             <CardHeader>
               <CardTitle>高・緊急の完了タスク数</CardTitle>
@@ -1942,7 +2229,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 完了タスクの優先度別内訳の枠 */}
+          {/* 完了タスクの優先度別内訳の枠 */}
           <Card>
             <CardHeader>
               <CardTitle>完了タスクの優先度別内訳</CardTitle>
@@ -1962,7 +2249,229 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
                     {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
-                    {/* 完成版: 積み上げの4本と閉じタグ */}
+                    {/* 積み上げの4本と閉じタグ */}
+                    <Bar dataKey="low" stackId="priority" name="低"
+                      fill={TASK_PRIORITY_COLORS.LOW} />
+                    <Bar dataKey="medium" stackId="priority" name="中"
+                      fill={TASK_PRIORITY_COLORS.MEDIUM} />
+                    <Bar dataKey="high" stackId="priority" name="高"
+                      fill={TASK_PRIORITY_COLORS.HIGH} />
+                    <Bar dataKey="urgent" stackId="priority" name="緊急"
+                      fill={TASK_PRIORITY_COLORS.URGENT} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/report/weekly/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/report/weekly/page.tsx
+// 完成版: ファイル全体
+'use client';
+import { formatDateOnly } from '@/lib/date';
+import { useState } from 'react';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+
+import {
+  Select, SelectContent,
+  SelectItem, SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import {
+  Bar, BarChart, CartesianGrid,
+  Legend, Line, LineChart,
+  ResponsiveContainer,
+  Tooltip, XAxis, YAxis,
+} from 'recharts';
+import {
+  TASK_PRIORITY, TASK_PRIORITY_COLORS,
+} from '@/lib/constant/priority';
+import { api } from '@/trpc/react';
+
+const CHART_PRIMARY_COLOR = '#8884d8';
+
+export default function WeeklyReportPage() {
+  const [weeks, setWeeks] = useState('4');
+
+  const {
+    data: reportData,
+    isLoading,
+  } = api.report.getWeeklyReport.useQuery({
+    weeks: Number.parseInt(weeks, 10),
+  });
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  const chartData =
+    reportData?.weeklyData.map((week) => ({
+      name: week.week,
+      completed: week.totalCompleted,
+      high:
+        week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+      urgent:
+        week.byPriority[TASK_PRIORITY.URGENT]
+        ?? 0,
+    }));
+
+  const priorityData = reportData?.weeklyData.map((week) => ({
+    name: week.week,
+    low: week.byPriority[TASK_PRIORITY.LOW] ?? 0,
+    medium: week.byPriority[TASK_PRIORITY.MEDIUM] ?? 0,
+    high: week.byPriority[TASK_PRIORITY.HIGH] ?? 0,
+    urgent: week.byPriority[TASK_PRIORITY.URGENT] ?? 0,
+  }));
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center
+          justify-between">
+          <h1 className="text-3xl font-bold">
+            週次レポート
+          </h1>
+
+          <div className="w-[150px]">
+            <Select
+              value={weeks}
+              onValueChange={setWeeks}>
+              <SelectTrigger>
+                <SelectValue placeholder="期間" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="4">
+                  4週間
+                </SelectItem>
+                <SelectItem value="8">
+                  8週間
+                </SelectItem>
+                <SelectItem value="12">
+                  12週間
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1
+          md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了タスク合計
+              </p>
+              <p className="text-3xl font-bold">
+                {reportData?.totalCompleted ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                週平均
+              </p>
+              <p className="text-3xl font-bold">
+                {reportData?.totalCompleted
+                  ? Math.round(
+                      reportData.totalCompleted
+                      / Number.parseInt(weeks, 10)
+                    )
+                  : 0}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                対象期間（UTC）</p>
+              <p className="text-lg font-semibold">
+                {reportData?.startDate
+                  && reportData?.endDate
+                  ? `${formatDateOnly(reportData.startDate)} - ${formatDateOnly(reportData.endDate)}`
+                  : '-'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1
+          lg:grid-cols-2 gap-6">
+          <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+              <CardTitle>週別完了タスク数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+                    <Line type="monotone"
+                      dataKey="completed"
+                      stroke={CHART_PRIMARY_COLOR}
+                      name="完了数" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>高・緊急の完了タスク数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+                    <Bar dataKey="urgent" name="緊急"
+                      fill={TASK_PRIORITY_COLORS.URGENT} />
+                    <Bar dataKey="high" name="高"
+                      fill={TASK_PRIORITY_COLORS.HIGH} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>完了タスクの優先度別内訳</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={priorityData ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis /><Tooltip /><Legend />
+
                     <Bar dataKey="low" stackId="priority" name="低"
                       fill={TASK_PRIORITY_COLORS.LOW} />
                     <Bar dataKey="medium" stackId="priority" name="中"
@@ -1995,7 +2504,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 画面部品の取り込み
+// 画面部品の取り込み
 'use client';
 
 import { ArrowRight } from 'lucide-react';
@@ -2022,7 +2531,7 @@ import {
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 色とラベルの定数、通信の入口
+// 色とラベルの定数、通信の入口
 import {
   isTaskPriority,
   TASK_PRIORITY_COLORS,
@@ -2044,7 +2553,7 @@ const CHART_FALLBACK_COLOR = '#9e9e9e';
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 取得と表示用の値づくり
+// 取得と表示用の値づくり
 export default function ReportPage() {
   const { data: overview, isLoading } =
     api.report.getOverview.useQuery();
@@ -2066,7 +2575,7 @@ export default function ReportPage() {
 
 ```typescript
 // filepath: src/app/report/page.tsx（同じファイルの続き）
-// 完成版: 円グラフへ渡す2つの配列
+// 円グラフへ渡す2つの配列
   const statusData =
     overview?.statusData.map((entry) => ({
       ...entry,
@@ -2094,7 +2603,7 @@ export default function ReportPage() {
 
 ```typescript
 // filepath: src/app/report/page.tsx
-// 完成版: 見出しと週次レポートへのリンク
+// 見出しと週次レポートへのリンク
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -2126,7 +2635,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: 統計カード（タスク数・完了率） */}
+        {/* 統計カード（タスク数・完了率） */}
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -2155,7 +2664,7 @@ export default function ReportPage() {
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 統計カード（作業時間の合計と平均） */}
+          {/* 統計カード（作業時間の合計と平均） */}
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm
@@ -2183,7 +2692,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: ステータス円グラフの枠 */}
+        {/* ステータス円グラフの枠 */}
         <div className="grid grid-cols-1
           md:grid-cols-2 gap-6">
           <Card>
@@ -2212,7 +2721,7 @@ export default function ReportPage() {
 
 ```typescript
                       {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-                      {/* 完成版: ステータス円グラフの色と閉じタグ */}
+                      {/* ステータス円グラフの色と閉じタグ */}
                       {statusData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -2239,7 +2748,7 @@ export default function ReportPage() {
 
 ```typescript
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-          {/* 完成版: 優先度円グラフの枠 */}
+          {/* 優先度円グラフの枠 */}
           <Card>
             <CardHeader>
               <CardTitle>優先度別タスク</CardTitle>
@@ -2266,7 +2775,7 @@ export default function ReportPage() {
 
 ```typescript
                       {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-                      {/* 完成版: 優先度円グラフの色と閉じタグ */}
+                      {/* 優先度円グラフの色と閉じタグ */}
                       {priorityData.map((entry) => (
                         <Cell
                           key={entry.key}
@@ -2294,7 +2803,7 @@ export default function ReportPage() {
 
 ```typescript
         {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-        {/* 完成版: プロジェクト統計テーブルの見出し */}
+        {/* プロジェクト統計テーブルの見出し */}
         <Card>
           <CardHeader>
             <CardTitle>プロジェクト統計</CardTitle>
@@ -2323,7 +2832,7 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
 
 ```typescript
               {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-              {/* 完成版: プロジェクト統計テーブルの行 */}
+              {/* プロジェクト統計テーブルの行 */}
               <TableBody>
                 {overview?.projectStats.map((stat) => (
                   <TableRow key={stat.id}>
@@ -2349,7 +2858,272 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
 
 ```typescript
             {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
-            {/* 完成版: 閉じタグと関数の終わり */}
+            {/* 閉じタグと関数の終わり */}
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+完成版の `src/app/report/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/report/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Cell, Legend, Pie, PieChart,
+  ResponsiveContainer, Tooltip,
+} from 'recharts';
+import { AppLayout } from '@/component/layout/app-layout';
+import {
+  Card, CardContent,
+  CardHeader, CardTitle,
+} from '@/component/ui/card';
+import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
+import {
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
+} from '@/component/ui/table';
+
+import {
+  isTaskPriority,
+  TASK_PRIORITY_COLORS,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  isTaskStatus,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const CHART_FALLBACK_COLOR = '#9e9e9e';
+
+export default function ReportPage() {
+  const { data: overview, isLoading } =
+    api.report.getOverview.useQuery();
+
+  const totalTasks = overview?.totalTasks ?? 0;
+  const completionRate =
+    overview?.completionRate ?? 0;
+  const totalTimeHours =
+    ((overview?.totalTimeSpent ?? 0) / 60)
+      .toFixed(1);
+  const averageTimeHours =
+    ((overview?.averageTimePerTask ?? 0) / 60)
+      .toFixed(1);
+
+  const statusData =
+    overview?.statusData.map((entry) => ({
+      ...entry,
+      name: isTaskStatus(entry.key)
+        ? TASK_STATUS_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  const priorityData =
+    overview?.priorityData.map((entry) => ({
+      ...entry,
+      name: isTaskPriority(entry.key)
+        ? TASK_PRIORITY_LABELS[entry.key]
+        : entry.key,
+    })) ?? [];
+
+  if (isLoading) {
+    return <PageLoadingSpinner />;
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4
+          items-start sm:flex-row
+          sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              レポート・統計
+            </h1>
+            <p className="text-muted-foreground">
+              プロジェクトの進捗とタスクの状況を確認できます。
+            </p>
+          </div>
+          <Link
+            href="/report/weekly"
+            className="inline-flex items-center gap-2
+              text-sm font-medium text-primary hover:underline"
+          >
+            週次レポートを見る
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1
+          sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                タスク数</p>
+              <p className="text-3xl font-bold">
+                {totalTasks}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                完了率</p>
+              <p className="text-3xl font-bold">
+                {completionRate}%</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                合計作業時間</p>
+              <p className="text-3xl font-bold">
+                {totalTimeHours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm
+                text-muted-foreground mb-1">
+                平均作業時間/タスク</p>
+              <p className="text-3xl font-bold">
+                {averageTimeHours}h</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1
+          md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>ステータス別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+
+                      {statusData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskStatus(entry.key)
+                              ? TASK_STATUS_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>優先度別タスク</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer
+                  width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={priorityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+
+                      {priorityData.map((entry) => (
+                        <Cell
+                          key={entry.key}
+                          fill={
+                            isTaskPriority(entry.key)
+                              ? TASK_PRIORITY_COLORS[entry.key]
+                              : CHART_FALLBACK_COLOR
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>プロジェクト統計</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">
+                    プロジェクト</TableHead>
+                  <TableHead className="text-right">
+                    タスク数</TableHead>
+                  <TableHead className="text-right">
+                    完了</TableHead>
+                  <TableHead className="text-right">
+                    進捗</TableHead>
+                  <TableHead className="text-right">
+                    作業時間</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {overview?.projectStats.map((stat) => (
+                  <TableRow key={stat.id}>
+                    <TableCell className="font-medium">
+                      {stat.name}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.completedTasks}</TableCell>
+                    <TableCell className="text-right">
+                      {stat.progress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      {stat.totalTimeHours.toFixed(1)}h
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+
             </Table>
           </CardContent>
         </Card>

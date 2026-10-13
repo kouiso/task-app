@@ -1,0 +1,4 @@
+[apply_day] day19_コメント編集・削除.md (tag=day19)
+  ✅ WRITE  src/server/api/routers/comment.ts (kansei-run)
+  ✅ WRITE  src/component/task/task-detail-dialog.tsx (kansei-run)
+  → 2 files written

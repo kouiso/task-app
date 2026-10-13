@@ -1,0 +1,5 @@
+[apply_day] day11_プロジェクト編集・削除.md (tag=day11)
+  ✅ WRITE  src/server/api/routers/project.ts (kansei-run)
+  ✅ WRITE  src/app/project/page.tsx (kansei-run)
+  ✅ WRITE  src/lib/query-error.ts (single)
+  → 3 files written

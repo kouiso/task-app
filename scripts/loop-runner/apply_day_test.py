@@ -9,10 +9,14 @@ Gate B で実際に起きた2系統の破綻を固定する:
 """
 
 import json
+import os
+import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import apply_day as ad  # noqa: E402
@@ -293,7 +297,8 @@ class MustReviewFixes(unittest.TestCase):
             ad.Part(cont=False, body=");", kansei=False,
                     unmarked=False, prose="", directive=None),
         ]
-        new, gaps = ad.splice_parts(cur, parts, base, "src/a.ts", "d1")
+        _res, gaps = ad.splice_parts(cur, cur, parts, base, "src/a.ts", "d1")
+        new = _res[1] if _res else None
         self.assertIsNotNone(new, gaps)
         joined = "\n".join(new)
         self.assertIn("42", joined)
@@ -401,7 +406,8 @@ export const c = 3;
             cont=False, body="export const label = 'a b';",
             kansei=False, unmarked=False, prose="",
             directive=ad.Directive("replace_decl", ("label",)))]
-        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        _res, _gaps = ad.splice_parts(cur, cur, parts, cur, "src/a.ts", "d1")
+        new = _res[1] if _res else None
         self.assertIsNotNone(new)
         self.assertIn("export const label = 'a b';", new)
 
@@ -434,7 +440,8 @@ export const c = 3;
             cont=False, body='  "x",',
             kansei=False, unmarked=False, prose="",
             directive=ad.Directive("array_append", ("second",)))]
-        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        _res, _gaps = ad.splice_parts(cur, cur, parts, cur, "src/a.ts", "d1")
+        new = _res[1] if _res else None
         self.assertIsNotNone(new)
         joined = "\n".join(new)
         self.assertIn('"x"', joined)
@@ -450,7 +457,8 @@ export const c = 3;
             cont=False, body='  2,',
             kansei=False, unmarked=False, prose="",
             directive=ad.Directive("array_append", ("x",)))]
-        new, _gaps = ad.splice_parts(cur, parts, cur, "src/a.ts", "d1")
+        _res, _gaps = ad.splice_parts(cur, cur, parts, cur, "src/a.ts", "d1")
+        new = _res[1] if _res else None
         self.assertIsNotNone(new)
         joined = "\n".join(new)
         # 閉じ `]` は行末 `];` に残り、要素 `2,` が括弧内に入る
@@ -461,7 +469,8 @@ export const c = 3;
             cont=False, body='  2,',
             kansei=False, unmarked=False, prose="",
             directive=ad.Directive("array_append", ("y",)))]
-        new2, _ = ad.splice_parts(cur, parts2, cur, "src/a.ts", "d1")
+        _res2, _ = ad.splice_parts(cur, cur, parts2, cur, "src/a.ts", "d1")
+        new2 = _res2[1] if _res2 else None
         self.assertIsNotNone(new2)
         self.assertIn("const y = [[1],", "\n".join(new2))
 
@@ -486,7 +495,8 @@ export const c = 3;
             cont=False, body="          { key: 'B', value: 'b' },",
             kansei=False, unmarked=False, prose="",
             directive=ad.Directive("array_append", ("headers",)))]
-        new, _gaps = ad.splice_parts(cur, parts, cur, "next.config.ts", "d30")
+        _res, _gaps = ad.splice_parts(cur, cur, parts, cur, "next.config.ts", "d30")
+        new = _res[1] if _res else None
         self.assertIsNotNone(new)
         joined = "\n".join(new)
         # 内側 headers 配列の `],` 直前に要素が入る（外側 return 配列ではない）
@@ -514,6 +524,802 @@ export const missing = 5;
 """)
             _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
             self.assertTrue(any("kansei-listing-unplaced" in x for x in s), s)
+
+
+class Issue630Fixes(unittest.TestCase):
+    def test_string_literal_ws_change_not_treated_as_applied(self):
+        # "a b" → "ab" のように文字列リテラル内の空白差だけが違う断片を
+        # ブロブ照合が適用済みと誤認しない
+        cur = ["const msg = 'a b';"]
+        parts = [ad.Part(
+            cont=False, body="const msg = 'ab';",
+            kansei=False, unmarked=False, prose="",
+            directive=None)]
+        _res, _gaps = ad.splice_parts(cur, cur, parts, cur, "src/a.ts", "d1")
+        new = _res[1] if _res else None
+        # oracle=cur なので oracle_anchor/positional_splice 等が置き換え経路を
+        # 探す。適用済み誤認でスキップされなければ 'ab' が入る
+        self.assertIsNotNone(new)
+        self.assertIn("'ab'", "\n".join(new))
+
+    def test_insert_past_multiline_import_not_inside(self):
+        # `import {` が複数行に跨る時、その途中ではなく文の末尾へ挿入する
+        cur = [
+            "import {",
+            "  A,",
+            "  B,",
+            "} from 'lib';",
+            "",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        imp_idx = joined.index("import { C } from 'other';")
+        from_idx = joined.index("} from 'lib';")
+        self.assertTrue(imp_idx > from_idx)
+
+    def test_splice_writes_verbatim_fragment(self):
+        # 書き込みは正規化行ではなく教材原文を使う。
+        # テンプレート内の空行・行末空白が消えないこと
+        body = "const t = `head\n\n  indented line  \ntail`;"
+        parts = [ad.Part(
+            cont=False, body=body,
+            kansei=False, unmarked=False, prose="",
+            directive=ad.Directive("append_end", ()))]
+        _res, _gaps = ad.splice_parts(["const a = 1;"], ["const a = 1;"], parts,
+                                     ["const a = 1;"], "src/a.ts", "d1")
+        new = _res[1] if _res else None
+        self.assertIsNotNone(new)
+        joined = "\n".join(new)
+        self.assertIn("head\n\n  indented line  \ntail", joined)
+
+    def test_blob_keeps_multiline_template_whitespace(self):
+        # テンプレートリテラルは行を跨ぐ。行ごとに引用状態をリセットすると
+        # 継続行の空白が潰れて「適用済み」を誤認する（issue #630）
+        lines = ["const t = `head", "  a   b  ", "tail`;", "const x = 1;"]
+        blob = ad._norm_blob(lines)
+        # テンプレート内の改行も中身なので行末に残る
+        self.assertEqual(blob[1], "  a   b  \n")
+        self.assertEqual(blob[3], "constx=1;")
+
+    def test_insert_past_comment_semicolon_in_import(self):
+        # 複数行 import 内の `// keep A;` のようなコメント末尾の ';' で
+        # 文末判定を誤ってはいけない
+        cur = [
+            "import {",
+            "  A,",
+            "  // keep A;",
+            "} from 'lib';",
+            "",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        self.assertTrue(
+            joined.index("import { C } from 'other';")
+            > joined.index("} from 'lib';"))
+
+    def test_insert_past_import_attribute_block(self):
+        # `import ... from 'x' with { ... };` の属性ブロック途中にも入らない
+        cur = [
+            "import data from './d.json' with {",
+            "  type: 'json'",
+            "};",
+            "export const x = 1;",
+        ]
+        fl = ["import { C } from 'other';"]
+        new = ad.replace_import(cur, fl)
+        joined = "\n".join(new)
+        self.assertTrue(
+            joined.index("import { C } from 'other';") > joined.index("};"))
+
+    def test_apply_day_preserves_existing_whitespace(self):
+        # splice は無関係な箇所の空行・行末空白・テンプレート内空白を
+        # 原文のまま残す（issue #630）
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            oracle_body = "export const a = 1;\nexport const b = 2;"
+            write(oracle, "src/a.ts", oracle_body + "\n")
+            dest_body = (
+                "export const a = 1;\n"
+                "\n"
+                "export const t = `head\n"
+                "\n"
+                "  indented line  \n"
+                "tail`;\n"
+                "export const b = 2;   \n")
+            write(target, "src/a.ts", dest_body)
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（末尾に追加）
+export const c = 3;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn("export const c = 3;", body)
+            self.assertIn("export const a = 1;\n\nexport const t = `head\n\n  indented line  \ntail`;\nexport const b = 2;   \n", body)
+
+    def test_verbatim_different_fragment_repairs_baseline(self):
+        # 正規化済みでは一致するが原文が違う断片（空行の欠落等）は
+        # 「適用済み」とせず原文へ修復する（issue #630）
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            oracle_body = "export const a = 1;\n\nexport const b = 2;"
+            write(oracle, "src/a.ts", oracle_body + "\n")
+            write(target, "src/a.ts", "export const a = 1;\nexport const b = 2;\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+export const a = 1;
+
+export const b = 2;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn("export const a = 1;\n\nexport const b = 2;", body)
+            self.assertEqual(body.count("export const b = 2;"), 1)
+
+    def test_squash_keeps_literal_whitespace(self):
+        # _squash はコード側の空白だけ潰し、リテラル中身は保持する。
+        # _oracle_pos 等の照合でリテラル入り行が oracle と不一致になるのを防ぐ
+        self.assertEqual(ad._squash("  x = 'a b';"), "x='a b';")
+        self.assertEqual(ad._squash("if (a && b)"), "if(a&&b)")
+        self.assertEqual(ad._squash(""), "")
+
+    def test_oracle_pos_matches_wrapped_fragment_line(self):
+        # oracle が1行表記・断片が複数行表記でも、断片行が oracle 行の
+        # 部分文字列として見つかれば位置を返す（day20 app-layout 型）
+        base = ad.norm("""export function L() {
+  const menuItems = [
+    { text: 'a', icon: <A className="h-5 w-5" />, path: '/a' },
+    { text: '検索', icon: <Search className="h-5 w-5" />, path: '/search' },
+  ];
+}
+""".split("\n"))
+        fl = ["  {", "    text: '検索',",
+              '    icon: <Search className="h-5 w-5" />,',
+              "    path: '/search',", "  },"]
+        self.assertGreaterEqual(ad._oracle_pos(base, fl), 0)
+
+    def test_literal_fragment_insert_needs_expression_container(self):
+        # 裸 `{...}` 断片の文レベル挿入は構文エラーになるため拒否する
+        cur = ad.norm("""interface MenuItem {
+  text: string;
+}
+const menuItems = [
+  { text: 'a' },
+];
+""".split("\n"))
+        frag = ["{", "  text: '検索',", "},"]
+        # interface 直後の文位置（index 3）は拒否
+        self.assertFalse(ad._literal_fragment_insert_ok(cur, frag, 3))
+        # 配列内（index 5）は許可
+        self.assertTrue(ad._literal_fragment_insert_ok(cur, frag, 5))
+
+    def test_literal_fragment_insert_ok_inside_implicit_return_jsx(self):
+        # `() => <div>` のような括弧なし暗黙 return JSX の内側では、
+        # `{` 始まり断片は式コンテナに入るので許可する（issue #630）
+        cur = ad.norm("""export function Item() {
+  return <div>
+    <span>x</span>
+  </div>;
+}
+""".split("\n"))
+        frag = ["{ flag && <b>y</b> }"]
+        self.assertTrue(ad._literal_fragment_insert_ok(cur, frag, 3))
+
+
+class Issue630ReviewFixes(unittest.TestCase):
+    """PR#635 レビュー指摘の回帰テスト。
+
+    splice_parts の直叩きではなく apply_day の実経路（md → 既存ファイル →
+    ledger/skip 判定）を通す。実経路でなければ norm/raw の分離が
+    担保できない（issue #630 レビュー指摘）。
+    """
+
+    def test_import_insert_ends_at_code_semicolon(self):
+        # 複数行 import 内のコメント `// keep A;` や文字列内の `;`、
+        # 動的 `import(` を終端と誤認しない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts",
+                  "import { A } from 'lib';\nexport const x = 1;\n")
+            write(target, "src/a.ts", (
+                "import {\n"
+                "  A,\n"
+                "  // keep A;\n"
+                "  B,\n"
+                "} from 'lib';\n"
+                "\n"
+                "export const v = import('./lazy');\n"
+                "export const x = 1;\n"))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（import群に追加）
+import { C } from 'other';
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            # `} from 'lib';` の後かつ動的 import 行より前に入る
+            self.assertTrue(
+                body.index("import { C } from 'other';")
+                > body.index("} from 'lib';"), body)
+            self.assertTrue(
+                body.index("import { C } from 'other';")
+                < body.index("export const v"), body)
+            self.assertIn("// keep A;", body)
+
+    def test_import_insert_after_require_without_semicolon(self):
+        # `import x = require('y')` は ';' が無くてもその行が文の終端。
+        # EOF まで読み進めて次の文の後へ入ったり gap 化したりしない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "import x = require('y');\n")
+            write(target, "src/a.ts", "import x = require('y')\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（import群に追加）
+import { C } from 'other';
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "import x = require('y')\n"
+                      "import { C } from 'other';\n", body)
+
+    def test_import_insert_unclosed_import_is_gap(self):
+        # 閉じない複数行 import が末尾にある時、終端をでっち上げず
+        # gap 扱いにしてファイルを書き換えない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "import { A } from 'lib';\n")
+            write(target, "src/a.ts",
+                  "import { A } from 'lib';\nimport {\n  B,\n")
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（import群に追加）
+import { C } from 'other';
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertNotIn("import { C }", body)
+            self.assertEqual(
+                body, "import { A } from 'lib';\nimport {\n  B,\n")
+
+    def test_fragment_inside_block_comment_not_treated_as_applied(self):
+        # /* */ 内に置かれた断片と同じ行があっても「適用済み」とせず、
+        # 実際のコード位置へ書き込む
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const x = 0;\n")
+            write(target, "src/a.ts", (
+                "/* 完成版サンプル\n"
+                "export const a = 1;\n"
+                "export const b = 2;\n"
+                "*/\n"
+                "export const x = 0;\n"))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（末尾に追加）
+export const a = 1;
+export const b = 2;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            # コメント内の1件 + 実際に適用された1件
+            self.assertEqual(body.count("export const a = 1;"), 2, body)
+            self.assertTrue(
+                body.rindex("export const a = 1;")
+                > body.index("export const x = 0;"), body)
+
+    def test_interstitial_blank_lines_preserved_on_insert(self):
+        # 維持される行と行の間にある空行が、断片挿入で消えない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts",
+                  "export const a = 1;\n\nexport const b = 2;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "\n"
+                "\n"
+                "export const b = 2;\n"))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（export const a = 1 の直後に追加）
+export const c = 3;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn(
+                "export const a = 1;\nexport const c = 3;\n\n\n"
+                "export const b = 2;", body)
+
+    def test_closers_fragment_lands_after_written_fragment(self):
+        # last_end は「書き込んだ側」の行数で進める。norm 後の長さを使うと
+        # 断片内部の空行分ずれて閉じ断片が断片途中へ入る（issue #630）
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            # 前日までの適用途中で `}` がまだ閉じていない中間状態
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export function f() {\n"
+                "  return 1;\n"))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（末尾に追加）
+  // note
+
+  const z = 1;
+```
+```typescript
+// filepath: src/a.ts
+}
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn(
+                "// note\n\n  const z = 1;\n}", body)
+
+    def test_splice_inside_template_preserves_blank_lines(self):
+        # テンプレートリテラルの中身（空行・行末空白）はコード行ではないため、
+        # その直前に断片が挿入されても原文を保つ
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts",
+                  "export const a = 1;\nexport const b = 2;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export const t = `head\n"
+                "\n"
+                "  spaced   \n"
+                "tail`;\n"
+                "export const b = 2;\n"))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts（export const a = 1 の直後に追加）
+export const c = 3;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn(
+                "export const a = 1;\nexport const c = 3;\n"
+                "export const t = `head\n\n  spaced   \ntail`;\n"
+                "export const b = 2;", body)
+
+    def test_blob_keeps_template_state_across_interpolated_string(self):
+        # `${"a b"}` の内側の文字列が閉じた後も外側のテンプレート状態を保つ。
+        # 失うと残りのテンプレート文字列の空白がコード扱いで潰れる
+        blob = ad._norm_blob(['const t = `head ${"a b"} x y`;'])
+        self.assertEqual(blob, ['constt=`head ${"a b"} x y`;'])
+        blob = ad._norm_blob(["const t = `a ${f(`in ${'q r'} s`)} t u`;"])
+        self.assertEqual(blob, ["constt=`a ${f(`in ${'q r'} s`)} t u`;"])
+
+    def test_template_text_change_after_interpolation_is_applied(self):
+        # 補間内の文字列の後ろにあるテンプレート文字列の空白差を
+        # 「適用済み」と誤認して書き換えを飛ばさない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                'export const t = `head ${"a b"} x y`;\n'))
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+export const t = `head ${"a b"} xy`;
+```
+""")
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertIn('export const t = `head ${"a b"} xy`;', body)
+            self.assertNotIn("x y`", body)
+
+    def test_replace_keeps_fragment_raw_after_unchanged_first_line(self):
+        # 先頭行が既存宣言と同じでも、後続の変更行は断片原文
+        # （テンプレート内の空行・行末空白）で書き込む
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export const t = `head\n"
+                "old\n"
+                "tail`;\n"))
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `head\n"
+                "\n"
+                "  new  \n"
+                "tail`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n"
+                      "export const t = `head\n\n  new  \ntail`;\n", body)
+
+    def test_replace_does_not_double_blank_lines_inside_fragment(self):
+        # 置き換えで消える既存行の前の空行と断片側の空行を重ねて書かない。
+        # 重ねるとテンプレート文字列に改行が増える
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts", (
+                "export const a = 1;\n"
+                "export const t = `head\n"
+                "\n"
+                "old\n"
+                "tail`;\n"))
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `head\n"
+                "\n"
+                "  new  \n"
+                "tail`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n"
+                      "export const t = `head\n\n  new  \ntail`;\n", body)
+
+    def test_template_newline_change_is_applied(self):
+        # テンプレート内の改行の有無は文字列の中身の違い。
+        # 空白無視ブロブ照合で「適用済み」として飛ばさない
+        self.assertNotEqual(
+            "".join(ad._norm_blob(["const t = `a", "b`;"])),
+            "".join(ad._norm_blob(["const t = `ab`;"])))
+        self.assertNotEqual(
+            "".join(ad._norm_blob(["const t = `a", "", "b`;"])),
+            "".join(ad._norm_blob(["const t = `a", "b`;"])))
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", "export const a = 1;\n")
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const t = `ab`;\n")
+            md = write(root, "day.md", (
+                "```typescript\n"
+                "// filepath: src/a.ts\n"
+                "export const t = `a\n"
+                "b`;\n"
+                "```\n"))
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\nexport const t = `a\nb`;\n", body)
+
+    def test_core_match_repair_does_not_insert_meta_comment(self):
+        # 先頭の位置指示コメントを除いた本体が既存と一致する修復経路では、
+        # 教材用のコメント行をファイルへ持ち込まない
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            # 断片がファイル全体を覆うと listing 書き込みになるため、
+            # splice 経路を通すよう断片外の行を置く
+            rest = "export function helper() {\n  return 42;\n}\n"
+            write(oracle, "src/a.ts",
+                  "export const a = 1;\n\nexport const b = 2;\n" + rest)
+            write(target, "src/a.ts",
+                  "export const a = 1;\nexport const b = 2;\n" + rest)
+            md = write(root, "day.md", """```typescript
+// filepath: src/a.ts
+// b を a の直後に追加
+export const a = 1;
+
+export const b = 2;
+```
+""")
+            w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            self.assertEqual(w, ["SPLICE src/a.ts (1 parts)"])
+            body = (target / "src/a.ts").read_text()
+            self.assertEqual(
+                body, "export const a = 1;\n\nexport const b = 2;\n" + rest,
+                body)
+
+    def test_element_region_maps_each_hit_to_one_line(self):
+        # 一致行ごとに1つの oracle 行だけを記録する。以降の全行を
+        # 記録すると領域終端がファイル末尾になり、無関係な祖先要素を選ぶ
+        base = ad.norm("""export function L() {
+  return (
+    <ul>
+      <li className="item-one-long-class">
+        <span>first label text here</span>
+      </li>
+      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>second extra text here</em>
+      </li>
+    </ul>
+  );
+}
+export const trailingDeclarationOne = 1;
+export const trailingDeclarationTwo = 2;
+""".split("\n"))
+        cur = ad.norm("""export function L() {
+  return (
+    <ul>
+      <li className="item-one-long-class">
+        <span>first label text here</span>
+      </li>
+      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>old extra text</em>
+      </li>
+    </ul>
+  );
+}
+export const trailingDeclarationOne = 1;
+export const trailingDeclarationTwo = 2;
+""".split("\n"))
+        fl = ad.norm("""      <li className="item-two-long-class">
+        <span>second label text here</span>
+        <em>second extra text here</em>
+      </li>""".split("\n"))
+        res = ad.element_region_replace(cur, base, fl)
+        self.assertEqual(res, base)
+
+
+class Pr635LateReviewFixes(unittest.TestCase):
+    """PR#635 マージ直前に付いたレビュー指摘の回帰テスト。"""
+
+    def _apply(self, oracle_body: str, target_body: str, md_body: str,
+               runs: int = 1) -> tuple[str, list[list[str]]]:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", oracle_body)
+            write(target, "src/a.ts", target_body)
+            md = write(root, "day.md", md_body)
+            skipped = []
+            for r in range(runs):
+                _w, s = ad.apply_day(md, target, oracle_dir=oracle,
+                                     tag=f"d{r}")
+                skipped.append(s)
+            return (target / "src/a.ts").read_text(), skipped
+
+    def test_comment_only_fragment_rerun_is_idempotent(self):
+        # コメントだけの断片は再適用で重複させない
+        body, _s = self._apply(
+            "export const a = 1;\n", "export const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(body, "export const a = 1;\n// marker\n", body)
+
+    def test_inline_comment_only_change_is_applied(self):
+        # 行末コメントだけが違う断片を適用済みと誤認せず、
+        # 置き換えで後続の宣言も消さない
+        oracle = ("export const a = 1; // new\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "export const a = 1; // old\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1; // new\n```\n")
+        self.assertEqual(body, oracle, body)
+        self.assertEqual(s, [[]])
+
+    def test_commented_out_code_is_not_present(self):
+        # `// 説明` + 次行のコードの断片を、コードまでコメントアウトされた
+        # 1行と同じとみなして飛ばさない
+        oracle = ("// explanation\nexport const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            oracle,
+            "// explanation export const a = 1;\nexport const b = 2;\n"
+            "export const c = 3;\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "// explanation\nexport const a = 1;\n```\n")
+        self.assertIn("\nexport const a = 1;\n", body)
+        self.assertEqual(s, [[]])
+
+    def test_decl_end_ignores_trailing_line_comment(self):
+        lines = ["export const a = 1; // note", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(lines, 0), 0)
+
+    def test_decl_end_keeps_url_in_template_and_jsx_text(self):
+        # 複数行テンプレートや JSX テキストの `https://` はコメントではない。
+        # コメント扱いで終端を見失うと置き換えで次の宣言が消える
+        tpl = ["const s = `", "  see https://example.com`;",
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl, 0), 1)
+        jsx = ['export const L = () => <a href="/x">https://example.com</a>;',
+               "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(jsx, 0), 0)
+        # テンプレート内の `value; // literal` で宣言を終えない
+        tpl2 = ["const s = `", "value; // literal", "tail`;",
+                "const b = 2;"]
+        self.assertEqual(ad.find_decl_end(tpl2, 0), 2)
+        # 行末で開いた /* */ が次行で閉じるまでは宣言の内側
+        blk = ["export const a = 1; /* note", " more */", "export const b = 2;"]
+        self.assertEqual(ad.find_decl_end(blk, 0), 1)
+
+    def test_splice_into_whitespace_only_file(self):
+        # 空白行だけのファイルにも raw-norm-mismatch で落とさず書き込む。
+        # 先頭に追加でも断片の前に空行を残さない（#! が先頭に来なくなる）
+        oracle = ("export const a = 1;\nexport const b = 2;\n"
+                  "export const c = 3;\nexport const d = 4;\n")
+        for where in ("末尾に追加", "先頭に追加"):
+            body, s = self._apply(
+                oracle, "   \n\n",
+                f"```typescript\n// filepath: src/a.ts（{where}）\n"
+                "export const a = 1;\n```\n")
+            self.assertEqual(body, "export const a = 1;\n", (where, body))
+            self.assertEqual(s, [[]], where)
+
+    def test_code_fragment_present_across_existing_comment(self):
+        # コードだけの断片は既存側の間にコメントが挟まっていても適用済み。
+        # 見失うと宣言置き換えで b が二重定義になる
+        target = ("export const a = 1;\n// keep\nexport const b = 2;\n"
+                  "export const c = 3;\n")
+        body, s = self._apply(
+            "export const a = 1;\nexport const b = 2;\nexport const c = 3;\n"
+            "export const d = 4;\n",
+            target,
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const a = 1;\nexport const b = 2;\n```\n")
+        self.assertEqual(body, target, body)
+        self.assertEqual(s, [[]])
+
+    def test_comment_only_fragment_inside_block_comment_is_applied(self):
+        # 外側の /* */ の中身として同じ文字列があっても適用済みとしない
+        body, _s = self._apply(
+            "export const a = 1;\n",
+            "/*\n// marker\n*/\nexport const a = 1;\n",
+            "```typescript\n// filepath: src/a.ts（末尾に追加）\n"
+            "// marker\n```\n", runs=2)
+        self.assertEqual(
+            body, "/*\n// marker\n*/\nexport const a = 1;\n// marker\n", body)
+
+    def test_splice_raw_end_covers_whole_fragment(self):
+        # 断片の先頭・末尾が既存行と equal でも、終端は断片全体の後ろを返す。
+        # 最初の変更区間の終端を返すと後続の閉じ断片が断片内部へ入る
+        out = ["<div>", "<Widget>", "<a />", "</Widget>"]
+        res = ["<div>", "<Widget>", "<b />", "</Widget>"]
+        frag = ["<Widget>", "<b />", "</Widget>"]
+        raw = [[l] for l in out]
+        new_raw, end = ad._splice_raw(raw, out, res, frag,
+                                      [[l] for l in frag])
+        self.assertEqual([l for g in new_raw for l in g], res)
+        self.assertEqual(end, 4)
+
+    def test_splice_raw_end_picks_written_occurrence(self):
+        # 断片と同じ並びが既存側にもある時は、変更区間と重なる側を終端にする
+        out = ["A", "B", "A"]
+        res = ["A", "B", "A", "B", "A", "B"]
+        frag = ["A", "B", "A", "B"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 6)
+        # 変更区間が断片の出現と揃わない時も、前後が out と一致する
+        # 最初の出現（先頭の A の直後への挿入）を書き込み位置にする
+        out = ["A", "A", "B", "A", "A"]
+        res = ["A", "A", "B", "A", "B", "A", "B", "A", "A"]
+        _raw, end = ad._splice_raw([[l] for l in out], out, res, frag,
+                                   [[l] for l in frag])
+        self.assertEqual(end, 5)
+
+
+def _find_esbuild() -> Optional[str]:
+    repo = Path(__file__).resolve().parents[2]
+    for p in (os.environ.get("APPLY_DAY_ESBUILD"),
+              str(repo / "node_modules" / ".bin" / "esbuild"),
+              shutil.which("esbuild")):
+        if p and Path(p).exists():
+            return p
+    return None
+
+
+class EofBlankLineFixes(unittest.TestCase):
+    """ファイル末尾の空行が最後の行グループに混ざって、置き換え対象の
+    旧コード行が書き込みに残る退行の回帰テスト。"""
+
+    PREFIX = ("export const a = 1;\nexport const b = 2;\n"
+              "export const c = 3;\n")
+
+    def _apply(self, oracle_body: str, target_body: str, md_body: str,
+               esbuild: Optional[str]) -> tuple[str, list[str]]:
+        env = {k: v for k, v in os.environ.items()
+               if k != "APPLY_DAY_ESBUILD"}
+        if esbuild:
+            env["APPLY_DAY_ESBUILD"] = esbuild
+        with tempfile.TemporaryDirectory() as td, \
+                mock.patch.dict(os.environ, env, clear=True), \
+                mock.patch.object(ad.shutil, "which", return_value=None):
+            root = Path(td)
+            target, oracle = root / "app", root / "oracle"
+            write(oracle, "src/a.ts", oracle_body)
+            write(target, "src/a.ts", target_body)
+            md = write(root, "day.md", md_body)
+            _w, s = ad.apply_day(md, target, oracle_dir=oracle, tag="d1")
+            return (target / "src/a.ts").read_text(), s
+
+    def _check(self, oracle_body: str, target_body: str, md_body: str,
+               expected: str) -> None:
+        # esbuild 無しは構造検査だけ、有りは parse 検証まで通ることを見る
+        found = _find_esbuild()
+        for use in (False, True):
+            with self.subTest(esbuild=use):
+                if use and found is None:
+                    self.skipTest("esbuild not found")
+                body, s = self._apply(oracle_body, target_body, md_body,
+                                      found if use else None)
+                self.assertEqual(body, expected, body)
+                self.assertEqual(s, [])
+
+    def test_replace_final_declaration_with_trailing_eof_blanks(self):
+        self._check(
+            self.PREFIX + 'export const label = "new";\n',
+            self.PREFIX + 'export const label = "old";\n\n',
+            "```typescript\n// filepath: src/a.ts（label の宣言を書き直す）\n"
+            'export const label = "new";\n```\n',
+            self.PREFIX + 'export const label = "new";\n\n')
+
+    def test_append_after_final_line_with_trailing_eof_blanks(self):
+        # 断片先頭行が既存の最終行と一致する時も、その行を二重に書かない
+        self._check(
+            self.PREFIX + "export const d = 4;\n",
+            self.PREFIX + "\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const c = 3;\nexport const d = 4;\n```\n",
+            self.PREFIX + "export const d = 4;\n\n")
+
+    def test_whitespace_repair_of_final_line_with_trailing_eof_blanks(self):
+        # 行末空白だけが違う最終行の修復でも旧行を残さない
+        self._check(
+            self.PREFIX,
+            self.PREFIX[:-1] + "  \n\n",
+            "```typescript\n// filepath: src/a.ts\n"
+            "export const c = 3;\n```\n",
+            self.PREFIX + "\n")
+
+    def test_replace_after_deleting_final_line_keeps_one_declaration(self):
+        # 最終行を消した置き換えの後に残る空行も、次の断片の置き換えで
+        # 旧行を残す原因にならない
+        cur = ["export const p = 1;", "export const b = 2;", "",
+               "export const c = 3;"]
+        parts = [
+            ad.Part(cont=False,
+                    body="export const p = 10;\nexport const b = 2;",
+                    kansei=False, unmarked=False, prose="",
+                    directive=ad.Directive(
+                        "range", ("export const p", "export const c"))),
+            ad.Part(cont=False, body="export const b = 20;", kansei=False,
+                    unmarked=False, prose="",
+                    directive=ad.Directive("replace_decl", ("b",))),
+        ]
+        res, gaps = ad.splice_parts(ad.norm(cur), cur, parts, ad.norm(cur),
+                                    "src/a.ts", "d1")
+        self.assertEqual(gaps, [])
+        self.assertIsNotNone(res)
+        self.assertEqual(res[1], ["export const p = 10;",
+                                  "export const b = 20;", ""])
+
+    def test_detach_trailing_blanks_keeps_code_line_last(self):
+        raw = [["a"], ["", "b", "", " "]]
+        self.assertEqual(ad._detach_trailing_blanks(raw), ["", " "])
+        self.assertEqual(raw, [["a"], ["", "b"]])
+        # 空行だけ残ったグループは対応する norm 行が無いので取り除く
+        raw = [["a"], ["", ""]]
+        self.assertEqual(ad._detach_trailing_blanks(raw), ["", ""])
+        self.assertEqual(raw, [["a"]])
 
 
 if __name__ == "__main__":

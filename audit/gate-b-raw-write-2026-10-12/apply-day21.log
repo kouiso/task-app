@@ -1,0 +1,9 @@
+[apply_day] day21_統計カードを表示.md (tag=day21)
+  ✅ WRITE  src/server/api/routers/report.ts (kansei-run)
+  ✅ SPLICE src/server/api/root.ts (4 parts)
+  ✅ WRITE  src/app/report/page.tsx (kansei-run)
+  (skipped 2 blocks)
+  ⚠️  splice rejected, baseline kept: src/component/layout/app-layout.tsx
+  ⚠️  gap:fragment-not-in-baseline-or-anchor-ambiguous:src/component/layout/app-layout.tsx
+  → 3 files written
+  ❌ 2 block(s) not applied — partial apply is a fail

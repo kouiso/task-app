@@ -1,0 +1,9 @@
+[apply_day] day01_開発環境を整えて、初めてのアプリを動かそう.md (tag=day01)
+  ✅ WRITE  src/app/globals.css (listing-run)
+  ✅ WRITE  src/app/page.tsx (listing-run-divergent)
+  ✅ WRITE  src/app/dashboard/page.tsx (listing-run)
+  (skipped 2 blocks)
+  ⚠️  splice rejected, baseline kept: .env.example
+  ⚠️  gap:fragment-not-in-baseline-or-anchor-ambiguous:.env.example
+  → 3 files written
+  ❌ 2 block(s) not applied — partial apply is a fail
