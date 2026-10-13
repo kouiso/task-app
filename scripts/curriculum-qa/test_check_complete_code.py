@@ -9,6 +9,7 @@
 
 import contextlib
 import io
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -16,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import check_complete_code  # noqa: E402
+import check_complete_section_fences  # noqa: E402
 from check_complete_code import check_corpus, code_tokens  # noqa: E402
 
 BLOCK = "```typescript\n// filepath: src/a.ts\n{body}\n```"
@@ -148,6 +150,21 @@ def token_cases() -> int:
     return failed
 
 
+def tracking_cases() -> int:
+    """既知ドリフトの登録は、直す場所と消す条件を辿れるよう Issue 番号を必ず持つ。"""
+    issue_ref = re.compile(r"#\d+")
+    failed = 0
+    for path, reason in check_complete_code.KNOWN_DRIFT.items():
+        if not issue_ref.search(reason):
+            failed += 1
+            print(f"  ❌ KNOWN_DRIFT の {path} に追跡 Issue の番号（#数字）がない")
+    for key, (reason, _lines) in check_complete_section_fences.LISTING_DIVERGES.items():
+        if not issue_ref.search(reason):
+            failed += 1
+            print(f"  ❌ LISTING_DIVERGES の {key} に追跡 Issue の番号（#数字）がない")
+    return failed
+
+
 def main() -> int:
     failed = 0
     for name, material, src, expected in CASES:
@@ -156,7 +173,8 @@ def main() -> int:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
     failed += token_cases()
-    total = len(CASES) + 5
+    failed += tracking_cases()
+    total = len(CASES) + 5 + 2
     if failed:
         print(f"❌ check_complete_code 自己テスト {failed}/{total} 失敗")
         return 1
