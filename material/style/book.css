@@ -495,11 +495,13 @@ figure img[src$=".png"] {
   }
 }
 
-/* 箇条書きの中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
-   次のページへ送る（issue #474 直し4）。段落の中のリンクへ当てると
-   Day 04 の組版が止まるので箇条書きに限る。 */
+/* 箇条書きと引用の中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
+   次のページへ送る（issue #474 直し4）。素の段落の中のリンクへ当てると
+   Day 04 の組版が止まるので、箇条書きと引用に限る。引用を外すと Day 01 の
+   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
 @media print {
-  li > a[data-pdf-footnote][href^="http"]::before {
+  li > a[data-pdf-footnote][href^="http"]::before,
+  blockquote > p > a[data-pdf-footnote][href^="http"]::before {
     footnote-policy: line;
   }
 }
