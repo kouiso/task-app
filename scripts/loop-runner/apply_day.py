@@ -35,6 +35,18 @@ from typing import Optional, Sequence
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 
+# フェンスの解釈は品質ゲート（scripts/curriculum-qa）と同一の
+# CommonMark 系スキャナーを使う。runner だけ ``` 専用だと、
+# lint が受理する ~~~ フェンスを読み落として契約が検算されない
+sys.path.insert(0, str(REPO_DIR / "scripts" / "curriculum-qa"))
+from fence_roles import (  # noqa: E402
+    INFO_PATH,
+    has_safe_path_shape,
+    is_safe_rel_path,
+    roles,
+)
+from markdown_scan import fence_states  # noqa: E402
+
 SKIP_LANGS = {
     "bash", "shell", "sh", "zsh", "console", "terminal", "output",
     "mermaid", "diff", "sql", "dockerfile", "makefile", "text",
@@ -49,27 +61,13 @@ FAMILY = {
     "example": {"env", "text", "txt", ""}, "env": {"env", "text", "txt", ""},
 }
 
-# 教材が書き込み指示を出すルート直下ファイルの限定許可。
-# src/ prisma/ public/ 以外を無条件に通すと「ターミナル」等のラベルが
-# 実ファイルへ化けるため、実教材で使う名前だけを列挙する。
-SAFE_ROOT_FILES = {
-    ".env.example", ".env.local.example", "docker-compose.yml", "docker-compose.yaml",
-    "next.config.ts", "next.config.js", "next.config.mjs",
-    "vitest.config.ts", "vitest.config.mts", "tailwind.config.ts", "tailwind.config.js",
-    "postcss.config.mjs", "postcss.config.js", "components.json", "middleware.ts",
-    "tsconfig.json", "playwright.config.ts",
-}
-SAFE_PREFIXES = ("src/", "prisma/", "public/", "scripts/", "e2e/")
-
 FP_RE = re.compile(r"filepath:\s*([^\s（)\u3000]+)")
-PATH_OK = re.compile(r"^[A-Za-z0-9_./\-]+$")
 CONTINUE_PATTERN = re.compile(r"^(.+?)（.*続き.*）\s*$")
 KANSEI_RE = re.compile(r"完成版|完成形")
 # 「完成版: …」「完成形: …」のラベル行。コードではなく写経ツール用の目印なので、
 # WRITE の全量書き出し・SPLICE の挿入ペイロードからは取り除く。
 #（そのまま挿すと成果物ファイルに目印コメントが混入する）
 KANSEI_LABEL = re.compile(r"^\s*(?://+|/\*+|\{\s*/\*)\s*完成[版形][:：]")
-JP_RE = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff（）]")
 
 # `...IDENT` / `...(` は JS/TS のスプレッド構文であって省略記号ではない。
 # 省略はコメント頭の …/...・日本語の省略語・点だけの行だけを認める。
@@ -84,12 +82,6 @@ FRAG_PROSE = re.compile(r"追加|追記|末尾に|先頭に|途中に|変更|修
 EXCERPT_RE = re.compile(r"抜粋|作成済み|読み比べ|確認用|実ファイルには対応しません|写経しません")
 
 IDENT_RE = re.compile(r"^[A-Za-z_$][\w$]*$")
-
-
-def is_safe_rel_path(rel_path: str) -> bool:
-    if ".." in rel_path or rel_path.startswith("/"):
-        return False
-    return rel_path.startswith(SAFE_PREFIXES) or rel_path in SAFE_ROOT_FILES
 
 
 def apply_safe_shell_ops(body: str, target_dir: Path,
@@ -110,7 +102,7 @@ def apply_safe_shell_ops(body: str, target_dir: Path,
         if parts[0] != "mv" or len(parts) != 3:
             continue
         src, dest = parts[1], parts[2]
-        if not is_safe_rel_path(src) or not is_safe_rel_path(dest):
+        if not has_safe_path_shape(src) or not has_safe_path_shape(dest):
             skipped.append(f"skipped unsafe shell move: {src} -> {dest}")
             continue
         src_path, dest_path = target_dir / src, target_dir / dest
@@ -147,8 +139,257 @@ def has_ellipsis(body: str) -> bool:
                for l in body.split("\n"))
 
 
+# `// filepath:` 目印はフェンス冒頭の注記行。文字列リテラル内の
+# "filepath: ..." まで消すと適用側とオラクル側の両方でコード行が欠落し、
+# expect 検算が欠落を検出できなくなるため、行全体がコメント注記のものだけ剥がす
+FP_COMMENT = re.compile(r"^\s*(?://|#|--|;|/\*+\s*|\*\s|<!--)\s*filepath:")
+
+# /.../ の直前トークンが演算子・開き括弧・キーワード系の時だけ
+# 正規表現リテラルとみなすヒューリスティック（除算との区別）。
+# 誤判定は「行を残す」側に倒れるので害がない
+_REGEX_HINT = re.compile(
+    r"(?:^|[(=,:;!&|?+\-*~^{]|=>"
+    r"|return|typeof|case|in|of|do|else|yield|await)\s*$")
+
+
+# JSX 要素のタグ名（フラグメント <> は別扱い）
+_JSX_OPEN = re.compile(r"<([A-Za-z][\w.]*)")
+_JSX_CLOSE = re.compile(r"</([A-Za-z][\w.]*)?\s*>")
+
+
+def _scan_variants(l: str, stack: tuple) -> "set[tuple]":
+    """1行を stack 状態から走査し、行末にあり得る区切りスタックの集合を返す。
+
+    `//` と `/*` は JS ではコメントだが JSX テキストではリテラルであり、
+    文脈なしには確定できない。そのため曖昧なものは両方の解釈を残す
+    （コメントとして行末まで無視する系と、リテラルとして走査を続ける系）。
+    """
+    results: set[tuple] = set()
+    work: list[tuple] = [(tuple(stack), 0)]
+    seen: set[tuple] = set()
+    while work:
+        st0, i0 = work.pop()
+        if (st0, i0) in seen:
+            continue
+        seen.add((st0, i0))
+        st = list(st0)
+        i, n, q = i0, len(l), None
+        # 前行末の \ 継続や未終了文字列は q をスタックの "q:" 要素として
+        # 持ち越す。行またぎ文字列の中身がコード面に出ると目印を誤剥離する
+        if st and st[-1].startswith("q:"):
+            q = st[-1][-1]
+            st.pop()
+        forked = False
+        while i < n:
+            c = l[i]
+            top = st[-1] if st else ""
+            if q is not None:
+                if c == "\\":
+                    i += 1
+                elif c == q:
+                    q = None
+            elif top in ('"""', "'''"):
+                if l.startswith(top, i):
+                    st.pop()
+                    i += 2
+            elif top == "blk":
+                if l.startswith("*/", i):
+                    st.pop()
+                    i += 1
+            elif top == "tpl":
+                if c == "\\":
+                    i += 1
+                elif c == "`":
+                    st.pop()
+                elif l.startswith("${", i):
+                    st.append("interp")
+                    i += 1
+            elif top.startswith("jsx-head:"):
+                # 開始タグ内部: /> で自分ごと閉じ、> で子要素モードへ
+                if l.startswith("/>", i):
+                    st.pop()
+                    i += 1
+                elif c == ">":
+                    st[-1] = "jsx:" + top[len("jsx-head:"):]
+                elif c == "{":
+                    st.append("{")
+                elif c == "`":
+                    st.append("tpl")
+                elif c in "'\"":
+                    q = c
+            elif top.startswith("jsx:"):
+                # 子要素モード: 行の中身はテキスト。ネスト要素と {} 式だけ追う
+                if l.startswith("</>", i):
+                    if top == "jsx:":
+                        st.pop()
+                    i += 2
+                elif l.startswith("</", i):
+                    m = _JSX_CLOSE.match(l, i)
+                    if m and (m.group(1) or "") == top[4:]:
+                        st.pop()
+                        i = m.end() - 1
+                    # 不一致の閉じタグはリテラル文字として進む
+                elif c == "<":
+                    if l.startswith("<>", i):
+                        st.append("jsx:")
+                        i += 1
+                    else:
+                        m = _JSX_OPEN.match(l, i)
+                        if m:
+                            st.append("jsx-head:" + m.group(1))
+                            i = m.end() - 1
+                        # < の後に名前が無いものはリテラル
+                elif c == "{":
+                    st.append("{")
+            elif top in ("interp", "{"):
+                if l.startswith("//", i):
+                    # コメント解釈: この行の走査はここで終わる。
+                    # q はここでは必ず None（引用符判定が先に処理される）
+                    results.add(tuple(st))
+                    # リテラル解釈: 中身として走査を続ける
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if l.startswith("/*", i):
+                    work.append((tuple(st + ["blk"]), i + 2))
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if c == "{":
+                    st.append("{")
+                elif c == "}":
+                    st.pop()
+                elif l.startswith('"""', i):
+                    st.append('"""')
+                    i += 2
+                elif l.startswith("'''", i):
+                    st.append("'''")
+                    i += 2
+                elif c == "`":
+                    st.append("tpl")
+                elif c in "'\"":
+                    q = c
+                elif c == "<" and (l.startswith("<>", i)
+                                   or _JSX_OPEN.match(l, i)):
+                    # 式の中の <Tag> / <> も JSX になりうる。
+                    # < リテラル（比較・ジェネリクス）との両解釈を残す
+                    m = _JSX_OPEN.match(l, i)
+                    if m:
+                        work.append((tuple(st + ["jsx-head:" + m.group(1)]),
+                                     m.end()))
+                    else:
+                        work.append((tuple(st + ["jsx:"]), i + 2))
+                    work.append((tuple(st), i + 1))
+                    forked = True
+                    break
+            else:  # コード面
+                if l.startswith("//", i):
+                    results.add(tuple(st))
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if l.startswith("/*", i):
+                    work.append((tuple(st + ["blk"]), i + 2))
+                    work.append((tuple(st), i + 2))
+                    forked = True
+                    break
+                if l.startswith('"""', i):
+                    st.append('"""')
+                    i += 2
+                elif l.startswith("'''", i):
+                    st.append("'''")
+                    i += 2
+                elif c == "`":
+                    st.append("tpl")
+                elif c in "'\"":
+                    q = c
+                elif c == "<" and (l.startswith("<>", i)
+                                   or _JSX_OPEN.match(l, i)):
+                    # <Tag> は JSX 要素かもしれないし、< は比較・
+                    # ジェネリクスかもしれない。両方の解釈を残す
+                    m = _JSX_OPEN.match(l, i)
+                    if m:
+                        work.append((tuple(st + ["jsx-head:" + m.group(1)]),
+                                     m.end()))
+                    else:
+                        work.append((tuple(st + ["jsx:"]), i + 2))
+                    work.append((tuple(st), i + 1))
+                    forked = True
+                    break
+                elif c == "/" and _REGEX_HINT.search(l[:i]):
+                    # 正規表現らしき /.../ は行内で読み飛ばす。
+                    # 中のバッククォートや引用符が区切り誤認を起こさない
+                    j = i + 1
+                    in_class = False
+                    while j < n:
+                        cj = l[j]
+                        if cj == "\\":
+                            j += 1
+                        elif in_class:
+                            if cj == "]":
+                                in_class = False
+                        elif cj == "[":
+                            in_class = True
+                        elif cj == "/":
+                            break
+                        j += 1
+                    i = j
+            i += 1
+        if not forked:
+            # 引用符が閉じないまま行末に来た時は \ 継続・未終了のいずれでも
+            # 「文字列内側」の可能性として次行へ持ち越す
+            results.add(tuple(st) + (("q:" + q,) if q else ()))
+    return results
+
+
+# 目印はフェンス冒頭の注記（実教材での最深位置は先頭5行目）。
+# 冒頭のこの行数までだけを解釈追跡の対象にし、それ以降の同名行は
+# 文字列や JSX テキストの中身であり得るので剥がさない。全行を追跡すると
+# 解釈候補が行数比例で増殖し O(n^2) になる（day28 で 0.01s→71s の退行）
+_MARKER_HEAD_LINES = 16
+
+
+def _drop_marker_lines(lines: Sequence[str],
+                       drop: "re.Pattern[str]") -> list[str]:
+    """フェンス冒頭の注記区間にある目印行（drop がヒットする行）だけを取り除く。
+
+    目印は教材ツール用のコメントだが、行またぎ文字列（JS のテンプレート
+    リテラル・Python の三重引用符）の内側に現れる同名の行は文字列の中身。
+    それまで剥がすと成果物の実行時値が変わるのに、オラクル側でも同じ行が
+    消えて検算をすり抜ける。冒頭区間の区切り内外は _scan_variants が行ごとの
+    解釈候補の集合として追跡し、剥がすのは全候補でコード面にある行だけに
+    限る。候補のどれか1つでも文字列内側を指すなら、その行は中身の可能性
+    があるので残す（誤判定は常に「残す」側に倒す。残った注記コメントは
+    無害だが、消えた中身は検算をすり抜ける）。
+    """
+    out: list[str] = []
+    states: set[tuple] = {()}
+    for i, l in enumerate(lines):
+        if i >= _MARKER_HEAD_LINES:
+            # 冒頭区間を過ぎた行は目印ではない。追跡も打ち切る
+            out.append(l)
+            continue
+        # 剥がしてよいのは全解釈で「コメント」と確定する行だけ。
+        # コード面ならどの注記形でもよい。{...} 式の内側では //・/*・{/* */}
+        # のどれも実コメント。{/* */} 形は JSX 子要素内でも式コンテナの
+        # コメントで表示されない（// は子要素内ではリテラルテキストなので
+        # 対象外）。tpl/文字列/ブロックコメント内側は常に中身なので残す。
+        jsx_note = l.lstrip().startswith("{/")
+        droppable = bool(drop.search(l)) and all(
+            (not s) or s[-1] in ("interp", "{")
+            or (jsx_note and s[-1].startswith("jsx"))
+            for s in states)
+        if not droppable:
+            out.append(l)
+        nxt: set[tuple] = set()
+        for st in states:
+            nxt |= _scan_variants(l, st)
+        states = nxt or {()}
+    return out
+
+
 def strip_fp(code: str) -> str:
-    return "\n".join(l for l in code.split("\n") if "filepath:" not in l)
+    return "\n".join(_drop_marker_lines(code.split("\n"), FP_COMMENT))
 
 
 def ext_of(path: str) -> str:
@@ -303,36 +544,150 @@ class Part:
     directive: Optional[Directive]
 
 
-def collect_parts(text: str) -> dict[str, list[Part]]:
+def _iter_fences(text: str):
+    """(lang, info, code, 直前の地の文) をフェンスごとに返す。
+
+    ``` と ~~~ の両方を lint と同じ意味で解釈する。
+    地の文は開始行の直前6行まで（直前のフェンスより手前は取らない）。
+    """
+    lines = text.split("\n")
+    buf: list[str] = []
+    info = lang = before = ""
+    open_lineno = prev_close = 0
+    for lineno, _line, state, fence in fence_states(text):
+        if state == "open" and fence is not None:
+            buf, info, lang, open_lineno = [], fence.info, fence.lang, lineno
+            before = "\n".join(
+                lines[max(prev_close, open_lineno - 7):open_lineno - 1])
+        elif state == "inside":
+            buf.append(_line)
+        elif state == "close":
+            yield lang, info, "\n".join(buf), before
+            prev_close = lineno
+            open_lineno = 0
+    # 閉じられないまま終端したフェンスも CommonMark と同じく本文として扱う。
+    # 捨てると expect 契約が検算されずに通ってしまう
+    if open_lineno:
+        yield lang, info, "\n".join(buf), before
+
+
+# フェンス info 文字列の役割タグは fence_roles で lint と共有する。
+# ` ```tsx apply path=...` は適用する断片、` ```tsx expect path=...` は
+# その日の最終状態の検算用オラクル（適用はしない）。`apply expect` の
+# 併記は自己比較になるため廃止（invalid 扱い）。役割タグが無い
+# filepath フェンスは従来どおり apply 扱いにして全30日の後方互換を保つ。
+_roles = roles
+
+
+# expect 本体から剥がす注記行の合成パターン。
+# コード面上の目印だけが対象（文字列内の同名行は中身なので残す）
+_EXPECT_MARKER = re.compile(
+    f"(?:{FP_COMMENT.pattern})|(?:{KANSEI_LABEL.pattern})")
+
+
+def _expect_body(code: str) -> str:
+    """expect フェンス本体から写経ツール用の目印行を剥がした本文を返す。
+
+    検算対象は「ファイルが最終的にこうなる」本文なので、
+    `// filepath:` と `// 完成版:` 系ラベルは成果物に含まれない。
+    """
+    lines = _drop_marker_lines(code.split("\n"), _EXPECT_MARKER)
+    return "\n".join(lines).strip("\n")
+
+
+def _expect_norm(body: str) -> str:
+    """expect 検算用の正規化。前後の空行だけを剥がした生文字列。
+
+    断片照合用の norm() は空行・行末空白を吸収するが、完成版の検算は
+    「ファイルがこの本文になる」厳密な契約。行末空白まで揃えると
+    テンプレートリテラル内の実行時値の違い（`` `a ` `` vs `` `a` ``）を
+    見逃すため、境界の空行だけを許して中身は byte 一致を要求する。
+    """
+    return body.strip("\n")
+
+
+def collect_parts(text: str) -> tuple[dict[str, list[Part]],
+                                      dict[str, list[str]], list[str]]:
+    """(parts, expects, invalid) を返��。
+
+    expects は path -> 完成版本文のリスト（同一対象の expect が複数あれば
+    全件を検算する）。invalid は役割タグを名乗りながら検算・適用に使える
+    安全な対象を持たないフェンスの一覧で、呼び出し側で skip 扱いにする。
+    """
     parts: dict[str, list[Part]] = {}
+    expects: dict[str, list[str]] = {}
+    invalid: list[str] = []
     cur_fp: Optional[str] = None
-    prev_end = 0
-    for m in re.finditer(r"```([a-zA-Z0-9]*)\n(.*?)```", text, re.S):
-        lang, code = m.group(1).lower(), m.group(2)
-        before = text[max(prev_end, m.start() - 400):m.start()]
-        before = "\n".join(before.split("\n")[-6:])
+    def _usable(fp: Optional[str]) -> bool:
+        return bool(fp and is_safe_rel_path(fp))
+
+    for lang, info, code, before in _iter_fences(text):
         prose = classify_prose(before)
-        prev_end = m.end()
+        roles_set = _roles(info)
+        info_fp = INFO_PATH.search(info)
         fm = FP_RE.search(code)
-        if fm:
-            fp = fm.group(1).strip()
-            fp_line = next(l for l in code.split("\n") if "filepath:" in l)
-            if PATH_OK.match(fp) and is_safe_rel_path(fp) and not JP_RE.search(fp):
-                cur_fp = fp
-                body = strip_fp(code)
-                if not body.strip():
-                    continue
-                head = "\n".join(body.split("\n")[:2])
-                parts.setdefault(fp, []).append(Part(
-                    cont=is_continuation(fp_line, code),
-                    body=body,
-                    kansei=bool(KANSEI_RE.search(head)),
-                    unmarked=False,
-                    prose=prose,
-                    directive=directive_of(fp_line, body),
-                ))
-            else:
-                cur_fp = None  # 読み比べ用・ターミナル等
+        if "expect" in roles_set:
+            # `apply expect` 併記は複合役割。同じ本文を��用してから自分と
+            # 突合する自己比較は何も検算しないため、適用・検算のどちらにも
+            # 使わず invalid とする（lint 側でもエラー）
+            if "apply" in roles_set:
+                invalid.append(
+                    "apply+expect combined role is not allowed "
+                    f"(info: {info!r})")
+                cur_fp = None
+                continue
+            # expect は「このパスがこの本文になる」宣言。対象は info の
+            # path= のみ（本文の // filepath: は契約の対象として認めない。
+            # lint と同じ規則）。expect 本体は適用せず検算にだけ使う
+            target = info_fp.group(1) if info_fp else None
+            if not _usable(target):
+                invalid.append(
+                    f"expect fence without safe path= (info: {info!r})")
+                cur_fp = None
+                continue
+            expects.setdefault(target, []).append(_expect_body(code))
+            cur_fp = None
+            continue
+        elif "apply" in roles_set:
+            fp = (info_fp.group(1) if info_fp else
+                  fm.group(1).strip() if fm else None)
+            if fp is None:
+                # apply を名乗るのに対象が読み取れないフェンスを
+                # 直前ファイルへの続き扱いすると別ファイルへ混入する
+                invalid.append(
+                    f"apply fence without target (info: {info!r})")
+                cur_fp = None
+                continue
+            if not _usable(fp):
+                # 役割を名乗った上で書き込めない対象を指すフェンスは、
+                # 黙って直前ファイルへの続き扱いにすると別ファイルへ
+                # 混入する。適用しないことを記録する。
+                invalid.append(f"apply fence with unsafe path: {fp!r}")
+                cur_fp = None
+                continue
+        else:
+            fp = fm.group(1).strip() if fm else None
+        if fp is not None and _usable(fp):
+            cur_fp = fp
+            body = strip_fp(code)
+            if not body.strip():
+                continue
+            fp_line = next(
+                (l for l in code.split("\n") if "filepath:" in l),
+                f"// filepath: {fp}")
+            head = "\n".join(body.split("\n")[:2])
+            parts.setdefault(fp, []).append(Part(
+                cont=is_continuation(fp_line, code),
+                body=body,
+                kansei=bool(KANSEI_RE.search(head)),
+                unmarked=False,
+                prose=prose,
+                directive=directive_of(fp_line, body),
+            ))
+            continue
+        if fm or info_fp:
+            # 実ファイルでない参照フェンスや安全でない path の指定。
+            cur_fp = None
             continue
         if cur_fp is None or lang in SHELLISH:
             continue
@@ -341,7 +696,7 @@ def collect_parts(text: str) -> dict[str, list[Part]]:
                 cont=True, body=code,
                 kansei=bool(KANSEI_RE.search("\n".join(code.split("\n")[:2]))),
                 unmarked=True, prose=prose, directive=None))
-    return parts
+    return parts, expects, invalid
 
 
 # ---------------------------------------------------------------------------
@@ -353,8 +708,8 @@ def candidates(parts: list[Part]):
     seen: set[str] = set()
     def emit(label: str, sub: list[Part]):
         body = "\n".join(
-            l for p in sub for l in p.body.split("\n")
-            if not KANSEI_LABEL.match(l))
+            l for p in sub
+            for l in _drop_marker_lines(p.body.split("\n"), KANSEI_LABEL))
         key = body[:4000]
         if body.strip() and key not in seen:
             seen.add(key)
@@ -402,7 +757,10 @@ def looks_complete(joined: str) -> bool:
         if not s:
             continue
         return bool(re.match(
-            r"^('use (client|server)'|\"use (client|server)\"|import |export |//|/\*|\{/\*|#|@|/\*)", s))
+            r"^('use (client|server)'|\"use (client|server)\"|import |export "
+            r"|//|/\*|\{/\*|#|@"
+            r"|(?:async\s+)?function\s|const\s|let\s|var\s"
+            r"|type\s|interface\s|class\s|enum\s|namespace\s|declare\s)", s))
     return False
 
 
@@ -1200,6 +1558,11 @@ def oracle_anchor(cur: list[str], base_lines: list[str], fl: list[str]) -> Optio
 JSX_ELEM_HEAD = re.compile(r"^\s*<([A-Za-z][\w.]*)")
 PLACEHOLDER_COMMENT = re.compile(r"残す|そのまま|変えない|残して")
 
+# splice 挿入ペイロードから剥がす行（プレースホルダー指示 + 完成ラベル）。
+# コード面上の目印だけが対象（文字列内の同名行は中身なので残す）
+_PAYLOAD_MARKER = re.compile(
+    f"(?:{PLACEHOLDER_COMMENT.pattern})|(?:{KANSEI_LABEL.pattern})")
+
 
 def element_replace(cur: list[str], base_lines: list[str], fl: list[str]) -> Optional[list[str]]:
     """断片が <Tag ...> の完全な要素で cur に同名要素がある時は要素ごと置き換える。
@@ -1933,9 +2296,8 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
             continue  # 抜粋・読み比べ・写経しませんは参照提示なので適用しない
         # プレースホルダー行（「既存の〜を残す」）はコードではなく指示なので、
         # 挿入用の断片からは除く。retag だけは区切り記号として使うため元の fl を見る
-        fl_ins = [l for l in fl
-                  if not PLACEHOLDER_COMMENT.search(l)
-                  and not KANSEI_LABEL.match(l)]
+        fl_ins = _drop_marker_lines(
+            fl, _PAYLOAD_MARKER)
         if not fl_ins:
             continue
         # 照合は norm 済み行で行うが、書き込みは教材フェンスの原文を使う。
@@ -2036,6 +2398,15 @@ def splice_parts(cur_norm: list[str], cur_raw: list[str],
                 raw = raw[:i] + fg + raw[i + hit:]
                 last_end = i + hit
                 continue
+        # scaffold が完成版を配るファイル（.env.example 等）では、
+        # 教材の「この行を足す」断片が既に散在して全部入っている。
+        # 行の並びを問わず全行が在るなら追加することは無い = 冪等スキップ。
+        # verbatim/present_norm の後に置く: 空白差だけの壊れた baseline は
+        # 先に修復経路へ渡すため
+        out_lines = set(out)
+        if (not part.directive
+                and all(l in out_lines for l in fl_ins)):
+            continue
         if part.directive:
             res = apply_directive(out, part.directive, fl_ins)
             if res is None:
@@ -2109,16 +2480,12 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
     meta = {"modified": [], "created": []}
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    # パス区切りと `_` を個別エスケープしないと `a/b` と `a_b` や
-    # `a_/b` と `a/_b` が衝突する。`_`→`_u`、`/`→`_s` の一方向変換にする
-    key = "".join("_u" if c == "_" else "_s" if c == "/" else c
-                  for c in rel_path)
     if rel_path in meta["created"]:
         # 初回実行で新規作成と記録済み。再実行時は作成状態のまま残し、
         # restore で削除できるようにする（modified へ再分類しない）。
         pass
     elif dest.exists():
-        snap = backup_root / tag / "files" / key
+        snap = backup_root / tag / "files" / _snap_key(rel_path)
         # 同タグで再実行しても初回のバックアップを上書きしない。
         # restore は「このタグの適用前」の状態を保証する責務があるため。
         if not snap.exists():
@@ -2138,6 +2505,43 @@ def snapshot_file(backup_root: Path, tag: str, rel_path: str, dest: Path) -> Non
                          encoding="utf-8")
 
 
+def _snap_key(rel_path: str) -> str:
+    """`a/b` と `a_b`、`a_/b` と `a/_b` が衝突しない一方向変換。
+
+    `_`→`_u`、`/`→`_s` の置換でファイル名キーを作る。
+    """
+    return "".join(
+        "_u" if c == "_" else "_s" if c == "/" else c for c in rel_path)
+
+
+def restore_one(backup_root: Path, tag: str, target_dir: Path,
+                rel_path: str) -> bool:
+    """1ファイルだけを <tag> の適用前状態へ戻す。
+
+    expect 検算で不一致が出た時に、そのファイルだけ baseline を
+    クリーンな状態へ戻すために使う（他の正常ファイルは巻き込まない）。
+    """
+    meta_path = backup_root / tag / "manifest.json"
+    if not meta_path.exists():
+        return False
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    dest = target_dir / rel_path
+    if rel_path in meta.get("modified", []):
+        snap = backup_root / tag / "files" / _snap_key(rel_path)
+        if not snap.exists():
+            snap = backup_root / tag / "files" / rel_path.replace("/", "__")
+        if not snap.exists():
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(snap, dest)
+        return True
+    if rel_path in meta.get("created", []):
+        if dest.exists():
+            dest.unlink()
+        return True
+    return False
+
+
 def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     """manifest に従い <tag> の適用前状態へ復元し、復元したパスを返す。"""
     meta_path = backup_root / tag / "manifest.json"
@@ -2146,8 +2550,7 @@ def restore_day(backup_root: Path, tag: str, target_dir: Path) -> list[str]:
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     restored: list[str] = []
     for rel in meta.get("modified", []):
-        snap = backup_root / tag / "files" / "".join(
-            "_u" if c == "_" else "_s" if c == "/" else c for c in rel)
+        snap = backup_root / tag / "files" / _snap_key(rel)
         if not snap.exists():
             # キー形式変更前に作られたバックアップ（`/`→`__` 形式）も復元対象にする
             snap = backup_root / tag / "files" / rel.replace("/", "__")
@@ -2183,7 +2586,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
     ]
     esbuild = next((p for p in esbuild_candidates if p and Path(p).exists()), None)
 
-    parts_map = collect_parts(content)
+    parts_map, expects, invalid_fences = collect_parts(content)
 
     # シェル操作(mv)はファイル系フェンスより先に処理する
     written: list[str] = []
@@ -2195,6 +2598,11 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
 
     applied_rec: list[dict] = []
     gaps: list[dict] = []
+    written_paths: set[str] = set()
+
+    for inv in invalid_fences:
+        gaps.append({"day": tag, "reason": "invalid-fence", "detail": inv})
+        skipped.append(f"invalid tagged fence: {inv}")
 
     for path, parts in parts_map.items():
         dest = target_dir / path
@@ -2219,6 +2627,24 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                 continue
             if not parses_as_file(path, joined, esbuild):
                 continue
+            if not dest_exists and parts:
+                # 新規ファイルを断片から組み立てる時、先頭断片の冒頭行を
+                # 含まない候補は「完成版: 途中から」型の再掲で、採用すると
+                # 'use client' や import の頭が静かに欠ける（day13型）。
+                # ファイルの先頭は最初の完全な断片（続き・無印ではない part）
+                # の冒頭行とみなす。先頭が未完成の再掲の時に完成版リスティングが
+                # 頭落ち判定で弾かれないためである。
+                head_part = next(
+                    (p for p in parts if not p.cont and not p.unmarked),
+                    parts[0])
+                head_line = next(
+                    (l for l in _drop_marker_lines(
+                        head_part.body.split("\n"), KANSEI_LABEL)
+                     if l.strip() and not l.lstrip().startswith(("//", "/*"))),
+                    None)
+                if head_line is not None and head_line.strip() \
+                        not in (l.strip() for l in joined.split("\n")):
+                    continue
             if dest_exists:
                 r1, r2 = coverage(joined, base_lines)
                 # 中間バージョンは完成版 oracle と乖離するため、
@@ -2275,6 +2701,7 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
                             encoding="utf-8")
             written.append(f"WRITE  {path} ({mode})")
             applied_rec.append({"path": path, "n": len(parts), "mode": mode})
+            written_paths.add(path)
             continue
 
         # リスティングとして採用できない = 断片。既存ファイルへ splice する。
@@ -2317,6 +2744,35 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         dest.write_text(spliced_text, encoding="utf-8")
         written.append(f"SPLICE {path} ({len(parts)} parts)")
         applied_rec.append({"path": path, "n": len(parts), "mode": "splice"})
+        written_paths.add(path)
+
+    # expect フェンスの検算。適用済みファイルだけを対象にし、不一致は
+    # そのファイルを <tag> の適用前状態へ戻す（連鎖崩壊を起こさない）。
+    # 同一対象に複数の expect がある場合は全件に一致する必要がある。
+    for path, oracle_bodies in expects.items():
+        if path not in parts_map:
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-without-apply-fence"})
+            skipped.append(f"expect without apply: {path}")
+            continue
+        if path not in written_paths:
+            # 適用自体が reject/スキップ済み。そちらの記録で足りる。
+            continue
+        dest = target_dir / path
+        got = dest.read_text(encoding="utf-8") if dest.exists() else ""
+        if all(_expect_norm(got) == _expect_norm(ob) for ob in oracle_bodies):
+            applied_rec.append({"path": path, "mode": "expect-ok"})
+            continue
+        if restore_one(backup_root, tag, target_dir, path):
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-mismatch; baseline restored"})
+            skipped.append(f"expect mismatch, baseline restored: {path}")
+        else:
+            # スナップショットが取れていない（書き込み前に snapshot できなかった
+            # 異常系）。ファイルは不一致のまま残るので完走扱いにはしない。
+            gaps.append({"day": tag, "path": path,
+                         "reason": "expect-mismatch; no snapshot to restore"})
+            skipped.append(f"expect mismatch, file left dirty: {path}")
 
     if ledger_path is not None:
         rec = {"day": tag, "md": md_path.name, "applied": applied_rec, "gaps": gaps}
@@ -2324,7 +2780,8 @@ def apply_day(md_path: Path, target_dir: Path, *, oracle_dir: Optional[Path] = N
         with ledger_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-    skipped.extend(f"gap:{g['reason']}:{g['path']}" for g in gaps)
+    skipped.extend(f"gap:{g['reason']}:{g.get('path', g.get('detail', ''))}"
+                   for g in gaps)
     return written, skipped
 
 
@@ -2390,18 +2847,16 @@ def main() -> None:
         print("  ℹ️ no app file changes in this day")
         return
 
-    # 0 件書き込みで skip がある = filepath マーカー不足 or 検出ロジック過剰スキップ。
-    # 後段ステップが false-positive で「pass」と判定するのを防ぐため non-zero で抜ける。
-    if not written:
-        print("  ❌ no files written — fail to surface false-positive day-pass")
-        sys.exit(2)
-
     # 一部のファイルが reject/skip されても別ファイルが書ければ終了コード0に
     # なると、「完走した」と見做して部分適用のまま翌日へ進んでしまう。
-    # Gate B では1件でも未適用があれば失敗として扱う。
+    # Gate B では1件でも未適用があれば失敗として扱う。書き込み0件でも同じ。
     if skipped:
         print(f"  ❌ {len(skipped)} block(s) not applied — partial apply is a fail")
         sys.exit(3)
+
+    if not written:
+        print("  ❌ no files written — fail to surface false-positive day-pass")
+        sys.exit(2)
 
 
 if __name__ == "__main__":

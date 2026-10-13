@@ -1,0 +1,3 @@
+[apply_day] day29_ユーザー詳細・編集ページを作ろう.md (tag=day29)
+  ✅ WRITE  src/server/api/routers/user.ts (kansei-run)
+  → 1 files written

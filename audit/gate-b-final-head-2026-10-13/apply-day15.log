@@ -1,0 +1,5 @@
+[apply_day] day15_タスク編集・削除.md (tag=day15)
+  ✅ WRITE  src/server/api/routers/task.ts (kansei-run)
+  ✅ SPLICE src/component/task/task-dialog.tsx (4 parts)
+  ✅ WRITE  src/app/task/page.tsx (kansei-run)
+  → 3 files written

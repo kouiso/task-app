@@ -1,0 +1,7 @@
+[apply_day] day14_タスク新規作成.md (tag=day14)
+  ✅ WRITE  src/server/api/routers/task.ts (kansei-run)
+  ✅ WRITE  src/server/api/routers/search.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (kansei-run)
+  ✅ WRITE  src/component/task/task-dialog.tsx (kansei-run)
+  ✅ WRITE  src/app/task/page.tsx (kansei-run)
+  → 5 files written

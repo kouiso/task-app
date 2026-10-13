@@ -1,0 +1,4 @@
+[apply_day] day12_メンバー追加.md (tag=day12)
+  ✅ WRITE  src/server/api/routers/project.ts (kansei-run)
+  ✅ WRITE  src/app/project/page.tsx (kansei-run)
+  → 2 files written

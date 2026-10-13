@@ -1,0 +1,13 @@
+[apply_day] day26_エラーページを作って、バグを退治しよう.md (tag=day26)
+  ✅ WRITE  src/app/error.tsx (kansei-run)
+  ✅ WRITE  src/app/not-found.tsx (kansei-run)
+  ✅ WRITE  src/app/dashboard/page.tsx (kansei-run)
+  ✅ WRITE  src/lib/query-error.ts (listing-run)
+  ✅ WRITE  src/app/my-task/page.tsx (kansei-run)
+  ✅ WRITE  vitest.config.ts (listing-run)
+  ✅ WRITE  src/test/setup.ts (listing-run)
+  ✅ WRITE  src/app/dashboard/page.test.tsx (listing-run)
+  ✅ WRITE  src/app/my-task/page.test.tsx (listing-run)
+  ✅ WRITE  src/app/report/page.test.tsx (listing-run)
+  ✅ WRITE  src/app/report/page.tsx (kansei-run)
+  → 11 files written

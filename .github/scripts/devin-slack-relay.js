@@ -11,8 +11,8 @@ const MARKER_RE = /<!-- devin-slack-triggered([^>]*)-->/;
 const SESSION_URL_RE = /https:\/\/(?:[\w-]+\.)*devin\.ai\/sessions\/[0-9a-f]+/;
 const FAILURE_RE =
   /Failed to create Devin|Failed to start|Failed to launch|couldn'?t start|could not start|unable to start|error creating session/i;
-const MAX_TRIES = 36; // 10分間隔で約6時間
-const STALE_TRIGGER_TRIES = 6; // 起動要求後に Devin の返信が無いまま許容する sweep 回数(約1時間)
+const MAX_TRIES = 4; // 6時間間隔で約1日。無言のまま回し続けて Actions と Slack を無駄に叩かんため打ち切る
+const STALE_TRIGGER_TRIES = 2; // 起動要求後に Devin の返信が無いまま許容する sweep 回数(約12時間)
 
 const STATUS_LABELS = {
   queued: 'Queued',
@@ -166,13 +166,23 @@ async function ensureLabel(github, repo, name, color, description) {
     });
   } catch (e) {
     if (e.status !== 422) throw e; // 既存なら 422
+    // 既存ラベルの説明が古いままだと表示が実態とずれる。説明に差がある時だけ合わせる(色は手で変えられても触らない)
+    const cur = await github.rest.issues.getLabel({ owner: repo.owner, repo: repo.repo, name });
+    if ((cur.data.description || '') !== (description || '')) {
+      await github.rest.issues.updateLabel({
+        owner: repo.owner,
+        repo: repo.repo,
+        name,
+        description,
+      });
+    }
   }
 }
 
 const LABEL_DEFS = {
   'devin-queued': { color: '0e8a16', desc: 'Devin 起動を定期実行にキューイング' },
   'devin-waiting': { color: 'fbca04', desc: 'Devin 起動失敗。定期実行で再試行中' },
-  'devin-failed': { color: 'd93f0b', desc: 'Devin 起動リトライ上限到達' },
+  'devin-failed': { color: 'd93f0b', desc: 'Devin 起動リトライ上限到達または無応答。要手動対応' },
 };
 
 async function syncLabels(github, repo, issueNumber, status, cfg) {
@@ -219,7 +229,7 @@ function statusCommentBody({ permalink, sessionUrl, status, ts, tries, note }) {
     triggered: '起動要求送信済み',
     pending: '失敗。定期実行で再試行中',
     done: 'Devin セッション起動済み',
-    failed: '再試行上限到達。要手動対応',
+    failed: '再試行上限到達または Devin 無応答。要手動対応',
   }[status];
   const lines = [
     ':robot_face: Devin 起動リレー',
@@ -565,7 +575,10 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
 
   if (marker?.status === 'triggered' && marker?.ts) {
     // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
-    // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
+    // どちらも無い無応答が続く場合は tries を進め、上限で追跡を打ち切る。
+    // 無言は「起動済みで作業中」の可能性が高く、pending へ降格して再投稿すると重複 Devin セッションを
+    // 量産する。triggered のまま残すと、ラベルを付け直しても dispatch が「起動済み」と読んで弾くので、
+    // 手動再投稿できる failed に落とす。
     const r = await slackReplies(cfg, marker.ts);
     if (!r.ok) {
       // スレッドが消えているなら pending へ降格して次回新スレッドで再投稿させる
@@ -613,9 +626,9 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
           context,
           core,
           issue,
-          { ts: marker.ts, status: 'pending', tries },
+          { ts: marker.ts, status: 'failed', tries },
           cfg,
-          'Devin 応答なし。定期実行で再投稿します',
+          'Devin 応答なし。自動再投稿はしません。Slack スレッドを確認し、未起動ならラベルを付け直してください',
         );
         await removeTriggerLabel(issue.number);
       } else {
@@ -664,7 +677,7 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
         issue,
         { ts: marker?.ts, status: 'failed', tries },
         cfg,
-        '再試行回数の上限に達しました',
+        'Devin 応答なし。再試行回数の上限に達したため打ち切りました。ラベルを付け直してください',
       );
       return;
     }

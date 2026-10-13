@@ -11,7 +11,7 @@ permissions:
 jobs:
   trigger-devin:
     name: Trigger Devin via Slack
-    runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     if: |
       github.event.label.name == 'devin' ||

@@ -1,0 +1,6 @@
+[apply_day] day21_統計カードを表示.md (tag=day21)
+  ✅ WRITE  src/server/api/routers/report.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (listing-run)
+  ✅ WRITE  src/app/report/page.tsx (kansei-run)
+  ✅ WRITE  src/component/layout/app-layout.tsx (kansei-run)
+  → 4 files written

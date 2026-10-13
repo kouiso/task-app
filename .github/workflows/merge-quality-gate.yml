@@ -5,6 +5,11 @@ on:
     branches: [main]
     types: [closed]
 
+# 同一 workflow・同 PR の二重起動を潰す。closed(merge) の github.ref は main になり別PRの検査を巻き込むため PR 番号で分ける
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check-quality:
     name: Post-merge quality check

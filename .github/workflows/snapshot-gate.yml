@@ -34,13 +34,18 @@ name: 写経ビルド検査
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
   # npm の推移的依存と runner の Node 版はリポジトリの差分に現れん。
   # pdf-book-full.yml と同じ理屈で、週次で回して初めて分かる。
   # 月曜 04:00 JST（PDF週次の1時間後。runner の取り合いを避ける）
   schedule:
     - cron: '0 19 * * 0'
   workflow_dispatch:
+
+# 同一 workflow・同 ref の二重起動を潰す
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -49,6 +54,8 @@ defaults:
 jobs:
   snapshot:
     name: 写経ビルド検査
+    # draft PR では走らない（ready_for_review で再走）。draft は merge 不能なのでゲートの意味は変わらん
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
