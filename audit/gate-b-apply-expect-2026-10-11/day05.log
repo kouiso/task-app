@@ -1,0 +1,4 @@
+[apply_day] day05_ログイン画面のUI.md (tag=day05)
+  ✅ WRITE  src/app/login/page.tsx (kansei-run)
+  ✅ WRITE  src/lib/redirect.ts (kansei-run)
+  → 2 files written

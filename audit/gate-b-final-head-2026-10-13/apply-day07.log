@@ -1,0 +1,8 @@
+[apply_day] day07_認証バックエンドを作ろう.md (tag=day07)
+  ✅ WRITE  src/lib/session.ts (kansei-run)
+  ✅ WRITE  src/server/api/trpc.ts (kansei-run)
+  ✅ WRITE  src/server/api/routers/_helpers/select.ts (kansei-run)
+  ✅ WRITE  src/server/api/routers/auth.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (listing-run)
+  ✅ WRITE  src/middleware.ts (kansei-run)
+  → 6 files written

@@ -1,0 +1,5 @@
+[apply_day] day09_プロジェクト一覧画面.md (tag=day09)
+  ✅ WRITE  src/server/api/routers/project.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (kansei-run)
+  ✅ WRITE  src/app/project/page.tsx (kansei-run)
+  → 3 files written

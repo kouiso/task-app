@@ -1,0 +1,5 @@
+[apply_day] day23_週次レポート.md (tag=day23)
+  ✅ WRITE  src/server/api/routers/report.ts (kansei-run)
+  ✅ WRITE  src/app/report/page.tsx (kansei-run)
+  ✅ WRITE  src/app/report/weekly/page.tsx (listing-run)
+  → 3 files written

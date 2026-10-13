@@ -1,0 +1,5 @@
+[apply_day] day30_完成版を公開！.md (tag=day30)
+  ✅ SPLICE .env.example (1 parts)
+  ✅ WRITE  docker-compose.yml (listing-run)
+  ✅ SPLICE next.config.ts (4 parts)
+  → 3 files written

@@ -1,0 +1,6 @@
+[apply_day] day18_コメント投稿.md (tag=day18)
+  ✅ WRITE  src/server/api/routers/comment.ts (kansei-run)
+  ✅ WRITE  src/server/api/root.ts (kansei-run)
+  ✅ WRITE  src/component/task/task-detail-dialog.tsx (kansei-run)
+  ✅ SPLICE src/app/task/page.tsx (1 parts)
+  → 4 files written
