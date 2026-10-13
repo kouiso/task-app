@@ -7,7 +7,7 @@ name: Devin Slack Retry
 on:
   schedule:
     # 10分毎だと無言の issue がある限り 1日144回起動する。6時間毎で足りる
-    - cron: '0 */6 * * *'
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions:
