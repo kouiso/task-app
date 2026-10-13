@@ -11,6 +11,7 @@ Gate B で実際に起きた2系統の破綻を固定する:
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1946,6 +1947,62 @@ class EofBlankLineFixes(unittest.TestCase):
         raw = [["a"], ["", ""]]
         self.assertEqual(ad._detach_trailing_blanks(raw), ["", ""])
         self.assertEqual(raw, [["a"]])
+
+
+class ParsesAsFileEsbuild(unittest.TestCase):
+    """parses_as_file の esbuild 呼び出し形式の回帰テスト。
+
+    Gate B 再現ツール (devin/gate-b-evidence-20261010 ブランチの
+    audit/gate-b-repro-2026-10-10/tools/apply_day.py) は loader を
+    ``--loader:tsx`` の CLI フラグで渡し、esbuild に全件拒否させて
+    parse 判定を常に False にした（同ブランチの 4c6b501 で修正済み。
+    main の本体は最初から拡張子付きの一時ファイルの形式）。loader を
+    フラグで渡す形式に戻った時に検出する。esbuild が無い環境では
+    構造検査へ落ちるためスキップする。
+    """
+
+    def _esbuild(self) -> str:
+        found = _find_esbuild()
+        if found is None:
+            self.skipTest("esbuild not found")
+        return found
+
+    def test_valid_ts_family_parses(self):
+        # .ts/.tsx が現行形式（拡張子付き一時ファイル）で通ること。
+        # 誤って --loader フラグ形式に戻すと正しい本文まで False になる
+        esbuild = self._esbuild()
+        self.assertTrue(
+            ad.parses_as_file("src/a.ts", "export const a = 1;\n", esbuild))
+        self.assertTrue(
+            ad.parses_as_file(
+                "src/a.tsx", "export const A = () => <div />;\n", esbuild))
+
+    def test_syntax_error_only_fails_with_real_esbuild(self):
+        # この本文は括弧の深さも先頭行の完成形判定も通る (= esbuild が
+        # 無ければ構造検査で True)。False が返るのは実 esbuild の parse が
+        # 失敗した時だけなので、parse 検証が実呼び出しである証明になる
+        esbuild = self._esbuild()
+        body = "export const a = ;\n"
+        self.assertTrue(ad.structural_balance_ok(body))
+        self.assertTrue(ad.looks_complete(body))
+        self.assertFalse(ad.parses_as_file("src/a.ts", body, esbuild))
+
+    def test_loader_flag_form_is_rejected_by_esbuild(self):
+        # 再現ツールの誤形式。esbuild は loader フラグに「.拡張子=loader」の
+        # 指定を要求するため returncode != 0 となり、これを parses_as_file
+        # の裏に使うと全件不一致の誤判定に繋がる
+        esbuild = self._esbuild()
+        with tempfile.NamedTemporaryFile("w", suffix=".tsx",
+                                         delete=False) as t:
+            t.write("export const A = () => <div />;\n")
+            tmp = t.name
+        try:
+            r = subprocess.run([esbuild, "--loader:tsx", tmp,
+                                "--outfile=/dev/null"],
+                               capture_output=True, text=True)
+            self.assertNotEqual(r.returncode, 0, r.stderr)
+        finally:
+            os.unlink(tmp)
 
 
 if __name__ == "__main__":
