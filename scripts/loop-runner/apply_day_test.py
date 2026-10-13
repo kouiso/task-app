@@ -1952,13 +1952,12 @@ class EofBlankLineFixes(unittest.TestCase):
 class ParsesAsFileEsbuild(unittest.TestCase):
     """parses_as_file の esbuild 呼び出し形式の回帰テスト。
 
-    Gate B 再現ツール (devin/gate-b-evidence-20261010 ブランチの
-    audit/gate-b-repro-2026-10-10/tools/apply_day.py) は loader を
-    ``--loader:tsx`` の CLI フラグで渡し、esbuild に全件拒否させて
-    parse 判定を常に False にした（同ブランチの 4c6b501 で修正済み。
-    main の本体は最初から拡張子付きの一時ファイルの形式）。loader を
-    フラグで渡す形式に戻った時に検出する。esbuild が無い環境では
-    構造検査へ落ちるためスキップする。
+    esbuild は loader フラグに「.拡張子=loader」の形式を要求するため、
+    ``--loader:tsx`` をフラグとして渡す呼び出しは常に拒否され、
+    parse 判定が常に False になる（Gate B 再現ツールが実際に踏んだ
+    失敗。本体は最初から拡張子付きの一時ファイルの形式なので、
+    loader をフラグで渡す形式に戻った時にここで検出する）。
+    esbuild が無い環境では構造検査へ落ちるためスキップする。
     """
 
     def _esbuild(self) -> str:
@@ -1999,8 +1998,12 @@ class ParsesAsFileEsbuild(unittest.TestCase):
         try:
             r = subprocess.run([esbuild, "--loader:tsx", tmp,
                                 "--outfile=/dev/null"],
-                               capture_output=True, text=True)
+                               capture_output=True, text=True,
+                               timeout=30)
             self.assertNotEqual(r.returncode, 0, r.stderr)
+            # 拒否の理由が loader フラグ側にあることも見る。本文の parse
+            # エラー（Unexpected ...）で落ちたのではない証明になる
+            self.assertIn("--loader:tsx", r.stderr)
         finally:
             os.unlink(tmp)
 
