@@ -565,7 +565,10 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
 
   if (marker?.status === 'triggered' && marker?.ts) {
     // 遅延する Devin 応答を回収する。URLなら done。失敗なら pending。
-    // どちらも無い無応答が続く場合は tries を進めて上限で pending へ降格し再投稿に委ねる。
+    // どちらも無い無応答が続く場合は tries を進め、上限で追跡を打ち切る。
+    // 無言は「起動済みで作業中」の可能性が高く、pending へ降格して再投稿すると重複 Devin セッションを
+    // 量産する。triggered のまま残すと、ラベルを付け直しても dispatch が「起動済み」と読んで弾くので、
+    // 手動再投稿できる failed に落とす。
     const r = await slackReplies(cfg, marker.ts);
     if (!r.ok) {
       // スレッドが消えているなら pending へ降格して次回新スレッドで再投稿させる
@@ -613,9 +616,9 @@ async function sweepIssue(github, context, core, cfg, issue, labels, removeTrigg
           context,
           core,
           issue,
-          { ts: marker.ts, status: 'pending', tries },
+          { ts: marker.ts, status: 'failed', tries },
           cfg,
-          'Devin 応答なし。定期実行で再投稿します',
+          'Devin 応答なし。自動再投稿はしません。Slack スレッドを確認し、未起動ならラベルを付け直してください',
         );
         await removeTriggerLabel(issue.number);
       } else {
