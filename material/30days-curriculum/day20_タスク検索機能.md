@@ -2113,7 +2113,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は以下のコードを上から順に貼り付けて各ファイルを置き換えてください。1つのファイルが複数のブロックに分かれている場合はそのファイルの見出しの下にあるブロックを、出てくる順につなげたものが全文です。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は5つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は各ファイルの最後にある全文のブロックでファイルを置き換えてください。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2123,7 +2123,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 | `src/component/layout/app-layout.tsx` | サイドバーの検索導線 | Step 2 |
 | `src/app/task/page.tsx` | 検索からの編集リンクの受け取り | Step 8 |
 
-`app-layout.tsx` と `task/page.tsx` は今日の分だけを載せます。それ以外の部分に今日は触っていないので手元のファイルをそのまま残してください。
+`app-layout.tsx` と `task/page.tsx` の全文には前の日までに書いた部分もそのまま入っています。今日書き足したのはそのうち断片で示した箇所だけです。
 
 ### `src/server/api/routers/search.ts`
 
@@ -2131,7 +2131,7 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: インポートと件数の上限
+// インポートと件数の上限
 import type { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -2155,7 +2155,7 @@ Day 14 で書いた import に、今日の3行が混ざった状態です。並�
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: 検索条件の入力スキーマ
+// 検索条件の入力スキーマ
 const searchInputSchema = z.object({
   keyword: z.string().optional(),
   projectId: z.string().cuid().optional(),
@@ -2181,7 +2181,7 @@ const searchInputSchema = z.object({
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: 簡易検索の入力と条件の型
+// 簡易検索の入力と条件の型
 const quickSearchInputSchema = z.object({
   keyword: z.string().trim().min(1, 'キーワードは必須です'),
 });
@@ -2201,7 +2201,7 @@ type FilterConfig = {
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: 条件を組み立てる部品
+// 条件を組み立てる部品
 const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
   const result: Partial<Prisma.TaskWhereInput> = {};
   for (const f of filters) {
@@ -2226,7 +2226,7 @@ const buildKeywordFilter = (keyword: string, fields: string[]) =>
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: 期限の範囲を組み立てる部品
+// 期限の範囲を組み立てる部品
 const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
   const dateFilter: Partial<{ gte: Date; lte: Date }> = {};
   if (dateFrom) {
@@ -2245,7 +2245,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
 
 ```typescript
 // filepath: src/server/api/routers/search.ts
-// 完成版: search — 入口と条件の材料
+// search — 入口と条件の材料
 export const searchRouter = createTRPCRouter({
   search: protectedProcedure.input(searchInputSchema).query(async ({ input, ctx }) => {
     const userId = ctx.session.userId;
@@ -2267,7 +2267,7 @@ export const searchRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: search — 検索条件の組み立て
+// search — 検索条件の組み立て
     const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
 
     const projectIds = await getUserProjectIds(userId);
@@ -2298,7 +2298,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: search — キーワードとタスクの取得
+// search — キーワードとタスクの取得
     if (keyword) {
       andConditions.push({ OR: buildKeywordFilter(keyword, ['title', 'description']) });
     }
@@ -2329,7 +2329,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: search — プロジェクトの検索条件
+// search — プロジェクトの検索条件
     const projects = !keyword
       ? []
       : await prisma.project.findMany({
@@ -2345,7 +2345,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: search — プロジェクトの取得と戻り値
+// search — プロジェクトの取得と戻り値
           include: {
             members: {
               include: {
@@ -2376,7 +2376,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: quickSearch — タスク側
+// quickSearch — タスク側
   quickSearch: protectedProcedure.input(quickSearchInputSchema).query(async ({ input, ctx }) => {
     const userId = ctx.session.userId;
     const keyword = input.keyword.trim();
@@ -2405,7 +2405,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: quickSearch — プロジェクト側と戻り値
+// quickSearch — プロジェクト側と戻り値
       prisma.project.findMany({
         where: {
           members: { some: { userId } },
@@ -2436,7 +2436,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getUserProjects
+// getUserProjects
   getUserProjects: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.userId;
 
@@ -2466,7 +2466,7 @@ flowchart LR
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getProjectMembers — 検索条件
+// getProjectMembers — 検索条件
   getProjectMembers: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.userId;
 
@@ -2488,7 +2488,7 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getProjectMembers — 取得と戻り値
+// getProjectMembers — 取得と戻り値
       select: {
         user: {
           select: USER_SELECT,
@@ -2512,7 +2512,7 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getMembersByProject — 所属の確認
+// getMembersByProject — 所属の確認
   getMembersByProject: protectedProcedure
     .input(z.object({ projectId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -2540,7 +2540,292 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
-// 完成版: getMembersByProject — 取得と戻り値
+// getMembersByProject — 取得と戻り値
+      const members = await prisma.projectMember.findMany({
+        where: { projectId: input.projectId },
+        select: {
+          user: {
+            select: USER_SELECT,
+          },
+        },
+        orderBy: {
+          user: {
+            name: 'asc',
+          },
+        },
+      });
+
+      return members.map((member) => member.user);
+    }),
+});
+```
+
+完成版の `src/server/api/routers/search.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/server/api/routers/search.ts
+// 完成版: ファイル全体
+import type { Prisma } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
+import { prisma } from '@/lib/prisma';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { getUserProjectIds } from './_helpers/permission';
+import { USER_SELECT } from './_helpers/select';
+
+const SEARCH_TASK_LIMIT = 100;
+const SEARCH_PROJECT_LIMIT = 20;
+const QUICK_SEARCH_TASK_LIMIT = 20;
+const QUICK_SEARCH_PROJECT_LIMIT = 10;
+
+const searchInputSchema = z.object({
+  keyword: z.string().optional(),
+  projectId: z.string().cuid().optional(),
+  status: z
+    .union([z.literal('all'), taskStatusSchema])
+    .optional()
+    .default('all'),
+  priority: z
+    .union([z.literal('all'), taskPrioritySchema])
+    .optional()
+    .default('all'),
+  assignedTo: z.string().cuid().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+
+const quickSearchInputSchema = z.object({
+  keyword: z.string().trim().min(1, 'キーワードは必須です'),
+});
+
+type FilterConfig = {
+  key: keyof Prisma.TaskWhereInput;
+  value: string | undefined;
+  transform?: (value: string) => Prisma.TaskWhereInput[keyof Prisma.TaskWhereInput];
+};
+
+const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInput> => {
+  const result: Partial<Prisma.TaskWhereInput> = {};
+  for (const f of filters) {
+    if (f.value !== undefined && f.value !== 'all') {
+      Object.assign(result, { [f.key]: f.transform ? f.transform(f.value) : f.value });
+    }
+  }
+  return result;
+};
+
+const buildKeywordFilter = (keyword: string, fields: string[]) =>
+  fields.map((field) => ({
+    [field]: { contains: keyword, mode: 'insensitive' satisfies Prisma.QueryMode },
+  }));
+
+const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
+  const dateFilter: Partial<{ gte: Date; lte: Date }> = {};
+  if (dateFrom) {
+    dateFilter.gte = new Date(dateFrom);
+  }
+  if (dateTo) {
+    dateFilter.lte = new Date(dateTo);
+  }
+  return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
+};
+
+export const searchRouter = createTRPCRouter({
+  search: protectedProcedure.input(searchInputSchema).query(async ({ input, ctx }) => {
+    const userId = ctx.session.userId;
+    const keyword = input.keyword?.trim();
+
+    const baseFilters: FilterConfig[] = [
+      { key: 'projectId', value: input.projectId },
+      { key: 'status', value: input.status },
+      { key: 'priority', value: input.priority },
+      { key: 'assigneeId', value: input.assignedTo },
+    ];
+
+    const dueDateFilter = buildDateRangeFilter(input.dateFrom, input.dateTo);
+
+    const projectIds = await getUserProjectIds(userId);
+
+    const andConditions: Prisma.TaskWhereInput[] = [
+      { projectId: { in: projectIds } },
+      buildDynamicWhere(baseFilters),
+    ];
+    if (dueDateFilter) {
+      andConditions.push({ dueDate: dueDateFilter });
+    }
+
+    if (keyword) {
+      andConditions.push({ OR: buildKeywordFilter(keyword, ['title', 'description']) });
+    }
+
+    const taskWhere: Prisma.TaskWhereInput = { AND: andConditions };
+
+    const tasks = await prisma.task.findMany({
+      where: taskWhere,
+      include: {
+        project: true,
+        createdBy: {
+          select: USER_SELECT,
+        },
+        assignee: {
+          select: USER_SELECT,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: SEARCH_TASK_LIMIT,
+    });
+
+    const projects = !keyword
+      ? []
+      : await prisma.project.findMany({
+          where: {
+            members: {
+              some: { userId },
+            },
+            OR: buildKeywordFilter(keyword, ['name', 'description']),
+          },
+
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: USER_SELECT,
+                },
+              },
+            },
+            _count: {
+              select: { tasks: true },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: SEARCH_PROJECT_LIMIT,
+        });
+
+    return {
+      tasks,
+      projects,
+      totalCount: tasks.length + projects.length,
+    };
+  }),
+
+  quickSearch: protectedProcedure.input(quickSearchInputSchema).query(async ({ input, ctx }) => {
+    const userId = ctx.session.userId;
+    const keyword = input.keyword.trim();
+
+    const projectIds = await getUserProjectIds(userId);
+
+    const [tasks, projects] = await Promise.all([
+      prisma.task.findMany({
+        where: {
+          projectId: { in: projectIds },
+          OR: buildKeywordFilter(keyword, ['title', 'description']),
+        },
+        include: {
+          project: true,
+          createdBy: { select: USER_SELECT },
+          assignee: { select: USER_SELECT },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: QUICK_SEARCH_TASK_LIMIT,
+      }),
+
+      prisma.project.findMany({
+        where: {
+          members: { some: { userId } },
+          OR: buildKeywordFilter(keyword, ['name', 'description']),
+        },
+        include: {
+          members: {
+            include: { user: { select: USER_SELECT } },
+          },
+          _count: { select: { tasks: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: QUICK_SEARCH_PROJECT_LIMIT,
+      }),
+    ]);
+
+    return {
+      tasks,
+      projects,
+      totalCount: tasks.length + projects.length,
+    };
+  }),
+
+  getUserProjects: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.userId;
+
+    const projects = await prisma.project.findMany({
+      where: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: { tasks: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return projects;
+  }),
+
+  getProjectMembers: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.userId;
+
+    const projectMembers = await prisma.projectMember.findMany({
+      where: {
+        project: {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
+
+      select: {
+        user: {
+          select: USER_SELECT,
+        },
+      },
+      distinct: ['userId'],
+      orderBy: {
+        user: {
+          name: 'asc',
+        },
+      },
+    });
+
+    return projectMembers.map((member) => member.user);
+  }),
+
+  getMembersByProject: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const callerMembership = await prisma.projectMember.findUnique({
+        where: {
+          userId_projectId: {
+            userId: ctx.session.userId,
+            projectId: input.projectId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!callerMembership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'このプロジェクトのメンバーではありません',
+        });
+      }
+
       const members = await prisma.projectMember.findMany({
         where: { projectId: input.projectId },
         select: {
@@ -2585,7 +2870,7 @@ export default function Loading() {
 
 ```typescript
 // filepath: src/app/search/page.tsx
-// 完成版: import部分（外部ライブラリ）
+// import部分（外部ライブラリ）
 'use client';
 
 import { zodResolver }
@@ -2609,7 +2894,7 @@ import { z } from 'zod';
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: import部分（画面の部品）
+// import部分（画面の部品）
 import { AppLayout }
   from '@/component/layout/app-layout';
 import { TaskCard }
@@ -2641,7 +2926,7 @@ import { Separator }
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: import部分（定数と日付の道具）
+// import部分（定数と日付の道具）
 import {
   isTaskPriority,
   TASK_PRIORITY_LABELS,
@@ -2673,7 +2958,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 値の一覧とフォームのスキーマ
+// 値の一覧とフォームのスキーマ
 const TASK_STATUS_VALUES = [
   'TODO', 'IN_PROGRESS', 'IN_REVIEW',
   'DONE', 'CANCELLED',
@@ -2725,7 +3010,7 @@ IDはサーバーと同じ `cuid()` で検査し、不正なら絞り込みな�
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 関数の入口と useForm の初期値
+// 関数の入口と useForm の初期値
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2755,7 +3040,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: useForm の初期値の残り
+// useForm の初期値の残り
       priority:
         isTaskPriority(initialPriority)
           ? initialPriority : 'all',
@@ -2784,7 +3069,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: ロールの対応表を作る
+// ロールの対応表を作る
   const { data: session } =
     api.auth.getSession.useQuery();
   const { data: memberProjects } =
@@ -2816,7 +3101,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 権限を判定する関数
+// 権限を判定する関数
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -2842,7 +3127,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: handleSearch — URL へ載せる条件を並べる
+// handleSearch — URL へ載せる条件を並べる
   const handleSearch = () => {
     const values = form.getValues();
     const paramList = [
@@ -2875,7 +3160,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: handleSearch — URL を組み立てて移動する
+// handleSearch — URL を組み立てて移動する
     const params = new URLSearchParams();
     const filtered = paramList.filter(
       (p) =>
@@ -2897,7 +3182,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: handleClear
+// handleClear
   const handleClear = () => {
     form.reset({
       keyword: '',
@@ -2920,7 +3205,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: URL からフォームへ戻す（前半）
+// URL からフォームへ戻す（前半）
   useEffect(() => {
     const paramMap: Array<{
       key: keyof SearchFormValues;
@@ -2949,7 +3234,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: URL からフォームへ戻す（後半）
+// URL からフォームへ戻す（後半）
     for (const { key, empty, transform }
       of paramMap) {
       const value =
@@ -2970,7 +3255,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 検索を実行するかどうかの判定
+// 検索を実行するかどうかの判定
   const shouldSearch =
     !!formValues.keyword
     || formValues.projectId !== 'all'
@@ -2989,7 +3274,7 @@ function SearchPageContent() {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 検索 API の呼び出し（前半）
+// 検索 API の呼び出し（前半）
 const {
     data: searchResults,
     isLoading,
@@ -3021,7 +3306,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 検索 API の呼び出し（後半）
+// 検索 API の呼び出し（後半）
       dateFrom: formValues.dateFrom
         ? dateOnlyToUtcStartIso(
             formValues.dateFrom
@@ -3049,7 +3334,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 取得エラーの分類
+// 取得エラーの分類
   const authFailed = isAuthError(searchError);
   const forbidden = isForbiddenError(searchError);
   const protectedSearchError =
@@ -3074,7 +3359,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 画面の移動を扱う関数
+// 画面の移動を扱う関数
   const handleTaskClick =
     (taskId: string) => {
       router.push(
@@ -3100,7 +3385,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: 削除の状態と処理
+// 削除の状態と処理
   const [deleteTaskConfirm,
     setDeleteTaskConfirm] = useState<{
       open: boolean;
@@ -3133,7 +3418,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — 画面の外枠と見出し
+// JSX — 画面の外枠と見出し
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -3154,7 +3439,7 @@ const {
 
 ```typescript
         {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — キーワード入力 */}
+        {/* JSX — キーワード入力 */}
         <Card>
           <CardContent className="pt-6">
             <div className="grid gap-4">
@@ -3187,7 +3472,7 @@ const {
 
 ```typescript
               {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-              {/* 完成版: JSX — プロジェクトの選択（前半） */}
+              {/* JSX — プロジェクトの選択（前半） */}
               <div className="grid grid-cols-1
                 md:grid-cols-2 lg:grid-cols-3
                 gap-4">
@@ -3212,7 +3497,7 @@ const {
 
 ```typescript
                     {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                    {/* 完成版: JSX — プロジェクトの選択（後半） */}
+                    {/* JSX — プロジェクトの選択（後半） */}
                     <SelectContent>
                       <SelectItem value="all">
                         すべてのプロジェクト
@@ -3235,7 +3520,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — ステータスの選択 */}
+                {/* JSX — ステータスの選択 */}
                 <div className="grid gap-2">
                   <Label htmlFor="status">
                     ステータス</Label>
@@ -3269,7 +3554,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — 優先度の選択 */}
+                {/* JSX — 優先度の選択 */}
                 <div className="grid gap-2">
                   <Label htmlFor="priority">
                     優先度</Label>
@@ -3301,7 +3586,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — 担当者の選択（前半） */}
+                {/* JSX — 担当者の選択（前半） */}
                 <div className="grid gap-2">
                   <Label htmlFor="assignedTo">
                     担当者
@@ -3322,7 +3607,7 @@ const {
 
 ```typescript
                     {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                    {/* 完成版: JSX — 担当者の選択（後半） */}
+                    {/* JSX — 担当者の選択（後半） */}
                     <SelectContent>
                       <SelectItem value="all">
                         すべての担当者
@@ -3343,7 +3628,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — 期限の範囲 */}
+                {/* JSX — 期限の範囲 */}
                 <div className="grid gap-2">
                   <Label htmlFor="dateFrom">
                     期限：開始日</Label>
@@ -3367,7 +3652,7 @@ const {
 
 ```typescript
               {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-              {/* 完成版: JSX — 検索とクリアのボタン */}
+              {/* JSX — 検索とクリアのボタン */}
               <div className="flex
                 justify-end gap-2 pt-2">
                 <Button variant="outline"
@@ -3393,7 +3678,7 @@ const {
 
 ```typescript
         {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — 結果の見出しと件数 */}
+        {/* JSX — 結果の見出しと件数 */}
         {isLoading ? (
           <PageLoadingSpinner />
         ) : shouldSearch && searchErrorPresent
@@ -3464,7 +3749,7 @@ const {
 
 ```typescript
             {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-            {/* 完成版: JSX — タスク結果の見出し */}
+            {/* JSX — タスク結果の見出し */}
             {searchResults.tasks.length > 0
               && (
               <div className="space-y-4">
@@ -3488,7 +3773,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — タスクカードの一覧（表示する値） */}
+                {/* JSX — タスクカードの一覧（表示する値） */}
                 <div className="grid gap-6
                   sm:grid-cols-2 lg:grid-cols-3
                   xl:grid-cols-4">
@@ -3510,7 +3795,7 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: JSX — タスクカードの操作と権限の props
+// JSX — タスクカードの操作と権限の props
                       onEdit={handleTaskEdit}
                       onDelete={handleTaskDelete}
                       onClick={handleTaskClick}
@@ -3534,7 +3819,7 @@ const {
 
 ```typescript
             {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-            {/* 完成版: JSX — プロジェクト結果の見出し */}
+            {/* JSX — プロジェクト結果の見出し */}
             {searchResults.projects.length
               > 0 && (
               <div className="space-y-4">
@@ -3557,7 +3842,7 @@ const {
 
 ```typescript
                 {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-                {/* 完成版: JSX — プロジェクトカードの一覧 */}
+                {/* JSX — プロジェクトカードの一覧 */}
                 <div className="grid gap-6
                   sm:grid-cols-2 lg:grid-cols-3
                   xl:grid-cols-4">
@@ -3591,7 +3876,7 @@ const {
 
 ```typescript
             {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-            {/* 完成版: JSX — 0件と未入力の案内 */}
+            {/* JSX — 0件と未入力の案内 */}
             {searchResults.totalCount === 0 && (
               <div className="text-center py-12
                 text-muted-foreground">
@@ -3612,7 +3897,7 @@ const {
 
 ```typescript
         {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
-        {/* 完成版: JSX — 削除の確認画面と閉じタグ */}
+        {/* JSX — 削除の確認画面と閉じタグ */}
         <DeleteConfirmDialog
           open={deleteTaskConfirm.open}
           onOpenChange={(open) =>
@@ -3643,7 +3928,716 @@ const {
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
-// 完成版: Suspense で包んで公開する
+// Suspense で包んで公開する
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+```
+
+完成版の `src/app/search/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/search/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { zodResolver }
+  from '@hookform/resolvers/zod';
+import { Search } from 'lucide-react';
+import {
+  useRouter, useSearchParams,
+} from 'next/navigation';
+import {
+  Suspense, useCallback, useEffect,
+  useMemo, useState,
+} from 'react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { Button }
+  from '@/component/ui/button';
+import {
+  Card, CardContent,
+} from '@/component/ui/card';
+import { DeleteConfirmDialog }
+  from '@/component/ui/delete-confirm-dialog';
+import { Input }
+  from '@/component/ui/input';
+import { Label }
+  from '@/component/ui/label';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import { Separator }
+  from '@/component/ui/separator';
+
+import {
+  isTaskPriority,
+  TASK_PRIORITY_LABELS,
+} from '@/lib/constant/priority';
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+} from '@/lib/constant/status';
+import {
+  dateOnlyToUtcEndIso,
+  dateOnlyToUtcStartIso,
+} from '@/lib/date';
+import {
+  isAuthError, isForbiddenError,
+  shouldRetryQuery,
+} from '@/lib/query-error';
+import { api } from '@/trpc/react';
+
+const TASK_STATUS_VALUES = [
+  'TODO', 'IN_PROGRESS', 'IN_REVIEW',
+  'DONE', 'CANCELLED',
+] as const;
+const TASK_PRIORITY_VALUES = [
+  'LOW', 'MEDIUM', 'HIGH', 'URGENT',
+] as const;
+
+const searchFormSchema = z.object({
+  keyword: z.string(),
+  projectId: z.string(),
+  status: z.enum([
+    'all', ...TASK_STATUS_VALUES,
+  ]),
+  priority: z.enum([
+    'all', ...TASK_PRIORITY_VALUES,
+  ]),
+  assignedTo: z.string(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+});
+type SearchFormValues =
+  z.infer<typeof searchFormSchema>;
+
+const normalizeId = (value: string): string =>
+  z.string().cuid().safeParse(value).success ? value : 'all';
+
+const normalizeDate = (value: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+    ? value : '';
+};
+
+function SearchPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const utils = api.useUtils();
+
+  const initialStatus =
+    searchParams.get('status') ?? 'all';
+  const initialPriority =
+    searchParams.get('priority') ?? 'all';
+
+  const form = useForm<SearchFormValues>({
+    resolver: zodResolver(searchFormSchema),
+    defaultValues: {
+      keyword:
+        searchParams.get('keyword') ?? '',
+      projectId:
+        normalizeId(searchParams.get('projectId') ?? ''),
+      status: isTaskStatus(initialStatus)
+        ? initialStatus : 'all',
+
+      priority:
+        isTaskPriority(initialPriority)
+          ? initialPriority : 'all',
+      assignedTo:
+        normalizeId(searchParams.get('assignedTo') ?? ''),
+      dateFrom:
+        normalizeDate(searchParams.get('dateFrom') ?? ''),
+      dateTo:
+        normalizeDate(searchParams.get('dateTo') ?? ''),
+    },
+  });
+
+  const formValues = form.watch();
+
+  const { data: projects } =
+    api.search.getUserProjects.useQuery();
+  const { data: users } =
+    api.search.getProjectMembers.useQuery();
+
+  const { data: session } =
+    api.auth.getSession.useQuery();
+  const { data: memberProjects } =
+    api.project.getAll.useQuery();
+
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !memberProjects) {
+      return map;
+    }
+    for (const project of memberProjects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [memberProjects, session?.user?.id]);
+
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const handleSearch = () => {
+    const values = form.getValues();
+    const paramList = [
+      { key: 'keyword',
+        value: values.keyword },
+      { key: 'projectId',
+        value: values.projectId,
+        exclude: 'all' },
+      { key: 'status',
+        value: values.status,
+        exclude: 'all' },
+      { key: 'priority',
+        value: values.priority,
+        exclude: 'all' },
+      { key: 'assignedTo',
+        value: values.assignedTo,
+        exclude: 'all' },
+      { key: 'dateFrom',
+        value: values.dateFrom },
+      { key: 'dateTo',
+        value: values.dateTo },
+    ];
+
+    const params = new URLSearchParams();
+    const filtered = paramList.filter(
+      (p) =>
+        p.value && p.value !== p.exclude,
+    );
+    for (const p of filtered) {
+      params.set(p.key, p.value);
+    }
+    router.push(
+      `/search?${params.toString()}`);
+  };
+
+  const handleClear = () => {
+    form.reset({
+      keyword: '',
+      projectId: 'all',
+      status: 'all',
+      priority: 'all',
+      assignedTo: 'all',
+      dateFrom: '',
+      dateTo: '',
+    });
+    router.push('/search');
+  };
+
+  useEffect(() => {
+    const paramMap: Array<{
+      key: keyof SearchFormValues;
+      empty: string;
+      transform?: (v: string) => string;
+    }> = [
+      { key: 'keyword', empty: '' },
+      { key: 'projectId', empty: 'all', transform: normalizeId },
+      { key: 'status', empty: 'all',
+        transform: (v) =>
+          isTaskStatus(v) ? v : 'all' },
+      { key: 'priority', empty: 'all',
+        transform: (v) =>
+          isTaskPriority(v) ? v : 'all' },
+      { key: 'assignedTo', empty: 'all', transform: normalizeId },
+      { key: 'dateFrom', empty: '', transform: normalizeDate },
+      { key: 'dateTo', empty: '', transform: normalizeDate },
+    ];
+
+    for (const { key, empty, transform }
+      of paramMap) {
+      const value =
+        searchParams.get(key);
+      const next = value
+        ? transform
+          ? transform(value)
+          : value
+        : empty;
+      form.setValue(key, next);
+    }
+  }, [searchParams, form]);
+
+  const shouldSearch =
+    !!formValues.keyword
+    || formValues.projectId !== 'all'
+    || formValues.status !== 'all'
+    || formValues.priority !== 'all'
+    || formValues.assignedTo !== 'all'
+    || !!formValues.dateFrom
+    || !!formValues.dateTo;
+
+const {
+    data: searchResults,
+    isLoading,
+    isError: searchErrorPresent,
+    isFetching: searchFetching,
+    error: searchError,
+    refetch: refetchSearch,
+  } = api.search.search.useQuery(
+    {
+      keyword:
+        formValues.keyword || undefined,
+      projectId:
+        formValues.projectId !== 'all'
+          ? formValues.projectId
+          : undefined,
+      status: formValues.status,
+      priority: formValues.priority,
+      assignedTo:
+        formValues.assignedTo !== 'all'
+          ? formValues.assignedTo
+          : undefined,
+
+      dateFrom: formValues.dateFrom
+        ? dateOnlyToUtcStartIso(
+            formValues.dateFrom
+          )
+        : undefined,
+      dateTo: formValues.dateTo
+        ? dateOnlyToUtcEndIso(
+            formValues.dateTo
+          )
+        : undefined,
+    },
+    {
+      enabled: shouldSearch,
+      refetchOnWindowFocus: false,
+      retry: shouldRetryQuery,
+    },
+  );
+
+  const authFailed = isAuthError(searchError);
+  const forbidden = isForbiddenError(searchError);
+  const protectedSearchError =
+    searchErrorPresent && (authFailed || forbidden);
+
+  const handleSearchErrorAction = () => {
+    if (authFailed) {
+      router.push('/login');
+      return;
+    }
+    if (forbidden) {
+      handleClear();
+      return;
+    }
+    void refetchSearch();
+  };
+
+  const handleTaskClick =
+    (taskId: string) => {
+      router.push(
+        `/task?taskId=${taskId}`);
+    };
+  const handleTaskEdit =
+    (taskId: string) => {
+      router.push(
+        `/task?taskId=${taskId}&edit=true`);
+    };
+  const handleProjectClick =
+    (projectId: string) => {
+      router.push(
+        `/project?projectId=${projectId}`);
+    };
+
+  const [deleteTaskConfirm,
+    setDeleteTaskConfirm] = useState<{
+      open: boolean;
+      taskId: string | null;
+    }>({ open: false, taskId: null });
+
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.search.search.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message
+          ?? 'タスクの削除に失敗しました');
+      },
+    });
+
+  const handleTaskDelete =
+    (taskId: string) => {
+      setDeleteTaskConfirm(
+        { open: true, taskId });
+    };
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold
+            tracking-tight">検索</h1>
+          <p className="text-muted-foreground">
+            タスクやプロジェクトを検索します
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="keyword">
+                  キーワード
+                </Label>
+                <div className="relative">
+                  <Search className="absolute
+                    left-2 top-3 h-4 w-4
+                    text-muted-foreground" />
+                  <Input id="keyword"
+                    placeholder=
+                      "タスク名、説明で検索..."
+                    className="pl-8"
+                    {...form.register('keyword')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                        handleSearch();
+                    }} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1
+                md:grid-cols-2 lg:grid-cols-3
+                gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="project">
+                    プロジェクト</Label>
+                  <Select
+                    value={formValues.projectId}
+                    onValueChange={(v) =>
+                      form.setValue('projectId', v)}>
+                    <SelectTrigger id="project">
+                      <SelectValue
+                        placeholder="すべて" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="all">
+                        すべてのプロジェクト
+                      </SelectItem>
+                      {projects?.map((p) => (
+                        <SelectItem key={p.id}
+                          value={p.id}>
+                          {p.name}
+                        </SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="status">
+                    ステータス</Label>
+                  <Select value={formValues.status}
+                    onValueChange={(v) => {
+                      if (isTaskStatus(v)
+                        || v === 'all')
+                        form.setValue('status', v);
+                    }}>
+                    <SelectTrigger id="status">
+                      <SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        すべて</SelectItem>
+                      {Object.entries(
+                        TASK_STATUS_LABELS
+                      ).map(([v, label]) => (
+                        <SelectItem key={v}
+                          value={v}>{label}
+                        </SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">
+                    優先度</Label>
+                  <Select value={formValues.priority}
+                    onValueChange={(v) => {
+                      if (isTaskPriority(v)
+                        || v === 'all')
+                        form.setValue('priority', v);
+                    }}>
+                    <SelectTrigger id="priority">
+                      <SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        すべて</SelectItem>
+                      {Object.entries(
+                        TASK_PRIORITY_LABELS
+                      ).map(([v, label]) => (
+                        <SelectItem key={v}
+                          value={v}>{label}
+                        </SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="assignedTo">
+                    担当者
+                  </Label>
+                  <Select
+                    value={formValues.assignedTo}
+                    onValueChange={(v) =>
+                      form.setValue('assignedTo', v)}>
+                    <SelectTrigger id="assignedTo">
+                      <SelectValue
+                        placeholder="すべての担当者" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="all">
+                        すべての担当者
+                      </SelectItem>
+                      {users?.map((user) => (
+                        <SelectItem key={user.id}
+                          value={user.id}>
+                          {user.name ?? user.email}
+                        </SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="dateFrom">
+                    期限：開始日</Label>
+                  <Input id="dateFrom" type="date"
+                    {...form.register('dateFrom')} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="dateTo">
+                    期限：終了日</Label>
+                  <Input id="dateTo" type="date"
+                    {...form.register('dateTo')} />
+                </div>
+              </div>
+
+              <div className="flex
+                justify-end gap-2 pt-2">
+                <Button variant="outline"
+                  onClick={handleClear}>
+                  クリア
+                </Button>
+                <Button onClick={handleSearch}>
+                  <Search className="mr-2
+                    h-4 w-4" />
+                  検索
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isLoading ? (
+          <PageLoadingSpinner />
+        ) : shouldSearch && searchErrorPresent
+          && (!searchResults || protectedSearchError) ? (
+          <div className="space-y-4 rounded-lg border
+            border-destructive/40 p-6 text-center">
+            <p className="font-medium">
+              {authFailed
+                ? 'ログインの有効期限が切れました'
+                : forbidden
+                  ? 'この検索結果を見る権限がありません'
+                  : '検索に失敗しました'}
+            </p>
+            <Button type="button" variant="outline"
+              onClick={handleSearchErrorAction}
+              disabled={searchFetching}>
+              {authFailed ? 'ログイン画面へ'
+                : forbidden ? '検索条件をクリア' : '再試行'}
+            </Button>
+          </div>
+
+        ) : shouldSearch && searchResults ? (
+          <div className="space-y-6">
+            {searchErrorPresent ? (
+              <div role="alert" className="flex items-center
+                justify-between gap-4 rounded-lg border
+                border-amber-300/60 bg-amber-50 px-4 py-3">
+                <span>最新の検索結果を取得できませんでした。前回取得時の内容です。</span>
+                <Button type="button" variant="outline" size="sm"
+                  onClick={() => void refetchSearch()}
+                  disabled={searchFetching}>再試行</Button>
+              </div>
+            ) : null}
+
+            <h2 className="text-xl font-semibold
+              flex items-center gap-2">
+              検索結果:
+              {searchResults.totalCount}件
+              {searchResults.tasks.length > 0
+                && (
+                <span className="text-sm
+                  font-normal
+                  text-muted-foreground">
+                  （タスク:
+                  {searchResults.tasks.length}件
+                  {searchResults.projects
+                    .length > 0
+                    && `, プロジェクト: ${
+                      searchResults.projects
+                        .length}件`}）
+                </span>)}
+            </h2>
+
+            {searchResults.tasks.length > 0
+              && (
+              <div className="space-y-4">
+                <div className="flex
+                  items-center gap-2">
+                  <h3 className="text-lg
+                    font-semibold">
+                    タスク
+                    ({searchResults.tasks.length})
+                  </h3>
+                  <Separator
+                    className="flex-1" />
+                </div>
+
+                <div className="grid gap-6
+                  sm:grid-cols-2 lg:grid-cols-3
+                  xl:grid-cols-4">
+                  {searchResults.tasks.map((task) => (
+                    <TaskCard key={task.id}
+                      id={task.id}
+                      title={task.title}
+                      description={task.description}
+                      status={task.status}
+                      priority={task.priority}
+                      dueDate={task.dueDate}
+                      assignee={task.assignee}
+                      timeSpentMinutes={task.timeSpentMinutes}
+
+                      onEdit={handleTaskEdit}
+                      onDelete={handleTaskDelete}
+                      onClick={handleTaskClick}
+                      onTimeLogSuccess={() =>
+                        utils.search.search.invalidate()}
+                      canEdit={canEditProject(
+                        task.projectId)}
+                      canDelete={canDeleteProject(
+                        task.projectId)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchResults.projects.length
+              > 0 && (
+              <div className="space-y-4">
+                <div className="flex
+                  items-center gap-2">
+                  <h3 className="text-lg
+                    font-semibold">
+                    プロジェクト
+                    ({searchResults
+                      .projects.length})
+                  </h3>
+                  <Separator
+                    className="flex-1" />
+                </div>
+
+                <div className="grid gap-6
+                  sm:grid-cols-2 lg:grid-cols-3
+                  xl:grid-cols-4">
+                  {searchResults.projects
+                    .map((project) => (
+                    <Card key={project.id}
+                      className="cursor-pointer
+                        hover:shadow-md"
+                      onClick={() =>
+                        handleProjectClick(
+                          project.id)}>
+                      <CardContent className="pt-6">
+                        <h4 className=
+                          "font-semibold mb-2">
+                          {project.name}</h4>
+                        <p className="text-sm
+                          text-muted-foreground
+                          line-clamp-2">
+                          {project.description
+                            ?? '説明なし'}</p>
+                      </CardContent>
+                    </Card>))}
+                </div></div>)}
+
+            {searchResults.totalCount === 0 && (
+              <div className="text-center py-12
+                text-muted-foreground">
+                <p>検索結果が見つかりません</p>
+              </div>)}
+          </div>
+        ) : (
+          <div className="text-center py-12
+            text-muted-foreground">
+            <p>検索条件を入力してください</p>
+          </div>
+        )}
+
+        <DeleteConfirmDialog
+          open={deleteTaskConfirm.open}
+          onOpenChange={(open) =>
+            !open && setDeleteTaskConfirm(
+              { open: false, taskId: null })}
+          onConfirm={() => {
+            if (deleteTaskConfirm.taskId) {
+              deleteMutation.mutate({
+                id: deleteTaskConfirm.taskId,
+              });
+              setDeleteTaskConfirm(
+                { open: false, taskId: null });
+            }
+          }}
+          isPending={
+            deleteMutation.isPending} />
+      </div>
+    </AppLayout>
+  );
+}
+
 export default function SearchPage() {
   return (
     <Suspense
@@ -3666,7 +4660,7 @@ export default function SearchPage() {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: アイコンのインポート
+// アイコンのインポート
 import {
   ClipboardList,
   FolderOpen,
@@ -3683,7 +4677,7 @@ import {
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
-// 完成版: サイドバーのメニュー項目
+// サイドバーのメニュー項目
 const menuItems: MenuItem[] = [
   {
     text: 'ダッシュボード',
@@ -3711,13 +4705,217 @@ const menuItems: MenuItem[] = [
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
-// 完成版: 今日足したメニュー項目
+// 今日足したメニュー項目
   {
     text: '検索',
     icon: <Search className="h-5 w-5" />,
     path: '/search',
   },
 ];
+```
+
+完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/component/layout/app-layout.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  FolderOpen,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  ClipboardList,
+  Search
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/component/ui/alert-dialog';
+import { Button } from '@/component/ui/button';
+import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'ダッシュボード',
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    path: '/dashboard',
+  },
+  {
+    text: 'プロジェクト',
+    icon: <FolderOpen className="h-5 w-5" />,
+    path: '/project',
+  },
+  {
+    text: 'マイタスク',
+    icon: <ListTodo className="h-5 w-5" />,
+    path: '/my-task',
+  },
+  {
+    text: 'タスク',
+    icon: <ClipboardList className="h-5 w-5" />,
+    path: '/task',
+  },
+  {
+    text: '検索',
+    icon: <Search className="h-5 w-5" />,
+    path: '/search',
+  },
+];
+
+export function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: session, isLoading } =
+    api.auth.getSession.useQuery();
+
+  const logoutMutation = api.auth.logout.useMutation({
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push('/login');
+      router.refresh();
+    },
+  });
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading && !session) {
+      router.push('/login');
+    }
+  }, [hasMounted, isLoading, session, router]);
+
+  if (!hasMounted || isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
+  return (
+    <div className="flex h-screen bg-background">
+      {/* サイドバー */}
+      <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        {/* ロゴ */}
+        <div className="border-b border-sidebar-border p-4">
+          <h1 className="text-lg font-bold text-sidebar-foreground">
+            タスク管理
+          </h1>
+        </div>
+        {/* ナビゲーション */}
+        <nav className="flex-1 p-3">
+          <ul className="space-y-1">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm ' +
+                      'transition-colors',
+                    pathname === item.path
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' +
+                        ' font-medium'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50' +
+                        ' hover:text-sidebar-foreground',
+                  )}
+                >
+                  {item.icon}
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* ユーザー情報 + ログアウト */}
+        <div className="border-t border-sidebar-border p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+              {session.user.name?.[0] || 'U'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground">
+                {session.user.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {session.user.role === 'ADMIN'
+                  ? '管理者'
+                  : 'ユーザー'}
+              </span>
+            </div>
+          </div>
+          {/* ログアウトボタン（確認ダイアログ付き） */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-sidebar-border text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ログアウトしますか？
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  ログアウトすると、再度ログインが必要になります。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  ログアウト
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </aside>
+      {/* 画面に main は1つだけ置くため、各ページ側では書かない */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
+    </div>
+  );
+}
 ```
 
 今日足したのは末尾の「検索」だけです。`path: '/search'` が `src/app/search/page.tsx` の置き場所と対応します。
@@ -3728,7 +4926,7 @@ const menuItems: MenuItem[] = [
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 完成版: 編集リンクの読み取り
+// 編集リンクの読み取り
 import { useRouter, useSearchParams }
   from 'next/navigation';
 
@@ -3757,7 +4955,7 @@ Day 13 で書いた `taskIdParam` とその下の `useEffect` を、今日この
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 編集ダイアログを開く処理
+// 編集ダイアログを開く処理
 useEffect(() => {
   if (!isEditLink || !linkedTask) return;
   setEditingTask(
@@ -3774,7 +4972,7 @@ useEffect(() => {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: ダイアログを閉じる処理
+// ダイアログを閉じる処理
 const closeTaskDialog = () => {
   setDialogOpen(false);
   setEditingTask(undefined);
@@ -3798,7 +4996,7 @@ const closeTaskDialog = () => {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: 呼び出し側の差し替え
+// 呼び出し側の差し替え
 const createMutation =
   api.task.create.useMutation({
     onSuccess: () => {
@@ -3812,7 +5010,7 @@ const createMutation =
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 完成版: updateMutation の成功時も同じ関数で閉じる
+// updateMutation の成功時も同じ関数で閉じる
 const updateMutation =
   api.task.update.useMutation({
     onSuccess: () => {
@@ -3834,7 +5032,7 @@ Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDi
 
 ```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-{/* 完成版: 編集ダイアログの onClose */}
+{/* 編集ダイアログの onClose */}
 <TaskDialog
   open={dialogOpen}
   onClose={closeTaskDialog}
@@ -3842,6 +5040,414 @@ Day 15 で書いた `updateMutation` の `setDialogOpen(false)` を `closeTaskDi
   initialData={editingTask}
   projects={projects ?? []}
 />
+```
+
+完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```typescript
+// filepath: src/app/task/page.tsx
+// 完成版: ファイル全体
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useRouter, useSearchParams }
+  from 'next/navigation';
+import {
+  Suspense, useCallback,
+  useEffect, useMemo, useState,
+} from 'react';
+import toast from 'react-hot-toast';
+import { AppLayout }
+  from '@/component/layout/app-layout';
+import { TaskCard }
+  from '@/component/task/task-card';
+import { TaskDetailDialog }
+  from '@/component/task/task-detail-dialog';
+import {
+  TaskDialog, type TaskFormData,
+} from '@/component/task/task-dialog';
+import { Button }
+  from '@/component/ui/button';
+import { DeleteConfirmDialog } from
+  '@/component/ui/delete-confirm-dialog';
+import { PageLoadingSpinner }
+  from '@/component/ui/loading-spinner';
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/component/ui/select';
+import {
+  hasPermission, isProjectMemberRole,
+  type ProjectMemberRole,
+} from '@/lib/constant/roles';
+import {
+  isTaskStatus,
+  TASK_STATUS_LABELS,
+  type TaskStatus,
+} from '@/lib/constant/status';
+import { dateOnlyToUtcStartIso }
+  from '@/lib/date';
+import { taskToFormData }
+  from '@/lib/task-form';
+import { api } from '@/trpc/react';
+
+function TaskPageContent() {
+  const [filterProject, setFilterProject] =
+    useState<string>('all');
+  const [filterStatus, setFilterStatus] =
+    useState<TaskStatus | 'all'>('all');
+  const [selectedTask, setSelectedTask] =
+    useState<string | null>(null);
+  const [detailOpen, setDetailOpen] =
+    useState(false);
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+  const [editingTask, setEditingTask] =
+    useState<TaskFormData | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen]
+    = useState(false);
+  const [deleteTargetId, setDeleteTargetId]
+    = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const taskIdParam = searchParams.get('taskId');
+  const isEditLink =
+    searchParams.get('edit') === 'true';
+  const { data: linkedTask } =
+    api.task.getById.useQuery(
+      { id: taskIdParam ?? '' },
+      { enabled: !!taskIdParam && isEditLink },
+    );
+
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+  } = api.task.getAll.useQuery(
+    {
+      projectId: filterProject === 'all'
+        ? undefined : filterProject,
+      status: filterStatus === 'all'
+        ? undefined : filterStatus,
+    },
+    { refetchOnWindowFocus: false },
+  );
+  const { data: projects } =
+    api.project.getAll.useQuery();
+  const { data: session } =
+    api.auth.getSession.useQuery();
+  const utils = api.useUtils();
+  // 時間記録の成功後に一覧を取り直す
+  const handleTimeLogSuccess = useCallback(() => {
+    void utils.task.getAll.invalidate();
+  }, [utils.task.getAll]);
+  const myRoleByProject = useMemo(() => {
+    const map = new Map<string, ProjectMemberRole>();
+    const userId = session?.user?.id;
+    if (!userId || !projects) {
+      return map;
+    }
+    for (const project of projects) {
+      const me = project.members?.find(
+        (member) => member.userId === userId,
+      );
+      if (me && isProjectMemberRole(me.role)) {
+        map.set(project.id, me.role);
+      }
+    }
+    return map;
+  }, [projects, session?.user?.id]);
+  const canEditProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canEdit') : false;
+    },
+    [myRoleByProject],
+  );
+
+  const canDeleteProject = useCallback(
+    (projectId: string) => {
+      const role = myRoleByProject.get(projectId);
+      return role ? hasPermission(role, 'canDelete') : false;
+    },
+    [myRoleByProject],
+  );
+  useEffect(() => {
+    if (taskIdParam && !isEditLink) {
+      setSelectedTask(taskIdParam);
+      setDetailOpen(true);
+    }
+  }, [isEditLink, taskIdParam]);
+
+  useEffect(() => {
+    if (!isEditLink || !linkedTask) return;
+    setEditingTask(
+      taskToFormData(linkedTask),
+    );
+    setDetailOpen(false);
+    setDialogOpen(true);
+  }, [isEditLink, linkedTask]);
+
+  const closeTaskDialog = () => {
+    setDialogOpen(false);
+    setEditingTask(undefined);
+    if (!isEditLink) return;
+
+    const params = new URLSearchParams(
+      searchParams.toString(),
+    );
+    params.delete('taskId');
+    params.delete('edit');
+    const query = params.toString();
+    router.replace(
+      query ? `/task?${query}` : '/task',
+    );
+  };
+
+  const createMutation =
+    api.task.create.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        closeTaskDialog();
+      },
+    });
+
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        closeTaskDialog();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const deleteMutation =
+    api.task.delete.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const handleCreate = () => {
+    setEditingTask(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (taskId: string) => {
+    const task =
+      tasks?.find((t) => t.id === taskId);
+    if (task) {
+      setEditingTask(taskToFormData(task));
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDelete = (taskId: string) => {
+    setDeleteTargetId(taskId);
+    setDeleteDialogOpen(true);
+  };
+  const handleSubmit =
+    (data: TaskFormData) => {
+      if (data.id) {
+        updateMutation.mutate({
+          id: data.id,
+          title: data.title,
+          description:
+            data.description || null,
+          status: data.status,
+          priority: data.priority,
+          dueDate: data.dueDate
+            ? dateOnlyToUtcStartIso(data.dueDate)
+            : null,
+          estimatedHours:
+            data.estimatedHours ?? null,
+          projectId: data.projectId,
+          assigneeId:
+            data.assigneeId || null,
+          expectedUpdatedAt:
+            data.expectedUpdatedAt,
+        });
+        return;
+      }
+      if (!session?.user?.id) return;
+      createMutation.mutate({
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        projectId: data.projectId,
+        dueDate: data.dueDate
+          ? dateOnlyToUtcStartIso(
+              data.dueDate
+            )
+          : undefined,
+        estimatedHours:
+          data.estimatedHours ?? undefined,
+        assigneeId:
+          data.assigneeId || undefined,
+      });
+    };
+  const handleTaskClick =
+    (taskId: string) => {
+      setSelectedTask(taskId);
+      setDetailOpen(true);
+    };
+  const handleDetailClose = () => {
+    setDetailOpen(false);
+    setSelectedTask(null);
+  };
+
+  if (tasksLoading) {
+    return (
+      <AppLayout>
+        <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-bold
+          tracking-tight">
+          タスク
+        </h1>
+        <Button size="sm"
+          className="w-full sm:w-auto"
+          onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          新規タスク
+        </Button>
+        <div className="flex gap-2 w-full
+          sm:w-auto ml-auto">
+          <div className="w-[200px]">
+            <Select value={filterProject}
+              onValueChange={setFilterProject}>
+              <SelectTrigger
+                aria-label="プロジェクトで絞り込み">
+                <SelectValue placeholder=
+                  "すべてのプロジェクト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのプロジェクト
+                </SelectItem>
+                {projects?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-[200px]">
+            <Select value={filterStatus}
+              onValueChange={(value) => {
+                if (value === 'all'
+                  || isTaskStatus(value))
+                  setFilterStatus(value);
+              }}>
+              <SelectTrigger>
+                <SelectValue placeholder=
+                  "すべてのステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  すべてのステータス
+                </SelectItem>
+                {Object.entries(
+                  TASK_STATUS_LABELS
+                ).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid gap-6
+          sm:grid-cols-2 lg:grid-cols-3
+          xl:grid-cols-4">
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                description={task.description}
+                status={task.status}
+                priority={task.priority}
+                dueDate={task.dueDate}
+                assignee={task.assignee}
+                timeSpentMinutes={task.timeSpentMinutes}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={handleTaskClick}
+                onTimeLogSuccess={handleTimeLogSuccess}
+                canEdit={canEditProject(task.projectId)}
+                canDelete={canDeleteProject(task.projectId)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full flex
+              flex-col items-center
+              justify-center py-12
+              text-center
+              text-muted-foreground">
+              <p>タスクが見つかりません。</p>
+              {filterProject === 'all' && filterStatus === 'all' && (
+                <p>最初のタスクを作成しましょう！</p>
+              )}
+            </div>
+          )}
+        </div>
+        <TaskDetailDialog
+          open={detailOpen}
+          taskId={selectedTask}
+          onClose={handleDetailClose}
+          canEditProject={canEditProject}
+        />
+
+        <TaskDialog
+          open={dialogOpen}
+          onClose={closeTaskDialog}
+          onSubmit={handleSubmit}
+          initialData={editingTask}
+          projects={projects ?? []}
+        />
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => {
+            if (deleteTargetId) {
+              deleteMutation.mutate(
+                { id: deleteTargetId }
+              );
+            }
+          }}
+          isPending={deleteMutation.isPending}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+
+export default function TaskPage() {
+  return (
+    <Suspense
+      fallback={<PageLoadingSpinner />}>
+      <TaskPageContent />
+    </Suspense>
+  );
+}
 ```
 
 Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTaskDialog}` へ替えた箇所です。

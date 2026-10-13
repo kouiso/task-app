@@ -49,6 +49,21 @@ const USERS = [
 // ─── メイン処理 ─────────────────────────────────────────────────────────────
 
 async function main() {
+  // 本番相当のDBへ既知資格情報の管理者を作らせないため、接続先をローカルに限定する
+  const databaseUrl = process.env.DATABASE_URL ?? '';
+  // URL 全体を正規表現で探すと query 等で回避されるため、hostname を厳密比較する
+  const LOCAL_DB_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+  let dbHostname = '';
+  try {
+    dbHostname = new URL(databaseUrl).hostname;
+  } catch {
+    dbHostname = '';
+  }
+  const isLocalDb = LOCAL_DB_HOSTS.has(dbHostname);
+  if (process.env.NODE_ENV === 'production' || !isLocalDb) {
+    throw new Error('db:seed:dev はローカル開発DB（localhost）への接続でのみ実行できます');
+  }
+
   console.warn('🌱 デバッグ用フルデータを投入しています...');
 
   HASHED_PASSWORD = await bcrypt.hash('password123', 10);

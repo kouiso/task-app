@@ -1,0 +1,64 @@
+day01: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day02: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day03: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day04: ツリー OK（76 ファイル） Prisma生成 OK tsc OK build OK
+day05: ツリー OK（78 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day06: ツリー OK（79 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day07: ツリー OK（86 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day08: ツリー OK（89 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day09: ツリー OK（91 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day10: ツリー OK（92 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day11: ツリー OK（93 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day12: ツリー OK（93 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day13: ツリー OK（95 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.
+day14: ツリー OK（97 ファイル） Prisma生成 OK tsc NG build NG
+    src/app/login/page.tsx(14,21): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(15,10): error TS2304: Cannot find name 'z'.
+    src/app/login/page.tsx(17,13): error TS2304: Cannot find name 'z'.
+    Failed to compile.
+    Type error: Cannot find name 'z'.

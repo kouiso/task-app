@@ -12,6 +12,7 @@ jobs:
       github.event.pull_request.base.ref == 'develop') &&
       (vars.DEVIN_REVIEW_ENABLED == 'true' || vars.CODEX_REVIEW_ENABLED == 'true')
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write

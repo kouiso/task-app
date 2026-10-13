@@ -1,0 +1,5 @@
+[apply_day] day27_プロジェクト詳細・アーカイブを実装しよう.md (tag=day27)
+  ✅ SPLICE src/server/api/routers/project.ts (4 parts)
+  ✅ WRITE  src/app/project/page.tsx (kansei-run)
+  ✅ WRITE  src/component/project/project-detail-view.tsx (kansei-run)
+  → 3 files written
