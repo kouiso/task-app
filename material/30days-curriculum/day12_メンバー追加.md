@@ -450,7 +450,7 @@ sequenceDiagram
 
 `delete` にも `userId_projectId` を渡すので消えるのは「このプロジェクトのこのユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残ります。外された人も他のプロジェクトではこれまで通り作業できます。
 
-メンバーから外れた人に、このプロジェクトのタスクの担当が残る問題が次です。担当が残ると Day 29 で作るユーザー詳細ページから、もう所属していないプロジェクトのタスクが読めてしまいます。同じトランザクションの中で担当を外します。
+次の問題は、外れた人に担当タスクが残ることです。担当が残ると Day 29 で作るユーザー詳細ページから、もう所属していないプロジェクトのタスクが読めてしまいます。同じトランザクションの中で担当を外します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -2029,7 +2029,7 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
         );
 ```
 
-`removeMember` は全体を `prisma.$transaction` で囲み、最初にプロジェクトの行を `FOR UPDATE` でロックします。OWNER が2人いるときの同時削除で OWNER が0人にならないようにするためです。ロックを取るメソッドは Prisma にないので `$queryRaw` で SQL を書き、`${input.projectId}` は `Prisma.sql` がパラメータとして渡します。
+`removeMember` は全体を `prisma.$transaction` で囲み、最初にプロジェクトの行を `FOR UPDATE` でロックします。OWNER が2人いるときに2つの削除が同時に届いても OWNER は0人になりません。そのための処理です。ロックを取るメソッドは Prisma にないので `$queryRaw` で SQL を書き、`${input.projectId}` は `Prisma.sql` がパラメータとして渡します。
 
 **removeMember の権限確認**:
 
