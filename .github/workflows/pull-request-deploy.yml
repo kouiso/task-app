@@ -11,7 +11,7 @@ env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   SERVICE: ${{ vars.GCP_REPOSITORY }}
   REGION: ${{ vars.GCP_REGION }}
-  IMAGE: asia.gcr.io//${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_REPOSITORY }}/app:${{ github.sha }}
+  IMAGE: asia.gcr.io/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_REPOSITORY }}/app:${{ github.sha }}
 
 jobs:
   deploy:
