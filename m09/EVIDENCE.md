@@ -1,11 +1,11 @@
 # M09 curriculum evidence (PR #667)
 
-- Evidence taken from PR head: `3e0aaea0e3127b8d2d985d0e8a289b4e8e09cef6` (branch m09/curriculum-20261015)
+- Evidence taken from PR head: `e47540d1283dfc3fd873d35242e9e6f3ffcd322a` (branch m09/curriculum-20261015)
 - Compared against main: `e69374e796664e308a3963cf0d2c0e3dba7556ac`
 - PDF pages: built locally on the Mac mini with `scripts/pdf-book/build_pdf_book.py` (same builder and `PDF_BOOK_LINK_MAP` as the 教材PDF検査 workflow, which uploads no PDF artifact). Rendered with `pdftoppm -r 90`.
 - Screenshots m09/day12/14/20_side.png were added earlier.
 
-| Day | Page | Before (main e69374e7) | After (head 3e0aaea0) |
+| Day | Page | Before (main e69374e7) | After (head e47540d1) |
 |---|---|---|---|
 | day24 | Mermaid: 全体図 | [p3](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day24_before_p3.png) | [p3](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day24_after_p3.png) |
 | day24 | ユーザー一覧 (createdAt guard) | [p46](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day24_before_p46.png) | [p46](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day24_after_p46.png) |
@@ -17,4 +17,6 @@
 | day29 | user-detail-client (戻るボタン) | [p45](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day29_before_p45.png) | [p46](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day29_after_p46.png) |
 | day28 | Step 8: handleBulkUpdateStatus (Step section) | [p59](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day28_before_p59.png) | [p64](https://github.com/kouiso/task-app/blob/evidence/m09-curriculum-20261015/m09/pdf/day28_after_p64.png) |
 
-After pages: day28 rebuilt from 3e0aaea0; day24/29 from 8eeac081 and day26 from 12a396cb (those files are unchanged since).
+After pages: day28 rebuilt from e47540d1; day24/29 from 8eeac081 and day26 from 12a396cb (those files are unchanged since).
+
+Mermaid diagrams: the before/after pairs for day24 p3, day26 p6, day28 p6 and day29 p6 are byte-identical images. This PR does not change any Mermaid diagram in these days; the pairs are included only to show the rendered diagrams readers see.
