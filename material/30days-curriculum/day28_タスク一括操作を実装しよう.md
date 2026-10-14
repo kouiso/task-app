@@ -472,9 +472,7 @@ const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
 
 ```typescript
 // filepath: src/app/task/page.tsx
-const handleTaskSelect = (
-  taskId: string, checked: boolean
-) => {
+const handleTaskSelect = (taskId: string, checked: boolean) => {
   setSelectedTasks((prev) => {
     const next = new Set(prev);
     checked ? next.add(taskId) : next.delete(taskId);
@@ -496,18 +494,12 @@ React では state を直接変更してはいけません。`prev.add(id)` と�
 ```typescript
 // filepath: src/app/task/page.tsx
 const selectableTasks = useMemo(
-  () => tasks?.filter(
-    (task) =>
-      canEditProject(task.projectId)
-      || canDeleteProject(task.projectId),
-  ) ?? [],
+  () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
   [tasks, canEditProject, canDeleteProject],
 );
 
 const selectedTaskList = useMemo(
-  () => tasks?.filter(
-    (task) => selectedTasks.has(task.id),
-  ) ?? [],
+  () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
   [tasks, selectedTasks],
 );
 ```
@@ -535,15 +527,10 @@ flowchart TB
 ```typescript
 // filepath: src/app/task/page.tsx
 const canCompleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canEditProject(task.projectId),
-  );
+  selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
+
 const canDeleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canDeleteProject(task.projectId),
-  );
+  selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 ```
 
 `every`（配列の全要素が条件を満たしたときだけ `true` を返すメソッド）を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので「編集はできるが削除はできない」タスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
@@ -557,13 +544,7 @@ const canDeleteSelected =
 ```typescript
 // filepath: src/app/task/page.tsx
 const handleSelectAll = (checked: boolean) => {
-  setSelectedTasks(
-    checked
-      ? new Set(selectableTasks.map(
-          (task) => task.id
-        ))
-      : new Set()
-  );
+  setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
 };
 ```
 
@@ -790,8 +771,7 @@ const selectAllState =
   selectableTasks.length > 0
     ? selectedTaskList.length === 0
       ? false
-      : selectedTaskList.length
-          === selectableTasks.length
+      : selectedTaskList.length === selectableTasks.length
         ? true
         : 'indeterminate'
     : false;
@@ -931,31 +911,22 @@ Day 20 で作った `notifyMutationError` を一括操作にも使います。
 import { CheckSquare } from 'lucide-react';
 
 // 一括完了のミューテーション
-const bulkCompleteMutation =
-  api.task.bulkComplete.useMutation({
-    onSuccess: () => {
-      // キャッシュを無効化して一覧を再取得
-      utils.task.getAll.invalidate();
-      // 選択状態をリセット
-      setSelectedTasks(new Set());
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクの一括完了に失敗しました'),
-  });
+const bulkCompleteMutation = api.task.bulkComplete.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+  },
+});
 ```
 
-成功時は一覧を再取得して選択を解除します。失敗時は通知関数でエラーを分類します。応答を確認できない場合も選択を残すため操作の対象を確かめ直せます。
+成功時は `invalidate` で一覧を再取得し、`setSelectedTasks(new Set())` で選択を解除します。失敗したときは選択がそのまま残るので、対象を確かめてからもう一度押せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 // 一括完了のハンドラー
 const handleBulkComplete = () => {
-  if (canCompleteSelected) {
-    bulkCompleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
+  if (selectedTaskList.length > 0) {
+    bulkCompleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
   }
 };
 ```
@@ -973,10 +944,10 @@ const handleBulkComplete = () => {
   <Button
     variant="outline"
     size="sm"
+    className="w-full sm:w-auto"
     onClick={handleBulkComplete}
   >
-    <CheckSquare className="mr-2 h-4 w-4" />
-    完了にする
+    <CheckSquare className="mr-2 h-4 w-4" /> 完了にする
   </Button>
 )}
 ```
@@ -1019,16 +990,14 @@ tRPC は一度取得したデータをキャッシュ（記憶）しています
 ```typescript
 // filepath: src/app/task/page.tsx
 // 一括削除のミューテーション
-const bulkDeleteMutation =
-  api.task.bulkDelete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-      setBulkDeleteDialogOpen(false);
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクの一括削除に失敗しました'),
-  });
+const bulkDeleteMutation = api.task.bulkDelete.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+    setBulkDeleteDialogOpen(false);
+  },
+  onError: (error) => notifyMutationError(error, 'タスクの一括削除に失敗しました'),
+});
 ```
 
 削除の成功を確認してから選択を解除してダイアログを閉じます。`DeleteConfirmDialog` は削除の完了を待つため確認ボタンだけでは閉じません。成功時の `setBulkDeleteDialogOpen(false)` が必要です。失敗時は選択と画面を保ちます。通知関数で理由を伝えて対象タスクを確認できるようにします。
@@ -1037,7 +1006,7 @@ const bulkDeleteMutation =
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 // 削除ボタンのハンドラー（ダイアログを開くだけ）
 const handleBulkDelete = () => {
-  if (canDeleteSelected) {
+  if (selectedTaskList.length > 0) {
     setBulkDeleteDialogOpen(true);
   }
 };
@@ -1068,7 +1037,7 @@ import { CheckSquare, Plus, Trash2 }
   <Button
     variant="outline"
     size="sm"
-    className="text-destructive hover:text-destructive"
+    className="w-full text-destructive hover:text-destructive sm:w-auto"
     onClick={handleBulkDelete}
   >
     <Trash2 className="mr-2 h-4 w-4" /> 削除
@@ -1092,12 +1061,7 @@ Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残し�
   open={bulkDeleteDialogOpen}
   onOpenChange={setBulkDeleteDialogOpen}
   onConfirm={() => {
-    // OKが押されたら実際に削除を実行
-    bulkDeleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
+    bulkDeleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
   }}
   isPending={bulkDeleteMutation.isPending}
   title={`${selectedTaskList.length}件のタスクを削除しますか？`}
@@ -1146,15 +1110,12 @@ import {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 一括ステータス変更のミューテーション
-const bulkUpdateStatusMutation =
-  api.task.bulkUpdateStatus.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクのステータス変更に失敗しました'),
-  });
+const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+  },
+});
 ```
 
 成功時だけ選択を解除します。応答が不明な場合は変更済みの可能性があるため一覧を再取得します。通知を読んで対象タスクのステータスを確認するため選択を残します。
@@ -1162,23 +1123,16 @@ const bulkUpdateStatusMutation =
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 // ステータス変更のハンドラー
-const handleBulkUpdateStatus = (
-  status: TaskStatus
-) => {
-  if (canCompleteSelected) {
-    bulkUpdateStatusMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-      status,
-    });
+const handleBulkUpdateStatus = (status: TaskStatus) => {
+  if (selectedTaskList.length > 0) {
+    bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((t) => t.id), status });
   }
 };
 ```
 
 `bulkComplete` との違いは`mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので両者の中身はほとんど重なります。
 
-権限の判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えるとボタンは出るのにサーバーが断る、という食い違いが生まれます。
+ボタンを出す判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えるとボタンは出るのにサーバーが断る、という食い違いが生まれます。
 
 ヘッダーの一括操作ボタン領域に追加します。
 
@@ -1188,20 +1142,18 @@ const handleBulkUpdateStatus = (
 {canCompleteSelected && (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="outline" size="sm">
+      <Button variant="outline" size="sm" className="w-full sm:w-auto">
         ステータス変更
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      {Object.entries(
-        TASK_STATUS_LABELS
-      ).map(([value, label]) => (
-        <DropdownMenuItem key={value}
+      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+        <DropdownMenuItem
+          key={value}
           onClick={() => {
-            if (isTaskStatus(value)) {
-              handleBulkUpdateStatus(value);
-            }
-          }}>
+            if (isTaskStatus(value)) handleBulkUpdateStatus(value);
+          }}
+        >
           {label}
         </DropdownMenuItem>
       ))}

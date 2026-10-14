@@ -810,21 +810,21 @@ export default function UsersPage() {
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
-                      {format(
-                            new Date(
-                              user.createdAt),
-                            'yyyy/MM/dd',
-                            { locale: ja })}
+                      {user.createdAt
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                            locale: ja,
+                          })
+                        : '-'}
                     </TableCell>
 ```
 
 > `format` は `date-fns` の関数です。
 > `yyyy/MM/dd` で年・月・日を数字で表示します。
-> 取得したユーザーの `createdAt` は必ず `Date` です。
+> `createdAt` が無いときは `-` を表示します。
 > ユーザー取得前の待機は Step 3 で判定しています。
 
 **確認ポイント**:
-- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡している
+- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡し、値が無いときは `-` にしている
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}

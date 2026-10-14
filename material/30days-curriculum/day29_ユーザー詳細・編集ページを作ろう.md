@@ -678,8 +678,8 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     );
   }
 
-  const isAdmin = currentUser.role === USER_ROLE.ADMIN;
-  const isOwnProfile = currentUser.id === user.id;
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === user.id;
 ```
 
 401ではログイン、403ではダッシュボード、404では管理者だけユーザー一覧へ戻します。一時的な500相当の失敗で前回データがある場合はこの早期リターンを通らず、Step 4 で追加する警告と前回内容を表示します。本人判定にはサーバーが返した `user.id` を使います。
@@ -877,17 +877,17 @@ import { formatDateOnly } from '@/lib/date';
                         登録日
                       </p>
                       <p>
-                        {format(
-                              new Date(user.createdAt),
-                              'yyyy年MM月dd日',
-                              { locale: ja }
-                            )}
+                        {user.createdAt
+                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
 ```
 
-表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。取得したユーザーの登録日と更新日は必須項目です。`getById` が両方を選んで返すためその値を整形します。ユーザー全体の読み込み中や取得失敗は Step 3 で先に判定しています。
+表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。`getById` が返した日時を整形し、値が無いときは `-` を出します。ユーザー全体の読み込み中や取得失敗は Step 3 で先に判定しています。
 
 **確認ポイント**: 登録日がカレンダーアイコン付きで表示されることを確認してください。
 
@@ -903,11 +903,11 @@ import { formatDateOnly } from '@/lib/date';
                         最終更新日
                       </p>
                       <p>
-                        {format(
-                              new Date(user.updatedAt),
-                              'yyyy年MM月dd日',
-                              { locale: ja }
-                            )}
+                        {user.updatedAt
+                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
@@ -1613,7 +1613,7 @@ import { Label } from '@/component/ui/label';
 
 CardContent 内のフォームを書きます。`register` でテキスト入力を管理し、`watch` でアバタープレビューをリアルタイム更新します。
 
-> `onSubmit` と `updateUser` は
+> `handleSubmit` と `updateUser` は
 > Step 10 で定義します。ここではJSX構造を
 > 先に書き、Step 10 の完了後に動作確認します。
 
@@ -1621,7 +1621,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
 {/* フォーム開始 + アバタープレビュー */}
             <form onSubmit={
-              form.handleSubmit(onSubmit)}
+              form.handleSubmit(handleSubmit)}
               className="space-y-6">
               <div className="flex
                 justify-center mb-6">
@@ -1701,7 +1701,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
 **確認ポイント**:
-- `<form onSubmit={form.handleSubmit(onSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
+- `<form onSubmit={form.handleSubmit(handleSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
 - 名前欄に `{...form.register('name')}` が入っている
 - メールアドレスの欄だけ `register` を使わず `value={user.email}` と `disabled` になっている
 
@@ -1901,36 +1901,31 @@ import { Alert, AlertDescription, AlertTitle }
         router.refresh();
       },
       onError: (error) => {
-        toast.error(error.message
-          || 'ユーザー情報の更新に'
-          + '失敗しました');
+        toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
       },
     });
 ```
 
-`Error.message` は文字列です。空文字では失敗の案内が出ないため `||` で既定の文言を使います。サーバーから文言が届いた場合はその内容を表示します。
+`??` は左側が `null` か `undefined` のときだけ右側の既定の文言を使います。サーバーから文言が届いた場合はその内容を表示します。
 
 先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` は覚えている結果に「古い」という印を付ける命令です。いま画面に出ている分はすぐ取り直されます。取り直しが終わるまでは前の結果がそのまま表示されます。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-  // zodバリデーション済みの値で送信
-  const onSubmit =
-    (values: UserEditFormValues) => {
-      updateUser.mutate({
-        id: userId,
-        name: values.name,
-        avatar: values.avatar
-          || null,
-        ...(canManageAccount
-          ? { role: values.role,
-              isActive: values.isActive }
-          : {}),
-      });
-    };
+  const handleSubmit = (values: UserEditFormValues) => {
+    updateUser.mutate({
+      id: userId,
+      name: values.name,
+      avatar: normalizeAvatarValue(values.avatar),
+      // 管理者でも本人編集時は role/isActive を送らない
+      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
+    });
+  };
 ```
 
-**確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くのでこの時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは`</form>` を書き終えた Step 10 の最後で確かめます。
+`normalizeAvatarValue` は空のアバター入力を `null` にそろえる関数で、ファイル先頭で `import { normalizeAvatarValue } from '@/lib/utils';` と取り込みます。
+
+**確認ポイント**: `handleSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くのでこの時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(handleSubmit)}>` が指している2つがそろいました。実際に動くかどうかは`</form>` を書き終えた Step 10 の最後で確かめます。
 
 サーバー側の `update` ルーターは自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `null` に変換しています。`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、すでに登録されている画像を消せません。
 
