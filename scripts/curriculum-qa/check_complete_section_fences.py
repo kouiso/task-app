@@ -109,14 +109,6 @@ DECLARED_EXCERPTS: dict[tuple[int, str], str] = {
 # 値は (理由, listing に無い断片の行数)。行数を持つのは、登録した箇所に新しいずれが
 # 足されても素通りしないようにするため。数が変わったら登録を見直す。
 LISTING_DIVERGES: dict[tuple[int, str], tuple[str, int]] = {
-    (28, "src/app/task/page.tsx"): (
-        "listing は PR #622 で src/ の実装を載せたもので、断片とは変数名（task と t）と"
-        "一括ハンドラーの判定（canCompleteSelected と selectedTaskList.length > 0）が違う。"
-        "Step に無い URL 同期フィルタ（useSearchParams と router.replace）も使っている。"
-        "`@/lib/task-filter-query` は #650 で配布物に足して import 自体は解決するが、"
-        "Step で教えていない実装は残る。方針の決定と直しを行い、終わったらこの登録を消す。追跡: #657",
-        12,
-    ),
 }
 
 

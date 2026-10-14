@@ -1640,9 +1640,7 @@ const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
 ```typescript
 // filepath: src/app/task/page.tsx
 // 1件のチェックを切り替える関数
-const handleTaskSelect = (
-  taskId: string, checked: boolean
-) => {
+const handleTaskSelect = (taskId: string, checked: boolean) => {
   setSelectedTasks((prev) => {
     const next = new Set(prev);
     checked ? next.add(taskId) : next.delete(taskId);
@@ -1659,18 +1657,12 @@ const handleTaskSelect = (
 // filepath: src/app/task/page.tsx
 // 操作できるタスクと選択中タスクの絞り込み
 const selectableTasks = useMemo(
-  () => tasks?.filter(
-    (task) =>
-      canEditProject(task.projectId)
-      || canDeleteProject(task.projectId),
-  ) ?? [],
+  () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
   [tasks, canEditProject, canDeleteProject],
 );
 
 const selectedTaskList = useMemo(
-  () => tasks?.filter(
-    (task) => selectedTasks.has(task.id),
-  ) ?? [],
+  () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
   [tasks, selectedTasks],
 );
 ```
@@ -1683,15 +1675,9 @@ const selectedTaskList = useMemo(
 // filepath: src/app/task/page.tsx
 // 操作ごとの権限の判定
 const canCompleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canEditProject(task.projectId),
-  );
+  selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
 const canDeleteSelected =
-  selectedTaskList.length > 0
-  && selectedTaskList.every(
-    (task) => canDeleteProject(task.projectId),
-  );
+  selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 ```
 
 `every` を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので削除できないタスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出て押した先でサーバーに断られます。この2つが守るのはボタンを出すかどうかまでで、最後に守るのは Step 0 のサーバー側です。
@@ -1702,13 +1688,7 @@ const canDeleteSelected =
 // filepath: src/app/task/page.tsx
 // 全選択・全解除の関数
 const handleSelectAll = (checked: boolean) => {
-  setSelectedTasks(
-    checked
-      ? new Set(selectableTasks.map(
-          (task) => task.id
-        ))
-      : new Set()
-  );
+  setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
 };
 ```
 
@@ -1723,8 +1703,7 @@ const selectAllState =
   selectableTasks.length > 0
     ? selectedTaskList.length === 0
       ? false
-      : selectedTaskList.length
-          === selectableTasks.length
+      : selectedTaskList.length === selectableTasks.length
         ? true
         : 'indeterminate'
     : false;
@@ -1737,28 +1716,21 @@ const selectAllState =
 ```typescript
 // filepath: src/app/task/page.tsx
 // 一括完了の mutation とハンドラー
-const bulkCompleteMutation =
-  api.task.bulkComplete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクの一括完了に失敗しました'),
-  });
+const bulkCompleteMutation = api.task.bulkComplete.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+  },
+});
 ```
 
-この成功処理とエラー処理は Step 6 と一致させます。通信結果が不明な場合は一覧を再取得して確認します。成功を受け取るまでは対象タスクの選択を残します。
+成功したときだけ一覧を再取得して選択を解除します。失敗したときは選択が残るので、どのタスクが対象だったかを画面で確認してからもう一度押せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 const handleBulkComplete = () => {
-  if (canCompleteSelected) {
-    bulkCompleteMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-    });
+  if (selectedTaskList.length > 0) {
+    bulkCompleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
   }
 };
 ```
@@ -1770,16 +1742,14 @@ const handleBulkComplete = () => {
 ```typescript
 // filepath: src/app/task/page.tsx
 // 一括削除の mutation とハンドラー
-const bulkDeleteMutation =
-  api.task.bulkDelete.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-      setBulkDeleteDialogOpen(false);
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクの一括削除に失敗しました'),
-  });
+const bulkDeleteMutation = api.task.bulkDelete.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+    setBulkDeleteDialogOpen(false);
+  },
+  onError: (error) => notifyMutationError(error, 'タスクの一括削除に失敗しました'),
+});
 ```
 
 一括削除にも通知関数を残します。失敗したタスクの選択を消すと削除の対象を確認し直せません。成功時だけ選択を解除して処理の結果を判断できるようにします。
@@ -1787,7 +1757,7 @@ const bulkDeleteMutation =
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 const handleBulkDelete = () => {
-  if (canDeleteSelected) {
+  if (selectedTaskList.length > 0) {
     setBulkDeleteDialogOpen(true);
   }
 };
@@ -1800,36 +1770,26 @@ const handleBulkDelete = () => {
 ```typescript
 // filepath: src/app/task/page.tsx
 // ステータス一括変更の mutation とハンドラー
-const bulkUpdateStatusMutation =
-  api.task.bulkUpdateStatus.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setSelectedTasks(new Set());
-    },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクのステータス変更に失敗しました'),
-  });
+const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
+  onSuccess: () => {
+    utils.task.getAll.invalidate();
+    setSelectedTasks(new Set());
+  },
+});
 ```
 
-ステータスの一括変更も成功時だけ選択を解除します。応答が確認できない場合は更新済みの可能性があります。通知関数で一覧を再取得して対象タスクを確認できるようにします。
+ステータスの一括変更も成功時だけ一覧を再取得して選択を解除します。失敗したときは選択が残るので、変えたかったタスクを確かめてからもう一度選び直さずに押せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-const handleBulkUpdateStatus = (
-  status: TaskStatus
-) => {
-  if (canCompleteSelected) {
-    bulkUpdateStatusMutation.mutate({
-      ids: selectedTaskList.map(
-        (task) => task.id
-      ),
-      status,
-    });
+const handleBulkUpdateStatus = (status: TaskStatus) => {
+  if (selectedTaskList.length > 0) {
+    bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((t) => t.id), status });
   }
 };
 ```
 
-判定に `canCompleteSelected` を使い回しているのはステータスの変更が編集にあたるからです。Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。ここだけ削除権限に変えるとボタンは出るのにサーバーが断るという食い違いが生まれます。画面側とサーバー側で、確かめる権限の名前をそろえてください。
+3つのハンドラーはどれも `selectedTaskList` が空でないことだけを確かめます。権限の判定は `canCompleteSelected` と `canDeleteSelected` でボタンを出すかどうかに使い、最後に守るのは Step 0 のサーバー側です。ステータスの変更は編集にあたるので、Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。
 
 完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果が
 このファイルと一致しているかを確認します。
