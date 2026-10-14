@@ -716,10 +716,22 @@ def candidates(parts: list[Part]):
             return (label, body, sub[0].prose)
         return None
     n = len(parts)
+    kansei_idx = [i for i, p in enumerate(parts) if p.kansei]
+    if kansei_idx:
+        k0, k1 = kansei_idx[0], kansei_idx[-1]
+        span = parts[k0:k1 + 1]
+        # 節別リスティングで積み上げる教材（day11 型）: kansei 部分が
+        # 連続している時は全結合を先に試す。途中の kansei 断片から始める
+        # kansei-run が先に採用されると 'use client'・import 群の頭が
+        # 静かに欠ける。本文側の kansei 断片と節の listing が混在する
+        # ファイルは連続にならないため、従来順へ落ちて損は出ない。
+        if all(p.kansei or p.cont or p.unmarked for p in span):
+            r = emit("kansei-all", [p for p in span])
+            if r:
+                yield r
     # 「完成版」の確認用全量リスティングは末尾に来る。
     # 途中の断片も「〜の完成形」と名付くことがあるため、
     # 先頭の完成ラベルからではなく後ろの完成ラベルから順に試す。
-    kansei_idx = [i for i, p in enumerate(parts) if p.kansei]
     for k0 in reversed(kansei_idx):
         for label, sub in (("kansei-run", parts[k0:]),
                            ("kansei-run-marked", [p for p in parts[k0:] if not p.unmarked]),

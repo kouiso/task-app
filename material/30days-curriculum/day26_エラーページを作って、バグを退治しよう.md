@@ -381,7 +381,7 @@ DevTools を開いて Console タブを見てください。
 
 401 と 403 で前回値を隠すのは、いま表示する権利が確認できないデータを画面に残さないためです。500 は権限が変わった証拠ではないので、取得済みの値があれば作業を続けられるように残します。
 
-`src/lib/query-error.ts` は Day 11 で作りました。本書の後半「通信エラー対応後の完成コード」に載せたコメント付きの完成形で丸ごと置き換えます。処理は Day 11 と同じです。分類の理由をコメントで足しています。開いて、HTTP ステータスの取り出し方と再試行の条件を確認します。
+`src/lib/query-error.ts` は Day 11 で作りました。今回は内容を読み合わせるだけです。後半の「通信エラー対応後の完成コード」には分類の理由をコメントで足した見本を載せています。手元のファイルを開いて HTTP ステータスの取り出し方と再試行の条件を確認します。
 
 ```typescript
 // filepath: src/lib/query-error.ts
@@ -432,7 +432,9 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 
 #### 2.5-2. 画面で使う問い合わせをすべて監視する
 
-この節の3画面は本書の後半「通信エラー対応後の完成コード」に載せた完全なファイルで丸ごと置き換えます。断片を継ぎ足すのではありません。先に `src/app/dashboard/page.tsx`、`src/app/my-task/page.tsx`、`src/app/report/page.tsx` の3ファイルをそこから写して保存してください。この先は3ファイルを置き換えた状態で読み進めます。この節に載せる断片は置き換えたファイルの中で判定がどう組まれているかを読むためのものです。
+この節では本書の後半「通信エラー対応後の完成コード」から4ファイルを丸ごと置き換えます。先に `src/component/task/task-dialog.tsx` を保存してください。そのあとで `src/app/dashboard/page.tsx`、`src/app/my-task/page.tsx`、`src/app/report/page.tsx` を保存します。断片を継ぎ足す必要はありません。この節の短いコードは保存したファイルの判定を読むための見本です。
+
+保存中にタイトルを書き足してから先の保存が成功すると新しい入力まで消える場合があります。マイタスクでは保存の結果を TaskDialog へ返します。TaskDialog が送信時と現在の入力を比べて閉じてよいかを判断します。Day 15 の一覧画面と Day 20 の検索画面は従来どおり親画面が閉じます。この段階では2画面の送信後の入力保持まで確認した扱いにはしません。
 
 置き換える前のダッシュボードは Day 02 で書いた固定メッセージの画面です。置き換えた後はプロジェクト一覧と集計の2件を同時に取得します。片方だけを見ると、もう片方の 401 や 500 を成功として扱ってしまいます。完成コードでは両方から `isError`、`error`、`refetch` を受け取ります。
 
@@ -636,7 +638,12 @@ const mocks = vi.hoisted(() => ({
   projects: vi.fn(),
   tasks: vi.fn(),
   push: vi.fn(),
-  updateOptions: null as null | { onError?: (error: ErrorShape) => void },
+  updateAsync: vi.fn(),
+  submitResult: undefined as unknown,
+  updateOptions: null as null | {
+    onError?: (error: ErrorShape) => void;
+    onSuccess?: () => void;
+  },
 }));
 
 interface ErrorShape {
@@ -668,8 +675,18 @@ vi.mock('@/component/task/task-card', () => ({
   ),
 }));
 vi.mock('@/component/task/task-dialog', () => ({
-  TaskDialog: ({ open, initialData }: { open: boolean; initialData?: { title?: string } }) =>
-    open ? <div>編集中: {initialData?.title}</div> : null,
+  TaskDialog: ({ open, initialData, onSubmit }: {
+    open: boolean;
+    initialData?: import('@/component/task/task-dialog').TaskFormData;
+    onSubmit: (data: import('@/component/task/task-dialog').TaskFormData) => unknown;
+  }) => open ? (
+    <div>
+      <span>編集中: {initialData?.title}</span>
+      <button type="button" onClick={() => {
+        if (initialData) mocks.submitResult = onSubmit(initialData);
+      }}>更新を送信</button>
+    </div>
+  ) : null,
 }));
 vi.mock('@/component/ui/delete-confirm-dialog', () => ({ DeleteConfirmDialog: () => null }));
 vi.mock('@/component/ui/loading-spinner', () => ({ PageLoadingSpinner: () => <div>loading</div> }));
@@ -692,9 +709,9 @@ vi.mock('@/trpc/react', () => ({
     task: {
       getAll: { useQuery: mocks.tasks },
       update: {
-        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+        useMutation: (options: { onError?: (error: ErrorShape) => void; onSuccess?: () => void }) => {
           mocks.updateOptions = options;
-          return { mutate: vi.fn() };
+          return { mutateAsync: mocks.updateAsync };
         },
       },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
@@ -797,6 +814,18 @@ describe('マイタスクの取得エラー', () => {
     ).toBeInTheDocument();
   });
 
+  it('保存の完了をダイアログへ返し成功時も親は閉じない', async () => {
+    const saved = Promise.resolve({ id: task.id });
+    mocks.updateAsync.mockReturnValue(saved);
+    render(<MyTasksPage />);
+    fireEvent.click(screen.getByRole('button', { name: '編集' }));
+    fireEvent.click(screen.getByRole('button', { name: '更新を送信' }));
+    expect(mocks.submitResult).toBe(saved);
+    await saved;
+    act(() => mocks.updateOptions?.onSuccess?.());
+    expect(screen.getByText('編集中: 前回取得したタスク')).toBeInTheDocument();
+  });
+
   it('更新失敗後も編集中の入力元とダイアログを保持する', () => {
     render(<MyTasksPage />);
     fireEvent.click(screen.getByRole('button', { name: '編集' }));
@@ -810,7 +839,7 @@ describe('マイタスクの取得エラー', () => {
 });
 ```
 
-`updateOptions` には `useMutation` へ渡した `onError` が入ります。テストから失敗時の処理だけを呼ぶことで、サーバーを起動せずにダイアログが閉じないことを確認できます。
+`updateOptions` には成功時と失敗時の処理を保存します。保存の完了を表す Promise（非同期処理の結果を受け取る値）がダイアログへ返ることも確認します。このテストは親画面の担当範囲を調べます。実際の入力欄については後半の「保存中に書き足した入力を画面で確かめる」で操作します。
 
 #### 2.5-7. レポートの状態をテストする
 
@@ -1365,7 +1394,7 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 
 ## 完成コード全体
 
-今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では3画面を更新し、テストに必要な5ファイルも作ります。Day 11 で作った `src/lib/query-error.ts` も含めて次の11ファイルが今日の確認対象です。
+今日作る画面は `src/app/error.tsx` と `src/app/not-found.tsx` の2つです。Step 2.5 では3画面と共通フォームを更新します。テストに必要な5ファイルも作ります。Day 11 で作った `src/lib/query-error.ts` の読み合わせを含めて次の12ファイルが確認対象です。
 
 バグAとバグBは教材内で修正版を読むため、アプリのファイルは増えません。バグCで足した `console.log` と、Step 2 で足した `throw` は削除済みです。
 
@@ -1374,16 +1403,17 @@ Day 05 で断ったとおり、この教材のコードは Biome の整形前の
 | `src/app/error.tsx` | 新しく作る | Step 1 |
 | `src/app/not-found.tsx` | 新しく作る | Step 2 |
 | `src/app/dashboard/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
+| `src/component/task/task-dialog.tsx` | 送信後の入力を保持する共通フォームへ置き換える | Step 2.5 |
 | `src/app/my-task/page.tsx` | 通信エラー表示と更新失敗時の処理を更新する | Step 2.5 |
 | `src/app/report/page.tsx` | 通信エラー表示を更新する | Step 2.5 |
-| `src/lib/query-error.ts` | コメント付きの完成形で置き換える | Step 2.5 |
+| `src/lib/query-error.ts` | Day 11 で作った処理を読み合わせる。置き換え不要 | Step 2.5 |
 | `vitest.config.ts` | 新しく作る | Step 2.5 |
 | `src/test/setup.ts` | 新しく作る | Step 2.5 |
 | `src/app/dashboard/page.test.tsx` | 新しく作る | Step 2.5 |
 | `src/app/my-task/page.test.tsx` | 新しく作る | Step 2.5 |
 | `src/app/report/page.test.tsx` | 新しく作る | Step 2.5 |
 
-まず2つの画面を以下と見比べます。通信エラー対応の4ファイルは、そのあとの「通信エラー対応後の完成コード」で確認してください。テスト設定と3つのテストは Step 2.5-4〜2.5-7 に完全な形を載せています。
+まず2つの画面を以下と見比べます。通信エラー対応の5ファイルは、そのあとの「通信エラー対応後の完成コード」で確認してください。テスト設定と3つのテストは Step 2.5-4〜2.5-7 に完全な形を載せています。
 
 ### `src/app/error.tsx`
 
@@ -1479,7 +1509,7 @@ export default function NotFound() {
 
 ## 通信エラー対応後の完成コード
 
-Step 2.5 では次の4ファイルをここに載せた完成形で丸ごと置き換えます。長いページを部分ごとに置換すると、古い import や条件分岐が残って型検査を通っても誤った表示になる場合があります。ここでは状態と表示を切り離せないファイルだけを、完全なコピー単位として載せます。
+Step 2.5 では3画面と TaskDialog の4ファイルを次の完成形で丸ごと置き換えます。5つ目の `src/lib/query-error.ts` は読み合わせ用です。置き換える必要はありません。長いページを部分ごとに置換すると古い import や条件分岐を消し忘れる場合があります。状態と表示を一緒に更新するためファイル全体をコピー単位にしています。
 
 ### `src/app/dashboard/page.tsx`（ダッシュボード）
 
@@ -1697,10 +1727,10 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
-            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
-            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
+            { label: '未対応タスク', value: todoTasks, color: TASK_STATUS_COLORS[TASK_STATUS.TODO], icon: Circle, },
+            { label: '完了タスク', value: completedTasks, color: TASK_STATUS_COLORS[TASK_STATUS.DONE], icon: CheckCircle2, },
+            { label: '進行中タスク', value: inProgressTasks, color: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS], icon: Timer, },
+            { label: 'レビュー中タスク', value: inReviewTasks, color: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW], icon: Eye, },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -1873,6 +1903,448 @@ export default function DashboardPage() {
 ```
 
 取得済みデータの有無とステータスを別々に判定するため、初回500、再取得500、401、403で決めた表示を保てます。再試行ボタンはそのページで使う取得処理を呼び直します。
+
+### `src/component/task/task-dialog.tsx`（保存中の入力を保持する）
+
+このファイルは複数の画面で使う入力欄です。通信を担当する親画面から Promise（保存の成功や失敗を後で受け取る値）が返る場合だけ結果を待ちます。何も返さない親画面ではこれまでの閉じる処理を使います。親画面の移行が終わる前に成功扱いで閉じることを防ぐためです。
+
+`generationRef` は開閉や対象変更の回数です。`draftRevisionRef` は入力変更の回数です。送信時の2つの値と現在値を比べると別の編集画面や送信後の入力を閉じずに残せます。`watch` はフォームの入力変更を通知します。Promise を待つ間は `isSubmitting` が送信ボタンを無効にします。
+
+Day 14 で作った `src/component/task/task-dialog.tsx` の内容を次のファイル全体で置き換えます。型定義と送信処理を組にして更新するため1つのコピー単位にしています。
+
+<!-- code-block-length-exception: complete-copy-unit -->
+```tsx
+// filepath: src/component/task/task-dialog.tsx
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useRef } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+import { Button } from '@/component/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/component/ui/dialog';
+import { Input } from '@/component/ui/input';
+import { Label } from '@/component/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/component/ui/select';
+import { Textarea } from '@/component/ui/textarea';
+import { TASK_PRIORITY, TASK_PRIORITY_LABELS, type TaskPriority } from '@/lib/constant/priority';
+import { TASK_STATUS, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
+import { api } from '@/trpc/react';
+
+const taskFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, 'タイトルは必須です'),
+  description: z.string().optional(),
+  status: z.nativeEnum(TASK_STATUS),
+  priority: z.nativeEnum(TASK_PRIORITY),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().min(0).optional(),
+  projectId: z.string().min(1, 'プロジェクトは必須です'),
+  assigneeId: z.string().optional(),
+  expectedUpdatedAt: z.string().optional(),
+});
+
+type TaskFormValues = z.infer<typeof taskFormSchema>;
+
+interface TaskDialogProps {
+  open: boolean;
+  onClose: () => void;
+  // 非同期で送信する場合は Promise を返す。Promise が reject した時は失敗として扱い、
+  // ダイアログを閉じずに下書きを残す
+  onSubmit: (data: TaskFormData) => unknown;
+  initialData?: TaskFormData | undefined;
+  projects: Array<{ id: string; name: string }>;
+}
+
+export interface TaskFormData {
+  id?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  estimatedHours?: number;
+  projectId: string;
+  assigneeId?: string;
+  // 楽観ロック用。編集画面を開いた時点の updatedAt（ISO文字列）を保持し、
+  // update API に渡すことで「他の人が先に更新していたら CONFLICT」を検出できる
+  expectedUpdatedAt?: string;
+}
+
+function buildTaskFormValues(
+  initialData: TaskFormData | undefined,
+  projects: Array<{ id: string; name: string }>,
+): TaskFormValues {
+  return {
+    id: initialData?.id,
+    title: initialData?.title ?? '',
+    description: initialData?.description ?? '',
+    status: initialData?.status ?? TASK_STATUS.TODO,
+    priority: initialData?.priority ?? TASK_PRIORITY.MEDIUM,
+    dueDate: initialData?.dueDate ?? '',
+    estimatedHours: initialData?.estimatedHours,
+    projectId: initialData?.projectId ?? (projects[0]?.id || ''),
+    assigneeId: initialData?.assigneeId ?? '',
+    expectedUpdatedAt: initialData?.expectedUpdatedAt,
+  };
+}
+
+export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: TaskDialogProps) {
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<TaskFormValues>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: buildTaskFormValues(initialData, projects),
+  });
+
+  // 送信応答が返る頃には下書きが変わっている可能性があるため、送信時点の
+  // 状態を世代（generation）と編集回数（revision）で記録して成功時に照合する。
+  // 世代はダイアログの開閉と編集対象の切り替わりで進め、revision は下書きの
+  // 変更ごとに進める。世代がずれた成功は別セッションのものとして触れない。
+  const generationRef = useRef(0);
+  const draftRevisionRef = useRef(0);
+
+  useEffect(() => {
+    const subscription = watch(() => {
+      draftRevisionRef.current += 1;
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
+  const selectedProjectId = watch('projectId');
+  const projectsRef = useRef(projects);
+  const { data: projectMembers } = api.search.getMembersByProject.useQuery(
+    { projectId: selectedProjectId },
+    { enabled: open && !!selectedProjectId },
+  );
+  const users = projectMembers ?? [];
+
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  useEffect(() => {
+    // 開閉や編集対象の切り替わりは別セッションなので世代を進める
+    generationRef.current += 1;
+    draftRevisionRef.current = 0;
+    if (!open) {
+      return;
+    }
+
+    reset(buildTaskFormValues(initialData, projectsRef.current));
+  }, [initialData, open, reset]);
+
+  useEffect(() => {
+    return () => {
+      // アンマウント（StrictMode の疑似再マウントを含む）も別セッションとみなす。
+      // 遅れて届く成功応答が、畳まれたフォームや親の状態に触れないようにする
+      generationRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    const firstProjectId = projects[0]?.id;
+    if (!open || initialData || selectedProjectId || !firstProjectId) {
+      return;
+    }
+
+    setValue('projectId', firstProjectId, { shouldDirty: false });
+  }, [initialData, open, projects, selectedProjectId, setValue]);
+
+  const handleClose = () => {
+    reset(buildTaskFormValues(undefined, projects));
+    onClose();
+  };
+
+  const handleFormSubmit = async (data: TaskFormValues) => {
+    const submitData: TaskFormData = {
+      ...(data.id !== undefined && { id: data.id }),
+      title: data.title,
+      status: data.status,
+      priority: data.priority,
+      projectId: data.projectId,
+      ...(data.description && { description: data.description }),
+      ...(data.dueDate && { dueDate: data.dueDate }),
+      ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
+      ...(data.assigneeId && { assigneeId: data.assigneeId }),
+      // 編集時のみ送る。サーバー側は updatedAt が一致しないと CONFLICT を返す
+      ...(data.id !== undefined &&
+        data.expectedUpdatedAt !== undefined && { expectedUpdatedAt: data.expectedUpdatedAt }),
+    };
+    const submitGeneration = generationRef.current;
+    const submitRevision = draftRevisionRef.current;
+    // この送信が「現在のセッションで、送信時点の下書きのまま」かを
+    // 応答時点に照合する
+    const isCurrent = () =>
+      submitGeneration === generationRef.current && submitRevision === draftRevisionRef.current;
+    try {
+      const result = onSubmit(submitData);
+      // Day 15 と Day 20 の親画面は成功時に自分で閉じるため待機対象がない
+      if (result === undefined) return;
+      await result;
+    } catch {
+      // 失敗時はダイアログを閉じず下書きを残す。エラー通知は呼び出し側の責務
+      return;
+    }
+    // 成功通知はダイアログを閉じる・閉じないに関係なく必ず出す
+    toast.success(submitData.id ? 'タスクを更新しました' : 'タスクを作成しました');
+    if (submitGeneration !== generationRef.current) {
+      return;
+    }
+    if (!isCurrent()) {
+      // 送信後に書き足された下書きは保存されていないので、閉じずに理由を伝える
+      toast(
+        submitData.id
+          ? '送信後の変更は保存されていません。閉じて開き直してから保存してください'
+          : '送信後の変更は保存されていません。このまま作成すると別のタスクになります',
+      );
+      return;
+    }
+    handleClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>{initialData?.id ? 'タスク編集' : 'タスク作成'}</DialogTitle>
+          <DialogDescription>
+            {initialData?.id
+              ? 'タスクの詳細を更新します。'
+              : 'プロジェクトに新しいタスクを追加します。'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">
+                タイトル{' '}
+                <span aria-hidden="true" className="text-destructive">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="タスクのタイトルを入力"
+                aria-required="true"
+                aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? 'title-error' : undefined}
+                {...register('title')}
+              />
+              {errors.title && (
+                <p id="title-error" className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">説明</Label>
+              <Textarea
+                id="description"
+                placeholder="タスクの説明..."
+                rows={4}
+                {...register('description')}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="status">
+                  ステータス{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="status" aria-label="ステータスを選択" aria-required="true">
+                        <SelectValue placeholder="ステータスを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="priority">
+                  優先度{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Controller
+                  name="priority"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="priority" aria-label="優先度を選択" aria-required="true">
+                        <SelectValue placeholder="優先度を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="project">
+                  プロジェクト{' '}
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
+                </Label>
+                <Controller
+                  name="projectId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        if (value !== field.value) {
+                          // 移動先プロジェクトに現担当者が居ない可能性があるため一旦未割当へ
+                          setValue('assigneeId', '');
+                        }
+                        field.onChange(value);
+                      }}
+                      disabled={!projects.length}
+                    >
+                      <SelectTrigger
+                        id="project"
+                        aria-label="プロジェクトを選択"
+                        aria-required="true"
+                      >
+                        <SelectValue placeholder="プロジェクトを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.projectId && (
+                  <p className="text-sm text-destructive">{errors.projectId.message}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="assignee">担当者</Label>
+                <Controller
+                  name="assigneeId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || 'unassigned'}
+                      onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)}
+                    >
+                      <SelectTrigger id="assignee" aria-label="担当者を選択">
+                        <SelectValue placeholder="担当者を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">未割当</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name || user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">期限</Label>
+                <Input id="dueDate" type="date" {...register('dueDate')} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="estimatedHours">見積時間</Label>
+                <Input
+                  id="estimatedHours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="0.0"
+                  {...register('estimatedHours', {
+                    setValueAs: (v: string) => (v === '' ? undefined : Number(v)),
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? '送信中...' : initialData?.id ? '更新' : '作成'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+#### 保存中に書き足した入力を画面で確かめる
+
+自分が編集できる練習用タスクをマイタスクで開きます。元のタイトルを手元に控えてから次の操作をします。
+
+
+（1）Chrome で開発者ツールを開きます。Mac は `command + option + I` です。Windows と Ubuntu は `Ctrl + Shift + I` です。`Network` タブを選びます。
+
+（2）上部の `No throttling` を開きます。`Custom` の `Add...` を選びます。設定画面の `Network throttling profiles` にある `Add profile` を押します。
+
+（3）名前を `Task edit check` にします。Download と Upload にそれぞれ `1000` を入れます。Latency（通信に足す待ち時間）に `3000` を入れて `Add` を押します。速度の単位は Kbps です。待ち時間の単位はミリ秒なので `3000` は3秒です。
+
+（4）設定を閉じて Network に戻ります。通信速度の一覧から `Task edit check` を選びます。これは Chrome の[通信速度を変える設定](https://developer.chrome.com/docs/devtools/settings/throttling)です。
+
+（5）編集欄のタイトルを `保存するタイトル` に変えて「更新」を押します。「送信中...」の間に末尾へ `追加分` と入力します。先の保存が成功しても入力欄が残り「送信後の変更は保存されていません」と表示されることを確かめます。
+
+（6）入力を追加する前に保存が終わった場合は未確認です。Latency を `10000` に変えます。編集を開き直して手順5を試してください。
+
+（7）「キャンセル」で閉じて開き直します。保存されたタイトルに `追加分` が含まれないことを確認します。元のタイトルへ戻して更新します。今度は送信後に入力を変えずに待ちます。成功すると編集欄が閉じます。
+
+（8）Network の通信速度を `No throttling` に戻します。元のタイトルが一覧に戻ったことを確認して開発者ツールを閉じます。
+
+エラーが表示された場合は成功時の確認には数えません。通信速度を `No throttling` に戻して編集欄を閉じます。一覧を更新して保存結果を確かめてから練習をやり直してください。
 
 ### `src/app/my-task/page.tsx`（マイタスク）
 
@@ -2071,10 +2543,11 @@ export default function MyTasksPage() {
     utils.task.getAll.invalidate();
   }, [utils.task.getAll]);
 
+  // ダイアログを閉じる判断は TaskDialog 側が持つ（送信後に下書きが
+  // 書き足されていた場合は閉じずに警告を出すため）
   const updateMutation = api.task.update.useMutation({
     onSuccess: () => {
       utils.task.getAll.invalidate();
-      setDialogOpen(false);
     },
     // 失敗時はダイアログを閉じず入力を残す。閉じてしまうと利用者は
     // 成功したのか失敗したのか分からず、再入力を強いられる。
@@ -2082,11 +2555,12 @@ export default function MyTasksPage() {
       // 応答そのものが届かなかった場合、サーバー側では処理が
       // 成功している可能性がある。「失敗しました」と断定せず、
       // 一覧を再取得して実際の結果を確認できるようにする。
+      if (isAuthError(error)) {
+        toast.error('ログインの有効期限が切れました');
+        return;
+      }
       if (isUnknownResult(error)) {
-        toast.error(
-          '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。'
-        );
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
         void utils.task.getAll.invalidate();
         return;
       }
@@ -2101,11 +2575,12 @@ export default function MyTasksPage() {
       setDeleteTargetId(null);
     },
     onError: (error) => {
+      if (isAuthError(error)) {
+        toast.error('ログインの有効期限が切れました');
+        return;
+      }
       if (isUnknownResult(error)) {
-        toast.error(
-          '応答を確認できませんでした。' +
-            '一覧を更新して結果を確認してください。'
-        );
+        toast.error('応答を確認できませんでした。一覧を更新して結果を確認してください。');
         void utils.task.getAll.invalidate();
         return;
       }
@@ -2126,9 +2601,9 @@ export default function MyTasksPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = (data: TaskFormData) => {
+  const handleSubmit = (data: TaskFormData): Promise<unknown> => {
     if (data.id) {
-      updateMutation.mutate({
+      return updateMutation.mutateAsync({
         id: data.id,
         title: data.title,
         description: data.description || null,
@@ -2143,6 +2618,7 @@ export default function MyTasksPage() {
         }),
       });
     }
+    return Promise.reject(new Error('更新対象のタスクがありません'));
   };
 
   const groupedTasks = useMemo(() => {
@@ -2233,8 +2709,7 @@ export default function MyTasksPage() {
               <span>
                 {authFailed
                   ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
-                  : '最新の情報を取得できませんでした。' +
-                    '表示は前回取得時の内容です。'}
+                  : '最新の情報を取得できませんでした。表示は前回取得時の内容です。'}
               </span>
               <button
                 type="button"
@@ -2698,7 +3173,7 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 
 401 と 403 の再試行を止め、応答が無い更新を結果不明として分ける基準が1か所にまとまりました。ページごとに別の判定を書かないため、同じ通信状態なら同じ案内になります。
 
-4ファイルを置き換えたら Step 2.5 のテストを実行します。テストが通れば、通常表示が出ることだけでなく、保護データを隠す条件と入力を残す条件も確認できます。
+3画面と TaskDialog の4ファイルを置き換えたら Step 2.5 のテストを実行します。`query-error.ts` は既存の処理を読み合わせます。テストでは保護データを隠す条件と親画面が編集中のダイアログを閉じないことを確認します。実際の入力欄は先ほどの手動確認で確かめます。
 
 ## 今日のまとめ
 
@@ -2795,6 +3270,6 @@ Day 27 ではDay 11・12 で作ったプロジェクト詳細のインライン�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
