@@ -1540,8 +1540,7 @@ import { api } from '@/trpc/react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  // ダッシュボードはアクティブな状況の概要のため、
-  // アーカイブ済みプロジェクトは除外する
+  // ダッシュボードはアクティブな状況の概要のため、アーカイブ済みプロジェクトは除外する
   const {
     data: projects,
     isLoading: projectsLoading,
@@ -1643,8 +1642,7 @@ export default function DashboardPage() {
             <span>
               {authFailed
                 ? 'ログインの有効期限が切れました。表示は前回取得時の内容です。'
-                : '最新の情報を取得できませんでした。' +
-                  '表示は前回取得時の内容です。'}
+                : '最新の情報を取得できませんでした。表示は前回取得時の内容です。'}
             </span>
             <button
               type="button"
@@ -1727,10 +1725,10 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '未対応タスク', value: todoTasks, color: TASK_STATUS_COLORS[TASK_STATUS.TODO], icon: Circle, },
-            { label: '完了タスク', value: completedTasks, color: TASK_STATUS_COLORS[TASK_STATUS.DONE], icon: CheckCircle2, },
-            { label: '進行中タスク', value: inProgressTasks, color: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS], icon: Timer, },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW], icon: Eye, },
+            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
+            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
+            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
+            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -2097,10 +2095,7 @@ export function TaskDialog({ open, onClose, onSubmit, initialData, projects }: T
     const isCurrent = () =>
       submitGeneration === generationRef.current && submitRevision === draftRevisionRef.current;
     try {
-      const result = onSubmit(submitData);
-      // Day 15 と Day 20 の親画面は成功時に自分で閉じるため待機対象がない
-      if (result === undefined) return;
-      await result;
+      await onSubmit(submitData);
     } catch {
       // 失敗時はダイアログを閉じず下書きを残す。エラー通知は呼び出し側の責務
       return;

@@ -429,13 +429,13 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-2xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -450,7 +450,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-未ログインはログイン画面へ送ります。IDの形式が不正な `BAD_REQUEST` と対象が無い `NOT_FOUND` は404へ送ります。`getById` は形式が正しいIDについて対象の検索前に本人か管理者かを調べます。権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
+未ログインはログイン画面へ送ります。対象が無い `NOT_FOUND` は404へ送ります。`getById` は形式が正しいIDについて対象の検索前に本人か管理者かを調べます。権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
@@ -684,7 +684,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 401ではログイン、403ではダッシュボード、404では管理者だけユーザー一覧へ戻します。一時的な500相当の失敗で前回データがある場合はこの早期リターンを通らず、Step 4 で追加する警告と前回内容を表示します。本人判定にはサーバーが返した `user.id` を使います。
 
-**確認ポイント**: 管理者で存在しないIDを開くと404画面が表示されます。形式が不正な `/user/not-a-cuid` でも `src/app/not-found.tsx` の404画面が表示されます。client 側で再取得中に対象が消えた場合も、スピナーではなく未発見の案内が残ります。
+**確認ポイント**: 管理者で存在しないIDを開くと404画面が表示されます。client 側で再取得中に対象が消えた場合も、スピナーではなく未発見の案内が残ります。
 
 正常系の表示を書きます。次のステップで内容を充実させます。
 
@@ -801,10 +801,10 @@ import { formatDateOnly } from '@/lib/date';
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
+          onClick={() => router.push('/user')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
+          ユーザー一覧に戻る
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -1209,13 +1209,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -1230,7 +1230,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-UNAUTHORIZED はログイン画面へ送ります。BAD_REQUEST と NOT_FOUND は404ページへ送ります。FORBIDDEN は詳細ページと同じ拒否画面にそろえます。それ以外のエラーは `throw` で上位へ渡します。
+UNAUTHORIZED はログイン画面へ送ります。NOT_FOUND は404ページへ送ります。FORBIDDEN は詳細ページと同じ拒否画面にそろえます。それ以外のエラーは `throw` で上位へ渡します。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -1241,7 +1241,7 @@ UNAUTHORIZED はログイン画面へ送ります。BAD_REQUEST と NOT_FOUND �
 }
 ```
 
-詳細ページを通らず編集URLを直接開くこともできます。そのため編集側にも同じ判定が必要です。形式が正しい他人のIDを一般ユーザーが開くと実在しても未発見でも `FORBIDDEN` の拒否画面になります。権限のある人にだけ `NOT_FOUND` の404を返します。形式が不正な `/user/not-a-cuid/edit` は `BAD_REQUEST` として404へ送ります。
+詳細ページを通らず編集URLを直接開くこともできます。そのため編集側にも同じ判定が必要です。形式が正しい他人のIDを一般ユーザーが開くと実在しても未発見でも `FORBIDDEN` の拒否画面になります。権限のある人にだけ `NOT_FOUND` の404を返します。
 
 次に client 側の取り込み、スキーマ、フォーム初期値を書きます。
 
@@ -1469,7 +1469,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-xl font-bold mb-2">
                 アクセス権限がありません
               </h1>
@@ -2728,13 +2728,13 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
 // エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-2xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -2749,7 +2749,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-401・403・404を分けるとログインし直すべき人とURLを直すべき人へ異なる案内を出せます。不正な形式のIDは BAD_REQUEST を404に変えます。形式が正しいIDの403は実在しても未発見でも同じ表示になります。
+401・403・404を分けるとログインし直すべき人とURLを直すべき人へ異なる案内を出せます。形式が正しいIDの403は実在しても未発見でも同じ表示になります。
 
 **client 部品への受け渡し**:
 
@@ -2790,13 +2790,13 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
                 <p className="text-muted-foreground">このユーザーを見る権限がありません</p>
               </CardContent>
@@ -3105,10 +3105,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
+          onClick={() => router.push('/user')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
+          ユーザー一覧に戻る
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -3171,15 +3171,17 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">登録日</p>
                       <p>
-                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                        {user.createdAt
+                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
                               locale: ja,
-                            })}
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
 ```
 
-表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。取得したユーザーの登録日と更新日は必須です。ユーザー全体の取得状態を先に判定したうえで `getById` が返した日時を整形します。
+表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。日時が無いときは `-` を出します。ユーザー全体の取得状態を先に判定したうえで `getById` が返した日時を整形します。
 
 **左カラムの最終更新日**:
 
@@ -3191,9 +3193,11 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
                       <p>
-                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                        {user.updatedAt
+                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
                               locale: ja,
-                            })}
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
@@ -3534,10 +3538,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
+          onClick={() => router.push('/user')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
+          ユーザー一覧に戻る
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -3573,9 +3577,11 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">登録日</p>
                       <p>
-                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                        {user.createdAt
+                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
                               locale: ja,
-                            })}
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
@@ -3584,9 +3590,11 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
                       <p>
-                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                        {user.updatedAt
+                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
                               locale: ja,
-                            })}
+                            })
+                          : '-'}
                       </p>
                     </div>
                   </div>
@@ -3721,13 +3729,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
 // エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -3742,7 +3750,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-権限がある人にだけ未発見の404を返します。不正な形式のIDも BAD_REQUEST を404に変えます。形式が正しいIDに権限がない人には実在を知らせません。編集できる条件を画面に残します。
+権限がある人にだけ未発見の404を返します。形式が正しいIDに権限がない人には実在を知らせません。編集できる条件を画面に残します。
 
 **client 部品への受け渡し**:
 
@@ -3783,13 +3791,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
+    if (trpcError.code === 'NOT_FOUND') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6 sm:pt-6">
+              <CardContent className="pt-6">
                 <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
                 <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
               </CardContent>
@@ -3979,7 +3987,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
     },
   });
 
@@ -4163,7 +4171,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>
@@ -4555,7 +4563,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
     },
   });
 
@@ -4667,7 +4675,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>
@@ -4926,7 +4934,7 @@ sequenceDiagram
 
 **Q1. `page.tsx` と画面側の両方で `getById` を呼んでいます。2回問い合わせるのはなぜで、存在しないIDを打ち込まれたとき返り方はどうなりますか。**
 
-A. `page.tsx` は描画前にログイン状態と権限を検査します。通過したときだけ `UserDetailClient` が表示用にもう一度 `getById` を呼びます。形式が正しい他人のIDは存在しても未発見でも一般ユーザーには同じ拒否画面を返します。権限を確認してからDBを検索するためIDの実在を知らせません。未発見の404は本人か管理者にだけ返します。不正な形式のIDは BAD_REQUEST を404へ変換します。
+A. `page.tsx` は描画前にログイン状態と権限を検査します。通過したときだけ `UserDetailClient` が表示用にもう一度 `getById` を呼びます。形式が正しい他人のIDは存在しても未発見でも一般ユーザーには同じ拒否画面を返します。権限を確認してからDBを検索するためIDの実在を知らせません。未発見の404は本人か管理者にだけ返します。
 
 **Q2. 一般ユーザーが他人の `/user/他人のid` を開くと編集ボタンが消えるだけですか。**
 

@@ -1843,7 +1843,7 @@ const handleBulkUpdateStatus = (
 'use client';
 
 import { CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/component/layout/app-layout';
@@ -1873,6 +1873,10 @@ import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/li
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { isAuthError, isUnknownResult } from '@/lib/query-error';
+import {
+  buildTaskFiltersQueryString,
+  parseTaskFiltersFromSearchParams,
+} from '@/lib/task-filter-query';
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
@@ -1892,6 +1896,7 @@ function TaskPageContent() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const taskIdParam = searchParams.get('taskId');
   const isEditLink = searchParams.get('edit') === 'true';
   const { data: linkedTask } = api.task.getById.useQuery(
@@ -1912,6 +1917,37 @@ function TaskPageContent() {
     setDetailOpen(false);
     setDialogOpen(true);
   }, [isEditLink, linkedTask]);
+
+  useEffect(() => {
+    const parsed = parseTaskFiltersFromSearchParams(searchParams);
+    setFilterProject(parsed.project);
+    setFilterStatus(parsed.status);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('project');
+    params.delete('status');
+
+    const filterQuery = buildTaskFiltersQueryString({
+      project: filterProject,
+      status: filterStatus,
+    });
+
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery);
+      for (const [key, value] of filterParams.entries()) {
+        params.set(key, value);
+      }
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [filterProject, filterStatus, pathname, router, searchParams]);
 
   const utils = api.useUtils();
 
@@ -1974,17 +2010,18 @@ function TaskPageContent() {
     [projects, canEditProject],
   );
 
-  const closeTaskDialog = () => {
+  const closeTaskDialog = useCallback(() => {
     setDialogOpen(false);
     setEditingTask(undefined);
-    if (!isEditLink) return;
 
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('taskId');
-    params.delete('edit');
-    const query = params.toString();
-    router.replace(query ? `/task?${query}` : '/task');
-  };
+    if (isEditLink) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('taskId');
+      params.delete('edit');
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [isEditLink, pathname, router, searchParams]);
 
   // タスク操作の失敗を利用者へ伝える。401 は再ログインが必要なので通常の
   // 失敗と区別し、応答自体が届かなかった場合は結果不明として断定せず
@@ -2037,8 +2074,6 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクの一括完了に失敗しました'),
   });
 
   const bulkDeleteMutation = api.task.bulkDelete.useMutation({
@@ -2055,8 +2090,6 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
-    onError: (error) =>
-      notifyMutationError(error, 'タスクのステータス変更に失敗しました'),
   });
 
   const handleCreate = () => {
@@ -2065,7 +2098,7 @@ function TaskPageContent() {
   };
 
   const handleEdit = (taskId: string) => {
-    const task = tasks?.find((task) => task.id === taskId);
+    const task = tasks?.find((t) => t.id === taskId);
     if (task) {
       setEditingTask(taskToFormData(task));
       setDialogOpen(true);
@@ -2129,41 +2162,41 @@ function TaskPageContent() {
 
   // 編集も削除もできないタスク（閲覧のみ）は一括操作の対象から除外する
   const selectableTasks = useMemo(
-    () => tasks?.filter((task) => canEditProject(task.projectId) || canDeleteProject(task.projectId)) ?? [],
+    () => tasks?.filter((t) => canEditProject(t.projectId) || canDeleteProject(t.projectId)) ?? [],
     [tasks, canEditProject, canDeleteProject],
   );
 
   const selectedTaskList = useMemo(
-    () => tasks?.filter((task) => selectedTasks.has(task.id)) ?? [],
+    () => tasks?.filter((t) => selectedTasks.has(t.id)) ?? [],
     [tasks, selectedTasks],
   );
 
   const canCompleteSelected =
-    selectedTaskList.length > 0 && selectedTaskList.every((task) => canEditProject(task.projectId));
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canEditProject(t.projectId));
   const canDeleteSelected =
-    selectedTaskList.length > 0 && selectedTaskList.every((task) => canDeleteProject(task.projectId));
+    selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedTasks(checked ? new Set(selectableTasks.map((task) => task.id)) : new Set());
+    setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
   };
 
   // 一括操作は「現在表示されている選択中タスク」のみを対象にする。
   // フィルタで非表示になったタスクや権限外タスクを巻き込まないようにするため。
   const handleBulkComplete = () => {
-    if (canCompleteSelected) {
-      bulkCompleteMutation.mutate({ ids: selectedTaskList.map((task) => task.id) });
+    if (selectedTaskList.length > 0) {
+      bulkCompleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
     }
   };
 
   const handleBulkDelete = () => {
-    if (canDeleteSelected) {
+    if (selectedTaskList.length > 0) {
       setBulkDeleteDialogOpen(true);
     }
   };
 
   const handleBulkUpdateStatus = (status: TaskStatus) => {
-    if (canCompleteSelected) {
-      bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((task) => task.id), status });
+    if (selectedTaskList.length > 0) {
+      bulkUpdateStatusMutation.mutate({ ids: selectedTaskList.map((t) => t.id), status });
     }
   };
 
@@ -2396,12 +2429,7 @@ function TaskPageContent() {
             projects={editableProjects}
           />
 
-          <TaskDetailDialog
-            open={detailOpen}
-            taskId={selectedTask}
-            onClose={handleDetailClose}
-            canEditProject={canEditProject}
-          />
+          <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
         </div>
       )}
 
@@ -2420,7 +2448,7 @@ function TaskPageContent() {
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
         onConfirm={() => {
-          bulkDeleteMutation.mutate({ ids: selectedTaskList.map((task) => task.id) });
+          bulkDeleteMutation.mutate({ ids: selectedTaskList.map((t) => t.id) });
         }}
         isPending={bulkDeleteMutation.isPending}
         title={`${selectedTaskList.length}件のタスクを削除しますか？`}

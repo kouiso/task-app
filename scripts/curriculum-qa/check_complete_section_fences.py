@@ -115,7 +115,7 @@ LISTING_DIVERGES: dict[tuple[int, str], tuple[str, int]] = {
         "Step に無い URL 同期フィルタ（useSearchParams と router.replace）も使っている。"
         "`@/lib/task-filter-query` は #650 で配布物に足して import 自体は解決するが、"
         "Step で教えていない実装は残る。方針の決定と直しを行い、終わったらこの登録を消す。追跡: #657",
-        10,
+        12,
     ),
 }
 

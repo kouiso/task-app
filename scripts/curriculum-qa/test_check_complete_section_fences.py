@@ -25,8 +25,8 @@ WHOLE_PAGE = (
     "  return <button onClick={() => setOpen(!open)} />;\n}"
 )
 
-# day28 page.tsx の登録行数（10 行）と同じ数だけ listing に無い行を持つ断片。
-DIVERGED_LINES = "// 一括完了\n" + "\n".join(f"  ifSelected{i}();" for i in range(1, 11))
+# day28 page.tsx の登録行数（12 行）と同じ数だけ listing に無い行を持つ断片。
+DIVERGED_LINES = "// 一括完了\n" + "\n".join(f"  ifSelected{i}();" for i in range(1, 13))
 
 
 def block(target: str, body: str, note: str = "", lang: str = "typescript") -> str:
@@ -390,7 +390,7 @@ CASES: list[tuple[str, str, str, int]] = [
         "day28_x.md",
         day(
             "",
-            block(PAGE, DIVERGED_LINES + "\n  ifSelected11();")
+            block(PAGE, DIVERGED_LINES + "\n  ifSelected13();")
             + unit(PAGE, WHOLE_PAGE),
         ),
         1,

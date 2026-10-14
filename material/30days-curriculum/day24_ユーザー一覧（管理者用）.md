@@ -532,7 +532,7 @@ export default function UsersPage() {
         <div className="container mx-auto
           max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed
                   ? 'ログインの有効期限が切れました'
@@ -1425,7 +1425,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1526,9 +1526,11 @@ export default function UsersPage() {
                     {/* filepath: src/app/user/page.tsx */}
                     {/* 登録日と詳細ボタン */}
                     <TableCell>
-                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                      {user.createdAt
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
                             locale: ja,
-                          })}
+                          })
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -1690,7 +1692,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6 sm:pt-6">
+            <CardContent className="pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1762,9 +1764,11 @@ export default function UsersPage() {
                       <ActiveStatusBadge isActive={user.isActive} />
                     </TableCell>
                     <TableCell>
-                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                      {user.createdAt
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
                             locale: ja,
-                          })}
+                          })
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
