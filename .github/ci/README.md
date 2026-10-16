@@ -65,4 +65,8 @@ propagation and gate boundaries. It does not prove the application, material,
 PDF, database, browser, security-service or cloud checks pass. The extraction
 receipt `source-closure.json` records original workflow step hashes; the
 intentional adaptations are portable Bash array input, fail-closed snapshot
-log checks, literal license input, and the local nonduplicated PDF verification.
+log checks, literal license input, the local nonduplicated PDF verification,
+and a checked, complete ZIP listing reused for content assertions. The ZIP
+listing avoids early-closing pipelines under strict pipefail. Run
+`node --test .github/ci/zip-contents.test.mjs` for synthetic large real ZIP,
+missing/forbidden entry, corrupt archive and failed-listing regression tests.
