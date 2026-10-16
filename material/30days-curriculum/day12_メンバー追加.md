@@ -106,7 +106,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
+| Step 0 | メンバー管理APIと行ロックを `project.ts` に追加する | 35分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
 | Step 2 | ProjectDetailViewに渡す値を `page.tsx` に用意する | 7分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
@@ -116,7 +116,7 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約69分です。
+**合計時間**: 約84分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -124,7 +124,7 @@ src/
 
 ---
 
-### Step 0: メンバー管理APIを `project.ts` に追加する（20分）
+### Step 0: メンバー管理APIを `project.ts` に追加する（35分）
 
 追加するのは `getAvailableUsers`、`addMember`、`removeMember`、`updateMemberRole` の4つです。
 
@@ -293,12 +293,28 @@ const projectMemberSchema = z.object({
 
 `addMember` で一番大事なのは追加する前に「もうすでにメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
 
-#### 0-3. removeMember（最後のOWNERは消せない）
+#### 0-3. removeMember（同時操作でも最後のOWNERを残す）
 
-`addMember` の下に追加します。まず入力の形と、自分の権限を確認します。
+退会した人を未完了タスクの担当者として残さないようにします。さらに2人が同時に退会してもOWNERを1人残します。ファイル先頭の `import type { Prisma }` を次の1行に置き換えます。型だけを取り込む形のままだとSQLを作る `Prisma.sql` を呼べません。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
+import { Prisma } from '@prisma/client';
+```
+
+`Prisma` を値として取り込むと `Prisma.sql` を実行できます。型の注釈にも引き続き使えます。同じインポート欄へ次の1行も追加します。完了とキャンセルの担当記録を残す判定に使います。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+import { TASK_STATUS } from '@/lib/constant/status';
+```
+
+`addMember` の下へ次のブロックを順番に貼ります。各ブロックの続きも含めて1つの `removeMember` です。
+
+削除対象はプロジェクトIDとユーザーIDの組で指定します。続けて権限確認から保存までをトランザクション（途中で失敗したら中の変更をまとめて取り消す処理）に入れます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
   removeMember: protectedProcedure
     .input(
       z.object({
@@ -307,110 +323,128 @@ const projectMemberSchema = z.object({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-削除でも、最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので`canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますがこのチェックはボタンの有無とは関係なく毎回動きます。
+最初にプロジェクトの行ロック（同じ行を変更する別の処理を待たせる保護）を取ります。`$queryRaw` はSQL（データベースへの命令を書く言語）を直接実行します。`Prisma.sql` は埋め込んだIDを値として渡すための書き方です。`FOR UPDATE` がロックを取る命令です。`projects` はスキーマの `@@map("projects")` が決めたテーブル名です。
 
-続けて削除対象のメンバーが実際に存在するかを確認します。
+ロックはこのトランザクションが終わるまで保ちます。退会と降格が同じ行をロックするため同じプロジェクトの2つの操作は順に進みます。待っていた処理は先の変更が終わってから権限と人数を読み直します。まず `tx` で操作する本人を探して権限を確かめます。プロジェクトの行をロックしても入力IDの相手を閲覧する権限は増えません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-      const member = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+      return await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
 
-      if (!member) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'メンバーが見つかりません',
-        });
-      }
-```
-
-自分の権限と削除対象の存在を確認できたらaddMember と同じ2段階チェックです。1段階目は「自分にメンバーを削除する権限があるか」（`canManageMembers`）、2段階目は「削除対象が OWNER なら自分も OWNER か」です。`canManageMembers` があってもOWNER の削除だけは別に確認します。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      // OWNERメンバーの削除はOWNERのみに限定する。
-      // ADMINによるオーナー排除を防ぐため。
-      if (
-        member.role === PROJECT_MEMBER_ROLE.OWNER &&
-        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'オーナーの削除はオーナーのみ可能です',
-        });
-      }
-```
-
-`canManageMembers` を持つ ADMIN は普通のメンバーを削除できますがOWNER を削除できてしまうとADMIN が邪魔なオーナーを外して実質的にプロジェクトを乗っ取れます。削除対象が OWNER のときだけ、削除する側も OWNER であることを確認します。
-
-続けて削除してよいかの最終チェックです。削除対象が OWNER のときだけ、そのプロジェクトの OWNER が何人いるかを数えます。
-
-```typescript
-// filepath: src/server/api/routers/project.ts（続き）
-      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
-        const ownerCount = await prisma.projectMember.count({
+        const userMember = await tx.projectMember.findUnique({
           where: {
-            projectId: input.projectId,
-            role: PROJECT_MEMBER_ROLE.OWNER,
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
           },
         });
 
-        if (ownerCount === 1) {
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+自分の権限を確認したあとで削除対象を探します。存在しない相手には日本語の説明を付けて止めます。`tx.projectMember.findUnique` もロックを持つ同じ処理の中なので待っていた操作が変更後の参加状況を確かめます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        const member = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!member) {
           throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'プロジェクト唯一のオーナーは削除できません',
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
           });
         }
-      }
 ```
 
-1人しかいない場合は削除を止めます。OWNER が0人になるとプロジェクトの削除とアーカイブを実行できる人がいなくなります。名前の変更やメンバー追加は ADMIN にも許可されています。MEMBER や VIEWER を削除するときはこの人数チェックを通りません。
-
-チェックを抜けたら実際に削除します。
+ADMINがOWNERを外せるとプロジェクトを乗っ取れるためOWNERの削除はOWNERに限ります。MEMBERとVIEWERは手前の権限確認で止まります。削除対象がOWNERの場合だけ追加の制限を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-      await prisma.projectMember.delete({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+        if (
+          member.role === PROJECT_MEMBER_ROLE.OWNER &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナーの削除はオーナーのみ可能です',
+          });
+        }
+```
 
-      return { success: true };
+OWNERが1人なら削除を止めます。ロックを保持したまま人数を数えるため2人が同時に退会しても両方が「2人いる」と判定して進むことを防ぎます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーは削除できません',
+            });
+          }
+        }
+```
+
+削除するのはこのプロジェクトに参加する1人分の行です。ユーザー本体や他のプロジェクトの参加記録は残ります。続けて同じ `tx` で担当を外します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        await tx.projectMember.delete({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+```
+
+`updateMany` は外した人が担当するこのプロジェクトの未完了タスクだけを更新します。完了とキャンセルの担当者は過去の記録として残します。削除と担当解除のどちらかが失敗したら両方を取り消します。成功したら画面が一覧を取り直すための返事を返します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
+        await tx.task.updateMany({
+          where: {
+            projectId: input.projectId,
+            assigneeId: input.userId,
+            status: { notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] },
+          },
+          data: { assigneeId: null },
+        });
+
+        return { success: true };
+      });
     }),
 ```
 
-`delete` にも `userId_projectId` を渡すので消えるのは「このプロジェクトの、このユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。最後の `return { success: true }` は削除には返せる中身が無いための返事です。Step 6 で書く画面側はこれを受け取った時点で `getById` を取り直し、消えたメンバーが一覧から居なくなったことを表示へ反映します。
+#### 0-4. updateMemberRole（同じロックで降格を保護する）
 
-#### 0-4. updateMemberRole（ロール変更の手続きを用意する）
+`removeMember` の下へ次のブロックを順番に貼ります。Step 2の画面から呼ぶ役割変更の手続きです。
 
-`removeMember` の下に追加します。`ProjectDetailView` の中にはメンバーのロールを変えるセレクトボックスがあります。これは Step 2 で書く `handleUpdateMemberRole` から呼ばれ、その先でこの `updateMemberRole` procedure を叩きます。先にサーバー側の手続きを用意してStep 2 のクライアント側とつなげます。
-
-まず自分の権限を確認します。
+ロール変更では指定した役割を `projectMemberRoleSchema` で検査します。続けて削除と同じプロジェクトの行をロックします。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
   updateMemberRole: protectedProcedure
     .input(
       z.object({
@@ -420,23 +454,33 @@ const projectMemberSchema = z.object({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここから先は `prisma.$transaction` の中で処理します。たとえば「対象メンバーを検索した直後に、別のリクエストが同じメンバーを削除してしまう」ようなタイミングのズレが起きると存在しないメンバーを更新しようとしてデータが壊れかねません。`$transaction` は複数の読み書きを1つのまとまりにして途中で失敗したときに全部を取り消す仕組みです。中の処理では `prisma` の代わりに、引数で渡された `tx` を使います。
+削除と降格の両方で同じ行をロックします。別の操作でも待つ相手がそろうため人数を確かめる間にもう1人が退会することを防げます。本人の権限もロックを取ったあとで読み直します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
       return await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
+
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+ロールを変更する相手が存在するかを確かめます。見つからなければ処理を止めてトランザクションを取り消します。`userId_projectId` に入力の2つのIDを渡すため別のプロジェクトの同じ人を更新することはありません。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（続き）
         const targetMember = await tx.projectMember.findUnique({
           where: {
             userId_projectId: {
@@ -454,12 +498,10 @@ const projectMemberSchema = z.object({
         }
 ```
 
-続けて権限昇格を防ぐチェックです。`addMember` は「OWNERとして追加できるか」、`removeMember` は「OWNERを削除できるか」を見ました。`updateMemberRole` は「ロールを変える」1つの操作の中に、昇格（誰かをOWNERにする）と降格（OWNERを他のロールに変える）の両方が起こり得ます。
+OWNERの付与と降格は実行する本人がOWNERの場合に限ります。ADMINからの権限昇格を防ぐためです。変更前の `targetMember.role` と変更後の `input.role` の両方を見るので付与と降格を1つの条件で保護できます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-        // OWNERロールの付与・剥奪はOWNERのみに限定する。
-        // ADMINによる権限昇格・オーナー降格を防ぐため。
         if (
           (input.role === PROJECT_MEMBER_ROLE.OWNER ||
             targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
@@ -472,9 +514,7 @@ const projectMemberSchema = z.object({
         }
 ```
 
-`input.role === OWNER`（誰かを新しくOWNERにしようとしている＝昇格）と `targetMember.role === OWNER`（今OWNERの人のロールを変えようとしている＝降格）を `||` でつないでいます。昇格と降格のどちらであっても「実行する本人がOWNERか」を同じ条件で確認したいからです。2つの操作を別々のif文で分けず1つにまとめ、チェック漏れを防いでいます。どちらの操作も、実行する本人がOWNERでなければ止めます。
-
-最後に`removeMember` の「最後のOWNERは削除できない」と対になる保護です。
+最後のOWNERを降格させる操作を止めます。人数確認だけをトランザクションへ入れても同時操作は防げません。ここでは確認から変更まで同じ行のロックを保つため待っていた処理が最新の人数を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -498,9 +538,7 @@ const projectMemberSchema = z.object({
         }
 ```
 
-この `count` を `$transaction` の中で数えているのには理由があります。外で数えると「OWNERは2人いる」と分かった直後に別のリクエストがもう1人を降格させ、書き込みが終わったときにはOWNERが0人という結果になり得ます。数えるところから書き換えるところまでを1つのまとまりに閉じると途中で失敗したときに片方だけ実行された状態が残りません。ただしこれで同時に届いた2つのリクエストまで整理できるわけではありません。PostgreSQL の初期設定（同時に走る処理をどこまで隔てるかの設定）では2つのリクエストが同時に「OWNERは2人いる」と数えたうえで、それぞれ別の人を降格させることが起こり得ます。そこまで塞ぐには数える前にプロジェクトの行を押さえるか、データベース側に「OWNERは1人以上」という決まりを持たせます。今日はまとまりで囲うところまでにします。
-
-唯一の OWNER を他のロールに降格させるとプロジェクトを削除・アーカイブできる人がいなくなります。名前の変更やメンバー追加は ADMIN でもできますがOWNER 専用の操作は代行できません。チェックを通ったら更新します。
+更新対象は `userId_projectId` の組で1人に決まります。`tx.projectMember.update` が成功するとトランザクションを確定してロックを解放します。画面で使うユーザーの項目も返します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -524,11 +562,7 @@ const projectMemberSchema = z.object({
     }),
 ```
 
-更新の相手を `userId_projectId` という2つの列の組で指定しているのは`ProjectMember` にはこの組み合わせで一意になる約束が付いているためです。`userId` だけで探すとその人が複数のプロジェクトに参加していたときどの行を直せばよいか決まりません。
-
-`prisma` ではなく `tx` を使っているのはこの更新が同じトランザクション（複数の操作をひとまとまりとして扱い、途中で失敗したら全部なかったことにする仕組み）の中にあるからです。手前で数えたオーナーの人数と、この書き換えを1つのまとまりとして扱います。別々に実行すると数えたあと書き換えるまでの隙間に他の人が役割を変え、オーナーが0人になる余地が残ります。
-
-最後の `});` で `projectRouter` 全体を閉じます。
+`removeMember` と `updateMemberRole` は同じプロジェクトの行をロックしてから本人の権限とOWNERの人数を確かめます。保存が終わるとロックを解放します。最後の `});` で `projectRouter` 全体を閉じます。
 
 **確認ポイント**:
 - `getAvailableUsers` / `addMember` / `removeMember` / `updateMemberRole` を追加した
@@ -1372,11 +1406,12 @@ Day 13 のタスク一覧でプロジェクトの絞り込みを試すときに�
 ```typescript
 // filepath: src/server/api/routers/project.ts
 // 完成版: インポート
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { DEFAULT_PROJECT_COLOR } from '@/lib/constant/project';
 import { PROJECT_MEMBER_ROLE, USER_ROLE } from '@/lib/constant/roles';
+import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { assertMemberPermission } from './_helpers/permission';
@@ -1915,11 +1950,13 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
 
 `data: input` と書けるのは入力スキーマの3項目が `ProjectMember` の列とそのまま対応しているからです。`include` でユーザーを一緒に返すので画面は追加された人の名前をすぐ表示できます。
 
-**removeMember の入力と権限確認**:
+**removeMember の完成コード**:
+
+削除対象はプロジェクトIDとユーザーIDの組で指定します。続けて権限確認から保存までをトランザクション（途中で失敗したら中の変更をまとめて取り消す処理）に入れます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の入力と権限確認
+// 完成版: メンバー操作の続き
   removeMember: protectedProcedure
     .input(
       z.object({
@@ -1928,113 +1965,133 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-削除でも最初に見るのは自分の権限です。MEMBER と VIEWER はこの1行で止まり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。
+最初にプロジェクトの行ロック（同じ行を変更する別の処理を待たせる保護）を取ります。`$queryRaw` はSQL（データベースへの命令を書く言語）を直接実行します。`Prisma.sql` は埋め込んだIDを値として渡すための書き方です。`FOR UPDATE` がロックを取る命令です。`projects` はスキーマの `@@map("projects")` が決めたテーブル名です。
 
-**removeMember の対象確認**:
+ロックはこのトランザクションが終わるまで保ちます。退会と降格が同じ行をロックするため同じプロジェクトの2つの操作は順に進みます。待っていた処理は先の変更が終わってから権限と人数を読み直します。まず `tx` で操作する本人を探して権限を確かめます。プロジェクトの行をロックしても入力IDの相手を閲覧する権限は増えません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の対象確認
-      const member = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+// 完成版: メンバー操作の続き
+      return await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
 
-      if (!member) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'メンバーが見つかりません',
-        });
-      }
-```
-
-削除する相手が実際にこのプロジェクトのメンバーかを確かめます。この行がないと存在しない組み合わせに対する `delete` がデータベース側の例外になります。取得した `member` はこの後のオーナー判定にも使います。
-
-**removeMember のオーナー削除の制限**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember のオーナー削除の制限
-      // OWNERメンバーの削除はOWNERのみに限定する。
-      // ADMINによるオーナー排除を防ぐため。
-      if (
-        member.role === PROJECT_MEMBER_ROLE.OWNER &&
-        userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'オーナーの削除はオーナーのみ可能です',
-        });
-      }
-```
-
-ADMIN は普通のメンバーを外せますがOWNER まで外せると邪魔なオーナーを排除して実質的にプロジェクトを奪えます。削除対象が OWNER のときだけ、削除する側も OWNER かを確かめます。
-
-**removeMember の最後のオーナーの保護**:
-
-```typescript
-// filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の最後のオーナーの保護
-      if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
-        const ownerCount = await prisma.projectMember.count({
+        const userMember = await tx.projectMember.findUnique({
           where: {
-            projectId: input.projectId,
-            role: PROJECT_MEMBER_ROLE.OWNER,
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
           },
         });
 
-        if (ownerCount === 1) {
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+自分の権限を確認したあとで削除対象を探します。存在しない相手には日本語の説明を付けて止めます。`tx.projectMember.findUnique` もロックを持つ同じ処理の中なので待っていた操作が変更後の参加状況を確かめます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: メンバー操作の続き
+        const member = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        if (!member) {
           throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'プロジェクト唯一のオーナーは削除できません',
+            code: 'NOT_FOUND',
+            message: 'メンバーが見つかりません',
           });
         }
-      }
 ```
 
-OWNER が0人になるとプロジェクトの削除とアーカイブを実行できません。名前の変更やメンバー追加は ADMIN にも許可されています。数えるのは対象が OWNER のときだけなのでMEMBER や VIEWER の削除ではこの問い合わせをしません。
-
-**removeMember の削除**:
+ADMINがOWNERを外せるとプロジェクトを乗っ取れるためOWNERの削除はOWNERに限ります。MEMBERとVIEWERは手前の権限確認で止まります。削除対象がOWNERの場合だけ追加の制限を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: removeMember の削除
-      await prisma.projectMember.delete({
-        where: {
-          userId_projectId: {
-            userId: input.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
+// 完成版: メンバー操作の続き
+        if (
+          member.role === PROJECT_MEMBER_ROLE.OWNER &&
+          userMember?.role !== PROJECT_MEMBER_ROLE.OWNER
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'オーナーの削除はオーナーのみ可能です',
+          });
+        }
+```
 
-      return { success: true };
+OWNERが1人なら削除を止めます。ロックを保持したまま人数を数えるため2人が同時に退会しても両方が「2人いる」と判定して進むことを防ぎます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: メンバー操作の続き
+        if (member.role === PROJECT_MEMBER_ROLE.OWNER) {
+          const ownerCount = await tx.projectMember.count({
+            where: {
+              projectId: input.projectId,
+              role: PROJECT_MEMBER_ROLE.OWNER,
+            },
+          });
+
+          if (ownerCount === 1) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'プロジェクト唯一のオーナーは削除できません',
+            });
+          }
+        }
+```
+
+削除するのはこのプロジェクトに参加する1人分の行です。ユーザー本体や他のプロジェクトの参加記録は残ります。続けて同じ `tx` で担当を外します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: メンバー操作の続き
+        await tx.projectMember.delete({
+          where: {
+            userId_projectId: {
+              userId: input.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+```
+
+`updateMany` は外した人が担当するこのプロジェクトの未完了タスクだけを更新します。完了とキャンセルの担当者は過去の記録として残します。削除と担当解除のどちらかが失敗したら両方を取り消します。成功したら画面が一覧を取り直すための返事を返します。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: メンバー操作の続き
+        await tx.task.updateMany({
+          where: {
+            projectId: input.projectId,
+            assigneeId: input.userId,
+            status: { notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] },
+          },
+          data: { assigneeId: null },
+        });
+
+        return { success: true };
+      });
     }),
 ```
 
-`delete` にも `userId_projectId` を渡すので消えるのはこのプロジェクトのこのユーザーを表す1行だけです。ユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。返す中身が無いので `{ success: true }` を返し、画面側は受け取った時点で `getById` を取り直します。
+**updateMemberRole の完成コード**:
 
-**updateMemberRole の入力と権限確認**:
+ロール変更では指定した役割を `projectMemberRoleSchema` で検査します。続けて削除と同じプロジェクトの行をロックします。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の入力と権限確認
+// 完成版: メンバー操作の続き
   updateMemberRole: protectedProcedure
     .input(
       z.object({
@@ -2044,26 +2101,35 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: input.projectId,
-          },
-        },
-      });
-
-      assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ロール変更の入力は `role` に `projectMemberRoleSchema` を使い、許される4つの文字列だけを受け付けます。画面側の `isProjectMemberRole` も同じ4つを指しているので選択肢に出る値とサーバーの受け付ける値はそろいます。
-
-**updateMemberRole のトランザクションと対象確認**:
+削除と降格の両方で同じ行をロックします。別の操作でも待つ相手がそろうため人数を確かめる間にもう1人が退会することを防げます。本人の権限もロックを取ったあとで読み直します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole のトランザクションと対象確認
+// 完成版: メンバー操作の続き
       return await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw<Array<{ id: string }>>(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${input.projectId} FOR UPDATE`,
+        );
+
+        const userMember = await tx.projectMember.findUnique({
+          where: {
+            userId_projectId: {
+              userId: ctx.session.userId,
+              projectId: input.projectId,
+            },
+          },
+        });
+
+        assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
+```
+
+ロールを変更する相手が存在するかを確かめます。見つからなければ処理を止めてトランザクションを取り消します。`userId_projectId` に入力の2つのIDを渡すため別のプロジェクトの同じ人を更新することはありません。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+// 完成版: メンバー操作の続き
         const targetMember = await tx.projectMember.findUnique({
           where: {
             userId_projectId: {
@@ -2081,15 +2147,11 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-`$transaction` は複数の読み書きを1つのまとまりにして途中で失敗したときに全部を取り消す仕組みです。中では `prisma` の代わりに引数の `tx` を使います。対象を探した直後に別のリクエストがその行を消してもまとまりごと取り消されるので中途半端な結果が残りません。
-
-**updateMemberRole のオーナー権限の変更制限**:
+OWNERの付与と降格は実行する本人がOWNERの場合に限ります。ADMINからの権限昇格を防ぐためです。変更前の `targetMember.role` と変更後の `input.role` の両方を見るので付与と降格を1つの条件で保護できます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole のオーナー権限の変更制限
-        // OWNERロールの付与・剥奪はOWNERのみに限定する。
-        // ADMINによる権限昇格・オーナー降格を防ぐため。
+// 完成版: メンバー操作の続き
         if (
           (input.role === PROJECT_MEMBER_ROLE.OWNER ||
             targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
@@ -2102,13 +2164,11 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-`input.role === OWNER` は誰かを新しく OWNER にする昇格、`targetMember.role === OWNER` は今の OWNER を別のロールへ変える降格です。どちらも実行する本人が OWNER かを問いたいので2つを `||` でつないで1つの条件にまとめています。別々の `if` に分けると片方だけ確認を書き忘れる余地が生まれます。
-
-**updateMemberRole の最後のオーナーの保護**:
+最後のOWNERを降格させる操作を止めます。人数確認だけをトランザクションへ入れても同時操作は防げません。ここでは確認から変更まで同じ行のロックを保つため待っていた処理が最新の人数を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の最後のオーナーの保護
+// 完成版: メンバー操作の続き
         if (
           targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
           input.role !== PROJECT_MEMBER_ROLE.OWNER
@@ -2129,13 +2189,11 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-`count` を `$transaction` の中で数えているのは数えてから書き換えるまでの隙間を減らすためです。外で数えると2人いると分かった直後に別のリクエストがもう1人を降格させ、書き終えたときには0人になり得ます。ただし同時に届いた2つのリクエストまではこの囲いだけでは整理できません。
-
-**updateMemberRole の更新**:
+更新対象は `userId_projectId` の組で1人に決まります。`tx.projectMember.update` が成功するとトランザクションを確定してロックを解放します。画面で使うユーザーの項目も返します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の更新
+// 完成版: メンバー操作の続き
         return await tx.projectMember.update({
           where: {
             userId_projectId: {
@@ -2156,7 +2214,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
     }),
 ```
 
-更新の相手を `userId_projectId` の組で指定しているのは`ProjectMember` がこの2列の組で一意になる約束を持っているからです。`userId` だけで探すとその人が複数のプロジェクトに参加していたときにどの行を直すか決まりません。`prisma` ではなく `tx` を使うのは手前で数えた人数とこの書き換えを1つのまとまりに保つためです。
+役割変更が成功すると画面で使うユーザーの項目を返します。ロックを解放してから待っていた次の操作が権限と人数を確かめます。失敗した場合は役割の変更を取り消すため最後のOWNERが消える途中状態は保存されません。
 
 **archive と unarchive**:
 
@@ -3194,6 +3252,6 @@ Day 13 ではタスク一覧ページを作ります。プロジェクトの中�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
