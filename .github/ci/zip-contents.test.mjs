@@ -1,11 +1,30 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const source = resolve('.github/ci');
+test('cloud and local CI include ZIP regression tests', () => {
+  const workflow = readFileSync(resolve('.github/workflows/reusable-ci.yml'), 'utf8');
+  const taskfile = readFileSync(resolve('taskfile.yaml'), 'utf8');
+  const command = 'node --test .github/ci/*.test.mjs';
+  assert.ok(workflow.includes(`run: ${command}`));
+  assert.ok(taskfile.includes(`- ${command}`));
+  for (const name of ['ci:fast', 'ci']) {
+    const task = taskfile.split(`  ${name}:\n`)[1].split(/\n {2}[^ ]/)[0];
+    assert.ok(task.includes('- task: ci:contracts'));
+  }
+});
 const fixtureCode = `import sys, zipfile
 names = ['package.json', '.env.example', 'tsconfig.json']
 mode = sys.argv[2]

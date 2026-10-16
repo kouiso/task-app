@@ -1,9 +1,12 @@
 # Shared CI checks
 
-`task ci:fast` (or `bash .github/ci/run.sh fast`) runs the same application
+`task ci:fast` runs the shared CI regression contracts, then the same application
 build, lint, type check and unit tests as Common Setup, in that order.
 Dependencies and the existing Firebase/test database `.env` must be prepared.
 It does not install dependencies or provision databases.
+The contract checks require Node, Python 3.9+, Bash and unzip in fast and full
+mode. `task ci:contracts` runs them without application dependencies or data.
+`bash .github/ci/run.sh fast` runs only the application command chain.
 
 `task ci` (or `bash .github/ci/run.sh full`) runs every shared verification
 family without change selection: application checks, naming, production npm
@@ -59,7 +62,7 @@ verification success. No production publication or external message is sent by
 this entry. TruffleHog's existing verified-only scan may contact credential
 providers when actually run, just as in cloud CI.
 
-`node --test .github/ci/entry.test.mjs` exercises the real shell entry with
+`node --test .github/ci/*.test.mjs` exercises the real shell entry with
 isolated fake tools and synthetic inputs. It proves command routing, failure
 propagation and gate boundaries. It does not prove the application, material,
 PDF, database, browser, security-service or cloud checks pass. The extraction
