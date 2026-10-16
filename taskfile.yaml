@@ -6,6 +6,16 @@ dotenv:
   - .env
 
 tasks:
+  ci:fast:
+    desc: Application build, lint, type check and unit tests (prepared dependencies)
+    cmds:
+      - bash .github/ci/run.sh fast
+
+  ci:
+    desc: All shared app, security, material, PDF, snapshot and ZIP gates (prepared environment)
+    cmds:
+      - bash .github/ci/run.sh full
+
   default:
     cmds:
       - task -l

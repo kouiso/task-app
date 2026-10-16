@@ -73,27 +73,32 @@ jobs:
 
       - name: Set Firebase Environment Variables
         run: |
-          echo "NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.firebase-api-key }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.firebase-auth-domain }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.firebase-project-id }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.firebase-storage-bucket }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.firebase-messaging-sender-id }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.firebase-app-id }}" >> .env
-          echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.firebase-measurement-id }}" >> .env
-          echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy" >> .env
-          echo "TEST_DATABASE_URL=postgresql://user:password@localhost:5432/taskapp_test?schema=public" >> .env
-          echo "_DOCKER_COMPOSE_HOST_PORT_TEST_DB=5432" >> .env
-          echo "JWT_SECRET=dummy-jwt-secret-for-ci-32-chars-min" >> .env
-          echo "SKIP_ENV_VALIDATION=true" >> .env
+          {
+            echo "NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.firebase-api-key }}"
+            echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.firebase-auth-domain }}"
+            echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.firebase-project-id }}"
+            echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.firebase-storage-bucket }}"
+            echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.firebase-messaging-sender-id }}"
+            echo "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.firebase-app-id }}"
+            echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.firebase-measurement-id }}"
+            echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy"
+            echo "TEST_DATABASE_URL=postgresql://user:password@localhost:5432/taskapp_test?schema=public"
+            echo "_DOCKER_COMPOSE_HOST_PORT_TEST_DB=5432"
+            echo "JWT_SECRET=dummy-jwt-secret-for-ci-32-chars-min"
+            echo "SKIP_ENV_VALIDATION=true"
+          } >> .env
+
+      - name: CI entry contracts
+        run: node --test .github/ci/entry.test.mjs
 
       - name: Npm Build
-        run: npm run build:ci
+        run: bash .github/ci/run.sh build
 
       - name: Npm Lint
-        run: npm run lint
+        run: bash .github/ci/run.sh lint
 
       - name: Npm Type Check
-        run: npm run type-check
+        run: bash .github/ci/run.sh type-check
 
       - name: Npm Test
-        run: npm test
+        run: bash .github/ci/run.sh unit
