@@ -28,7 +28,10 @@ const known = [
 ];
 const book = 'material/30days-curriculum/day01-synthetic.md';
 
-function runSelector(changes, { fontDiff = '', noMerge = false, diffFailure = false } = {}) {
+function runSelector(
+  changes,
+  { fontDiff = '', noMerge = false, diffFailure = false, bookText } = {},
+) {
   const root = mkdtempSync(join(tmpdir(), 'task-pdf-selection-'));
   try {
     mkdirSync(join(root, 'bin'));
@@ -36,6 +39,10 @@ function runSelector(changes, { fontDiff = '', noMerge = false, diffFailure = fa
     for (const change of changes.filter((item) => !item.deleted)) {
       mkdirSync(dirname(join(root, change.path)), { recursive: true });
       writeFileSync(join(root, change.path), 'synthetic fixture only');
+    }
+    if (bookText !== undefined) {
+      mkdirSync(dirname(join(root, book)), { recursive: true });
+      writeFileSync(join(root, book), bookText);
     }
     writeFileSync(join(root, 'all.z'), changes.map((item) => `${item.path}\0`).join(''));
     writeFileSync(
@@ -112,11 +119,37 @@ for (const path of [
   }
 }
 
-test('known ZIP change mixed with a synthetic book selects that book', () => {
+test('known ZIP change mixed with a synthetic book retains full selection', () => {
   const result = runSelector([{ path: known[1] }, { path: book }]);
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.output, /^scope=subset$/m);
+  assert.match(result.output, /^scope=all$/m);
   assert.equal(result.books, `${book}\n`);
+  assert.match(result.output, /^browser_qa=1$/m);
+});
+
+test('the complete known ZIP-only change set skips PDF output but keeps browser QA', () => {
+  const result = runSelector(known.map((path) => ({ path })));
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.output, /^scope=none$/m);
+  assert.match(result.output, /^browser_qa=1$/m);
+});
+
+for (const path of ['doc/synthetic.md', 'src/synthetic.ts', 'package.json', 'taskfile.yaml']) {
+  test(`any additional path disables the ZIP-only exemption: ${path}`, () => {
+    const result = runSelector([...known.map((item) => ({ path: item })), { path }]);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.output, /^scope=all$/m);
+    assert.match(result.output, /^browser_qa=1$/m);
+  });
+}
+
+test('ZIP plus a referenced leading-dash screenshot cannot skip PDF verification', () => {
+  const result = runSelector(
+    [{ path: known[1] }, { path: 'material/30days-curriculum/screenshots/--synthetic.png' }],
+    { bookText: 'synthetic image reference --synthetic.png\n' },
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.output, /^scope=all$/m);
   assert.match(result.output, /^browser_qa=1$/m);
 });
 

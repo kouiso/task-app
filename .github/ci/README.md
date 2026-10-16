@@ -74,11 +74,11 @@ listing avoids early-closing pipelines under strict pipefail. Run
 `node --test .github/ci/zip-contents.test.mjs` for synthetic large real ZIP,
 missing/forbidden entry, corrupt archive and failed-listing regression tests.
 
-PDF selection exempts only this README, `phase/zip-contents.sh`, and
-`zip-contents.test.mjs` from rebuilding all books. They do not supply PDF
-content, styles, fonts or generation code. Browser QA still runs. Unknown CI
-paths, deleted shared phases, and PDF workflow changes retain full selection.
+PDF selection skips rebuilding books only when the entire change set consists
+of this README, `phase/zip-contents.sh`, and/or `zip-contents.test.mjs`. They do
+not supply PDF content, styles, fonts or generation code. Browser QA still
+runs. Mixing any other path with these ZIP paths retains full selection.
+Unknown CI paths, deleted shared phases, and PDF workflow changes remain full.
 Renames include both old and new paths. A removed or renamed book requires
-all remaining books to validate catalog references. A mixed book/ZIP change
-still builds the affected book. `pdf-selection.test.mjs` exercises the actual selector with
+all remaining books to validate catalog references. `pdf-selection.test.mjs` exercises the actual selector with
 synthetic paths, failure injection and a real Git rename; it reads no material.

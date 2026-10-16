@@ -140,14 +140,23 @@ jobs:
           git -c core.quotePath=false diff --no-renames -z --name-only "$base" HEAD \
             > "$RUNNER_TEMP/changed-with-deletes.z"
 
+          # 混在時は既存の全冊判定を保つ。ZIP 専用の変更だけに例外を限定する。
+          zip_only=1
           while IFS= read -r -d '' file; do
             case "$file" in
-              # ZIP 一覧と合成試験は PDF の入力を変えない。ブラウザ検査は後段で維持する。
-              .github/ci/README.md|.github/ci/phase/zip-contents.sh|.github/ci/zip-contents.test.mjs)
+              .github/ci/README.md|.github/ci/phase/zip-contents.sh|.github/ci/zip-contents.test.mjs) ;;
+              *) zip_only=0 ;;
+            esac
+          done < "$RUNNER_TEMP/changed-with-deletes.z"
+
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              .github/ci/*)
+                if [ "$zip_only" -ne 1 ]; then blast=1; fi
                 ;;
               # 36冊すべての見た目が変わりうる変更。markdown_scan.py は build_pdf_book.py と
               # check_pdf_book.py の両方が import しとるので、フェンス解釈が変われば全冊変わる
-              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/ci/*|.github/workflows/pdf-book-gate.yml)
+              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
                 blast=1
                 ;;
               material/30days-curriculum/screenshots/*)
