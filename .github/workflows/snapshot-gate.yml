@@ -138,6 +138,7 @@ jobs:
           |\.npmrc
           |\.mise\.toml
           |Makefile
+          |\.github/ci/
           |\.github/workflows/snapshot-gate\.yml)'
           pattern="$(printf '%s' "$pattern" | tr -d '\n ')"
 
@@ -176,66 +177,36 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         # 本体を回す前に道具の判定境界を固める。ここが崩れとると、
         # 下の30日ぶんの結果そのものが信用でけへん
-        run: make snapshot-test
+        run: bash .github/ci/run.sh snapshot-test
 
       - name: DB へ届くことを先に確かめる
         if: steps.scope.outputs.run == 'true'
         # 届かんまま本体へ入ると、30日ぶん回した末に全部 SKIP になって
         # 「何を検証したのか分からん緑」で終わる。先に落とす
-        run: |
-          for _ in $(seq 1 30); do
-            if pg_isready -h 127.0.0.1 -p 25532 -U user -d taskapp >/dev/null 2>&1; then
-              echo "25532 へ届いた"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "::error::25532 の Postgres へ届かん。ここで止めんと全日 SKIP で緑になる"
-          exit 1
-
+        run: bash .github/ci/run.sh snapshot-db
       - name: 前回の結果表を消してから入る
         if: steps.scope.outputs.run == 'true'
         # 結果表はリポジトリに commit されとる。消さずに入ると、npm ci や退行テストで
         # 落ちた回でも下の always() が「前に成功した回の表」を成果物として上げてしまう。
         # 落ちた回を調べに来た人が、通った回の表を掴むことになる
-        run: rm -f doc/review-handoff/day-snapshots-result.md
+        run: bash .github/ci/run.sh snapshot-clean
 
       - name: 30日ぶんを組み直して型検査と build を回す
         if: steps.scope.outputs.run == 'true'
         id: verify
-        run: |
-          set -o pipefail
-          make snapshot-verify 2>&1 | tee "$RUNNER_TEMP/snapshot.log"
-
+        run: bash .github/ci/run.sh snapshot-build
       - name: 30日ぶん揃っとるか確かめる
         if: steps.scope.outputs.run == 'true'
         # 道具の `--all` は「今ある教材ファイル」を数えて回る。day を1本消した PR では
         # 29日ぶん回して全部通り、道具は 0 を返す。30日ゲートのつもりが29日ゲートに
         # 化けても誰も気づけんので、日付の並びは道具やのうてここで固定する
-        run: |
-          missing=""
-          for n in $(seq -w 1 30); do
-            grep -q "^day${n}:" "$RUNNER_TEMP/snapshot.log" || missing="$missing day${n}"
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::30日ぶん揃ってへん。判定されてへん日:$missing"
-            exit 1
-          fi
-          echo "day01〜day30 の30日ぶん、全部が判定されとる"
-
+        run: bash .github/ci/run.sh snapshot-coverage
       - name: SKIP が混ざってへんか確かめる
         if: steps.scope.outputs.run == 'true'
         # 道具は「DB が無い機械」では build を SKIP にして exit 0 を返す。
         # CI には DB がある前提なので、SKIP が出たら配線が壊れとる。
         # ここを入れんと、DB が落ちた回が「全部緑」に化ける
-        run: |
-          if grep -q 'build を判定できんかった日' "$RUNNER_TEMP/snapshot.log"; then
-            echo "::error::build を判定できんかった日がある。DB へ届いてへんので、この緑は何も保証せん"
-            grep -n 'build を判定できんかった日' -A 2 "$RUNNER_TEMP/snapshot.log"
-            exit 1
-          fi
-          echo "SKIP なし。30日ぶん全部を判定しとる"
-
+        run: bash .github/ci/run.sh snapshot-no-skip
       - name: 結果表を残す
         if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

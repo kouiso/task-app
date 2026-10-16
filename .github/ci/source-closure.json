@@ -1,0 +1,289 @@
+[
+  {
+    "workflow": "reusable-ci",
+    "job": "setup",
+    "index": 5,
+    "phase": "build",
+    "originalSha256": "6edd3cea57fc83f4436ee3e0abaa72bf57e05a2be8e0cbe02aecf6db69aedb07"
+  },
+  {
+    "workflow": "reusable-ci",
+    "job": "setup",
+    "index": 6,
+    "phase": "lint",
+    "originalSha256": "326d9800e732eb9d5a5eb56384a547a097ed84be317cb2852cea5bb574831812"
+  },
+  {
+    "workflow": "reusable-ci",
+    "job": "setup",
+    "index": 7,
+    "phase": "type-check",
+    "originalSha256": "d2fd93c17805c97259399b3ed9ef1cbc3790f80f71f2b0c59cb7e26177428d4e"
+  },
+  {
+    "workflow": "reusable-ci",
+    "job": "setup",
+    "index": 8,
+    "phase": "unit",
+    "originalSha256": "328e123c63857fd8473bd4bd3581e655b08b7440d7f5d2c31cc375607582f539"
+  },
+  {
+    "workflow": "naming-convention",
+    "job": "naming-convention",
+    "index": 1,
+    "phase": "naming",
+    "originalSha256": "1f4ed7a2d03d512154efe8d4899449a32b2d900dae0fd49ae1d9a12b1b1d8951"
+  },
+  {
+    "workflow": "npm-audit",
+    "job": "audit",
+    "index": 3,
+    "phase": "audit",
+    "originalSha256": "160a21cce8d88a86ac86d4b5e45f3527701c3b282d7b560ed8c62534c404882f"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "sale-package-gate",
+    "index": 1,
+    "phase": "sale-package",
+    "originalSha256": "d365e91a076b54c43ea1d5c0cf99f2f15a3436486e320deb00076d2a0488d9cb"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "vendored-skill-integrity",
+    "index": 1,
+    "phase": "vendor-submodule",
+    "originalSha256": "508d4bbe2406175bcb7b3e6e316dbbe09141b22f2d6928c486aafa81a8efb751"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "vendored-skill-integrity",
+    "index": 2,
+    "phase": "vendor-files",
+    "originalSha256": "9f95722eada669f1b15b8aafa6c8550f2970bb60e30b764135fa2f9e38e54c13"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "material-gate",
+    "index": 3,
+    "phase": "material-text",
+    "originalSha256": "895516a7b0e394a70929cd64c4c2305205877287c663ab2212dc6381bb234cbb"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "material-gate",
+    "index": 4,
+    "phase": "material-quality",
+    "originalSha256": "75c7cf0c0d033c44a15c2c50f1950a748b15cb4bcd60d8eec335db3de89617bb"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "material-gate",
+    "index": 5,
+    "phase": "material-images",
+    "originalSha256": "153433f222b52c74774affc538b8db6feda4a6612ad6705b4ee4b73b5a1f001b"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "material-gate",
+    "index": 6,
+    "phase": "material-imports",
+    "originalSha256": "e6465f51b80a21167b3d275234b1d18f1050cd106af800d4b479db614c323943"
+  },
+  {
+    "workflow": "material-gate",
+    "job": "material-gate",
+    "index": 7,
+    "phase": "material-corpus",
+    "originalSha256": "fb530cdef19dcbc756494206aa0dd3aa0da0b9892e939cd609c370f9c93172f6"
+  },
+  {
+    "workflow": "pdf-book-gate",
+    "job": "pdf-check-selftest",
+    "index": 3,
+    "phase": "pdf-selftest",
+    "originalSha256": "8665deeb64b1518158a50663b797e39de907e05297c9c265c104c126822c9b22"
+  },
+  {
+    "workflow": "pdf-book-gate",
+    "job": "pdf-book-inspection",
+    "index": 8,
+    "phase": "pdf-browser-test",
+    "originalSha256": "46131c81e730dc6f713e0d29613d2227d8be811b989b6a30fcff0c697587cb16"
+  },
+  {
+    "workflow": "pdf-book-gate",
+    "job": "pdf-book-inspection",
+    "index": 9,
+    "phase": "pdf-build",
+    "originalSha256": "31a379157ca6630d2582fc8f752ef85d5b698fe475cccf6a157385a2dc807c7a"
+  },
+  {
+    "workflow": "pdf-book-gate",
+    "job": "pdf-book-inspection",
+    "index": 10,
+    "phase": "pdf-verify",
+    "originalSha256": "a17ca246a2bf5b7b59c9fd66b73daf667b44ffd7b14c62f66d31cf96f1ecc490"
+  },
+  {
+    "workflow": "pdf-book-full",
+    "job": "full",
+    "index": 6,
+    "phase": "pdf-full-build",
+    "originalSha256": "a4332cc42b49f74d68f0b5bb9087d72c49f02e116b8d2a65eedb8e141a972b43"
+  },
+  {
+    "workflow": "pdf-book-full",
+    "job": "full",
+    "index": 8,
+    "phase": "pdf-full-verify",
+    "originalSha256": "9b331c4d3e3690415551c9c06ecc85e3ece3409d31b3f0dcf32943d674739068"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 4,
+    "phase": "snapshot-test",
+    "originalSha256": "7629dcd4b7183e92e347476d2ca786a9f3ca150bca5e1280387849d6869d1586"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 5,
+    "phase": "snapshot-db",
+    "originalSha256": "cb60c7573df00e52a725b3fe52910062d43f6410b23e696e350ac528d2c239b0"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 6,
+    "phase": "snapshot-clean",
+    "originalSha256": "47f384c8cd6a0f8266ab14019e5e7b3a625fdd42de34d8c3fada86f8b08fc1ab"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 7,
+    "phase": "snapshot-build",
+    "originalSha256": "f08fc3fa20b910835f746a9cc902cdcd942bf6e4295da9c3d39b034638d02d3b"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 8,
+    "phase": "snapshot-coverage",
+    "originalSha256": "a1128ab4dbe7230c4eeeabfa767d1a1a5d9cf8aed731fddc1150ebd45e43215e"
+  },
+  {
+    "workflow": "snapshot-gate",
+    "job": "snapshot",
+    "index": 9,
+    "phase": "snapshot-no-skip",
+    "originalSha256": "2701b1195d9865c8449b15829df45a8b850aa9810724b7826e7b5c6d015396a0"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "zip-export",
+    "index": 1,
+    "phase": "zip-build",
+    "originalSha256": "d4fa8ac99ff741fed4574d3ce52d69adf6d1c9c383fae4428a8d3731a55ded0e"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "zip-export",
+    "index": 2,
+    "phase": "zip-exists",
+    "originalSha256": "a77f07de7ae350dddd1484c598034a60ba7ff54a156ce189d9aef8de3b2408b6"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "zip-export",
+    "index": 3,
+    "phase": "zip-contents",
+    "originalSha256": "17945c40ebb1d31b8e394cbc56cb9762d78016684dd484932ae43fda3734e19f"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 1,
+    "phase": "zip-extract",
+    "originalSha256": "6c21c0369a583d0924f8be99fa064b1c6d448f6ec7febff5a358deb698ef40cd"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 4,
+    "phase": "zip-env",
+    "originalSha256": "e929ba35732fdde227feeca414bf9e59a997d7e51b1d5c7dc1c303194bd4a197"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 5,
+    "phase": "zip-install",
+    "originalSha256": "d6896d295c3a5f55bf3b1722607cbebfa50bfb2e3558be60363ccf6aeda200d4"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 6,
+    "phase": "zip-prisma",
+    "originalSha256": "8fad5e77e818631a6c0532ef0189ebd1d40cadb453134f1b574f44ccd09523a6"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 7,
+    "phase": "zip-type",
+    "originalSha256": "640728b150436b133180ae64d46fd50e6115e69c0162d881a49163b7291e28db"
+  },
+  {
+    "workflow": "zip-ci",
+    "job": "environment-setup",
+    "index": 8,
+    "phase": "zip-build-script",
+    "originalSha256": "6891030122c5a0367ec7a4206fb7dca01e1d266ccf555991c9443c9edff9b54f"
+  },
+  {
+    "workflow": "perf",
+    "job": "bundle-and-lighthouse",
+    "index": 3,
+    "phase": "perf-lint",
+    "originalSha256": "326d9800e732eb9d5a5eb56384a547a097ed84be317cb2852cea5bb574831812"
+  },
+  {
+    "workflow": "perf",
+    "job": "bundle-and-lighthouse",
+    "index": 4,
+    "phase": "perf-type",
+    "originalSha256": "d2fd93c17805c97259399b3ed9ef1cbc3790f80f71f2b0c59cb7e26177428d4e"
+  },
+  {
+    "workflow": "perf",
+    "job": "bundle-and-lighthouse",
+    "index": 5,
+    "phase": "perf-build",
+    "originalSha256": "7f540147f6fe990fc95eb0b285d12c3a0228d311d736e8631fd37490e833a2e3"
+  },
+  {
+    "workflow": "perf",
+    "job": "bundle-and-lighthouse",
+    "index": 6,
+    "phase": "perf-lighthouse",
+    "originalSha256": "cd3487a9cbb537d5cd7641ead82b46608cd131836d807da53ef6d55c439429a9"
+  },
+  {
+    "workflow": "semgrep",
+    "job": "semgrep",
+    "index": 1,
+    "phase": "semgrep",
+    "originalSha256": "52bef379ecbaa5b716d78afb756eae2447d369f3d2aa9dcdba1b22bbbc897ffa"
+  },
+  {
+    "workflow": "sync-ai-rules",
+    "job": "drift-check",
+    "index": 1,
+    "phase": "rules",
+    "originalSha256": "fa93404eb9faaa352613667dfe9d693b2b8ccce10041f6b41b91ad7bf9146c02"
+  }
+]
