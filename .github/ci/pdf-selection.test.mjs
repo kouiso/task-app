@@ -200,7 +200,9 @@ for (const oldPath of ['.github/ci/phase/unknown.sh', book]) {
   test(`real Git rename cannot hide a removed input behind a known ZIP path: ${oldPath}`, () => {
     const root = mkdtempSync(join(tmpdir(), 'task-pdf-rename-'));
     const env = {
-      ...process.env,
+      PATH: process.env.PATH,
+      GIT_CONFIG_NOSYSTEM: '1',
+      GIT_CONFIG_GLOBAL: '/dev/null',
       GIT_AUTHOR_NAME: 'Synthetic CI fixture',
       GIT_AUTHOR_EMAIL: 'synthetic@example.invalid',
       GIT_COMMITTER_NAME: 'Synthetic CI fixture',
@@ -238,6 +240,49 @@ for (const oldPath of ['.github/ci/phase/unknown.sh', book]) {
       });
       assert.equal(result.status, 0, result.stdout + result.stderr);
       assert.match(readFileSync(join(root, 'output'), 'utf8'), /^scope=all$/m);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
+for (const hostile of ['signing', 'hooks']) {
+  test(`real Git fixtures ignore hostile user ${hostile} configuration`, () => {
+    const root = mkdtempSync(join(tmpdir(), 'task-pdf-hostile-git-'));
+    try {
+      const hooks = join(root, 'hooks');
+      mkdirSync(hooks);
+      writeFileSync(join(hooks, 'pre-commit'), '#!/bin/sh\nexit 89\n', { mode: 0o755 });
+      const config = join(root, 'config');
+      writeFileSync(
+        config,
+        hostile === 'signing'
+          ? '[commit]\n  gpgSign = true\n[gpg]\n  program = /usr/bin/false\n'
+          : `[core]\n  hooksPath = ${hooks}\n`,
+      );
+      const childEnv = { ...process.env };
+      delete childEnv.NODE_TEST_CONTEXT;
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--test',
+          '--test-reporter=tap',
+          '--test-name-pattern=^real Git rename',
+          import.meta.filename,
+        ],
+        {
+          encoding: 'utf8',
+          env: {
+            ...childEnv,
+            GIT_CONFIG_GLOBAL: config,
+            GIT_CONFIG_COUNT: '1',
+            GIT_CONFIG_KEY_0: hostile === 'signing' ? 'commit.gpgSign' : 'core.hooksPath',
+            GIT_CONFIG_VALUE_0: hostile === 'signing' ? 'true' : hooks,
+          },
+        },
+      );
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /# pass 2/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
