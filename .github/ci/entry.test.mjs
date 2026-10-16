@@ -366,3 +366,21 @@ test('secrets rejects same or unavailable commit range before container start', 
     }
   }
 });
+
+test('local PDF requires browser assertions instead of accepting missing-browser SKIP', () => {
+  const f = fixture();
+  try {
+    prepareFull(f);
+    writeFileSync(
+      join(f.root, 'bin', 'python3'),
+      '#!/bin/bash\necho "browser-required=${CURRICULUM_QA_REQUIRE_BROWSER:-unset}"\nif [ "${CURRICULUM_QA_REQUIRE_BROWSER:-}" = 1 ]; then exit 17; fi\necho "SKIP missing browser"\nexit 0\n',
+      { mode: 0o755 },
+    );
+    const result = f.run('pdf', { CURRICULUM_QA_REQUIRE_BROWSER: '' });
+    assert.equal(result.status, 17, result.stdout + result.stderr);
+    assert.ok(result.stdout.includes('browser-required=1'));
+    assert.ok(!result.stdout.includes('SKIP missing browser'));
+  } finally {
+    f.close();
+  }
+});

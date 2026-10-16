@@ -25,7 +25,8 @@ local database or runs the destructive developer initialization tasks.
 
 Set `RUNNER_TEMP` to an isolated writable evidence directory and
 `PDF_BOOK_BUILD_LOG_DIR` to an isolated writable PDF log directory. The PDF
-browser cache and link map use the same defaults as cloud CI, and can be set
+readiness assertions are mandatory (`CURRICULUM_QA_REQUIRE_BROWSER=1`), so
+missing Chromium fails instead of passing a skipped test. The browser cache and link map use the same defaults as cloud CI, and can be set
 explicitly. ZIP setup uses an automatically removed temporary directory;
 its original `npm ci` and Prisma generation remain inside that extracted tree.
 Its existing advisory type check and build-script existence check are retained;

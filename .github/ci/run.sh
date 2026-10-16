@@ -28,6 +28,7 @@ case "$phase" in
     : "${PDF_BOOK_BUILD_LOG_DIR:?Set PDF_BOOK_BUILD_LOG_DIR to an isolated writable log directory}"
     export PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-"$repo_root/.pw-browsers"}
     export PDF_BOOK_LINK_MAP=${PDF_BOOK_LINK_MAP:-"$repo_root/scripts/pdf-book/pdf-link-map.json"}
+    export CURRICULUM_QA_REQUIRE_BROWSER=1
     run_phases pdf-browser-test pdf-full-build pdf-local-verify ;;
   zip)
     run_phases zip-build zip-exists zip-contents
