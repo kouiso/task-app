@@ -1,9 +1,12 @@
 # Shared CI checks
 
-`task ci:fast` (or `bash .github/ci/run.sh fast`) runs the same application
+`task ci:fast` runs the shared CI regression contracts, then the same application
 build, lint, type check and unit tests as Common Setup, in that order.
 Dependencies and the existing Firebase/test database `.env` must be prepared.
 It does not install dependencies or provision databases.
+The contract checks require Node, Python 3.9+, Bash, Git and unzip in fast and full
+mode. `task ci:contracts` runs them without application dependencies or data.
+`bash .github/ci/run.sh fast` runs only the application command chain.
 
 `task ci` (or `bash .github/ci/run.sh full`) runs every shared verification
 family without change selection: application checks, naming, production npm
@@ -59,10 +62,23 @@ verification success. No production publication or external message is sent by
 this entry. TruffleHog's existing verified-only scan may contact credential
 providers when actually run, just as in cloud CI.
 
-`node --test .github/ci/entry.test.mjs` exercises the real shell entry with
+`node --test .github/ci/*.test.mjs` exercises the real shell entry with
 isolated fake tools and synthetic inputs. It proves command routing, failure
 propagation and gate boundaries. It does not prove the application, material,
 PDF, database, browser, security-service or cloud checks pass. The extraction
 receipt `source-closure.json` records original workflow step hashes; the
 intentional adaptations are portable Bash array input, fail-closed snapshot
-log checks, literal license input, and the local nonduplicated PDF verification.
+log checks, literal license input, the local nonduplicated PDF verification,
+and a checked, complete ZIP listing reused for content assertions. The ZIP
+listing avoids early-closing pipelines under strict pipefail. Run
+`node --test .github/ci/zip-contents.test.mjs` for synthetic large real ZIP,
+missing/forbidden entry, corrupt archive and failed-listing regression tests.
+
+PDF selection skips rebuilding books only when the entire change set consists
+of this README, `phase/zip-contents.sh`, and/or `zip-contents.test.mjs`. They do
+not supply PDF content, styles, fonts or generation code. Browser QA still
+runs. Mixing any other path with these ZIP paths retains full selection.
+Unknown CI paths, deleted shared phases, and PDF workflow changes remain full.
+Renames include both old and new paths. A removed or renamed book requires
+all remaining books to validate catalog references. `pdf-selection.test.mjs` exercises the actual selector with
+synthetic paths, failure injection and a real Git rename; it reads no material.

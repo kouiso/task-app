@@ -89,7 +89,7 @@ jobs:
           } >> .env
 
       - name: CI entry contracts
-        run: node --test .github/ci/entry.test.mjs
+        run: node --test .github/ci/*.test.mjs
 
       - name: Npm Build
         run: bash .github/ci/run.sh build

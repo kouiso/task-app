@@ -135,16 +135,28 @@ jobs:
           # トリップワイヤが検知する。
           git -c core.quotePath=false diff -z --name-only --diff-filter=d "$base" HEAD \
             > "$RUNNER_TEMP/changed.z"
-          # browser_qa の判定にはこっちを使う。上の一覧は --diff-filter=d で削除を落としとるが、
-          # 撮影まわりのファイルを消した・改名した PR こそ実ブラウザ検査を走らせなアカン。
-          git -c core.quotePath=false diff -z --name-only "$base" HEAD \
+          # 削除や改名の旧パスも生成への影響判定に使う。未知の CI ファイルを
+          # ZIP 専用パスへ改名しても全冊判定から外れないよう改名検出を切る。
+          git -c core.quotePath=false diff --no-renames -z --name-only "$base" HEAD \
             > "$RUNNER_TEMP/changed-with-deletes.z"
+
+          # 混在時は既存の全冊判定を保つ。ZIP 専用の変更だけに例外を限定する。
+          zip_only=1
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              .github/ci/README.md|.github/ci/phase/zip-contents.sh|.github/ci/zip-contents.test.mjs) ;;
+              *) zip_only=0 ;;
+            esac
+          done < "$RUNNER_TEMP/changed-with-deletes.z"
 
           while IFS= read -r -d '' file; do
             case "$file" in
+              .github/ci/*)
+                if [ "$zip_only" -ne 1 ]; then blast=1; fi
+                ;;
               # 36冊すべての見た目が変わりうる変更。markdown_scan.py は build_pdf_book.py と
               # check_pdf_book.py の両方が import しとるので、フェンス解釈が変われば全冊変わる
-              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/ci/*|.github/workflows/pdf-book-gate.yml)
+              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
                 blast=1
                 ;;
               material/30days-curriculum/screenshots/*)
@@ -159,11 +171,13 @@ jobs:
                 if [ -f "$file" ]; then
                   printf '%s\n' "$file" >> "$books"
                 else
-                  echo "::notice::改名または移動のため組めん: $file"
+                  # 削除された冊への参照が残る可能性があるため全冊の整合を確かめる。
+                  blast=1
+                  echo "::notice::削除または移動された冊があるため全冊を検証する: $file"
                 fi
                 ;;
             esac
-          done < "$RUNNER_TEMP/changed.z"
+          done < "$RUNNER_TEMP/changed-with-deletes.z"
 
           # フォントは node_modules から直接読んどるので、版が動くと全冊の字形が変わる。
           # ここを `git diff | grep -q` にすると、lock の diff がパイプバッファ(64KB)を

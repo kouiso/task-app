@@ -6,14 +6,21 @@ dotenv:
   - .env
 
 tasks:
+  ci:contracts:
+    desc: Shared CI routing and synthetic real ZIP regression tests
+    cmds:
+      - node --test .github/ci/*.test.mjs
+
   ci:fast:
     desc: Application build, lint, type check and unit tests (prepared dependencies)
     cmds:
+      - task: ci:contracts
       - bash .github/ci/run.sh fast
 
   ci:
     desc: All shared app, security, material, PDF, snapshot and ZIP gates (prepared environment)
     cmds:
+      - task: ci:contracts
       - bash .github/ci/run.sh full
 
   default:
@@ -165,4 +172,3 @@ tasks:
         if not exist playground.nnb (
           echo {"cells": [{"language": "typescript", "source": ["console.log(JSON.stringify({}))"], "outputs": [{"items": [{"mime": "application/vnd.code.notebook.stdout", "value": ["{}", ""]}]}]}]} > playground.nnb
         )
-
