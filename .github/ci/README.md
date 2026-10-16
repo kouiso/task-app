@@ -4,7 +4,7 @@
 build, lint, type check and unit tests as Common Setup, in that order.
 Dependencies and the existing Firebase/test database `.env` must be prepared.
 It does not install dependencies or provision databases.
-The contract checks require Node, Python 3.9+, Bash and unzip in fast and full
+The contract checks require Node, Python 3.9+, Bash, Git and unzip in fast and full
 mode. `task ci:contracts` runs them without application dependencies or data.
 `bash .github/ci/run.sh fast` runs only the application command chain.
 
@@ -73,3 +73,12 @@ and a checked, complete ZIP listing reused for content assertions. The ZIP
 listing avoids early-closing pipelines under strict pipefail. Run
 `node --test .github/ci/zip-contents.test.mjs` for synthetic large real ZIP,
 missing/forbidden entry, corrupt archive and failed-listing regression tests.
+
+PDF selection exempts only this README, `phase/zip-contents.sh`, and
+`zip-contents.test.mjs` from rebuilding all books. They do not supply PDF
+content, styles, fonts or generation code. Browser QA still runs. Unknown CI
+paths, deleted shared phases, and PDF workflow changes retain full selection.
+Renames include both old and new paths. A removed or renamed book requires
+all remaining books to validate catalog references. A mixed book/ZIP change
+still builds the affected book. `pdf-selection.test.mjs` exercises the actual selector with
+synthetic paths, failure injection and a real Git rename; it reads no material.
