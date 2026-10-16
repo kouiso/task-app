@@ -112,9 +112,8 @@ LISTING_DIVERGES: dict[tuple[int, str], tuple[str, int]] = {
     (28, "src/app/task/page.tsx"): (
         "listing は PR #622 で src/ の実装を載せたもので、断片とは変数名（task と t）と"
         "一括ハンドラーの判定（canCompleteSelected と selectedTaskList.length > 0）が違う。"
-        "Step に無い URL 同期フィルタ（useSearchParams と router.replace）も使っている。"
-        "`@/lib/task-filter-query` は #650 で配布物に足して import 自体は解決するが、"
-        "Step で教えていない実装は残る。方針の決定と直しを行い、終わったらこの登録を消す。追跡: #657",
+        "Step に無かった URL 同期フィルタ（task-filter-query.ts）は listing から外した。"
+        "残る変数名と一括ハンドラーの判定の差を Step に合わせ直したら、この登録を消す。追跡: #657",
         10,
     ),
 }

@@ -97,6 +97,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/component/task/task-detail-dialog.tsx": "day19 の注記で権限の確かめ方の差分を説明済み",
     "src/lib/session.ts": "day07 の注記で saveSessionCookie 切り出しの差分を説明済み",
     "src/server/api/routers/auth.ts": "day07 は行の折り方の違いで末尾のカンマの有無が3か所違う。動きは同じ",
+    "src/app/task/page.tsx": "day28 の注記で、絞り込みを URL のクエリへ書き込む処理（task-filter-query.ts）の差分を説明済み",
 }
 
 # 実ドリフトの棚卸し。src/ が後から改良されて教材が追いついていない差分、
