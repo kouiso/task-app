@@ -373,7 +373,12 @@ test('local PDF requires browser assertions instead of accepting missing-browser
     prepareFull(f);
     writeFileSync(
       join(f.root, 'bin', 'python3'),
-      '#!/bin/bash\necho "browser-required=${CURRICULUM_QA_REQUIRE_BROWSER:-unset}"\nif [ "${CURRICULUM_QA_REQUIRE_BROWSER:-}" = 1 ]; then exit 17; fi\necho "SKIP missing browser"\nexit 0\n',
+      `#!/bin/bash
+echo "browser-required=\${CURRICULUM_QA_REQUIRE_BROWSER:-unset}"
+if [ "\${CURRICULUM_QA_REQUIRE_BROWSER:-}" = 1 ]; then exit 17; fi
+echo "SKIP missing browser"
+exit 0
+`,
       { mode: 0o755 },
     );
     const result = f.run('pdf', { CURRICULUM_QA_REQUIRE_BROWSER: '' });
