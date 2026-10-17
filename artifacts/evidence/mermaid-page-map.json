@@ -1,0 +1,492 @@
+{
+ "day01-bf910a-1": {
+  "book": "day01",
+  "page": 13,
+  "cap_page": 6,
+  "score": 2,
+  "mode": "jp"
+ },
+ "day01-bf910a-2": {
+  "book": "day01",
+  "page": 67,
+  "cap_page": 65,
+  "score": 3,
+  "mode": "ascii"
+ },
+ "day02-af6ad2-1": {
+  "book": "day02",
+  "page": 43,
+  "cap_page": 42,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day03-43d581-1": {
+  "book": "day03",
+  "page": 30,
+  "cap_page": 2,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day04-0cf6a5-1": {
+  "book": "day04",
+  "page": 4,
+  "cap_page": 4,
+  "score": 2,
+  "mode": "jp"
+ },
+ "day04-0cf6a5-2": {
+  "book": "day04",
+  "page": 5,
+  "cap_page": 5,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day04-0cf6a5-3": {
+  "book": "day04",
+  "page": 6,
+  "cap_page": 6,
+  "score": 2,
+  "mode": "jp"
+ },
+ "day04-0cf6a5-4": {
+  "book": "day04",
+  "page": 23,
+  "cap_page": 17,
+  "score": 7,
+  "mode": "jp"
+ },
+ "day05-bd9c42-1": {
+  "book": "day05",
+  "page": 6,
+  "cap_page": 6,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day05-bd9c42-2": {
+  "book": "day05",
+  "page": 11,
+  "cap_page": 11,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day05-bd9c42-3": {
+  "book": "day05",
+  "page": 39,
+  "cap_page": 2,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day06-c425aa-1": {
+  "book": "day06",
+  "page": 6,
+  "cap_page": 6,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day06-c425aa-2": {
+  "book": "day06",
+  "page": 38,
+  "cap_page": 36,
+  "score": 10,
+  "mode": "jp"
+ },
+ "day07-ec8746-1": {
+  "book": "day07",
+  "page": 6,
+  "cap_page": 6,
+  "score": 10,
+  "mode": "jp"
+ },
+ "day07-ec8746-2": {
+  "book": "day07",
+  "page": 52,
+  "cap_page": 45,
+  "score": 7,
+  "mode": "jp"
+ },
+ "day07-ec8746-3": {
+  "book": "day07",
+  "page": 75,
+  "cap_page": 2,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day07-ec8746-4": {
+  "book": "day07",
+  "page": 80,
+  "cap_page": 77,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day08-d42e7e-1": {
+  "book": "day08",
+  "page": 5,
+  "cap_page": 5,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day08-d42e7e-2": {
+  "book": "day08",
+  "page": 9,
+  "cap_page": 2,
+  "score": 1,
+  "mode": "jp"
+ },
+ "day08-d42e7e-3": {
+  "book": "day08",
+  "page": 15,
+  "cap_page": 2,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day08-d42e7e-4": {
+  "book": "day08",
+  "page": 26,
+  "cap_page": 20,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day08-d42e7e-5": {
+  "book": "day08",
+  "page": 37,
+  "cap_page": 2,
+  "score": 5,
+  "mode": "ascii"
+ },
+ "day09-d3dbb5-1": {
+  "book": "day09",
+  "page": 4,
+  "cap_page": 4,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day09-d3dbb5-2": {
+  "book": "day09",
+  "page": 29,
+  "cap_page": 2,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day10-5fa125-1": {
+  "book": "day10",
+  "page": 6,
+  "cap_page": 2,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day11-58e2cb-1": {
+  "book": "day11",
+  "page": 6,
+  "cap_page": 6,
+  "score": 10,
+  "mode": "jp"
+ },
+ "day11-58e2cb-2": {
+  "book": "day11",
+  "page": 51,
+  "cap_page": 8,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day12-b65f21-1": {
+  "book": "day12",
+  "page": 5,
+  "cap_page": 5,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day12-b65f21-2": {
+  "book": "day12",
+  "page": 14,
+  "cap_page": 11,
+  "score": 2,
+  "mode": "jp"
+ },
+ "day12-b65f21-3": {
+  "book": "day12",
+  "page": 68,
+  "cap_page": 2,
+  "score": 7,
+  "mode": "jp"
+ },
+ "day13-a869aa-1": {
+  "book": "day13",
+  "page": 5,
+  "cap_page": 5,
+  "score": 10,
+  "mode": "jp"
+ },
+ "day13-a869aa-2": {
+  "book": "day13",
+  "page": 6,
+  "cap_page": 6,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day13-a869aa-3": {
+  "book": "day13",
+  "page": 17,
+  "cap_page": 15,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day14-82e9c8-1": {
+  "book": "day14",
+  "page": 6,
+  "cap_page": 6,
+  "score": 12,
+  "mode": "jp"
+ },
+ "day14-82e9c8-2": {
+  "book": "day14",
+  "page": 15,
+  "cap_page": 11,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day15-1b9352-1": {
+  "book": "day15",
+  "page": 6,
+  "cap_page": 6,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day16-80b2b4-1": {
+  "book": "day16",
+  "page": 5,
+  "cap_page": 5,
+  "score": 7,
+  "mode": "jp"
+ },
+ "day16-80b2b4-2": {
+  "book": "day16",
+  "page": 42,
+  "cap_page": 2,
+  "score": 2,
+  "mode": "jp"
+ },
+ "day17-00a436-1": {
+  "book": "day17",
+  "page": 5,
+  "cap_page": 1,
+  "score": 11,
+  "mode": "jp"
+ },
+ "day17-00a436-2": {
+  "book": "day17",
+  "page": 46,
+  "cap_page": 2,
+  "score": 7,
+  "mode": "jp"
+ },
+ "day18-5a6a02-1": {
+  "book": "day18",
+  "page": 6,
+  "cap_page": 6,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day19-3b9165-1": {
+  "book": "day19",
+  "page": 5,
+  "cap_page": 5,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day20-f25fe5-1": {
+  "book": "day20",
+  "page": 5,
+  "cap_page": 5,
+  "score": 8,
+  "mode": "jp"
+ },
+ "day20-f25fe5-2": {
+  "book": "day20",
+  "page": 6,
+  "cap_page": 5,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day20-f25fe5-3": {
+  "book": "day20",
+  "page": 82,
+  "cap_page": 2,
+  "score": 3,
+  "mode": "jp"
+ },
+ "day20-f25fe5-4": {
+  "book": "day20",
+  "page": 151,
+  "cap_page": 7,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day21-e0a631-1": {
+  "book": "day21",
+  "page": 5,
+  "cap_page": 5,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day21-e0a631-2": {
+  "book": "day21",
+  "page": 10,
+  "cap_page": 9,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day22-a21d31-1": {
+  "book": "day22",
+  "page": 6,
+  "cap_page": 6,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day22-a21d31-2": {
+  "book": "day22",
+  "page": 22,
+  "cap_page": 2,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day23-87cb73-1": {
+  "book": "day23",
+  "page": 5,
+  "cap_page": 5,
+  "score": 8,
+  "mode": "jp"
+ },
+ "day23-87cb73-2": {
+  "book": "day23",
+  "page": 16,
+  "cap_page": 2,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day24-850975-1": {
+  "book": "day24",
+  "page": 5,
+  "cap_page": 3,
+  "score": 10,
+  "mode": "jp"
+ },
+ "day24-850975-2": {
+  "book": "day24",
+  "page": 53,
+  "cap_page": 2,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day25-710608-1": {
+  "book": "day25",
+  "page": 6,
+  "cap_page": 6,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day25-710608-2": {
+  "book": "day25",
+  "page": 83,
+  "cap_page": 2,
+  "score": 3,
+  "mode": "jp"
+ },
+ "day25-710608-3": {
+  "book": "day25",
+  "page": 99,
+  "cap_page": 2,
+  "score": 8,
+  "mode": "jp"
+ },
+ "day26-2e6bde-1": {
+  "book": "day26",
+  "page": 6,
+  "cap_page": 6,
+  "score": 13,
+  "mode": "jp"
+ },
+ "day26-2e6bde-2": {
+  "book": "day26",
+  "page": 14,
+  "cap_page": 2,
+  "score": 9,
+  "mode": "jp"
+ },
+ "day27-6bffba-1": {
+  "book": "day27",
+  "page": 6,
+  "cap_page": 6,
+  "score": 8,
+  "mode": "jp"
+ },
+ "day27-6bffba-2": {
+  "book": "day27",
+  "page": 7,
+  "cap_page": 6,
+  "score": 13,
+  "mode": "jp"
+ },
+ "day27-6bffba-3": {
+  "book": "day27",
+  "page": 15,
+  "cap_page": 2,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day28-6ccdd8-1": {
+  "book": "day28",
+  "page": 6,
+  "cap_page": 6,
+  "score": 16,
+  "mode": "jp"
+ },
+ "day29-a78910-1": {
+  "book": "day29",
+  "page": 7,
+  "cap_page": 7,
+  "score": 13,
+  "mode": "jp"
+ },
+ "day29-a78910-2": {
+  "book": "day29",
+  "page": 91,
+  "cap_page": 2,
+  "score": 6,
+  "mode": "jp"
+ },
+ "day29-a78910-3": {
+  "book": "day29",
+  "page": 170,
+  "cap_page": 170,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day29-a78910-4": {
+  "book": "day29",
+  "page": 171,
+  "cap_page": 171,
+  "score": 5,
+  "mode": "jp"
+ },
+ "day29-a78910-5": {
+  "book": "day29",
+  "page": 172,
+  "cap_page": 172,
+  "score": 3,
+  "mode": "jp"
+ },
+ "day30-5187a4-1": {
+  "book": "day30",
+  "page": 4,
+  "cap_page": 4,
+  "score": 4,
+  "mode": "jp"
+ },
+ "day30-5187a4-2": {
+  "book": "day30",
+  "page": 20,
+  "cap_page": 20,
+  "score": 3,
+  "mode": "jp"
+ }
+}
