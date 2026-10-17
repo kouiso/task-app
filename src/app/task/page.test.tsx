@@ -10,7 +10,43 @@ interface ErrorShape {
   message?: string;
 }
 
+interface MockProject {
+  id: string;
+  name: string;
+  members: { userId: string; role: string }[];
+}
+
+interface MockTask {
+  id: string;
+  title: string;
+  description: null;
+  status: string;
+  priority: string;
+  dueDate: null;
+  assignee: null;
+  projectId: string;
+  timeSpentMinutes: number;
+}
+
+const defaultProjects = (): MockProject[] => [
+  { id: 'project-1', name: 'Project', members: [{ userId: 'user-1', role: 'OWNER' }] },
+];
+
+const mockTask = (id: string, title: string, projectId = 'project-1'): MockTask => ({
+  id,
+  title,
+  description: null,
+  status: 'TODO',
+  priority: 'MEDIUM',
+  dueDate: null,
+  assignee: null,
+  projectId,
+  timeSpentMinutes: 0,
+});
+
 const mocks = vi.hoisted(() => ({
+  projects: [] as MockProject[],
+  tasks: [] as MockTask[],
   createOptions: null as null | { onError?: (error: ErrorShape) => void },
   updateOptions: null as null | { onError?: (error: ErrorShape) => void },
   deleteOptions: null as null | {
@@ -60,7 +96,25 @@ vi.mock('@/component/ui/button', () => ({
     </button>
   ),
 }));
-vi.mock('@/component/ui/checkbox', () => ({ Checkbox: () => null }));
+vi.mock('@/component/ui/checkbox', () => ({
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+    'aria-label': ariaLabel,
+  }: {
+    checked: boolean | 'indeterminate';
+    onCheckedChange: (checked: boolean) => void;
+    'aria-label'?: string;
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      data-state={checked === 'indeterminate' ? 'indeterminate' : checked ? 'checked' : 'unchecked'}
+      checked={checked === true}
+      onChange={() => onCheckedChange(checked !== true)}
+    />
+  ),
+}));
 vi.mock('@/component/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -81,39 +135,12 @@ vi.mock('@/trpc/react', () => ({
   api: {
     auth: { getSession: { useQuery: () => ({ data: { user: { id: 'user-1' } } }) } },
     project: {
-      getAll: {
-        useQuery: () => ({
-          data: [
-            {
-              id: 'project-1',
-              name: 'Project',
-              members: [{ userId: 'user-1', role: 'OWNER' }],
-            },
-          ],
-        }),
-      },
+      getAll: { useQuery: () => ({ data: mocks.projects }) },
     },
     search: { getProjectMembers: { useQuery: () => ({ data: [] }) } },
     task: {
       getById: { useQuery: () => ({ data: undefined }) },
-      getAll: {
-        useQuery: () => ({
-          data: [
-            {
-              id: 'task-1',
-              title: '削除対象',
-              description: null,
-              status: 'TODO',
-              priority: 'MEDIUM',
-              dueDate: null,
-              assignee: null,
-              projectId: 'project-1',
-              timeSpentMinutes: 0,
-            },
-          ],
-          isLoading: false,
-        }),
-      },
+      getAll: { useQuery: () => ({ data: mocks.tasks, isLoading: false }) },
       create: {
         useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
           mocks.createOptions = options;
@@ -144,6 +171,8 @@ vi.mock('@/trpc/react', () => ({
 }));
 
 beforeEach(() => {
+  mocks.projects = defaultProjects();
+  mocks.tasks = [mockTask('task-1', '削除対象')];
   mocks.createOptions = null;
   mocks.updateOptions = null;
   mocks.deleteOptions = null;
@@ -235,5 +264,45 @@ describe('タスク保存の失敗表示', () => {
       mocks.updateOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
     });
     expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
+  });
+});
+
+describe('すべて選択チェックボックスの状態', () => {
+  const selectAll = () => screen.getByRole('checkbox', { name: 'すべてのタスクを選択' });
+
+  it('選択可能なタスクを全部選ぶと全選択、一部だけなら中間状態になる', () => {
+    mocks.tasks = [mockTask('task-1', 'A'), mockTask('task-2', 'B')];
+    render(<TaskPage />);
+
+    expect(selectAll()).toHaveAttribute('data-state', 'unchecked');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Aを選択' }));
+    expect(selectAll()).toHaveAttribute('data-state', 'indeterminate');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Bを選択' }));
+    expect(selectAll()).toHaveAttribute('data-state', 'checked');
+  });
+
+  it('権限を失って選択不可になったタスクが選択に残っていても、全選択と表示しない', () => {
+    mocks.projects = [
+      { id: 'project-1', name: 'P1', members: [{ userId: 'user-1', role: 'OWNER' }] },
+      { id: 'project-2', name: 'P2', members: [{ userId: 'user-1', role: 'MEMBER' }] },
+    ];
+    mocks.tasks = [
+      mockTask('task-1', 'A'),
+      mockTask('task-2', 'B', 'project-2'),
+      mockTask('task-3', 'C'),
+    ];
+    const { rerender } = render(<TaskPage />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Bを選択' }));
+
+    // project-2 が閲覧のみになり、B は選択できないが selectedTasks には残る
+    mocks.projects = [
+      { id: 'project-1', name: 'P1', members: [{ userId: 'user-1', role: 'OWNER' }] },
+      { id: 'project-2', name: 'P2', members: [{ userId: 'user-1', role: 'VIEWER' }] },
+    ];
+    rerender(<TaskPage />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Aを選択' }));
+
+    // 選択中は B と A の2件で、選択可能な A と C の2件と数だけが一致する。C は未選択のまま
+    expect(selectAll()).toHaveAttribute('data-state', 'indeterminate');
   });
 });
