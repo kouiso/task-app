@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
@@ -410,6 +411,156 @@ describe('taskRouter', () => {
       await expect(caller.task.bulkComplete({ ids: [task.id, task.id] })).rejects.toThrow(
         'タスクIDを重複して指定できません',
       );
+    });
+  });
+
+  describe('退会者への担当の戻り（#664）', () => {
+    const addLeavingMember = async (projectId: string, email: string) => {
+      const user = await createTestUser({ email: uniqueEmail(email) });
+      await prisma.projectMember.create({ data: { projectId, userId: user.id, role: 'MEMBER' } });
+      return user;
+    };
+    const removeMemberRow = (projectId: string, userId: string) =>
+      prisma.projectMember.delete({ where: { userId_projectId: { userId, projectId } } });
+
+    // removeMember と同じプロジェクト行ロックを握ったまま退会させ、解放を遅らせる。
+    // 担当の確認がロックの前にあると、退会が見えないまま書き込みまで進んでしまう。
+    const withDepartureInFlight = async (
+      projectId: string,
+      userId: string,
+      run: () => Promise<unknown>,
+    ) => {
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let locked: () => void = () => undefined;
+      const lockAcquired = new Promise<void>((resolve) => {
+        locked = resolve;
+      });
+      const departure = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw(
+          Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+        );
+        await tx.projectMember.delete({ where: { userId_projectId: { userId, projectId } } });
+        locked();
+        await gate;
+      });
+      await lockAcquired;
+      const settled = Promise.allSettled([run()]);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      release();
+      await departure;
+      return (await settled)[0];
+    };
+
+    it.each([
+      'DONE',
+      'CANCELLED',
+    ] as const)('%sのタスクを再オープンすると退会済みの担当者を外す', async (status) => {
+      const { actor, project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'reopen-leaver');
+      const task = await createTestTask(project.id, actor.id, { status, assigneeId: leaver.id });
+      await removeMemberRow(project.id, leaver.id);
+
+      const reopened = await caller.task.update({ id: task.id, status: 'TODO' });
+
+      expect(reopened.assigneeId).toBeNull();
+    });
+
+    it('再オープンしても、今もメンバーである担当者は残す', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const member = await addLeavingMember(project.id, 'reopen-member');
+      const task = await createTestTask(project.id, actor.id, {
+        status: 'DONE',
+        assigneeId: member.id,
+      });
+
+      const reopened = await caller.task.update({ id: task.id, status: 'IN_PROGRESS' });
+
+      expect(reopened.assigneeId).toBe(member.id);
+    });
+
+    it('完了のまま編集しても、退会済みの担当者の実績は残す', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'keep-leaver');
+      const task = await createTestTask(project.id, actor.id, {
+        status: 'DONE',
+        assigneeId: leaver.id,
+      });
+      await removeMemberRow(project.id, leaver.id);
+
+      const edited = await caller.task.update({ id: task.id, title: '実績の題名だけ直す' });
+
+      expect(edited.assigneeId).toBe(leaver.id);
+    });
+
+    it('bulkUpdateStatus: 完了タスクを未完了へ戻すと退会済みの担当者だけ外す', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'bulk-leaver');
+      const stayer = await addLeavingMember(project.id, 'bulk-stayer');
+      const withLeaver = await createTestTask(project.id, actor.id, {
+        status: 'DONE',
+        assigneeId: leaver.id,
+      });
+      const withStayer = await createTestTask(project.id, actor.id, {
+        status: 'CANCELLED',
+        assigneeId: stayer.id,
+      });
+      await removeMemberRow(project.id, leaver.id);
+
+      await caller.task.bulkUpdateStatus({ ids: [withLeaver.id, withStayer.id], status: 'TODO' });
+
+      const storedLeaver = await prisma.task.findUniqueOrThrow({ where: { id: withLeaver.id } });
+      const storedStayer = await prisma.task.findUniqueOrThrow({ where: { id: withStayer.id } });
+      expect(storedLeaver.status).toBe('TODO');
+      expect(storedLeaver.assigneeId).toBeNull();
+      expect(storedStayer.status).toBe('TODO');
+      expect(storedStayer.assigneeId).toBe(stayer.id);
+    });
+
+    it('create: 担当の確認後に退会が割り込んでも、退会者が担当のタスクは作られない', async () => {
+      const { project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'race-create');
+
+      const result = await withDepartureInFlight(project.id, leaver.id, () =>
+        caller.task.create({ title: '競合', projectId: project.id, assigneeId: leaver.id }),
+      );
+
+      expect(result?.status).toBe('rejected');
+      expect(await prisma.task.count({ where: { assigneeId: leaver.id } })).toBe(0);
+    });
+
+    it('update: 担当の確認後に退会が割り込んでも、退会者を担当にできない', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'race-update');
+      const task = await createTestTask(project.id, actor.id);
+
+      const result = await withDepartureInFlight(project.id, leaver.id, () =>
+        caller.task.update({ id: task.id, assigneeId: leaver.id }),
+      );
+
+      expect(result?.status).toBe('rejected');
+      const stored = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(stored.assigneeId).toBeNull();
+    });
+
+    it('再オープン中に退会が割り込んでも、退会者が担当に戻らない', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const leaver = await addLeavingMember(project.id, 'race-reopen');
+      const task = await createTestTask(project.id, actor.id, {
+        status: 'DONE',
+        assigneeId: leaver.id,
+      });
+
+      const result = await withDepartureInFlight(project.id, leaver.id, () =>
+        caller.task.update({ id: task.id, status: 'TODO' }),
+      );
+
+      expect(result?.status).toBe('fulfilled');
+      const stored = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(stored.status).toBe('TODO');
+      expect(stored.assigneeId).toBeNull();
     });
   });
 
