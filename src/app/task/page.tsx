@@ -232,6 +232,7 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => notifyMutationError(error, 'タスクの一括完了に失敗しました'),
   });
 
   const bulkDeleteMutation = api.task.bulkDelete.useMutation({
@@ -248,6 +249,7 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => notifyMutationError(error, 'ステータスの一括変更に失敗しました'),
   });
 
   const handleCreate = () => {
