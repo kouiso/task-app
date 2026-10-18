@@ -7,6 +7,7 @@ on:
       - '.gemini/styleguide.md'
       - '.github/copilot-instructions.md'
       - 'scripts/sync-ai-rules.sh'
+      - '.github/ci/**'
 
 jobs:
   drift-check:
@@ -17,9 +18,4 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check bridge files are in sync
-        run: |
-          bash scripts/sync-ai-rules.sh
-          git diff --exit-code .gemini/styleguide.md .github/copilot-instructions.md || {
-            echo "DRIFT DETECTED: bridge ファイルが AGENTS.md と一致しません。修正: bash scripts/sync-ai-rules.sh を実行してコミット"
-            exit 1
-          }
+        run: bash .github/ci/run.sh rules

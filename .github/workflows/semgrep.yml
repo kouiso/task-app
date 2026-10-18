@@ -21,4 +21,4 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run Semgrep
-        run: semgrep scan --config auto --error
+        run: bash .github/ci/run.sh semgrep
