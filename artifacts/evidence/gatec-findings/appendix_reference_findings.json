@@ -1,0 +1,17 @@
+{
+  "book": "appendix_参考資料.pdf",
+  "file": "appendix_参考資料.pdf",
+  "sha256_12": "2cda346ce990",
+  "pages_total": 10,
+  "ranges_inspected": "1-10",
+  "all_pages_viewed": true,
+  "findings": [],
+  "verified": {
+    "toc": "目次(p2)の5項目が実頁と一致: 公式ドキュメント=p4, 学習リソース=p8, 便利なツール=p9, 戻る=p10, 奥付=p10",
+    "screenshots": "図1-3(p3-4)全て完整",
+    "footnotes": "脚注38件(技術公式URL+drive.google.com×2)・番号リスト様式+リンク注釈",
+    "okuduke": "p10 紺帯+タイトル/著者/版 完整",
+    "tables": "表は全て枠内収まり・はみ出しなし",
+    "nonnbre": "正常", "white_page": "なし", "glyph": "欠字なし(150dpi全頁実見)"
+  }
+}

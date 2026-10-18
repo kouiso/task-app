@@ -1,0 +1,17 @@
+{
+  "book": "00_カリキュラム目次.pdf",
+  "file": "00_カリキュラム目次.pdf",
+  "sha256_12": "41b6d9b19931",
+  "pages_total": 20,
+  "ranges_inspected": "1-20",
+  "all_pages_viewed": true,
+  "findings": [],
+  "verified": {
+    "toc": "目次(p2)の6項目が実頁と一致: この教材について=p3, 30日間カリキュラム=p8, 学習の進め方=p18, Day01を始めましょう=p19, 付録=p19, 奥付=p20",
+    "footnotes": "脚注36件(drive.google.com file/d/ へのリンク)・全て番号リスト様式+リンク注釈",
+    "okuduke": "p20 奥付紺帯正常・タイトル/著者/版情報完整",
+    "nonnbre": "全頁ノンブル正常",
+    "white_page": "なし",
+    "glyph": "欠字なし(150dpi全頁実見)"
+  }
+}

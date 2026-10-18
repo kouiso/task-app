@@ -1,0 +1,16 @@
+{
+  "book": "00-1_学びのロードマップ.pdf",
+  "file": "00-1_学びのロードマップ.pdf",
+  "sha256_12": "5576d7683a8c",
+  "pages_total": 7,
+  "ranges_inspected": "1-7",
+  "all_pages_viewed": true,
+  "findings": [],
+  "verified": {
+    "toc": "目次(p2)の5項目が実頁と一致: 8つの局面=p3, 技術のつながり=p5, 大きな2つの周回=p6, 進め方のコツ=p6, 奥付=p7",
+    "footnotes": "p3に番号付き脚注2件(drive.google.com URL)・リンク注釈付き・番号リスト様式",
+    "nonnbre": "全頁ノンブル正常(2-7)",
+    "white_page": "なし",
+    "glyph": "欠字なし(150dpi全頁実見)"
+  }
+}

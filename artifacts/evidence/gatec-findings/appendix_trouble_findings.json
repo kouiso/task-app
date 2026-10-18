@@ -1,0 +1,17 @@
+{
+  "book": "appendix_トラブルシューティング.pdf",
+  "file": "appendix_トラブルシューティング.pdf",
+  "sha256_12": "4cf1350761c8",
+  "pages_total": 21,
+  "ranges_inspected": "1-21",
+  "all_pages_viewed": true,
+  "findings": [],
+  "verified": {
+    "toc": "目次(p2)の5項目が実頁と一致: よくあるエラー=p5, 一般的なエラーと対処法=p18, デバッグのコツ=p20, 戻る=p20, 奥付=p21",
+    "screenshots": "図1(ログイン画面p3)・図2(ダッシュボードp4)・図3(タスク一覧p4)全て完整",
+    "footnotes": "脚注4件(code.visualstudio.com×2, drive.google.com×2)・番号リスト様式+リンク注釈",
+    "okuduke": "p21 紺帯+タイトル/著者/版 完整",
+    "nonnbre": "正常", "white_page": "なし", "glyph": "欠字なし(150dpi全頁実見)",
+    "code_blocks": "全コードブロック枠内収まり・末尾切れなし"
+  }
+}

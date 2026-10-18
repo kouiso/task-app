@@ -1,0 +1,31 @@
+{
+  "book": "day01_開発環境を整えて、初めてのアプリを動かそう",
+  "file": "day01_開発環境を整えて、初めてのアプリを動かそう.pdf",
+  "sha256_12": "c1f5c906d303",
+  "pages_total": 82,
+  "ranges_inspected": ["p-01..p-82"],
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 12, "category": "layout_whitespace", "severity": "note", "detail": "前提(読む目安)終端後〜脚注上の間に約55%の大空白。不可分ブロック(Step1見出し+本文)の次要素送り副作用。内容欠落なし"},
+    {"page": 23, "category": "layout_whitespace", "severity": "note", "detail": "ターミナル出力ラベル終端後に約70%の大空白。長大な不可分コードブロックが次頁送りになった副作用。内容欠落なし"},
+    {"page": 37, "category": "layout_whitespace", "severity": "note", "detail": "表ブロック終端後に約55%の大空白。不可分表ブロックの次要素送り副作用。内容欠落なし"},
+    {"page": 43, "category": "layout_whitespace", "severity": "note", "detail": "コードブロック終端後に約60%の大空白。不可分コードブロックの次要素送り副作用。内容欠落なし"},
+    {"page": 45, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約75%の大空白。不可分コードブロックの次頁送り副作用。内容欠落なし"},
+    {"page": 47, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約75%の大空白。同上。内容欠落なし"},
+    {"page": 49, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約75%の大空白。同上。内容欠落なし"},
+    {"page": 51, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約75%の大空白。同上。内容欠落なし"},
+    {"page": 65, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約40%の空白(やや軽度)。同上パターン。内容欠落なし"},
+    {"page": 68, "category": "layout_whitespace", "severity": "note", "detail": "本文終端後に約30%の空白(軽度)。同上パターン。内容欠落なし"},
+    {"page": 70, "category": "layout_whitespace", "severity": "note", "detail": "コードブロック+本文終端後に約45%の空白。同上パターン。内容欠落なし"}
+  ],
+  "verified": {
+    "toc_page_numbers": "目次実頁と一致: ゴールp3/なぜp5/前提p6/実装ステップ一覧p15/S1p16/S2p20/S3p29/S4p32/S5p74/成果p76/つまずきp76/用語p78/応用p79/チェックp80/次回p81/次に読むp81/奥付p82",
+    "mermaid_figures": "図2(p13)図5(p67)の全ノード/エッジラベルが末尾文字まで完整 — 旧must2両箇所の解消を実見確認",
+    "screenshots": "図1,3,4,6 のスクリーンショット全て完整・欠落なし",
+    "footnotes": "脚注1-19全て番号リスト様式+PDFリンクアノテーション(drive.google.com等)。裸URLではなく設計様式として一貫",
+    "code_blocks": "全コードブロックが枠内収まり・末尾切れなし",
+    "nonnbre": "ノンブル連番正常(1-82)。白頁なし",
+    "okuduke": "p82 紺帯+タイトル/著者/版 完整、著作権頁完整",
+    "glyph_loss": "フォント欠落・文字化けなし(glyph notdef audit=0と整合)"
+  }
+}

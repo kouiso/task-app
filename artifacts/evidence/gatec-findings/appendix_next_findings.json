@@ -1,0 +1,21 @@
+{
+  "book": "appendix_次のステップ.pdf",
+  "file": "appendix_次のステップ.pdf",
+  "sha256_12": "7bae1ff876f4",
+  "pages_total": 16,
+  "ranges_inspected": "1-16",
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 7, "category": "layout_whitespace", "severity": "note",
+     "detail": "プロジェクトアイデア表(ECサイト行)終端後に約60%の大空白。不可分表ブロックの次要素(ゼロから始めるときの手順+コードブロック)が次頁へ送られた副作用。内容欠落なし"}
+  ],
+  "verified": {
+    "toc": "目次(p2)の8項目が実頁と一致: レベル1=p4, レベル2=p6, レベル3=p12, レベル4=p13, 継続的な学習=p14, 戻る=p15, 奥付=p15, 著作権=p16",
+    "screenshots": "図1-3(p3-4)全て完整",
+    "footnotes": "脚注2件(drive.google.com)・番号リスト様式+リンク注釈",
+    "okuduke": "p15 紺帯+タイトル/著者/版 完整、p16 著作権頁完整",
+    "code_blocks": "p8 npm手順ブロック枠内収まり・末尾切れなし",
+    "tables": "全表枠内収まり・はみ出しなし",
+    "nonnbre": "正常", "white_page": "なし", "glyph": "欠字なし(150dpi全頁実見)"
+  }
+}
