@@ -138,6 +138,9 @@ MUST_NOT_CONTAIN = [
 
 
 WORKFLOW = REPO_ROOT / ".github/workflows/material-gate.yml"
+# Gate 4 の本体は workflow から run.sh 経由で呼ばれる phase スクリプトに移った。
+# workflow だけを見ると、呼び出しも集計もそこには無いので常に赤になる。
+GATE4_PHASE = REPO_ROOT / ".github/ci/phase/material-corpus.sh"
 
 
 def check_workflow_wiring() -> tuple[int, int]:
@@ -148,15 +151,19 @@ def check_workflow_wiring() -> tuple[int, int]:
     実行するだけでは足りない。終了コードを最後の集計へ入れていないと、
     赤くなっても Gate 全体は緑のまま通る。
     """
-    text = WORKFLOW.read_text(encoding="utf-8")
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    text = GATE4_PHASE.read_text(encoding="utf-8")
     failed = 0
+    if "bash .github/ci/run.sh material-corpus" not in workflow:
+        failed += 1
+        print("  ❌ material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
     if "scripts/curriculum-qa/test_sale_package.py" not in text:
         failed += 1
-        print("  ❌ material-gate.yml の Gate 4 が test_sale_package.py を呼んでいない")
+        print("  ❌ material-corpus.sh の Gate 4 が test_sale_package.py を呼んでいない")
     if text.count("salepkg_status") < 4:
         failed += 1
         print("  ❌ test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
-    return failed, 2
+    return failed, 3
 
 
 def check_declared() -> tuple[int, int]:
