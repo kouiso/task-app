@@ -331,7 +331,12 @@ const releaseNonMemberAssignees = async (
   if (preview.length === 0) {
     return;
   }
+```
 
+ここまでで、確かめる対象のプロジェクトが分かります。次に、そのプロジェクトをロックしてからタスクを読み直します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
   const projectIds = preview.map((task) => task.projectId).sort();
   for (const projectId of projectIds) {
     await lockProject(tx, projectId);
@@ -374,6 +379,12 @@ const releaseNonMemberAssignees = async (
   const memberKeys = new Set(
     members.map((member) => `${member.projectId}:${member.userId}`)
   );
+```
+
+`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
   const orphanIds = candidates
     .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
     .map((task) => task.id);
@@ -1437,7 +1448,12 @@ const releaseNonMemberAssignees = async (
   if (preview.length === 0) {
     return;
   }
+```
 
+ここまでで、確かめる対象のプロジェクトが分かります。次に、そのプロジェクトをロックしてからタスクを読み直します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
   const projectIds = preview.map((task) => task.projectId).sort();
   for (const projectId of projectIds) {
     await lockProject(tx, projectId);
@@ -1471,6 +1487,12 @@ const releaseNonMemberAssignees = async (
   const memberKeys = new Set(
     members.map((member) => `${member.projectId}:${member.userId}`)
   );
+```
+
+`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
   const orphanIds = candidates
     .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
     .map((task) => task.id);
