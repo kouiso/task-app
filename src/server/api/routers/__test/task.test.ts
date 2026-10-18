@@ -523,13 +523,16 @@ describe('taskRouter', () => {
       await locked;
       const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' });
       // 一括操作がロック待ちに入ってから付け替えを確定させる。
-      for (let i = 0; i < 100; i++) {
+      let waited = false;
+      for (let i = 0; i < 100 && !waited; i++) {
         const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
           SELECT count(*)::int AS n FROM pg_stat_activity
           WHERE wait_event_type = 'Lock' AND datname = current_database()`;
-        if ((waiting[0]?.n ?? 0) > 0) break;
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        waited = (waiting[0]?.n ?? 0) > 0;
+        if (!waited) await new Promise((resolve) => setTimeout(resolve, 20));
       }
+      // ロック待ちに入れなかったなら、順序が再現できていないのでテストを失敗させる。
+      expect(waited).toBe(true);
       release();
       await reassign;
       await reopen;

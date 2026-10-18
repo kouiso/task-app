@@ -1541,7 +1541,7 @@ const releaseNonMemberAssignees = async (
   );
 ```
 
-`members` は、候補のプロジェクトと担当者のどちらかに当てはまるメンバー行です。ここから `projectId:userId` の文字列を作った `memberKeys` に、候補の組が無いかどうかを次の処理で調べます。
+`members` は、候補のプロジェクトに属し、かつ候補の担当者であるメンバー行です。ここから `projectId:userId` の文字列を作った `memberKeys` に、候補の組が無いかどうかを次の処理で調べます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
