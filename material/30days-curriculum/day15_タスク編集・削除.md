@@ -246,7 +246,7 @@ const taskUpdateSchema = z.object({
 
 - `data.status` が送られてきている
 - 今のステータス（`existingTask.status`）が完了か中止
-- 新しいステータスが完了でも中止でもない
+- 新しいステータスが完了と中止のどちらにも当たらない
 
 戻すときだけ見分ける理由は Day 12 の `removeMember` にあります。`removeMember` はメンバーを外すときに未完了タスクの担当だけを外しました。完了と中止のタスクの担当者は「誰がやり終えたか」の実績として残しています。そのタスクを `TODO` へ戻すと外れた人が未完了タスクの担当に戻ります。Day 12 で防いだ「所属していない人が未完了タスクの担当者」という状態がここから入り込みます。
 
@@ -1816,9 +1816,15 @@ export const taskRouter = createTRPCRouter({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 ```
 
 判定に `!== undefined` を使い、`if (data.priority)` と書いていないのが要点です。後者だと `0` や空文字が偽と見なされ、`estimatedHours` を0時間へ直す編集が黙って無視されます。日付の2つが `? :` で分かれているのは値があれば `Date` へ、空なら `null` へ、と行き先が2つあるためです。
+
+`isReopening` を `isProjectChanging` と並べて先に決めておくのはロックを取るかどうかの判断に両方を使うからです。完了のまま編集する更新では偽になるので実績として残した担当者に触れません。
 
 **update のプロジェクト移動**:
 
@@ -1851,7 +1857,7 @@ export const taskRouter = createTRPCRouter({
     }
 ```
 
-トランザクションの外に残るのは `null`（担当を外す）の場合だけです。外す操作は相手がメンバーかを確かめなくても成り立つためです。値がある場合と `undefined` のままプロジェクトを移す場合は所属を確かめます。この2つはロックを取った後で扱います。
+トランザクションの外に残るのは `null`（担当を外す）の場合だけです。外す操作は相手がメンバーかを確かめなくても成り立つためです。値がある場合は所属を確かめます。`undefined` のままプロジェクトを移す場合と未完了へ戻す場合も今の担当者の所属を確かめます。これらはロックを取った後で扱います。
 
 **update のロック**:
 
@@ -1864,12 +1870,12 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId) {
+        } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
         }
 ```
 
-移動する場合は採番の中でロックが取れます。移動しないで担当者を付ける場合は `lockProject` だけを呼びます。どちらにも当たらない更新は所属を確かめないのでロックを取りません。
+移動する場合は採番の中でロックが取れます。移動しないで担当者を付ける場合と未完了へ戻す場合は `lockProject` だけを呼びます。どちらにも当たらない更新は所属を確かめないのでロックを取りません。
 
 **ロックの後ろで扱う update の担当者**:
 
@@ -1879,7 +1885,11 @@ export const taskRouter = createTRPCRouter({
         if (data.assigneeId) {
           await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
           updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
+        } else if (
+          data.assigneeId === undefined &&
+          (isProjectChanging || isReopening) &&
+          existingTask.assigneeId
+        ) {
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {
@@ -1895,7 +1905,7 @@ export const taskRouter = createTRPCRouter({
         }
 ```
 
-`null` と `undefined` の使い分けがここで結果を分けます。値があれば所属を確かめて付け替えます。`undefined` は「触らない」なのでふつうは何もしません。ただしプロジェクトを移すと今までの担当者が移動先のメンバーでなくなることがあります。その場合だけ後半の `else if` で自動的に外します。
+`null` と `undefined` の使い分けがここで結果を分けます。値があれば所属を確かめて付け替えます。`undefined` は「触らない」なのでふつうは何もしません。ただしプロジェクトを移すと今までの担当者が移動先のメンバーでなくなることがあります。完了・中止のタスクを未完了へ戻すときも Day 12 で外れた人が担当に残っていることがあります。この2つの場合だけ後半の `else if` で所属を確かめ直します。外れていれば自動的に担当を外します。
 
 どちらの読み取りもロックの後ろで `tx` を使います。Day 12 の `removeMember` も同じ `projects` 行をロックしてからメンバーを消すからです。確認をロックの前に置くと確認の直後に削除が割り込めます。そのまま保存すると外れた人が担当として残ります。
 
@@ -2021,6 +2031,10 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
     });
   }
 };
+
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
 
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
   await lockProject(tx, projectId);
@@ -2270,6 +2284,12 @@ export const taskRouter = createTRPCRouter({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    // 完了・中止に残った担当者は、退会後もそのまま残っていることがある。
+    // 未完了へ戻すときに所属を確かめ直さないと、外れた人が担当に戻る。
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 
     if (isProjectChanging) {
       const destinationMember = await prisma.projectMember.findUnique({
@@ -2294,7 +2314,7 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId) {
+        } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
         }
 
@@ -2303,8 +2323,12 @@ export const taskRouter = createTRPCRouter({
         if (data.assigneeId) {
           await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
           updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
-          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+        } else if (
+          data.assigneeId === undefined &&
+          (isProjectChanging || isReopening) &&
+          existingTask.assigneeId
+        ) {
+          // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {

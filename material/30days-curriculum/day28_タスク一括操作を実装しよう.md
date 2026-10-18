@@ -300,6 +300,86 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 流れは `bulkComplete` とよく似ていますが権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
 
+#### 0-5. 未完了へ戻すタスクの担当者を確かめる部品を作る
+
+3つ目の `bulkUpdateStatus` は完了したタスクを `TODO` へ戻すこともできます。ここで Day 12 の `removeMember` を思い出してください。メンバーを外すと未完了タスクの担当は外れます。完了と中止のタスクの担当は実績として残しました。
+
+なので完了済みのタスクの担当者欄には、もうプロジェクトにいない人が残っていることがあります。そのまま一括で `TODO` へ戻すと外れた人が未完了タスクの担当に戻ります。1件ずつ戻す Day 15 の `update` でも同じことが起きます。一括操作も戻す前に担当者の所属を確かめる必要があります。
+
+「完了と中止」を表す定数 `CLOSED_STATUSES` と判定の `isClosedStatus` は、Day 15 の `update` で `lockProject` の直後に作りました。ここではそれを使い回します。
+
+`CLOSED_STATUSES` は Day 12 の `removeMember` が担当を残す2つの状態と同じ組です。`DONE` と `CANCELLED` を使う場所ごとに書くと、片方で `CANCELLED` を書き忘れたときに中止のタスクだけ確かめずに戻ります。1か所に置いてあるので、`update` と `bulkUpdateStatus` で判定がずれません。Day 15 を飛ばした場合は、同じ2行を `lockProject` の直後に足してから進めてください。
+
+続けて担当者を確かめる関数の前半を書きます。置き場所は `export const taskRouter` の行の上です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null }
+    },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const projectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ].sort();
+  for (const projectId of projectIds) {
+    await lockProject(tx, projectId);
+  }
+```
+
+引数の `where` には一括操作が作った権限つきの条件をそのまま受け取ります。そこへ「完了か中止」と「担当者がいる」を足して確かめる候補を絞ります。未完了のタスクは候補に入れません。メンバーを外した時点で Day 12 の `removeMember` が担当を外しているからです。
+
+候補が属するプロジェクトは `lockProject` でロックします。`removeMember` も同じプロジェクトの行をロックします。なので確かめている途中でメンバーが外されて結果が古くなることはありません。
+
+ロックの前に `sort()` で id の順に並べるのはデッドロック（2つの処理が互いに相手のロックの解放を待って止まる状態）を避けるためです。一括操作 A がプロジェクト P1 から P2 の順にロックするとします。同時に一括操作 B は P2 から P1 の順にロックします。A は P1 を取って P2 を待ちます。B は P2 を取って P1 を待ちます。
+
+この状態になると PostgreSQL は片方のトランザクションをエラーで取り消します。全員が id の順に取れば先に P1 を取った側だけが進むので待ち合いが輪になりません。
+
+後半では候補の担当者がまだメンバーかをまとめて調べます。外れた人が担当していれば担当を空にします。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+  const assigneeIds = [
+    ...new Set(candidates.map((task) => task.assigneeId as string))
+  ];
+  const members = await tx.projectMember.findMany({
+    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(
+    members.map((member) => `${member.projectId}:${member.userId}`)
+  );
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({
+      where: { id: { in: orphanIds } },
+      data: { assigneeId: null }
+    });
+  }
+};
+```
+
+Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ確かめました。同じ書き方を候補の数だけ繰り返すと100件で100回の問い合わせになります。ここでは `tx.projectMember.findMany` の1回で「候補のプロジェクトのどれか」と「候補の担当者のどれか」に当てはまるメンバー行をまとめて取ります。
+
+ただしこの条件は余分な組も返します。田中さんは P1 のメンバーで P2 からは外れたとします。候補に P1 と P2 の田中さん担当のタスクがあると `findMany` は P1 の田中さんの行を返します。担当者の id だけで照合すると P2 のタスクも田中さんがメンバーだと見なして見逃します。
+
+そこで `projectId:userId` の形の文字列を作って「プロジェクトと担当者の組」で照合します。組が `memberKeys` に無いタスクだけが外れた人の担当です。その id を集めて `updateMany` で `assigneeId` を `null` にします。
+
+`task.assigneeId as string` と書くのは `findMany` の条件で `null` を除いても型は `string | null` のままだからです。候補には担当者のいるタスクしか入りません。だからここでは `string` として扱えます。
+
 #### 0-6. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
 最後に選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
@@ -342,12 +422,15 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 `data` に型を付けるとあとから追加する `completedAt` も検査できます。完了に変える場合は現在時刻を用意し、それ以外では `null` に戻します。
 
-続けて完了済みの日時を保ちながら更新します。
+続けてトランザクションを開きます。未完了へ戻すときは最初に 0-5 の部品を呼びます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
+        }
         const unchanged =
           input.status === TASK_STATUS.DONE
             ? await tx.task.updateMany({
@@ -355,6 +438,16 @@ const assertBulkWriteCount = (count: number, expected: number) => {
                 data: { status: TASK_STATUS.DONE },
               })
             : { count: 0 };
+```
+
+`releaseNonMemberAssignees` を呼ぶのは変更先が `TODO` や `IN_PROGRESS` のときだけです。変更先が完了か中止なら担当者には触れません。終わったタスクの担当は「誰が終えたか」の記録です。Day 12 の `removeMember` と同じく外れた人でも実績として残します。
+
+呼ぶ位置は `updateMany` より前です。ステータスを書き換えたあとでは候補を「完了か中止」で探せません。呼び出しは同じトランザクションの中にあります。このあと件数がずれて全体を取り消すときは外した担当も元に戻ります。
+
+残りは完了済みの日時を保ちながら更新する部分です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
         const changed = await tx.task.updateMany({
           where:
             input.status === TASK_STATUS.DONE
@@ -376,6 +469,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 - 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されている
 - `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいる
 - 書き込み側でも現在のロールを確認し、件数がずれたら全体を取り消している
+- 未完了へ戻すときだけ `releaseNonMemberAssignees` を `updateMany` より前に呼んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
 ---
@@ -1305,6 +1399,66 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は読者からは原因の見えない不具合になります。
 
+**完了と中止をまとめた定数と判定**は Day 15 で `lockProject` の直後に追加した2行をそのまま使います。`bulkUpdateStatus` はこの判定で「未完了へ戻す操作か」を見分けます。
+
+**外れた担当者を外す関数**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+// 完成版: 外れた担当者を外す関数
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null }
+    },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const projectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ].sort();
+  for (const projectId of projectIds) {
+    await lockProject(tx, projectId);
+  }
+```
+
+この関数は `export const taskRouter` の行の上に置きます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックするのは複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: 担当者の所属を組で照合して外す
+  const assigneeIds = [
+    ...new Set(candidates.map((task) => task.assigneeId as string))
+  ];
+  const members = await tx.projectMember.findMany({
+    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(
+    members.map((member) => `${member.projectId}:${member.userId}`)
+  );
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({
+      where: { id: { in: orphanIds } },
+      data: { assigneeId: null }
+    });
+  }
+};
+```
+
+メンバー行は `findMany` の1回でまとめて取ります。`projectId` と `userId` の `in` は余分な組も返します。だから「プロジェクトと担当者の組」の文字列で照合します。担当者の id だけで照合すると別のプロジェクトでメンバーの人を所属していると見なして見逃します。
+
 **bulkComplete**:
 
 ```typescript
@@ -1410,6 +1564,9 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
+        }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE
@@ -1419,6 +1576,8 @@ const assertBulkWriteCount = (count: number, expected: number) => {
               })
             : { count: 0 };
 ```
+
+未完了へ戻すときは最初に担当者の所属を確かめます。完了・中止の担当は Day 12 の `removeMember` が実績として残します。そのため外れた人が担当のまま残っていることがあります。完了か中止へ変えるときは実績を残すため呼びません。
 
 変更先が `DONE` の場合だけ完了済みの行を先に更新します。`completedAt` を含めないため、すでに週次集計へ入っている完了日時は変わりません。
 
