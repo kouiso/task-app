@@ -1781,10 +1781,6 @@ import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/li
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { isAuthError, isUnknownResult } from '@/lib/query-error';
-import {
-  buildTaskFiltersQueryString,
-  parseTaskFiltersFromSearchParams,
-} from '@/lib/task-filter-query';
 import { taskToFormData } from '@/lib/task-form';
 import { api } from '@/trpc/react';
 
@@ -1825,37 +1821,6 @@ function TaskPageContent() {
     setDetailOpen(false);
     setDialogOpen(true);
   }, [isEditLink, linkedTask]);
-
-  useEffect(() => {
-    const parsed = parseTaskFiltersFromSearchParams(searchParams);
-    setFilterProject(parsed.project);
-    setFilterStatus(parsed.status);
-  }, [searchParams]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('project');
-    params.delete('status');
-
-    const filterQuery = buildTaskFiltersQueryString({
-      project: filterProject,
-      status: filterStatus,
-    });
-
-    if (filterQuery) {
-      const filterParams = new URLSearchParams(filterQuery);
-      for (const [key, value] of filterParams.entries()) {
-        params.set(key, value);
-      }
-    }
-
-    const nextQuery = params.toString();
-    const currentQuery = searchParams.toString();
-
-    if (nextQuery !== currentQuery) {
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
-    }
-  }, [filterProject, filterStatus, pathname, router, searchParams]);
 
   const utils = api.useUtils();
 
@@ -2375,6 +2340,8 @@ export default function TaskPage() {
 ```
 
 `title` に件数を差し込んでいるのは承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
+
+公開リポジトリの `src/app/task/page.tsx` は販売 ZIP には入っていません。そのファイルにはこの本で扱わない処理が1つあります。選んだプロジェクトとステータスを URL のクエリに書き込みます。そのリンクを開くと同じ絞り込みで表示されます。この処理には `src/lib/task-filter-query.ts` の関数を使います。この本の `page.tsx` にはこの処理がありません。公開リポジトリのファイルを読むと `useEffect` が2つ多く見えます。
 
 ## 今日のまとめ
 
