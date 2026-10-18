@@ -714,6 +714,28 @@ def _starts_file(part: Part) -> bool:
     return False
 
 
+_TOP_LEVEL_DECL = re.compile(
+    r"^(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?"
+    r"(?:function\*?|const|let|var|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)")
+
+
+def _declares_twice(span: list[Part]) -> bool:
+    """断片をつなぐと、同じ名前をファイル直下で2回宣言する形になるなら True。
+
+    独立した完成版が2本あるときの全結合は、この形になる。節別リスティングの
+    import 群は2節目以降も import から始まるが、宣言は重複しない。
+    """
+    seen: set[str] = set()
+    for p in span:
+        for line in _drop_marker_lines(p.body.split("\n"), KANSEI_LABEL):
+            m = _TOP_LEVEL_DECL.match(line)
+            if m:
+                if m.group(1) in seen:
+                    return True
+                seen.add(m.group(1))
+    return False
+
+
 def candidates(parts: list[Part]):
     """(label, joined, first_prose) を優先順に yield。"""
     seen: set[str] = set()
@@ -737,10 +759,13 @@ def candidates(parts: list[Part]):
         # 静かに欠ける。本文側の kansei 断片と節の listing が混在する
         # ファイルは連続にならないため、従来順へ落ちて損は出ない。
         # ただし span に独立した完成版リスティング（ファイル先頭から始まる
-        # 断片）が2本以上あると、全結合は宣言の重複した成果物になる。
-        # そのときは先頭で試さず、後ろの kansei-run に任せる。
+        # 断片）が2本以上あり、同じ名前を2回宣言する形になるなら、全結合は
+        # 宣言の重複した成果物になる。そのときは先頭で試さず、後ろの
+        # kansei-run に任せる。import 群を節ごとに積む教材は、2節目以降も
+        # import から始まるだけで宣言は重複しないので、全結合を先に試す。
         file_starts = sum(1 for p in span if _starts_file(p))
-        if file_starts <= 1 and all(p.kansei or p.cont or p.unmarked for p in span):
+        independent = file_starts >= 2 and _declares_twice(span)
+        if not independent and all(p.kansei or p.cont or p.unmarked for p in span):
             r = emit("kansei-all", [p for p in span])
             if r:
                 yield r
