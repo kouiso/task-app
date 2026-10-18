@@ -32,6 +32,19 @@ async function setup(role: MemberRole) {
   return { actor, project, caller };
 }
 
+// 別のトランザクションのロックを待っている接続が現れるまで待つ。現れなければテストを失敗させる。
+// 固定時間の待ちでは遅い環境で順序が崩れるので、実際にロック待ちに入ったことを確かめる。
+async function waitUntilSomeoneWaitsForLock(): Promise<void> {
+  for (let i = 0; i < 250; i++) {
+    const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
+      SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+    if ((waiting[0]?.n ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('ロック待ちに入った接続が見つかりませんでした');
+}
+
 // プロジェクト行のロックを別のトランザクションで握り、その間に呼び出しを走らせてから、
 // メンバーを削除してロックを離す。呼び出しが「確認 → ロック → 保存」のどこで割り込まれても、
 // 毎回同じ順序（呼び出しがロックを待つ間にメンバーが削除される）になる。
@@ -384,7 +397,7 @@ describe('taskRouter', () => {
 
       await locked;
       const moving = caller.task.update({ id: task.id, projectId: destination.id });
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await waitUntilSomeoneWaitsForLock();
       const during = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
       expect(during.projectId).toBe(project.id);
 
@@ -523,16 +536,7 @@ describe('taskRouter', () => {
       await locked;
       const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' });
       // 一括操作がロック待ちに入ってから付け替えを確定させる。
-      let waited = false;
-      for (let i = 0; i < 100 && !waited; i++) {
-        const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
-          SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE wait_event_type = 'Lock' AND datname = current_database()`;
-        waited = (waiting[0]?.n ?? 0) > 0;
-        if (!waited) await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      // ロック待ちに入れなかったなら、順序が再現できていないのでテストを失敗させる。
-      expect(waited).toBe(true);
+      await waitUntilSomeoneWaitsForLock();
       release();
       await reassign;
       await reopen;
@@ -570,7 +574,7 @@ describe('taskRouter', () => {
         () => null,
         (error: unknown) => error,
       );
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await waitUntilSomeoneWaitsForLock();
       release();
       await mover;
       const error = await reopen;
@@ -603,15 +607,7 @@ describe('taskRouter', () => {
 
       await locked;
       const completing = caller.task.bulkComplete({ ids: [lowId, highId] });
-      let waited = false;
-      for (let i = 0; i < 100 && !waited; i++) {
-        const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
-          SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE wait_event_type = 'Lock' AND datname = current_database()`;
-        waited = (waiting[0]?.n ?? 0) > 0;
-        if (!waited) await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      expect(waited).toBe(true);
+      await waitUntilSomeoneWaitsForLock();
 
       // id の小さい行は、待っている間にもう取られている。
       const probe = prisma.$transaction(async (tx) => {
