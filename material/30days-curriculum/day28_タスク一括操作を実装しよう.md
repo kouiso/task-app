@@ -227,6 +227,22 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 一括操作は最初の権限確認と DB への書き込みの間にロールが変わる可能性も考えます。書き込み側の `where` でも現在のロールを確認し、件数がずれたらトランザクション（途中で失敗した場合に変更全体を取り消すまとまり）を失敗させます。
 
+続けて、一括操作どうしが行の取り合いで止まらないようにする部品を追加します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const lockTaskRows = async (
+  tx: Prisma.TransactionClient,
+  ids: string[]
+): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`
+  );
+};
+```
+
+`updateMany` や `deleteMany` が行に触る順番は実行計画しだいで、呼び出しごとに変わります。2つの一括操作が同じタスクを逆の順番で取り合うと、互いに相手の解放を待って止まり、PostgreSQL が片方を取り消します。そこで書き込みの前に、対象のタスク行を `ORDER BY "id"` の順でまとめてロックします。全員が id の順に取れば待ち合いは輪になりません。
+
 #### 0-3. bulkComplete を書く（まとめて完了にする）
 
 まず選んだタスクをまとめて完了にする `bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。
@@ -244,9 +260,10 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockTaskRows(tx, input.ids);
 ```
 
-入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。
+入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。トランザクションに入ったら、書き込みの前に `lockTaskRows` で対象の行を id の順にロックします。後で書く `bulkDelete` と `bulkUpdateStatus` も同じ順で取るので、どの組み合わせで重なっても待ち合いが輪になりません。
 
 続けて完了済みと未完了のタスクを分けて更新します。
 
@@ -289,6 +306,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 
       return await prisma.$transaction(async (tx) => {
+        await lockTaskRows(tx, input.ids);
         const result = await tx.task.deleteMany({
           where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
         });
@@ -481,6 +499,9 @@ Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ�
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
         if (!isClosedStatus(input.status)) {
           await lockProjectsOfTasks(tx, where);
+        }
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
           await releaseNonMemberAssignees(tx, where);
         }
         const unchanged =
@@ -1451,6 +1472,22 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は読者からは原因の見えない不具合になります。
 
+**タスク行を id の順にロックする関数**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+const lockTaskRows = async (
+  tx: Prisma.TransactionClient,
+  ids: string[]
+): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`
+  );
+};
+```
+
+`updateMany` や `deleteMany` が行に触る順番は実行計画しだいで、呼び出しごとに変わります。2つの一括操作が同じタスクを逆の順番で取り合うと、互いに相手の解放を待って止まり、PostgreSQL が片方を取り消します。そこで書き込みの前に、対象のタスク行を `ORDER BY "id"` の順でまとめてロックします。全員が id の順に取れば待ち合いは輪になりません。
+
 **完了と中止をまとめた定数と判定**は Day 15 で `lockProject` の直後に追加した2行をそのまま使います。`bulkUpdateStatus` はこの判定で「未完了へ戻す操作か」を見分けます。
 
 **対象のプロジェクトをロックする関数と、外れた担当者を外す関数**:
@@ -1575,6 +1612,7 @@ const releaseNonMemberAssignees = async (
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockTaskRows(tx, input.ids);
 ```
 
 書き込み直前にも同じ権限条件を使います。ここから完了済みと未完了を分けることで、完了済みタスクが持っている日時を新しい値で上書きしません。
@@ -1615,6 +1653,7 @@ const releaseNonMemberAssignees = async (
       }
 
       return await prisma.$transaction(async (tx) => {
+        await lockTaskRows(tx, input.ids);
         const result = await tx.task.deleteMany({
           where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
         });
@@ -1671,6 +1710,9 @@ const releaseNonMemberAssignees = async (
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
         if (!isClosedStatus(input.status)) {
           await lockProjectsOfTasks(tx, where);
+        }
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
           await releaseNonMemberAssignees(tx, where);
         }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。

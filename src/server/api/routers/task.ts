@@ -164,6 +164,14 @@ const lockProjectsOfTasks = async (
   }
 };
 
+// 一括操作の対象のタスク行を id の順にロックする。updateMany が行を触る順は実行計画しだいなので、
+// 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
+const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`,
+  );
+};
+
 // 完了・中止のタスクを未完了へ戻す前に、担当者がまだプロジェクトのメンバーか確かめ、
 // 外れていれば担当を外す。呼ぶ前に lockProjectsOfTasks で対象のプロジェクトを
 // すべてロックしておくこと。ロックの後で読むので、他の処理が確定させた結果を見て判断できる。
@@ -541,6 +549,7 @@ export const taskRouter = createTRPCRouter({
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockTaskRows(tx, input.ids);
         // 完了済みの行を先に更新・ロックし、完了日時を保ったまま全対象の権限を再確認する。
         const unchanged = await tx.task.updateMany({
           where: { ...where, status: TASK_STATUS.DONE },
@@ -565,6 +574,7 @@ export const taskRouter = createTRPCRouter({
       }
 
       return await prisma.$transaction(async (tx) => {
+        await lockTaskRows(tx, input.ids);
         const result = await tx.task.deleteMany({
           where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
         });
@@ -600,6 +610,9 @@ export const taskRouter = createTRPCRouter({
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
         if (!isClosedStatus(input.status)) {
           await lockProjectsOfTasks(tx, where);
+        }
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
           await releaseNonMemberAssignees(tx, where);
         }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。

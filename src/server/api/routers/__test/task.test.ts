@@ -580,6 +580,50 @@ describe('taskRouter', () => {
       expect(after.status).toBe('DONE');
     });
 
+    it('bulkComplete: 書き込みの前に対象のタスク行を id の順にロックする', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const first = await createTestTask(project.id, actor.id, { status: 'TODO' });
+      const second = await createTestTask(project.id, actor.id, { status: 'DONE' });
+      const [lowId, highId] = [first.id, second.id].sort() as [string, string];
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の処理が id の大きい行を握っている間に、一括操作を走らせる。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${highId} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const completing = caller.task.bulkComplete({ ids: [lowId, highId] });
+      let waited = false;
+      for (let i = 0; i < 100 && !waited; i++) {
+        const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
+          SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+        waited = (waiting[0]?.n ?? 0) > 0;
+        if (!waited) await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(waited).toBe(true);
+
+      // id の小さい行は、待っている間にもう取られている。
+      const probe = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${lowId} FOR UPDATE NOWAIT`;
+      });
+      await expect(probe).rejects.toThrow();
+
+      release();
+      await holder;
+      await completing;
+    });
+
     it('bulkUpdateStatus: 完了へ変える一括操作は担当者に触れない', async () => {
       const { caller, task, assignee } = await setupClosedTaskWithAssignee('CANCELLED', false);
       await caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
