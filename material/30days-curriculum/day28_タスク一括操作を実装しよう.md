@@ -1475,7 +1475,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 **タスク行を id の順にロックする関数**:
 
 ```typescript
-// filepath: src/server/api/routers/task.ts
+// filepath: src/server/api/routers/task.ts（続き）
 const lockTaskRows = async (
   tx: Prisma.TransactionClient,
   ids: string[]
