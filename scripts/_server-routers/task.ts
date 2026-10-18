@@ -132,11 +132,14 @@ async function assertTaskAssigneeBelongsToProject(
 
 // 対象のタスクが属するプロジェクトを id の順にロックする。ロックを待つ間にタスクが別の
 // プロジェクトへ移ることがあるため、読み直してもロック済みの集合に収まるまで繰り返す。
+// 読み直しで取り済みより小さい id が現れたら、順序が逆転してデッドロックし得るので、
+// ロックを取らずに CONFLICT で返す（トランザクション全体が取り消される）。
 const lockProjectsOfTasks = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
   const locked = new Set<string>();
+  let highest = '';
   for (;;) {
     const rows = await tx.task.findMany({
       where,
@@ -147,9 +150,16 @@ const lockProjectsOfTasks = async (
     if (pending.length === 0) {
       return;
     }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
     for (const projectId of pending.sort()) {
       await lockProject(tx, projectId);
       locked.add(projectId);
+      highest = projectId;
     }
   }
 };

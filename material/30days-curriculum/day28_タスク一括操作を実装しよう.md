@@ -319,6 +319,7 @@ const lockProjectsOfTasks = async (
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
   const locked = new Set<string>();
+  let highest = '';
   for (;;) {
     const rows = await tx.task.findMany({
       where,
@@ -331,9 +332,22 @@ const lockProjectsOfTasks = async (
     if (pending.length === 0) {
       return;
     }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
+```
+
+ここまでで、まだロックしていないプロジェクトを見つけ、取り済みより小さい id が混ざっていれば `CONFLICT` で戻します。問題が無ければ、見つけたプロジェクトを id の順に取ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
     for (const projectId of pending.sort()) {
       await lockProject(tx, projectId);
       locked.add(projectId);
+      highest = projectId;
     }
   }
 };
@@ -341,7 +355,7 @@ const lockProjectsOfTasks = async (
 
 `removeMember` も同じプロジェクトの行をロックします。確かめる前に対象のプロジェクトをすべてロックしておけば、確かめている途中でメンバーが外されることはありません。ロックを取る前に読んだ一覧は、ロックを待つ間に古くなります。そのため読む側は必ずロックの後で読みます。
 
-ロックを待つ間に `update` がタスクを別のプロジェクトへ移すことがあります。そこで一覧を読み直し、ロックしていないプロジェクトが出てきたら足してロックします。ロック済みの集合に収まったところで終わります。ロックを取り終えた後にタスクが別のプロジェクトへ抜け出せないのは、Day 15 の `update` が移動元と移動先の両方をロックするからです。移動元を握っている間、移動は待たされます。
+ロックを待つ間に `update` がタスクを別のプロジェクトへ移すことがあります。そこで一覧を読み直し、ロックしていないプロジェクトが出てきたら足してロックします。ロック済みの集合に収まったところで終わります。読み直しで、すでに取ったより小さい id のプロジェクトが現れたときは、ロックの順序が逆になってデッドロックし得ます。その場合はロックを取らずに `CONFLICT` を返し、利用者にもう一度操作してもらいます。ロックを取り終えた後にタスクが別のプロジェクトへ抜け出せないのは、Day 15 の `update` が移動元と移動先の両方をロックするからです。移動元を握っている間、移動は待たされます。
 
 ロックの前に `sort()` で id の順に並べるのはデッドロック（2つの処理が互いに相手のロックの解放を待って止まる状態）を避けるためです。一括操作 A がプロジェクト P1 から P2 の順にロックするとします。同時に一括操作 B は P2 から P1 の順にロックします。A は P1 を取って P2 を待ちます。B は P2 を取って P1 を待ちます。
 
@@ -1448,6 +1462,7 @@ const lockProjectsOfTasks = async (
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
   const locked = new Set<string>();
+  let highest = '';
   for (;;) {
     const rows = await tx.task.findMany({
       where,
@@ -1460,9 +1475,22 @@ const lockProjectsOfTasks = async (
     if (pending.length === 0) {
       return;
     }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
+```
+
+ここまでで、まだロックしていないプロジェクトを見つけ、取り済みより小さい id が混ざっていれば `CONFLICT` で戻します。問題が無ければ、見つけたプロジェクトを id の順に取ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
     for (const projectId of pending.sort()) {
       await lockProject(tx, projectId);
       locked.add(projectId);
+      highest = projectId;
     }
   }
 };

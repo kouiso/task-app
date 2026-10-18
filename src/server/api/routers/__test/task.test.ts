@@ -539,6 +539,44 @@ describe('taskRouter', () => {
       expect(after.assigneeId).toBe(newcomer.id);
     });
 
+    it('bulkUpdateStatus: ロック待ちの間にタスクが小さい id のプロジェクトへ移ったら、CONFLICT で戻す', async () => {
+      const { actor, caller } = await setup('OWNER');
+      const first = await createTestProject(actor.id);
+      const second = await createTestProject(actor.id);
+      const [low, high] = [first.id, second.id].sort();
+      const task = await createTestTask(high as string, actor.id, { status: 'DONE' });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の更新が両方のプロジェクトを握ったまま、タスクを id の小さい側へ移す。
+      const mover = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" IN (${low}, ${high}) ORDER BY "id" FOR UPDATE`;
+        markLocked();
+        await released;
+        await tx.task.update({ where: { id: task.id }, data: { projectId: low as string } });
+      });
+
+      await locked;
+      const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      release();
+      await mover;
+      const error = await reopen;
+
+      expect(String(error)).toContain('他の操作と重なりました');
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('DONE');
+    });
+
     it('bulkUpdateStatus: 完了へ変える一括操作は担当者に触れない', async () => {
       const { caller, task, assignee } = await setupClosedTaskWithAssignee('CANCELLED', false);
       await caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
