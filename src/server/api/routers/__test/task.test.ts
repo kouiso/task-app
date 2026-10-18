@@ -656,14 +656,11 @@ describe('taskRouter', () => {
       });
       await expect(probe).rejects.toThrow();
 
-      // 行を握られていても、コメント追加(外部キーの KEY SHARE)は待たされない。
-      const commented = await Promise.race([
-        prisma.comment.create({
-          data: { content: '一括操作の最中', taskId: lowId, userId: actor.id },
-        }),
-        new Promise<'blocked'>((resolve) => setTimeout(() => resolve('blocked'), 3000)),
-      ]);
-      expect(commented).not.toBe('blocked');
+      // 行を握られていても、コメント追加が外部キーの確認で取る KEY SHARE は待たされない。
+      // NOWAIT なので、待たされるなら固定時間を待たずに即エラーになる。
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${lowId} FOR KEY SHARE NOWAIT`;
+      });
 
       release();
       await holder;

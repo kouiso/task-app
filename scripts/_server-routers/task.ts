@@ -130,6 +130,17 @@ async function assertTaskAssigneeBelongsToProject(
   }
 }
 
+// 一括操作の対象のタスク行を id の順にロックする。updateMany が行を触る順は実行計画しだいなので、
+// 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
+// 先に lockProjectsOfTasks でプロジェクトを取り、removeMember などプロジェクトから取る処理とも
+// 「プロジェクト → タスク行」の順をそろえる。
+// FOR NO KEY UPDATE にするのは、コメント追加が取る外部キーの KEY SHARE を待たせないため。
+const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`,
+  );
+};
+
 // 対象のタスクが属するプロジェクトを id の順にロックする。ロックを待つ間にタスクが別の
 // プロジェクトへ移ることがあるため、読み直してもロック済みの集合に収まるまで繰り返す。
 // 読み直しで取り済みより小さい id が現れたら、順序が逆転してデッドロックし得るので、
@@ -162,17 +173,6 @@ const lockProjectsOfTasks = async (
       highest = projectId;
     }
   }
-};
-
-// 一括操作の対象のタスク行を id の順にロックする。updateMany が行を触る順は実行計画しだいなので、
-// 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
-// 先に lockProjectsOfTasks でプロジェクトを取り、removeMember などプロジェクトから取る処理とも
-// 「プロジェクト → タスク行」の順をそろえる。
-// FOR NO KEY UPDATE にするのは、コメント追加が取る外部キーの KEY SHARE を待たせないため。
-const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
-  await tx.$queryRaw(
-    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`,
-  );
 };
 
 // 完了・中止のタスクを未完了へ戻す前に、担当者がまだプロジェクトのメンバーか確かめ、
