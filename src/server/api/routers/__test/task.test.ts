@@ -159,6 +159,31 @@ describe('taskRouter', () => {
 
       expect(new Set(tasks.map((task) => task.position)).size).toBe(tasks.length);
     });
+
+    it('メンバー削除と同時に担当付きで作成しても、外れた人が未完了タスクの担当に残らない', async () => {
+      // 担当者の確認とメンバー削除が競合する順序は毎回同じにならないので、何度か繰り返して崩れないことを見る
+      for (let round = 0; round < 8; round++) {
+        const { project, caller } = await setup('OWNER');
+        const member = await createTestUser({ email: uniqueEmail('task-removed-member') });
+        await prisma.projectMember.create({
+          data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+        });
+
+        await Promise.allSettled([
+          caller.task.create({ title: '競合', projectId: project.id, assigneeId: member.id }),
+          caller.project.removeMember({ projectId: project.id, userId: member.id }),
+        ]);
+
+        const leaked = await prisma.task.findMany({
+          where: {
+            projectId: project.id,
+            assigneeId: member.id,
+            status: { notIn: ['DONE', 'CANCELLED'] },
+          },
+        });
+        expect(leaked).toEqual([]);
+      }
+    });
   });
 
   describe('update（更新）', () => {
@@ -273,6 +298,27 @@ describe('taskRouter', () => {
       ]);
 
       expect(new Set(moved.map((task) => task.position)).size).toBe(moved.length);
+    });
+  });
+
+  describe('update の担当者指定とメンバー削除の競合', () => {
+    it('メンバー削除と同時に担当を指定しても、外れた人が未完了タスクの担当に残らない', async () => {
+      for (let round = 0; round < 8; round++) {
+        const { actor, project, caller } = await setup('OWNER');
+        const member = await createTestUser({ email: uniqueEmail('task-removed-assignee') });
+        await prisma.projectMember.create({
+          data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+        });
+        const task = await createTestTask(project.id, actor.id);
+
+        await Promise.allSettled([
+          caller.task.update({ id: task.id, assigneeId: member.id }),
+          caller.project.removeMember({ projectId: project.id, userId: member.id }),
+        ]);
+
+        const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+        expect(after.assigneeId).not.toBe(member.id);
+      }
     });
   });
 
