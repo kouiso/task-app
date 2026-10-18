@@ -137,22 +137,35 @@ const releaseNonMemberAssignees = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
-  const candidates = await tx.task.findMany({
-    where: { ...where, status: { in: [...CLOSED_STATUSES] }, assigneeId: { not: null } },
-    select: { id: true, projectId: true, assigneeId: true },
+  const closedWithAssignee: Prisma.TaskWhereInput = {
+    ...where,
+    status: { in: [...CLOSED_STATUSES] },
+    assigneeId: { not: null },
+  };
+  const preview = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { projectId: true },
+    distinct: ['projectId'],
   });
-  if (candidates.length === 0) {
+  if (preview.length === 0) {
     return;
   }
 
-  const projectIds = [...new Set(candidates.map((task) => task.projectId))].sort();
+  const projectIds = preview.map((task) => task.projectId).sort();
   for (const projectId of projectIds) {
     await lockProject(tx, projectId);
   }
 
+  // ロックを待つ間に task.update が担当を付け替えていることがあるため、ロックの後で読み直す。
+  const candidates = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+
+  const candidateProjectIds = [...new Set(candidates.map((task) => task.projectId))];
   const assigneeIds = [...new Set(candidates.map((task) => task.assigneeId as string))];
   const members = await tx.projectMember.findMany({
-    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    where: { projectId: { in: candidateProjectIds }, userId: { in: assigneeIds } },
     select: { projectId: true, userId: true },
   });
   const memberKeys = new Set(members.map((member) => `${member.projectId}:${member.userId}`));

@@ -318,29 +318,37 @@ const releaseNonMemberAssignees = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
-  const candidates = await tx.task.findMany({
-    where: {
-      ...where,
-      status: { in: [...CLOSED_STATUSES] },
-      assigneeId: { not: null }
-    },
-    select: { id: true, projectId: true, assigneeId: true },
+  const closedWithAssignee: Prisma.TaskWhereInput = {
+    ...where,
+    status: { in: [...CLOSED_STATUSES] },
+    assigneeId: { not: null },
+  };
+  const preview = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { projectId: true },
+    distinct: ['projectId'],
   });
-  if (candidates.length === 0) {
+  if (preview.length === 0) {
     return;
   }
 
-  const projectIds = [
-    ...new Set(candidates.map((task) => task.projectId))
-  ].sort();
+  const projectIds = preview.map((task) => task.projectId).sort();
   for (const projectId of projectIds) {
     await lockProject(tx, projectId);
   }
+
+  // ロックを待つ間に付け替えられた担当を消さないよう、ロックの後で読み直す
+  const candidates = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { id: true, projectId: true, assigneeId: true },
+  });
 ```
 
 引数の `where` には一括操作が作った権限つきの条件をそのまま受け取ります。そこへ「完了か中止」と「担当者がいる」を足して確かめる候補を絞ります。未完了のタスクは候補に入れません。メンバーを外した時点で Day 12 の `removeMember` が担当を外しているからです。
 
-候補が属するプロジェクトは `lockProject` でロックします。`removeMember` も同じプロジェクトの行をロックします。なので確かめている途中でメンバーが外されて結果が古くなることはありません。
+先に「完了か中止で担当者がいるタスク」が属するプロジェクトだけを `distinct` で調べ、その行を `lockProject` でロックします。`removeMember` も同じ行をロックするので、確かめている途中でメンバーが外されて結果が古くなることはありません。
+
+タスクの一覧はロックを取った後でもう一度読みます。ロックを待つ間に `update` が担当を現メンバーへ付け替えていると、ロック前に読んだ一覧は古くなります。古い一覧のまま外れた人として扱うと、付け替えたばかりの正しい担当まで空にしてしまいます。ロックを取ってから読めば、他の処理が確定させた結果を見て判断できます。
 
 ロックの前に `sort()` で id の順に並べるのはデッドロック（2つの処理が互いに相手のロックの解放を待って止まる状態）を避けるためです。一括操作 A がプロジェクト P1 から P2 の順にロックするとします。同時に一括操作 B は P2 から P1 の順にロックします。A は P1 を取って P2 を待ちます。B は P2 を取って P1 を待ちます。
 
@@ -350,11 +358,17 @@ const releaseNonMemberAssignees = async (
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
+  const candidateProjectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ];
   const assigneeIds = [
     ...new Set(candidates.map((task) => task.assigneeId as string))
   ];
   const members = await tx.projectMember.findMany({
-    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    where: {
+      projectId: { in: candidateProjectIds },
+      userId: { in: assigneeIds }
+    },
     select: { projectId: true, userId: true },
   });
   const memberKeys = new Set(
@@ -1410,24 +1424,30 @@ const releaseNonMemberAssignees = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
-  const candidates = await tx.task.findMany({
-    where: {
-      ...where,
-      status: { in: [...CLOSED_STATUSES] },
-      assigneeId: { not: null }
-    },
-    select: { id: true, projectId: true, assigneeId: true },
+  const closedWithAssignee: Prisma.TaskWhereInput = {
+    ...where,
+    status: { in: [...CLOSED_STATUSES] },
+    assigneeId: { not: null },
+  };
+  const preview = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { projectId: true },
+    distinct: ['projectId'],
   });
-  if (candidates.length === 0) {
+  if (preview.length === 0) {
     return;
   }
 
-  const projectIds = [
-    ...new Set(candidates.map((task) => task.projectId))
-  ].sort();
+  const projectIds = preview.map((task) => task.projectId).sort();
   for (const projectId of projectIds) {
     await lockProject(tx, projectId);
   }
+
+  // ロックを待つ間に付け替えられた担当を消さないよう、ロックの後で読み直す
+  const candidates = await tx.task.findMany({
+    where: closedWithAssignee,
+    select: { id: true, projectId: true, assigneeId: true },
+  });
 ```
 
 この関数は `export const taskRouter` の行の上に置きます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックするのは複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
@@ -1435,11 +1455,17 @@ const releaseNonMemberAssignees = async (
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 // 完成版: 担当者の所属を組で照合して外す
+  const candidateProjectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ];
   const assigneeIds = [
     ...new Set(candidates.map((task) => task.assigneeId as string))
   ];
   const members = await tx.projectMember.findMany({
-    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    where: {
+      projectId: { in: candidateProjectIds },
+      userId: { in: assigneeIds }
+    },
     select: { projectId: true, userId: true },
   });
   const memberKeys = new Set(

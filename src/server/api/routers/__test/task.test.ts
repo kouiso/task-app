@@ -442,6 +442,48 @@ describe('taskRouter', () => {
       expect(keptAfter.assigneeId).toBe(kept.assignee.id);
     });
 
+    it('bulkUpdateStatus: ロックを待つ間に付け替えられた担当は、外さずに残す', async () => {
+      const { project, caller, task } = await setupClosedTaskWithAssignee('DONE', false);
+      const newcomer = await createTestUser({ email: uniqueEmail('task-reopen-newcomer') });
+      await prisma.projectMember.create({
+        data: { userId: newcomer.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の更新がロックを握ったまま、外れた人から現メンバーへ担当を付け替える。
+      const reassign = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+        await tx.task.update({ where: { id: task.id }, data: { assigneeId: newcomer.id } });
+      });
+
+      await locked;
+      const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' });
+      // 一括操作がロック待ちに入ってから付け替えを確定させる。
+      for (let i = 0; i < 100; i++) {
+        const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
+          SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+        if ((waiting[0]?.n ?? 0) > 0) break;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      release();
+      await reassign;
+      await reopen;
+
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBe(newcomer.id);
+    });
+
     it('bulkUpdateStatus: 完了へ変える一括操作は担当者に触れない', async () => {
       const { caller, task, assignee } = await setupClosedTaskWithAssignee('CANCELLED', false);
       await caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
