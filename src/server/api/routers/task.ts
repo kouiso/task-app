@@ -166,6 +166,8 @@ const lockProjectsOfTasks = async (
 
 // 一括操作の対象のタスク行を id の順にロックする。updateMany が行を触る順は実行計画しだいなので、
 // 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
+// 先に lockProjectsOfTasks でプロジェクトを取り、removeMember などプロジェクトから取る処理とも
+// 「プロジェクト → タスク行」の順をそろえる。
 const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
   await tx.$queryRaw(
     Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`,
@@ -549,6 +551,7 @@ export const taskRouter = createTRPCRouter({
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockProjectsOfTasks(tx, where);
         await lockTaskRows(tx, input.ids);
         // 完了済みの行を先に更新・ロックし、完了日時を保ったまま全対象の権限を再確認する。
         const unchanged = await tx.task.updateMany({
@@ -574,10 +577,10 @@ export const taskRouter = createTRPCRouter({
       }
 
       return await prisma.$transaction(async (tx) => {
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES);
+        await lockProjectsOfTasks(tx, where);
         await lockTaskRows(tx, input.ids);
-        const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
-        });
+        const result = await tx.task.deleteMany({ where });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
       });
@@ -608,9 +611,7 @@ export const taskRouter = createTRPCRouter({
 
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
-        if (!isClosedStatus(input.status)) {
-          await lockProjectsOfTasks(tx, where);
-        }
+        await lockProjectsOfTasks(tx, where);
         await lockTaskRows(tx, input.ids);
         if (!isClosedStatus(input.status)) {
           await releaseNonMemberAssignees(tx, where);

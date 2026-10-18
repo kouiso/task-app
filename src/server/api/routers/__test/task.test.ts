@@ -584,6 +584,47 @@ describe('taskRouter', () => {
       expect(after.status).toBe('DONE');
     });
 
+    it.each([
+      'bulkComplete',
+      'bulkDelete',
+      'bulkUpdateStatus',
+    ] as const)('%s: プロジェクトのロックが解放されるまで待つ', async (operation) => {
+      const { actor, project, caller } = await setup('OWNER');
+      const task = await createTestTask(project.id, actor.id, { status: 'IN_PROGRESS' });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // removeMember などがプロジェクトを握っている状態を作る。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const running =
+        operation === 'bulkComplete'
+          ? caller.task.bulkComplete({ ids: [task.id] })
+          : operation === 'bulkDelete'
+            ? caller.task.bulkDelete({ ids: [task.id] })
+            : caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
+      await waitUntilSomeoneWaitsForLock();
+      const during = await prisma.task.findUnique({ where: { id: task.id } });
+      expect(during?.status).toBe('IN_PROGRESS');
+
+      release();
+      await holder;
+      await running;
+      const after = await prisma.task.findUnique({ where: { id: task.id } });
+      expect(after?.status ?? null).toBe(operation === 'bulkDelete' ? null : 'DONE');
+    });
+
     it('bulkComplete: 書き込みの前に対象のタスク行を id の順にロックする', async () => {
       const { actor, project, caller } = await setup('OWNER');
       const first = await createTestTask(project.id, actor.id, { status: 'TODO' });
