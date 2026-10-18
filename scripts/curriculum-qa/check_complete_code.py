@@ -105,11 +105,16 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # 処置は「教材を src/ に追従させる（PDF 再生成が要る）」か
 # 「src/ を教材に合わせる」か「意図的として EXPECTED_DIFFERENT へ昇格」かの
 # 3択で、解決したものから順にこの表を空にする。
+#
+# 登録の書き方: 値の末尾に「追跡: #番号」（直す場所）と「消す条件: …」を書く。
+# どの処置でも、完成版と src/ が一致するか EXPECTED_DIFFERENT へ移した時点で
+# この登録は不要になる。一致したまま残すと「登録が古い」として失敗するので、
+# 消し忘れは CI が拾う。
 KNOWN_DRIFT: dict[str, str] = {
     # 教材の day25 完成版は Day 08 の簡易サイドバーに Day 13〜25 の変更を積んだ形
     # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
     # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
-    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658",
+    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658。消す条件: 3択（教材 day25 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
 }
 
 
