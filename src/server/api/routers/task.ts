@@ -92,6 +92,10 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   }
 };
 
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
   await lockProject(tx, projectId);
 
@@ -125,6 +129,40 @@ async function assertTaskAssigneeBelongsToProject(
     });
   }
 }
+
+// 完了・中止のタスクを未完了へ戻す前に、担当者がまだプロジェクトのメンバーか確かめ、
+// 外れていれば担当を外す。対象のプロジェクトは id の順にロックして、複数の一括操作が
+// 逆順にロックを取り合わないようにする。
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: { ...where, status: { in: [...CLOSED_STATUSES] }, assigneeId: { not: null } },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const projectIds = [...new Set(candidates.map((task) => task.projectId))].sort();
+  for (const projectId of projectIds) {
+    await lockProject(tx, projectId);
+  }
+
+  const assigneeIds = [...new Set(candidates.map((task) => task.assigneeId as string))];
+  const members = await tx.projectMember.findMany({
+    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(members.map((member) => `${member.projectId}:${member.userId}`));
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({ where: { id: { in: orphanIds } }, data: { assigneeId: null } });
+  }
+};
 
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -338,6 +376,12 @@ export const taskRouter = createTRPCRouter({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    // 完了・中止に残った担当者は、退会後もそのまま残っていることがある。
+    // 未完了へ戻すときに所属を確かめ直さないと、外れた人が担当に戻る。
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 
     if (isProjectChanging) {
       // 移動先プロジェクトでも canEdit 権限を持つかを確認
@@ -366,7 +410,7 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId) {
+        } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
         }
 
@@ -375,8 +419,12 @@ export const taskRouter = createTRPCRouter({
         if (data.assigneeId) {
           await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
           updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
-          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+        } else if (
+          data.assigneeId === undefined &&
+          (isProjectChanging || isReopening) &&
+          existingTask.assigneeId
+        ) {
+          // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {
@@ -515,6 +563,9 @@ export const taskRouter = createTRPCRouter({
 
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
+        }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE

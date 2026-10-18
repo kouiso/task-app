@@ -387,6 +387,69 @@ describe('taskRouter', () => {
     });
   });
 
+  describe('完了・中止のタスクを未完了へ戻すときの担当者', () => {
+    // removeMember は完了・中止の担当者を実績として残す。退会後の状態を直接作って確かめる。
+    async function setupClosedTaskWithAssignee(status: 'DONE' | 'CANCELLED', stillMember: boolean) {
+      const { actor, project, caller } = await setup('OWNER');
+      const assignee = await createTestUser({ email: uniqueEmail('task-reopen-assignee') });
+      await prisma.projectMember.create({
+        data: { userId: assignee.id, projectId: project.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, actor.id, { status });
+      await prisma.task.update({ where: { id: task.id }, data: { assigneeId: assignee.id } });
+      if (!stillMember) {
+        await prisma.projectMember.delete({
+          where: { userId_projectId: { userId: assignee.id, projectId: project.id } },
+        });
+      }
+      return { project, caller, task, assignee };
+    }
+
+    it.each([
+      'DONE',
+      'CANCELLED',
+    ] as const)('update: %s のタスクを TODO に戻すと、外れた人の担当を外す', async (status) => {
+      const { caller, task } = await setupClosedTaskWithAssignee(status, false);
+      const result = await caller.task.update({ id: task.id, status: 'TODO' });
+      expect(result.assigneeId).toBeNull();
+    });
+
+    it('update: まだメンバーの担当者は、TODO に戻しても担当のまま', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await caller.task.update({ id: task.id, status: 'TODO' });
+      expect(result.assigneeId).toBe(assignee.id);
+    });
+
+    it('update: 完了のまま編集しても、外れた人の担当は実績として残る', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', false);
+      const result = await caller.task.update({ id: task.id, title: '完了後に題名だけ直す' });
+      expect(result.assigneeId).toBe(assignee.id);
+    });
+
+    it('bulkUpdateStatus: TODO に戻すと、外れた人の担当だけを外す', async () => {
+      const gone = await setupClosedTaskWithAssignee('DONE', false);
+      const kept = await setupClosedTaskWithAssignee('DONE', true);
+      await expect(
+        gone.caller.task.bulkUpdateStatus({ ids: [gone.task.id], status: 'TODO' }),
+      ).resolves.toEqual({ count: 1 });
+      await expect(
+        kept.caller.task.bulkUpdateStatus({ ids: [kept.task.id], status: 'TODO' }),
+      ).resolves.toEqual({ count: 1 });
+
+      const goneAfter = await prisma.task.findUniqueOrThrow({ where: { id: gone.task.id } });
+      const keptAfter = await prisma.task.findUniqueOrThrow({ where: { id: kept.task.id } });
+      expect(goneAfter.assigneeId).toBeNull();
+      expect(keptAfter.assigneeId).toBe(kept.assignee.id);
+    });
+
+    it('bulkUpdateStatus: 完了へ変える一括操作は担当者に触れない', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('CANCELLED', false);
+      await caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.assigneeId).toBe(assignee.id);
+    });
+  });
+
   describe('delete（削除）', () => {
     it('OWNER(canDelete)はタスクを削除できる', async () => {
       const { actor, project, caller } = await setup('OWNER');
