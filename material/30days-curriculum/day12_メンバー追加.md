@@ -304,7 +304,7 @@ const projectMemberSchema = z.object({
 import { Prisma } from '@prisma/client';
 ```
 
-`Prisma.sql` を型ではなく値として呼ぶので、`type` を外した通常の import にします。2つ目は `PROJECT_MEMBER_ROLE` を取り込んでいる行の下への**追加**です。
+`Prisma.sql` を型ではなく値として呼びます。そのため `type` を外した通常の import にします。2つ目は `PROJECT_MEMBER_ROLE` を取り込んでいる行の下への**追加**です。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
@@ -312,7 +312,7 @@ import { Prisma } from '@prisma/client';
 import { TASK_STATUS } from '@/lib/constant/status';
 ```
 
-`TASK_STATUS` は担当を外すタスクの状態を判定するために使います。import を直したら、入力の形とプロジェクトの行をロックする処理から書きます。
+`TASK_STATUS` は担当を外すタスクの状態を判定するために使います。import を直したら入力の形とプロジェクトの行をロックする処理から書きます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -450,7 +450,7 @@ sequenceDiagram
 
 `delete` にも `userId_projectId` を渡すので消えるのは「このプロジェクトのこのユーザー」を表す1行だけです。`ProjectMember` の行が消えてもユーザー本体は残ります。外された人も他のプロジェクトではこれまで通り作業できます。
 
-次の問題は、外れた人に担当タスクが残ることです。担当が残るとデータの上では、所属していない人が未完了タスクの担当者になったままです。Day 29 のユーザー詳細ページは表示の側でも所属で絞ります。ここではデータの側でも外れた人を担当に残さず、二重に防ぎます。同じトランザクションの中で担当を外します。
+次の問題は外れた人に担当タスクが残ることです。担当が残るとデータの上では、所属していない人が未完了タスクの担当者になったままです。Day 29 のユーザー詳細ページは表示の側でも所属で絞ります。ここではデータの側でも外れた人を担当に残さず、二重に防ぎます。同じトランザクションの中で担当を外します。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
