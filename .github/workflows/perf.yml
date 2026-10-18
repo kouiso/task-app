@@ -29,13 +29,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: bash .github/ci/run.sh perf-lint
 
       - name: Type check
-        run: npm run type-check
+        run: bash .github/ci/run.sh perf-type
 
       - name: Build with bundle analyzer
-        run: ANALYZE=true npm run build
+        run: bash .github/ci/run.sh perf-build
 
       - name: Run Lighthouse CI
-        run: npx lhci autorun
+        run: bash .github/ci/run.sh perf-lighthouse

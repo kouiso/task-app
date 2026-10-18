@@ -811,22 +811,20 @@ export default function UsersPage() {
                     {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
                       {user.createdAt
-                        ? format(
-                            new Date(
-                              user.createdAt),
-                            'yyyy/MM/dd',
-                            { locale: ja })
+                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                            locale: ja,
+                          })
                         : '-'}
                     </TableCell>
 ```
 
 > `format` は `date-fns` の関数です。
-> `ja` ロケールを渡すと日本語の日付形式で
-> 表示されます。`createdAt` が undefined なら
-> `-` を表示して安全に処理しています。
+> `yyyy/MM/dd` で年・月・日を数字で表示します。
+> `createdAt` が無いときは `-` を表示します。
+> ユーザー取得前の待機は Step 3 で判定しています。
 
 **確認ポイント**:
-- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡している
+- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡し、値が無いときは `-` にしている
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
@@ -1547,7 +1545,7 @@ export default function UsersPage() {
                         </Button>
 ```
 
-`user.createdAt ? ... : '-'` の分岐は値が無いまま `format` を呼んで例外が起きるのを防ぐためのものです。`aria-label="詳細"` で読み上げ用の名前を付け、`title="詳細"` でマウスを載せたときにも名前を表示します。
+取得したユーザーの `createdAt` は必須項目です。API が登録日を選んで返すのでその値を整形します。`aria-label="詳細"` で読み上げ用の名前を付け、`title="詳細"` でマウスを載せたときにも名前を表示します。
 
 **編集ボタンとテーブルの閉じタグ**:
 
@@ -2102,7 +2100,7 @@ export function AppLayout({
 |--------------|------|---------|
 | 一般ユーザーで表示される | 権限チェック漏れ | `if (!isAdmin)` の早期リターンをテーブルより前に置く |
 | アバターが空白 | avatar が null | AvatarFallback で頭文字表示 |
-| 日付がInvalid Date | createdAt が undefined | 三項演算子で '-' を表示 |
+| 登録日の表示が想定と違う | 書式または日時の受け取り方が違う可能性 | `createdAt` が Date であることと `yyyy/MM/dd` の書式を確認する |
 | ボタンが押せない | onClick 未設定 | router.push を追加 |
 | テーブルが空で不安 | 空状態UI未実装 | length === 0 のメッセージを追加 |
 
@@ -2179,6 +2177,6 @@ Day 25 ではプロフィールページとパスワード変更機能を実装�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import check_complete_section_fences  # noqa: E402
 from check_complete_section_fences import UNIT_MARKER, WHOLE_FILE, check_file  # noqa: E402
 
 LAYOUT = "src/component/layout/app-layout.tsx"
@@ -417,6 +418,11 @@ def run_case(name: str, text: str) -> int:
 
 def main_test() -> int:
     failed = 0
+    # 実教材の day28 page.tsx は断片を src/ に合わせて登録を消した。登録時の挙動は
+    # 元と同じ行数（10 行）のテスト用登録で確かめる。
+    check_complete_section_fences.LISTING_DIVERGES.setdefault(
+        (28, PAGE), ("テスト用の登録。追跡: #657", 10)
+    )
     # build_day_snapshots が目印と読むのは `完成版` だけなので、listing の目印もそれに限る。
     if WHOLE_FILE.match("// 完成形: ファイル全体"):
         failed += 1

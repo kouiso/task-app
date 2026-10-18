@@ -102,17 +102,7 @@ jobs:
           # build_pdf_book.py が冊別ログを書く先。WORK_DIR(dist/.pdf-book-build)は
           # 再試行の rmtree で消えるので、job 中ずっと残る RUNNER_TEMP 配下に出す
           PDF_BOOK_BUILD_LOG_DIR: ${{ runner.temp }}/pdf-book-logs
-        run: |
-          # 組版ログをファイルにも残す。#501 の正体は組版時間が当時の 60 分
-          # 上限に届いたタイムアウト。job ログ自体は残るが、どの冊のどの外部
-          # プロセスが返らんかったかは job ログだけでは分からんので、冊別ログを
-          # artifact で回収できる形にする（下の upload-artifact がこの dir を拾う）
-          # ログ dir は tee がファイルを開くより先に作る。無いままだと tee が
-          # ENOENT で exit 1 して pipefail 経由で組版成功も失敗扱いになる
-          mkdir -p "$PDF_BOOK_BUILD_LOG_DIR"
-          make book-pdf 2>&1 | tee "$PDF_BOOK_BUILD_LOG_DIR/.pdf-book-build.log" || \
-            { echo "::warning::組版に失敗したので1回だけやり直す"; make book-pdf 2>&1 | tee -a "$PDF_BOOK_BUILD_LOG_DIR/.pdf-book-build.log"; }
-
+        run: bash .github/ci/run.sh pdf-full-build
       - name: 組版ログを残す
         # 失敗しても落ちたままの中間成果を拾う。固まった冊の特定と、
         # どの外部プロセスが返らんかったかの切り分けに使う（#501）
@@ -129,4 +119,4 @@ jobs:
           if-no-files-found: warn
 
       - name: 出力を検査
-        run: make book-pdf-verify
+        run: bash .github/ci/run.sh pdf-full-verify
