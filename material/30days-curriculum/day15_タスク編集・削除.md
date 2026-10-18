@@ -1392,7 +1392,7 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
 };
 ```
 
-Day 14 で作ったこの関数を今日は `update` からも直接呼びます。担当者だけを付け替える更新では並び番号が要りません。それでも担当者を確かめる前にこの行を押さえる必要があるためです。行が見つからないときに `NOT_FOUND` を投げるので呼び出し側で存在を確かめ直す必要はありません。
+この関数を作ったのは Day 14 です。今日は `update` からも直接呼びます。担当者だけを付け替える更新では並び番号が要りません。それでも担当者を確かめる前にこの行を押さえる必要があるためです。行が見つからないときに `NOT_FOUND` を投げるので呼び出し側で存在を確かめ直す必要はありません。
 
 **並び順の採番ヘルパー**:
 
@@ -1442,7 +1442,7 @@ async function assertTaskAssigneeBelongsToProject(
 }
 ```
 
-対象のタスクではなく `projectId` を受け取る形なので、この関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確かめます。まだ移動していない時点でも移動先のメンバーかを確かめられます。第1引数の `tx` はロックを取ったトランザクションを受け取るためのものです。呼ぶ前に `lockProject` か `getNextTaskPosition` でプロジェクト行を押さえておきます。
+対象のタスクではなく `projectId` を受け取る形なのでこの関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確かめます。まだ移動していない時点でも移動先のメンバーかを確かめられます。第1引数の `tx` はロックを取ったトランザクションを受け取るためのものです。呼ぶ前に `lockProject` か `getNextTaskPosition` でプロジェクト行を押さえておきます。
 
 **getAll の入力**:
 
@@ -1621,13 +1621,23 @@ export const taskRouter = createTRPCRouter({
     }
 
     assertMemberPermission(project.members, 'canEdit');
-
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
 ```
 
 権限の確認を保存より先に置いてあるのは弾かれる場合に DB へ1行も書かないためです。作成の対象はまだ存在しないタスクなので確認の相手はプロジェクトになります。この点が対象のタスクから確認を始める更新との違いです。
+
+**create のロックと担当者の確認**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// create のロックと担当者の確認
+    return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
+```
+
+担当者の確認が `getNextTaskPosition` の後ろにあるのは採番の中でプロジェクト行のロックを取るからです。ロックの後に確かめれば Day 12 の `removeMember` が同じ行を押さえて削除する処理と順番が入れ替わりません。更新の 0-10 と同じ理由です。
 
 **create のデータ組み立て**:
 
@@ -1636,14 +1646,13 @@ export const taskRouter = createTRPCRouter({
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
 // create のデータ組み立て
-    return await prisma.$transaction(async (tx) => {
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
@@ -1781,45 +1790,65 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の担当者
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
+// update の担当者を外す指定
+    if (data.assigneeId === null) {
+      updateData.assignee = { disconnect: true };
     }
 ```
 
-`null` と `undefined` の使い分けがここでいちばん効いています。`null` なら担当を外し、値があれば所属を確かめて付け替えます。`undefined` は「触らない」なのでふつうは何もしません。ただしプロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあるためその場合だけ後半の `else if` で自動的に外します。
+トランザクションの外に残るのは `null`（担当を外す）の場合だけです。外す操作は相手がメンバーかを確かめなくても成り立つためです。値がある場合と `undefined` のままプロジェクトを移す場合は所属を確かめます。この2つはロックを取った後で扱います。
 
-**update の保存**:
+**update のロック**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の保存
+// update のロック
     try {
       // 比較と更新の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めて1回のクエリにまとめる
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        } else if (data.assigneeId) {
+          await lockProject(tx, targetProjectId);
         }
+```
 
+移動する場合は採番の中でロックが取れます。移動しないで担当者を付ける場合は `lockProject` だけを呼びます。どちらにも当たらない更新は所属を確かめないのでロックを取りません。
+
+**ロックの後ろで扱う update の担当者**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// update の担当者（ロックの後ろ）
+        if (data.assigneeId) {
+          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+          updateData.assignee = { connect: { id: data.assigneeId } };
+        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
+        }
+```
+
+`null` と `undefined` の使い分けがここで結果を分けます。値があれば所属を確かめて付け替えます。`undefined` は「触らない」なのでふつうは何もしません。ただしプロジェクトを移すと今までの担当者が移動先のメンバーでなくなることがあります。その場合だけ後半の `else if` で自動的に外します。
+
+どちらの読み取りもロックの後ろで `tx` を使います。Day 12 の `removeMember` も同じ `projects` 行をロックしてからメンバーを消すからです。確認をロックの前に置くと確認の直後に削除が割り込めます。そのまま保存すると外れた人が担当として残ります。
+
+**update の保存**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// update の保存
         return await tx.task.update({
           where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
           data: updateData,
@@ -1924,7 +1953,9 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().cuid().optional().nullable(),
 });
 
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+// プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
+// ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -1934,6 +1965,10 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -1944,10 +1979,11 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -2090,18 +2126,19 @@ export const taskRouter = createTRPCRouter({
 
     assertMemberPermission(project.members, 'canEdit');
 
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
-
     return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
+
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
@@ -2192,26 +2229,8 @@ export const taskRouter = createTRPCRouter({
       updateData.project = { connect: { id: targetProjectId } };
     }
 
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
+    if (data.assigneeId === null) {
+      updateData.assignee = { disconnect: true };
     }
 
     try {
@@ -2220,6 +2239,29 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        } else if (data.assigneeId) {
+          await lockProject(tx, targetProjectId);
+        }
+
+        // 担当者の確認はプロジェクト行のロックを取ってから行う。
+        // ロックの前に確認すると、確認のあとにメンバー削除が割り込み、外れた人が担当に入る。
+        if (data.assigneeId) {
+          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+          updateData.assignee = { connect: { id: data.assigneeId } };
+        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
+          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
         }
 
         return await tx.task.update({

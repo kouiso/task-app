@@ -166,7 +166,7 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
 };
 ```
 
-ロックを取る処理を採番から切り出して名前を付けておくと、どこでロックを取っているかを関数名で読めます。0-4 では担当者の確認もこのロックの後ろに置きます。行が見つからなければ `NOT_FOUND` で止めます。
+ロックを取る処理を採番から切り出して名前を付けておけばロックを取る場所を関数名で探せます。0-4 では担当者の確認もこのロックの後ろに置きます。行が見つからなければ `NOT_FOUND` で止めます。
 
 続けて採番用ヘルパーを書きます。最初の1行で `lockProject` を呼び、ロックを取ってから最大値を読みます。
 
@@ -233,7 +233,7 @@ async function assertTaskAssigneeBelongsToProject(
 
 このヘルパーは指定された担当者がそのプロジェクトの `ProjectMember`（プロジェクトに紐づくメンバー行）に存在するかを調べ、いなければ `TRPCError` を `throw` します。プロジェクト外の人を担当者にしてしまう事故を防ぎます。
 
-第1引数に `tx` を受け取り `prisma` ではなく `tx.projectMember` で読むのは、採番と同じトランザクションの中で確認するためです。`prisma` で読むとトランザクションの外の別の問い合わせになり、ロックを取った後に読んだことになりません。
+`tx` を第1引数で受け取って `tx.projectMember` で読むのは採番と同じトランザクションの中で確認するためです。`prisma` で読むとトランザクションの外の別の問い合わせになります。それではロックを取った後の読み取りになりません。
 
 #### 0-3. ここが一番のヤマ場（作ってよい人かを確認する）
 
@@ -2042,9 +2042,7 @@ export const taskRouter = createTRPCRouter({
 
 `.query` ではなく `.mutation` で書くのが作る手続きの目印です。tRPC は `query` を読み取り、`mutation` を書き込みとして扱い、画面側の呼び方も `useQuery` と `useMutation` に分かれます。権限の確認を保存より先に置いてあるのは弾かれる場合に DB へ1行も書かないためです。
 
-**create のデータ組み立て**:
-
-最初から完了で作るタスクには作成時刻を `completedAt` に入れます。完了日時が空のままだと完了日を使うレポートで数えられないためです。
+**create の採番と担当者の確認**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
@@ -2056,7 +2054,11 @@ export const taskRouter = createTRPCRouter({
       }
 ```
 
-担当者の確認を `getNextTaskPosition` の後ろに置くのはプロジェクト行のロックを取ってからメンバー行を読むためです。ロックより前に確認すると確認の直後にメンバーが外され、外れた人が担当に入る順番が残ります。
+担当者の確認を `getNextTaskPosition` の後ろに置くのはプロジェクト行のロックを取ってからメンバー行を読むためです。ロックより前に確認すると確認の直後にメンバーを外せる隙間が残ります。その隙間に削除が入ると外れた人を担当にして保存します。
+
+**create のデータ組み立て**:
+
+最初から完了で作るタスクには作成時刻を `completedAt` に入れます。完了日時が空のままだと完了日を使うレポートで数えられないためです。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
@@ -2145,7 +2147,7 @@ const taskCreateSchema = z.object({
   assigneeId: z.string().cuid().optional(),
 });
 
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -2155,6 +2157,10 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -2165,10 +2171,11 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -2311,18 +2318,19 @@ export const taskRouter = createTRPCRouter({
 
     assertMemberPermission(project.members, 'canEdit');
 
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
-
     return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
+
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
@@ -4484,9 +4492,11 @@ export default function TaskPage() {
 
 今日書いたコードを見ながら答えてみてください。答えは各問のすぐ下にあります。
 
-**Q1. `assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId)` は何を確かめていますか。**
+**Q1. `assertTaskAssigneeBelongsToProject` は何を確かめていますか。なぜ `getNextTaskPosition` の後ろで呼ぶのですか。**
 
 A. 指定された担当者がそのプロジェクトのメンバーとして登録されているかを確かめています。登録が無ければ `BAD_REQUEST` を返して保存しません。画面の担当者候補は選んだプロジェクトのメンバーだけに絞ってありますが通信を書き換えれば別の人の id も送れます。断るのはサーバーの役目です。
+
+後ろで呼ぶのは `getNextTaskPosition` がプロジェクト行のロックを取るからです。ロックを取った同じトランザクションの `tx` でメンバー行を読みます。確認をロックより前に置くと確認の直後に `removeMember` でメンバーを外せる隙間が残ります。その隙間に削除が入ると外れた人を担当にして保存します。
 
 **Q2. ステータスの `Select` を `control` ではなく `register('status')` で登録するとどうなりますか。**
 
