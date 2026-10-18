@@ -751,7 +751,7 @@ import Link from 'next/link';
 <div className="grid grid-cols-1
   md:grid-cols-3 gap-4">
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         完了タスク合計
@@ -777,7 +777,7 @@ import Link from 'next/link';
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* 週平均カード */}
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         週平均
@@ -806,7 +806,7 @@ import Link from 'next/link';
 {/* filepath: src/app/report/weekly/page.tsx */}
 {/* 対象期間カード（UTC の日付を表示） */}
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         対象期間（UTC）</p>
@@ -2103,7 +2103,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
         <div className="grid grid-cols-1
           md:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了タスク合計
@@ -2123,7 +2123,7 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
           {/* 週平均のカード */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 週平均
@@ -2148,7 +2148,7 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
           {/* filepath: src/app/report/weekly/page.tsx（同じファイルの続き） */}
           {/* 対象期間のカード */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 対象期間（UTC）</p>
@@ -2373,7 +2373,7 @@ export default function WeeklyReportPage() {
         <div className="grid grid-cols-1
           md:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了タスク合計
@@ -2385,7 +2385,7 @@ export default function WeeklyReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 週平均
@@ -2402,7 +2402,7 @@ export default function WeeklyReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 対象期間（UTC）</p>
@@ -2639,7 +2639,7 @@ export default function ReportPage() {
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -2648,7 +2648,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -2666,7 +2666,7 @@ export default function ReportPage() {
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
           {/* 統計カード（作業時間の合計と平均） */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -2675,7 +2675,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -2968,7 +2968,7 @@ export default function ReportPage() {
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -2977,7 +2977,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -2987,7 +2987,7 @@ export default function ReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -2996,7 +2996,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -3226,6 +3226,6 @@ Day 24 では管理者専用のユーザー一覧ページを
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

@@ -703,6 +703,39 @@ def collect_parts(text: str) -> tuple[dict[str, list[Part]],
 # 全量リスティング候補
 # ---------------------------------------------------------------------------
 
+_FILE_START = re.compile(r"""^\s*(['"]use (client|server)['"]|import\s)""")
+
+
+def _starts_file(part: Part) -> bool:
+    """断片の最初のコード行がファイルの1行目に来る形（'use client' か import）なら True。"""
+    for line in _drop_marker_lines(part.body.split("\n"), KANSEI_LABEL):
+        if line.strip() and not line.strip().startswith("//"):
+            return bool(_FILE_START.match(line))
+    return False
+
+
+_TOP_LEVEL_DECL = re.compile(
+    r"^(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?"
+    r"(?:function\*?|const|let|var|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)")
+
+
+def _declares_twice(span: list[Part]) -> bool:
+    """断片をつなぐと、同じ名前をファイル直下で2回宣言する形になるなら True。
+
+    独立した完成版が2本あるときの全結合は、この形になる。節別リスティングの
+    import 群は2節目以降も import から始まるが、宣言は重複しない。
+    """
+    seen: set[str] = set()
+    for p in span:
+        for line in _drop_marker_lines(p.body.split("\n"), KANSEI_LABEL):
+            m = _TOP_LEVEL_DECL.match(line)
+            if m:
+                if m.group(1) in seen:
+                    return True
+                seen.add(m.group(1))
+    return False
+
+
 def candidates(parts: list[Part]):
     """(label, joined, first_prose) を優先順に yield。"""
     seen: set[str] = set()
@@ -716,10 +749,29 @@ def candidates(parts: list[Part]):
             return (label, body, sub[0].prose)
         return None
     n = len(parts)
+    kansei_idx = [i for i, p in enumerate(parts) if p.kansei]
+    if kansei_idx:
+        k0, k1 = kansei_idx[0], kansei_idx[-1]
+        span = parts[k0:k1 + 1]
+        # 節別リスティングで積み上げる教材（day11 型）: kansei 部分が
+        # 連続している時は全結合を先に試す。途中の kansei 断片から始める
+        # kansei-run が先に採用されると 'use client'・import 群の頭が
+        # 静かに欠ける。本文側の kansei 断片と節の listing が混在する
+        # ファイルは連続にならないため、従来順へ落ちて損は出ない。
+        # ただし span に独立した完成版リスティング（ファイル先頭から始まる
+        # 断片）が2本以上あり、同じ名前を2回宣言する形になるなら、全結合は
+        # 宣言の重複した成果物になる。そのときは先頭で試さず、後ろの
+        # kansei-run に任せる。import 群を節ごとに積む教材は、2節目以降も
+        # import から始まるだけで宣言は重複しないので、全結合を先に試す。
+        file_starts = sum(1 for p in span if _starts_file(p))
+        independent = file_starts >= 2 and _declares_twice(span)
+        if not independent and all(p.kansei or p.cont or p.unmarked for p in span):
+            r = emit("kansei-all", [p for p in span])
+            if r:
+                yield r
     # 「完成版」の確認用全量リスティングは末尾に来る。
     # 途中の断片も「〜の完成形」と名付くことがあるため、
     # 先頭の完成ラベルからではなく後ろの完成ラベルから順に試す。
-    kansei_idx = [i for i, p in enumerate(parts) if p.kansei]
     for k0 in reversed(kansei_idx):
         for label, sub in (("kansei-run", parts[k0:]),
                            ("kansei-run-marked", [p for p in parts[k0:] if not p.unmarked]),
