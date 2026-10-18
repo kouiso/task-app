@@ -656,6 +656,15 @@ describe('taskRouter', () => {
       });
       await expect(probe).rejects.toThrow();
 
+      // 行を握られていても、コメント追加(外部キーの KEY SHARE)は待たされない。
+      const commented = await Promise.race([
+        prisma.comment.create({
+          data: { content: '一括操作の最中', taskId: lowId, userId: actor.id },
+        }),
+        new Promise<'blocked'>((resolve) => setTimeout(() => resolve('blocked'), 3000)),
+      ]);
+      expect(commented).not.toBe('blocked');
+
       release();
       await holder;
       await completing;
