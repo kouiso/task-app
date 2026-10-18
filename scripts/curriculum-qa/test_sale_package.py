@@ -143,6 +143,29 @@ WORKFLOW = REPO_ROOT / ".github/workflows/material-gate.yml"
 GATE4_PHASE = REPO_ROOT / ".github/ci/phase/material-corpus.sh"
 
 
+def active_lines(text: str) -> list[str]:
+    """コメント行を除いた行。コメント化された呼び出しを「呼んでいる」と数えないために使う。"""
+    return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+
+
+def wiring_problems(workflow: str, phase: str) -> list[str]:
+    """workflow と phase スクリプトの配線の不備を返す。空なら配線は生きている。"""
+    problems: list[str] = []
+    if not any("bash .github/ci/run.sh material-corpus" in line for line in active_lines(workflow)):
+        problems.append("material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
+    phase_lines = active_lines(phase)
+    if not any(
+        "scripts/curriculum-qa/test_sale_package.py" in line and "salepkg_status=$?" in line
+        for line in phase_lines
+    ):
+        problems.append(
+            "material-corpus.sh の Gate 4 が test_sale_package.py を呼び、終了コードを salepkg_status に受けていない"
+        )
+    if not any('"$salepkg_status" -ne 0' in line for line in phase_lines):
+        problems.append("test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
+    return problems
+
+
 def check_workflow_wiring() -> tuple[int, int]:
     """この自己テストが CI からも走ること。
 
@@ -150,20 +173,42 @@ def check_workflow_wiring() -> tuple[int, int]:
     配布物の一覧がずれたまま PR がマージされる経路がそこに残る。
     実行するだけでは足りない。終了コードを最後の集計へ入れていないと、
     赤くなっても Gate 全体は緑のまま通る。
+    コメント化された呼び出しは実行されないので、コメント行は数えない。
     """
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    text = GATE4_PHASE.read_text(encoding="utf-8")
     failed = 0
-    if "bash .github/ci/run.sh material-corpus" not in workflow:
+    for problem in wiring_problems(
+        WORKFLOW.read_text(encoding="utf-8"), GATE4_PHASE.read_text(encoding="utf-8")
+    ):
         failed += 1
-        print("  ❌ material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
-    if "scripts/curriculum-qa/test_sale_package.py" not in text:
-        failed += 1
-        print("  ❌ material-corpus.sh の Gate 4 が test_sale_package.py を呼んでいない")
-    if text.count("salepkg_status") < 4:
-        failed += 1
-        print("  ❌ test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
-    return failed, 3
+        print(f"  ❌ {problem}")
+
+    live_workflow = "      - run: bash .github/ci/run.sh material-corpus\n"
+    live_phase = (
+        "python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?\n"
+        'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
+    )
+    synthetic = [
+        ("生きた配線は合格", live_workflow, live_phase, 0),
+        ("workflow の呼び出しをコメント化したら落ちる", "# " + live_workflow, live_phase, 1),
+        (
+            "phase の呼び出しをコメント化したら落ちる",
+            live_workflow,
+            live_phase.replace("python3", "# python3", 1),
+            1,
+        ),
+        (
+            "集計の条件式をコメント化したら落ちる",
+            live_workflow,
+            live_phase.replace("if [", "# if [", 1),
+            1,
+        ),
+    ]
+    for name, workflow, phase, expected in synthetic:
+        got = len(wiring_problems(workflow, phase))
+        if got != expected:
+            failed += 1
+            print(f"  ❌ 配線検査 {name}: 期待 {expected} / 実際 {got}")
+    return failed, 3 + len(synthetic)
 
 
 def check_declared() -> tuple[int, int]:
