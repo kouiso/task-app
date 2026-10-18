@@ -207,6 +207,22 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -214,7 +230,7 @@ const userUpdateSchema = z
       });
 ```
 
-`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+`where` の後半は見ている人によって返すタスクを変えます。ADMIN は全件を見られますが、それ以外の人は自分が所属するプロジェクトのタスクだけです。この絞り込みがないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに表示され続けます。`members: { some: { userId: ctx.session.userId } }` はメンバー一覧に自分が入っているプロジェクトのタスクだけを残す条件です。ADMIN は全件を見られる仕様なので空のオブジェクトを展開して条件を足しません。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -1110,6 +1126,20 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 - バッジをクリックするとプロジェクトページに遷移する
 - タスクの行をクリックするとタスク詳細に遷移する
 - プロジェクト・タスクがないユーザーには「ありません」メッセージが出る
+
+Step 0 で足した所属の絞り込みも、ここで実際に確かめます。詳細ページは本人か ADMIN だけが開けるので、確認は X 本人と ADMIN の2通りで行います。
+
+先に Prisma Studio（`npx prisma studio`）で次の状態を作ります。
+
+- X は MEMBER のロールで、プロジェクト B のメンバーに入っていない
+- プロジェクト B のタスクの担当者を X にする。ステータスは `DONE` と `CANCELLED` 以外にする
+
+状態ができたら次の2つを確かめます。
+
+- X でログインして自分の詳細ページを開くと、そのタスクは「担当中のタスク」に出ない
+- ADMIN でログインして X の詳細ページを開くと、そのタスクが表示される
+
+X の画面にそのタスクが出てしまう場合は `assignedTasks` の `where` を見直します。`members: { some: { userId: ctx.session.userId } }` の行が抜けているか、書き間違えています。型は通るので `tsc` では見つからず、画面で確かめるしかありません。
 
 ---
 
@@ -2287,6 +2317,25 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。
+
+**getById が返す担当タスクの所属絞り込み**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// getById が返す担当タスクの所属絞り込み
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -2294,7 +2343,7 @@ const userUpdateSchema = z
       });
 ```
 
-完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
+ADMIN 以外の人には自分が所属するプロジェクトのタスクだけを返します。この条件がないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに残ります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
 
 **getById の見つからない場合**:
 
@@ -2509,6 +2558,16 @@ export const userRouter = createTRPCRouter({
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },

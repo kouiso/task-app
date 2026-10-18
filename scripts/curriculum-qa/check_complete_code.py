@@ -118,11 +118,6 @@ KNOWN_DRIFT: dict[str, str] = {
     # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
     # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
     "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658。消す条件: 3択（教材 day25 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
-    # #634 のセキュリティ修正で src/ の user.getById の assignedTasks に
-    # 「呼び出し元が所属するプロジェクトのタスクだけ」の絞り込みが入った。
-    # 教材 day29 の完成版は絞り込み前のまま。教材追従（PDF 再生成が要る）は #655 で行い、
-    # 終わったらこの登録を消す
-    "src/server/api/routers/user.ts": "src/ は #634 で assignedTasks を呼び出し元の所属プロジェクトに絞る。教材 day29 の完成版は未追従。追跡: #655",
 }
 
 
