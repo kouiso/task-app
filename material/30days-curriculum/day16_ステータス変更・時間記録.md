@@ -1241,41 +1241,11 @@ const taskTimeUpdateSchema = z.object({
 
 Day 12 の `removeMember` はメンバーを外すときに完了と中止のタスクの担当を消しません。誰が終わらせたかを実績として残すためです。そのまま完了のタスクを未完了へ戻すとプロジェクトから外れた人が未完了タスクの担当に戻ってしまいます。そこで `update` は戻す操作を見分けます。
 
-```typescript
-// filepath: src/server/api/routers/task.ts
-// update の中で戻す操作を見分ける
-    const isReopening =
-      data.status !== undefined &&
-      isClosedStatus(existingTask.status) &&
-      !isClosedStatus(data.status);
-```
+Day 15 の `update` で、完了か中止から未完了へ戻す更新を `isReopening` として見分け、担当者の所属を確かめるようにしました。今日の `update` でステータスだけを変える呼び出しも、同じ経路を通ります。新しく書き足すコードはありません。
 
-`isClosedStatus` は完成版の `lockProject` の直後に `CLOSED_STATUSES` と一緒に定義する関数です。`isReopening` が `true` になるのは元の値が完了か中止で新しい値がどちらでもないときだけです。完了のままタイトルを直す編集では `false` のままなので担当には触れません。未完了どうしの変更も同じです。
+たとえば完了のタスクを `TODO` に戻す操作では `isReopening` が `true` になります。このときは `lockProject` でプロジェクト行をロックしてから、担当者がまだメンバーかを確かめます。外れていれば `disconnect` で担当を外し、メンバーのままなら担当は残します。確認の前にロックを取るのは、確認の直後に `removeMember` が割り込むと外された人が担当に残るからです。
 
-```typescript
-// filepath: src/server/api/routers/task.ts
-// トランザクションの中で既存の担当者の所属を確かめる
-        } else if (
-          data.assigneeId === undefined &&
-          (isProjectChanging || isReopening) &&
-          existingTask.assigneeId
-        ) {
-          const assigneeStillMember = await tx.projectMember.findUnique({
-            where: {
-              userId_projectId: {
-                userId: existingTask.assigneeId,
-                projectId: targetProjectId,
-              },
-            },
-            select: { id: true },
-          });
-          if (!assigneeStillMember) {
-            updateData.assignee = { disconnect: true };
-          }
-        }
-```
-
-この確認は Day 15 でプロジェクトを移すときに書いたものと同じです。条件に `isReopening` を足して戻すときにも通るようにしました。所属が見つからなければ `disconnect` で担当を外します。メンバーのままなら担当は残ります。確認の前には `lockProject` でプロジェクト行をロックします。ロックが無いと確認の直後に `removeMember` が割り込めるので外された人が担当に残ります。そのため完成版ではロックを取る条件も `data.assigneeId || isReopening` に広げてあります。
+完了のままタイトルを直す編集や、完了から中止への変更では `isReopening` は `false` です。どちらも終わったタスクなので、実績として担当を残す扱いは変わりません。
 
 完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 

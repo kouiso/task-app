@@ -442,6 +442,28 @@ describe('taskRouter', () => {
       expect(keptAfter.assigneeId).toBe(kept.assignee.id);
     });
 
+    it('update: 戻す処理がロックを待つ間にメンバーが外れたら、担当を外して戻す', async () => {
+      const { project, caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await callWhileMemberIsRemoved(project.id, assignee.id, () =>
+        caller.task.update({ id: task.id, status: 'TODO' }),
+      );
+      expect(result.ok).toBe(true);
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBeNull();
+    });
+
+    it('bulkUpdateStatus: 戻す処理がロックを待つ間にメンバーが外れたら、担当を外して戻す', async () => {
+      const { project, caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await callWhileMemberIsRemoved(project.id, assignee.id, () =>
+        caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' }),
+      );
+      expect(result.ok).toBe(true);
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBeNull();
+    });
+
     it('bulkUpdateStatus: ロックを待つ間に付け替えられた担当は、外さずに残す', async () => {
       const { project, caller, task } = await setupClosedTaskWithAssignee('DONE', false);
       const newcomer = await createTestUser({ email: uniqueEmail('task-reopen-newcomer') });

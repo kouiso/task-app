@@ -310,60 +310,72 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 `CLOSED_STATUSES` は Day 12 の `removeMember` が担当を残す2つの状態と同じ組です。`DONE` と `CANCELLED` を使う場所ごとに書くと、片方で `CANCELLED` を書き忘れたときに中止のタスクだけ確かめずに戻ります。1か所に置いてあるので、`update` と `bulkUpdateStatus` で判定がずれません。Day 15 を飛ばした場合は、同じ2行を `lockProject` の直後に足してから進めてください。
 
-続けて担当者を確かめる関数の前半を書きます。置き場所は `export const taskRouter` の行の上です。
+まず、対象のタスクが属するプロジェクトをすべてロックする関数を書きます。置き場所は `export const taskRouter` の行の上です。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
-const releaseNonMemberAssignees = async (
+const lockProjectsOfTasks = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
-  const closedWithAssignee: Prisma.TaskWhereInput = {
-    ...where,
-    status: { in: [...CLOSED_STATUSES] },
-    assigneeId: { not: null },
-  };
-  const preview = await tx.task.findMany({
-    where: closedWithAssignee,
-    select: { projectId: true },
-    distinct: ['projectId'],
-  });
-  if (preview.length === 0) {
-    return;
+  const locked = new Set<string>();
+  for (;;) {
+    const rows = await tx.task.findMany({
+      where,
+      select: { projectId: true },
+      distinct: ['projectId'],
+    });
+    const pending = rows
+      .map((row) => row.projectId)
+      .filter((id) => !locked.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+    for (const projectId of pending.sort()) {
+      await lockProject(tx, projectId);
+      locked.add(projectId);
+    }
   }
+};
 ```
 
-ここまでで、確かめる対象のプロジェクトが分かります。次に、そのプロジェクトをロックしてからタスクを読み直します。
+`removeMember` も同じプロジェクトの行をロックします。確かめる前に対象のプロジェクトをすべてロックしておけば、確かめている途中でメンバーが外されることはありません。ロックを取る前に読んだ一覧は、ロックを待つ間に古くなります。そのため読む側は必ずロックの後で読みます。
 
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-  const projectIds = preview.map((task) => task.projectId).sort();
-  for (const projectId of projectIds) {
-    await lockProject(tx, projectId);
-  }
-
-  // ロックを待つ間に付け替えられた担当を消さないよう、ロックの後で読み直す
-  const candidates = await tx.task.findMany({
-    where: closedWithAssignee,
-    select: { id: true, projectId: true, assigneeId: true },
-  });
-```
-
-引数の `where` には一括操作が作った権限つきの条件をそのまま受け取ります。そこへ「完了か中止」と「担当者がいる」を足して確かめる候補を絞ります。未完了のタスクは候補に入れません。メンバーを外した時点で Day 12 の `removeMember` が担当を外しているからです。
-
-先に「完了か中止で担当者がいるタスク」が属するプロジェクトだけを `distinct` で調べ、その行を `lockProject` でロックします。`removeMember` も同じ行をロックするので、確かめている途中でメンバーが外されて結果が古くなることはありません。
-
-タスクの一覧はロックを取った後でもう一度読みます。ロックを待つ間に `update` が担当を現メンバーへ付け替えていると、ロック前に読んだ一覧は古くなります。古い一覧のまま外れた人として扱うと、付け替えたばかりの正しい担当まで空にしてしまいます。ロックを取ってから読めば、他の処理が確定させた結果を見て判断できます。
+ロックを待つ間に `update` がタスクを別のプロジェクトへ移すことがあります。そこで一覧を読み直し、ロックしていないプロジェクトが出てきたら足してロックします。ロック済みの集合に収まったところで終わります。
 
 ロックの前に `sort()` で id の順に並べるのはデッドロック（2つの処理が互いに相手のロックの解放を待って止まる状態）を避けるためです。一括操作 A がプロジェクト P1 から P2 の順にロックするとします。同時に一括操作 B は P2 から P1 の順にロックします。A は P1 を取って P2 を待ちます。B は P2 を取って P1 を待ちます。
 
 この状態になると PostgreSQL は片方のトランザクションをエラーで取り消します。全員が id の順に取れば先に P1 を取った側だけが進むので待ち合いが輪になりません。
 
-後半では候補の担当者がまだメンバーかをまとめて調べます。外れた人が担当していれば担当を空にします。
+次に、担当者がまだメンバーかを確かめる関数の前半を書きます。置き場所は `lockProjectsOfTasks` の直後です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（lockProjectsOfTasks の直後に追加）
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null },
+    },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+```
+
+引数の `where` には一括操作が作った権限つきの条件をそのまま受け取ります。そこへ「完了か中止」と「担当者がいる」を足して確かめる候補を絞ります。未完了のタスクは候補に入れません。メンバーを外した時点で Day 12 の `removeMember` が担当を外しているからです。この関数はプロジェクトのロックを取った後で呼ぶ前提なので、読んだ一覧は他の処理が確定させた結果です。
+
+後半では候補の担当者がまだメンバーかをまとめて調べます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-  const candidateProjectIds = [
+  const projectIds = [
     ...new Set(candidates.map((task) => task.projectId))
   ];
   const assigneeIds = [
@@ -371,7 +383,7 @@ const releaseNonMemberAssignees = async (
   ];
   const members = await tx.projectMember.findMany({
     where: {
-      projectId: { in: candidateProjectIds },
+      projectId: { in: projectIds },
       userId: { in: assigneeIds }
     },
     select: { projectId: true, userId: true },
@@ -454,6 +466,7 @@ Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ�
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
         if (!isClosedStatus(input.status)) {
+          await lockProjectsOfTasks(tx, where);
           await releaseNonMemberAssignees(tx, where);
         }
         const unchanged =
@@ -465,7 +478,7 @@ Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ�
             : { count: 0 };
 ```
 
-`releaseNonMemberAssignees` を呼ぶのは変更先が `TODO` や `IN_PROGRESS` のときだけです。変更先が完了か中止なら担当者には触れません。終わったタスクの担当は「誰が終えたか」の記録です。Day 12 の `removeMember` と同じく外れた人でも実績として残します。
+`lockProjectsOfTasks` と `releaseNonMemberAssignees` を呼ぶのは変更先が `TODO` や `IN_PROGRESS` のときだけです。変更先が完了か中止なら担当者には触れません。終わったタスクの担当は「誰が終えたか」の記録です。Day 12 の `removeMember` と同じく外れた人でも実績として残します。
 
 呼ぶ位置は `updateMany` より前です。ステータスを書き換えたあとでは候補を「完了か中止」で探せません。呼び出しは同じトランザクションの中にあります。このあと件数がずれて全体を取り消すときは外した担当も元に戻ります。
 
@@ -494,7 +507,7 @@ Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ�
 - 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されている
 - `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいる
 - 書き込み側でも現在のロールを確認し、件数がずれたら全体を取り消している
-- 未完了へ戻すときだけ `releaseNonMemberAssignees` を `updateMany` より前に呼んでいる
+- 未完了へ戻すときだけ、`lockProjectsOfTasks` でロックしてから `releaseNonMemberAssignees` を `updateMany` より前に呼んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
 ---
@@ -1426,52 +1439,61 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 **完了と中止をまとめた定数と判定**は Day 15 で `lockProject` の直後に追加した2行をそのまま使います。`bulkUpdateStatus` はこの判定で「未完了へ戻す操作か」を見分けます。
 
-**外れた担当者を外す関数**:
+**対象のプロジェクトをロックする関数と、外れた担当者を外す関数**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// 完成版: 外れた担当者を外す関数
+const lockProjectsOfTasks = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const locked = new Set<string>();
+  for (;;) {
+    const rows = await tx.task.findMany({
+      where,
+      select: { projectId: true },
+      distinct: ['projectId'],
+    });
+    const pending = rows
+      .map((row) => row.projectId)
+      .filter((id) => !locked.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+    for (const projectId of pending.sort()) {
+      await lockProject(tx, projectId);
+      locked.add(projectId);
+    }
+  }
+};
+```
+
+この2つは `export const taskRouter` の行の上に置きます。ロックは先に取り、確かめる関数はロックの後で呼びます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックするのは複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: 外れた担当者を外す関数（前半）
 const releaseNonMemberAssignees = async (
   tx: Prisma.TransactionClient,
   where: Prisma.TaskWhereInput,
 ): Promise<void> => {
-  const closedWithAssignee: Prisma.TaskWhereInput = {
-    ...where,
-    status: { in: [...CLOSED_STATUSES] },
-    assigneeId: { not: null },
-  };
-  const preview = await tx.task.findMany({
-    where: closedWithAssignee,
-    select: { projectId: true },
-    distinct: ['projectId'],
-  });
-  if (preview.length === 0) {
-    return;
-  }
-```
-
-ここまでで、確かめる対象のプロジェクトが分かります。次に、そのプロジェクトをロックしてからタスクを読み直します。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-  const projectIds = preview.map((task) => task.projectId).sort();
-  for (const projectId of projectIds) {
-    await lockProject(tx, projectId);
-  }
-
-  // ロックを待つ間に付け替えられた担当を消さないよう、ロックの後で読み直す
   const candidates = await tx.task.findMany({
-    where: closedWithAssignee,
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null },
+    },
     select: { id: true, projectId: true, assigneeId: true },
   });
-```
+  if (candidates.length === 0) {
+    return;
+  }
 
-この関数は `export const taskRouter` の行の上に置きます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックするのは複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
+```
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-// 完成版: 担当者の所属を組で照合して外す
-  const candidateProjectIds = [
+  const projectIds = [
     ...new Set(candidates.map((task) => task.projectId))
   ];
   const assigneeIds = [
@@ -1479,7 +1501,7 @@ const releaseNonMemberAssignees = async (
   ];
   const members = await tx.projectMember.findMany({
     where: {
-      projectId: { in: candidateProjectIds },
+      projectId: { in: projectIds },
       userId: { in: assigneeIds }
     },
     select: { projectId: true, userId: true },
@@ -1488,8 +1510,6 @@ const releaseNonMemberAssignees = async (
     members.map((member) => `${member.projectId}:${member.userId}`)
   );
 ```
-
-`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1505,7 +1525,7 @@ const releaseNonMemberAssignees = async (
 };
 ```
 
-メンバー行は `findMany` の1回でまとめて取ります。`projectId` と `userId` の `in` は余分な組も返します。だから「プロジェクトと担当者の組」の文字列で照合します。担当者の id だけで照合すると別のプロジェクトでメンバーの人を所属していると見なして見逃します。
+メンバー行は `findMany` の1回でまとめて取ります。`projectId` と `userId` の `in` は余分な組も返します。だから「プロジェクトと担当者の組」の文字列で照合します。
 
 **bulkComplete**:
 
@@ -1609,10 +1629,16 @@ const releaseNonMemberAssignees = async (
       } else {
         data.completedAt = null;
       }
+```
 
+更新内容はここで決めます。完了へ変えるときだけ `completedAt` を現在時刻にし、それ以外では空にします。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
         if (!isClosedStatus(input.status)) {
+          await lockProjectsOfTasks(tx, where);
           await releaseNonMemberAssignees(tx, where);
         }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
