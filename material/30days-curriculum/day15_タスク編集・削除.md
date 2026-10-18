@@ -230,11 +230,40 @@ const taskUpdateSchema = z.object({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    // 完了・中止に残った担当者は、退会後もそのまま残っていることがある。
+    // 未完了へ戻すときに所属を確かめ直さないと、外れた人が担当に戻る。
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 ```
 
-前半は 0-3 と同じで、送られてきた項目だけを詰めます。`dueDate` は値があれば `new Date(...)` で日付に変換し、空なら `null` にします。最後の2行はプロジェクトの移動が起きるかどうかを判定しています。`isProjectChanging` は「新しい `projectId` が送られていてしかも今のプロジェクトと違う」ときだけ真になります。`targetProjectId` は移動するなら移動先、しないなら今のプロジェクトを指します。
+前半は 0-3 と同じで、送られてきた項目だけを詰めます。`dueDate` は値があれば `new Date(...)` で日付に変換し、空なら `null` にします。続く2行はプロジェクトの移動が起きるかどうかを判定しています。`isProjectChanging` は「新しい `projectId` が送られていてしかも今のプロジェクトと違う」ときだけ真になります。`targetProjectId` は移動するなら移動先、しないなら今のプロジェクトを指します。
 
 ここには `as string` が付いています。Day 13 では `as` を「中身を確かめずに正しいと言い張る書き方」として避けました。この行で使えるのは直前の `isProjectChanging` が `data.projectId !== undefined` を確かめ済みだからです。ただし TypeScript はその確認が別の変数に入ったことまでは追えず、`as` で人間が保証する形になっています。判定と使用を1つの条件式にまとめれば `as` は消せます。自分で書くときはまず条件の中で直接使えないかを試してください。
+
+最後の `isReopening` は「完了か中止のタスクを未完了へ戻す更新か」を表します。次の3つがすべてそろったときだけ真になります。
+
+- `data.status` が送られてきている
+- 今のステータス（`existingTask.status`）が完了か中止
+- 新しいステータスが完了でも中止でもない
+
+戻すときだけ見分ける理由は Day 12 の `removeMember` にあります。`removeMember` はメンバーを外すときに未完了タスクの担当だけを外しました。完了と中止のタスクの担当者は「誰がやり終えたか」の実績として残しています。そのタスクを `TODO` へ戻すと外れた人が未完了タスクの担当に戻ります。Day 12 で防いだ「所属していない人が未完了タスクの担当者」という状態がここから入り込みます。
+
+完了のまま編集する場合は担当に触れません。実績時間を直しただけで担当者が消えると誰がやり終えたかの記録が失われるからです。完了から中止へ変える場合も `isReopening` は偽です。どちらも閉じたタスクなので実績として残す扱いが変わりません。
+
+`isClosedStatus` はまだ作っていません。Day 14 で書いた `lockProject` の下で `getNextTaskPosition` の前に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（lockProject の直後、getNextTaskPosition の前に追加）
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+```
+
+`CLOSED_STATUSES` は閉じたタスクのステータスを1か所にまとめた一覧です。Day 12 の `removeMember` が `notIn` で除いた2つと同じ組み合わせです。2か所で同じ組み合わせを書いておくと片方だけ書き換えたときに判定が食い違います。だから一覧に名前を付けて判定はこの関数に任せます。
+
+`as const` を付けた配列は中身が `'DONE'` と `'CANCELLED'` に固定されます。固定された配列の `includes` はその2つの文字列しか引数に受け取りません。どんな文字列でも調べられるように `readonly string[]` として読み替えています。この `as` は上の `as string` と向きが逆です。狭い型を広い型として読むだけなので中身について嘘をつくことになりません。
 
 #### 0-6. プロジェクトを移すときの確認
 
@@ -280,7 +309,7 @@ const taskUpdateSchema = z.object({
 
 `assigneeId` が `null` で届いたら担当を外す（`disconnect`）指定を `updateData` に入れます。担当を外す操作は相手がメンバーかどうかに関係なく成り立ちます。確かめることが無いのでトランザクションの外で詰めて構いません。
 
-残りの2つは扱いが違います。1つは担当者を指定して付ける場合です。もう1つはプロジェクトを移した結果として今の担当者が移動先のメンバーでなくなる場合です。どちらも「その人がプロジェクトのメンバーか」を確かめてから決めます。この確認は 0-10 でプロジェクト行のロックを取ってから書きます。
+残りの3つは扱いが違います。1つ目は担当者を指定して付ける場合です。2つ目はプロジェクトを移した結果として今の担当者が移動先のメンバーでなくなる場合です。3つ目は完了・中止のタスクを未完了へ戻す場合です。どれも「その人がプロジェクトのメンバーか」を確かめてから決めます。この確認は 0-10 でプロジェクト行のロックを取ってから書きます。
 
 #### 0-9. トランザクションを開いてプロジェクト行をロックする
 
@@ -296,14 +325,16 @@ const taskUpdateSchema = z.object({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId) {
+        } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
         }
 ```
 
 プロジェクトを移すときは `getNextTaskPosition` が移動先の行をロックしてから並び番号を決めます。中で Day 14 の `lockProject` を呼んでいるのでロックはここで取れています。移さずに担当者だけを付け替えるときは並び番号が要りません。それでもこのあと担当者を確かめるのでロックは要ります。だから `lockProject` を直接呼んで今のプロジェクトの行を押さえます。
 
-タイトルを直すだけの更新や担当を外すだけの更新はどちらの条件にも当てはまらずロックを取りません。ロックを取ると同じプロジェクトへの書き込みは順番待ちになります。メンバーを確かめない更新まで待たせる理由はありません。
+未完了へ戻す更新（`isReopening`）も同じ理由でロックを取ります。担当者の指定が無くても今の担当者がまだメンバーかをこのあと確かめるからです。
+
+タイトルを直すだけの更新や担当を外すだけの更新はどちらの条件にも当てはまらずロックを取りません。完了のまま実績時間を直す更新も同じです。ロックを取ると同じプロジェクトへの書き込みは順番待ちになります。メンバーを確かめない更新まで待たせる理由はありません。
 
 #### 0-10. ロックの後ろで担当者を確かめる
 
@@ -316,8 +347,20 @@ const taskUpdateSchema = z.object({
         if (data.assigneeId) {
           await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
           updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
-          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+        } else if (
+          data.assigneeId === undefined &&
+          (isProjectChanging || isReopening) &&
+          existingTask.assigneeId
+        ) {
+```
+
+担当者の指定に値があれば `assertTaskAssigneeBelongsToProject` でメンバーかを確かめてから付けます。第1引数に `tx` を渡すのは確認の読み取りをロックと同じトランザクションの中にまとめるためです。`prisma` で読むと別の接続から問い合わせることになります。ロックを持ったままもう1本の接続を取って待つので接続の数が足りないと進めなくなります。確認と保存を同じトランザクションの中でそろえるので `tx` を渡します。
+
+後半の `else if` は担当者の指定が無いときに今の担当者を確かめ直す入口です。プロジェクトを移す場合か未完了へ戻す場合に入ります。中身は次のとおりです。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+          // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {
@@ -333,9 +376,9 @@ const taskUpdateSchema = z.object({
         }
 ```
 
-担当者の指定に値があれば `assertTaskAssigneeBelongsToProject` でメンバーかを確かめてから付けます。第1引数に `tx` を渡すのは確認の読み取りをロックと同じトランザクションの中にまとめるためです。`prisma` で読むと別の接続から問い合わせることになります。ロックを持ったままもう1本の接続を取って待つので接続の数が足りないと進めなくなります。確認と保存を同じトランザクションの中でそろえるので `tx` を渡します。
+担当者の指定が無くてもプロジェクトを移すと今の担当者が移動先のメンバーでなくなることがあります。未完了へ戻すときも 0-5 で見たとおり外れた人が担当に残っていることがあります。どちらの場合も `findUnique` で所属を確かめます。メンバーでなければ担当を外します。`targetProjectId` で確かめるので移動と差し戻しを同時に行っても移動先のメンバーかで決まります。ここでも `prisma.projectMember` ではなく `tx.projectMember` で読みます。
 
-担当者の指定が無くてもプロジェクトを移すと今の担当者が移動先のメンバーでなくなることがあります。その場合だけ後半の `else if` で担当を外します。ここでも `prisma.projectMember` ではなく `tx.projectMember` で読みます。
+担当者を指定したときと違ってここではエラーで止めません。外れた担当者は今の操作で選んだ人ではないからです。止めてしまうとステータスを戻したいだけの人が先に担当を外す手間を負います。
 
 確認をロックの後ろに置く理由は Day 12 で書いた `project.removeMember` にあります。メンバーを外すこの手続きも同じ `projects` 行を `FOR UPDATE` でロックしてから削除します。確認をロックの前に置くと次の順番が起こり得ます。
 
@@ -420,6 +463,7 @@ sequenceDiagram
 - `taskUpdateSchema` を `taskRouter` の前に、`update` を `create` の直後に足した
 - `expectedUpdatedAt` があるときは `where` に `updatedAt` を含めて書き換えのぶつかりを1回のクエリで判定している
 - 担当者の確認を `$transaction` の中のロックの後ろに置き `tx` を渡して呼んでいる
+- 完了・中止から未完了へ戻す更新でもロックの後ろで今の担当者の所属を確かめている
 - `npx tsc --noEmit` で型エラーが出ていない
 
 #### 0-13. delete を書く
@@ -1393,6 +1437,17 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
 ```
 
 この関数を作ったのは Day 14 です。今日は `update` からも直接呼びます。担当者だけを付け替える更新では並び番号が要りません。それでも担当者を確かめる前にこの行を押さえる必要があるためです。行が見つからないときに `NOT_FOUND` を投げるので呼び出し側で存在を確かめ直す必要はありません。
+
+**閉じたステータスの判定**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+```
+
+今日足した2行です。完了と中止を Day 12 の `removeMember` と同じ組み合わせで1か所にまとめます。`update` はこの関数で「閉じたタスクを未完了へ戻す更新か」を見分けます。
 
 **並び順の採番ヘルパー**:
 

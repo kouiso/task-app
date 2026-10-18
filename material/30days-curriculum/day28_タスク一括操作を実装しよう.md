@@ -105,7 +105,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 20 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
+| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 25 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
 | Step 1 | 選択状態を管理する state を作る | 7 分 | `src/app/task/page.tsx` | state が正しく動作する |
 | Step 2 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
 | Step 3 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
@@ -116,7 +116,7 @@ flowchart TD
 | Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
 | Step 9 | 動作確認と仕上げ | 4 分 | — | 一括操作が一通り動く |
 
-**合計時間**: 約 73 分です。
+**合計時間**: 約 78 分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -124,7 +124,7 @@ flowchart TD
 
 ---
 
-### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（20 分）
+### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（25 分）
 
 **ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つはこのあと Step 6〜8 で画面のボタンから呼び出します。
 
@@ -300,7 +300,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 流れは `bulkComplete` とよく似ていますが権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
 
-#### 0-5. bulkUpdateStatus を書く（まとめてステータス変更・前半）
+#### 0-6. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
 最後に選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
 
@@ -322,7 +322,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 入力は id の配列に加えて変更後の `status`（`taskStatusSchema` で検証）も受け取ります。ここまでは `bulkComplete` と同じで、まとめてタスクを取り、`for` で1件ずつ `'canEdit'` 権限を確かめます。ステータスの変更は編集にあたるので確認する権限は `'canEdit'` です。
 
-#### 0-6. bulkUpdateStatus を書く（後半・完了日時の管理）
+#### 0-7. bulkUpdateStatus を書く（後半・完了日時の管理）
 
 続けて更新するデータを組み立てて `updateMany` を呼びます。
 
