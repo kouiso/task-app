@@ -333,7 +333,7 @@ const taskUpdateSchema = z.object({
         }
 ```
 
-担当者の指定に値があれば `assertTaskAssigneeBelongsToProject` でメンバーかを確かめてから付けます。第1引数に `tx` を渡すのは確認の読み取りをロックと同じトランザクションの中にまとめるためです。`prisma` で読むと別の接続から問い合わせることになります。そうなるとロックを取った一連の処理の外で確かめた答えになります。
+担当者の指定に値があれば `assertTaskAssigneeBelongsToProject` でメンバーかを確かめてから付けます。第1引数に `tx` を渡すのは確認の読み取りをロックと同じトランザクションの中にまとめるためです。`prisma` で読むと別の接続から問い合わせることになります。ロックを持ったままもう1本の接続を取って待つので接続の数が足りないと進めなくなります。確認と保存を同じトランザクションの中でそろえるので `tx` を渡します。
 
 担当者の指定が無くてもプロジェクトを移すと今の担当者が移動先のメンバーでなくなることがあります。その場合だけ後半の `else if` で担当を外します。ここでも `prisma.projectMember` ではなく `tx.projectMember` で読みます。
 
@@ -419,7 +419,7 @@ sequenceDiagram
 **確認ポイント**:
 - `taskUpdateSchema` を `taskRouter` の前に、`update` を `create` の直後に足した
 - `expectedUpdatedAt` があるときは `where` に `updatedAt` を含めて書き換えのぶつかりを1回のクエリで判定している
-- 担当者の確認を `$transaction` の中に置き、ロックを取った後で `tx` を渡して呼んでいる
+- 担当者の確認を `$transaction` の中のロックの後ろに置き `tx` を渡して呼んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
 #### 0-13. delete を書く

@@ -168,7 +168,7 @@ const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
 
 ロックを取る処理を採番から切り出して名前を付けておけばロックを取る場所を関数名で探せます。0-4 では担当者の確認もこのロックの後ろに置きます。行が見つからなければ `NOT_FOUND` で止めます。
 
-続けて採番用ヘルパーを書きます。最初の1行で `lockProject` を呼び、ロックを取ってから最大値を読みます。
+続けて採番用ヘルパーを書きます。最初の1行で `lockProject` を呼びます。ロックを取ってから最大値を読みます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -184,7 +184,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
-`lockProject` の中だけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのはここ1か所だけです。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
+`lockProject` の中だけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのは行をロックするこの1文だけです。Day 12 の `removeMember` と `updateMemberRole` にも同じ文があります。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
 
 `FOR UPDATE` は同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
@@ -233,7 +233,7 @@ async function assertTaskAssigneeBelongsToProject(
 
 このヘルパーは指定された担当者がそのプロジェクトの `ProjectMember`（プロジェクトに紐づくメンバー行）に存在するかを調べ、いなければ `TRPCError` を `throw` します。プロジェクト外の人を担当者にしてしまう事故を防ぎます。
 
-`tx` を第1引数で受け取って `tx.projectMember` で読むのは採番と同じトランザクションの中で確認するためです。`prisma` で読むとトランザクションの外の別の問い合わせになります。それではロックを取った後の読み取りになりません。
+`tx` を第1引数で受け取って `tx.projectMember` で読むのは採番と同じトランザクションの中で確認するためです。`prisma` で読むとトランザクションの外の別の接続を使います。ロックを持ったままもう1本の接続を取って待つので接続の数が足りないと進めなくなります。確認と保存を同じトランザクションの中にそろえる意味でも `tx` で読みます。
 
 #### 0-3. ここが一番のヤマ場（作ってよい人かを確認する）
 
@@ -278,7 +278,7 @@ async function assertTaskAssigneeBelongsToProject(
 
 担当者が指定されているときだけ 0-2 のヘルパーでメンバーかを確認します。確認を採番の後ろに置いたのはプロジェクト行のロックを取ってから担当者を調べるためです。
 
-確認がロックより前にあると次の順で外れた人が担当に入ります。まずこの作成が「Aさんはメンバー」と確認します。その直後に Day 12 で書いた `removeMember` が届いてAさんを外します。最後にこの作成が確認済みのつもりでAさんを担当にして保存します。
+確認がロックより前にあると次の順で外れた人が担当に入ります。まずこの作成が「Aさんはメンバー」と確認します。その直後に Day 12 で書いた `removeMember` が届いてAさんを外します。最後にこの作成が確認済みのつもりでAさんを担当にして保存します。`removeMember` が担当を外す処理は、まだ保存されていないこの作成のタスクを対象にできません。だから確認をロックの後ろに置きます。
 
 ロックの後ろで確認しておけば同じ project 行をロックする処理はこの作成の保存が終わるまで待ちます。Day 12 で書いた `removeMember` も同じ行を `FOR UPDATE` でロックします。そのため確認と保存の間に削除が割り込むことはありません。
 
@@ -351,7 +351,7 @@ async function assertTaskAssigneeBelongsToProject(
 - `taskCreateSchema`・3つのヘルパーを `taskRouter` の前に、`create` を `getById` の直後に足した
 - `assertMemberPermission(project.members, 'canEdit')` で作成権限を確認している
 - `getNextTaskPosition` と担当者の確認と保存を同じトランザクションに入れている
-- 担当者の確認が `getNextTaskPosition` の後ろにあり、`tx` を第1引数に渡している
+- 担当者の確認が `getNextTaskPosition` の後ろにあって `tx` を第1引数に渡している
 - `npx tsc --noEmit` で型エラーが出ていない
 
 #### 0-7. 担当者候補を取る search ルーターを作る
