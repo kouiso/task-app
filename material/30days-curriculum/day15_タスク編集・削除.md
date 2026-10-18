@@ -159,7 +159,7 @@ const taskUpdateSchema = z.object({
 });
 ```
 
-`id` を除くほとんどの項目に `.optional()` が付いています。編集では「変えたい項目だけ」を送るので送られてこなかった項目はそのままにします。`.nullable()` は「空にできる」という意味で、たとえば担当者を外して未割り当てに戻す操作を表します。`expectedUpdatedAt` は少し特別で、これは 0-9 で使う「自分が編集を始めた時点のタスクの更新時刻」です。この値があとで説明する「ほかの書き換えとぶつかっていないか」の判定に効いてきます。
+`id` を除くほとんどの項目に `.optional()` が付いています。編集では「変えたい項目だけ」を送るので送られてこなかった項目はそのままにします。`.nullable()` は「空にできる」という意味で、たとえば担当者を外して未割り当てに戻す操作を表します。`expectedUpdatedAt` は少し特別で、これは 0-11 で使う「自分が編集を始めた時点のタスクの更新時刻」です。この値があとで説明する「ほかの書き換えとぶつかっていないか」の判定に効いてきます。
 
 ここに `completedAt` が無いことに気づいたでしょうか。完了日時は画面から直接送る項目ではなく、ステータスの変化からサーバーが決める値です。入力に受け付けると、完了のまま日時だけ書き換えられる道が開きます。Day 23 で作る週次レポートはこの日付でタスクを週へ分けるので、日付を後から動かせると集計がずれます。受け付けないこと自体がルールの一部です。
 
@@ -267,41 +267,24 @@ const taskUpdateSchema = z.object({
 
 この段階では project の接続先だけを `updateData` に入れます。`position` の最大値を先に読むだけでは同時移動した2件へ同じ番号を付ける恐れがあります。そのため0-9 で project 行をロックしてから採番します。
 
-#### 0-8. 担当者の付け替え
+#### 0-8. 担当者を外す指定だけ先に詰める
 
-担当者の指定にも、プロジェクト内のメンバーかを確認する処理を入れます。
+担当者の扱いは「外す」と「付ける」で置き場所が分かれます。先に外す側だけを書きます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
+    if (data.assigneeId === null) {
+      updateData.assignee = { disconnect: true };
     }
 ```
 
-担当者が送られてきたときは `null` なら担当を外し（`disconnect`）、指定があれば Day 14 で作った `assertTaskAssigneeBelongsToProject` でメンバーかを確認してから付けます。担当者の指定が無くてもプロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあります。その場合だけ、後半の `else if` で担当を自動的に外します。
+`assigneeId` が `null` で届いたら担当を外す（`disconnect`）指定を `updateData` に入れます。担当を外す操作は相手がメンバーかどうかに関係なく成り立ちます。確かめることが無いのでトランザクションの外で詰めて構いません。
 
-#### 0-9. ここが一番のヤマ場（楽観ロックで書き換える）
+残りの2つは扱いが違います。1つは担当者を指定して付ける場合です。もう1つはプロジェクトを移した結果として今の担当者が移動先のメンバーでなくなる場合です。どちらも「その人がプロジェクトのメンバーか」を確かめてから決めます。この確認は 0-10 でプロジェクト行のロックを取ってから書きます。
 
-最後に DB を書き換えます。ここで、この教材で初めて出てくる楽観ロック（optimistic lock）を使います。プロジェクトを移す場合は採番と更新を同じトランザクションへ入れます。
+#### 0-9. トランザクションを開いてプロジェクト行をロックする
+
+ここから先は DB を書き換えるトランザクションの中です。最初にプロジェクト行のロックを取ります。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -313,8 +296,70 @@ const taskUpdateSchema = z.object({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        } else if (data.assigneeId) {
+          await lockProject(tx, targetProjectId);
         }
+```
 
+プロジェクトを移すときは `getNextTaskPosition` が移動先の行をロックしてから並び番号を決めます。中で Day 14 の `lockProject` を呼んでいるのでロックはここで取れています。移さずに担当者だけを付け替えるときは並び番号が要りません。それでもこのあと担当者を確かめるのでロックは要ります。だから `lockProject` を直接呼んで今のプロジェクトの行を押さえます。
+
+タイトルを直すだけの更新や担当を外すだけの更新はどちらの条件にも当てはまらずロックを取りません。ロックを取ると同じプロジェクトへの書き込みは順番待ちになります。メンバーを確かめない更新まで待たせる理由はありません。
+
+#### 0-10. ロックの後ろで担当者を確かめる
+
+ロックを取れたら担当者を確かめます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+        // 担当者の確認はプロジェクト行のロックを取ってから行う。
+        // ロックの前に確認すると、確認のあとにメンバー削除が割り込み、外れた人が担当に入る。
+        if (data.assigneeId) {
+          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+          updateData.assignee = { connect: { id: data.assigneeId } };
+        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
+          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
+        }
+```
+
+担当者の指定に値があれば `assertTaskAssigneeBelongsToProject` でメンバーかを確かめてから付けます。第1引数に `tx` を渡すのは確認の読み取りをロックと同じトランザクションの中にまとめるためです。`prisma` で読むと別の接続から問い合わせることになります。そうなるとロックを取った一連の処理の外で確かめた答えになります。
+
+担当者の指定が無くてもプロジェクトを移すと今の担当者が移動先のメンバーでなくなることがあります。その場合だけ後半の `else if` で担当を外します。ここでも `prisma.projectMember` ではなく `tx.projectMember` で読みます。
+
+確認をロックの後ろに置く理由は Day 12 で書いた `project.removeMember` にあります。メンバーを外すこの手続きも同じ `projects` 行を `FOR UPDATE` でロックしてから削除します。確認をロックの前に置くと次の順番が起こり得ます。
+
+```mermaid
+sequenceDiagram
+    participant U as あなたの update
+    participant D as DB
+    participant R as 管理者の removeMember
+    U->>D: 佐藤さんがメンバーかを確かめる（メンバーだった）
+    R->>D: projects 行をロックして佐藤さんを外す
+    U->>D: 佐藤さんを担当にして保存する
+    Note over D: プロジェクトにいない人が担当に残る
+```
+
+確かめた時点の答えは正しいのに保存する時点では古くなっています。ロックを先に取るとこの割り込みが起きません。`FOR UPDATE` のロックは `$transaction` が終わるまで外れないからです。
+
+どちらが先に来ても結果は正しくなります。`update` が先にロックを取れば `removeMember` は保存が終わるまで待ちます。`removeMember` が先なら `update` は削除が終わるまで待ちます。待ったあとに確かめるので外れた人を見つけて `BAD_REQUEST` で止めます。
+
+#### 0-11. ここが一番のヤマ場（楽観ロックで書き換える）
+
+最後に DB を書き換えます。この教材で初めて出てくる楽観ロック（optimistic lock）を使います。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
         return await tx.task.update({
           where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
           data: updateData,
@@ -331,7 +376,7 @@ const taskUpdateSchema = z.object({
       });
 ```
 
-移動時は `getNextTaskPosition` が移動先 project をロックし、そのロックを保った `tx.task.update` で保存します。これで同じプロジェクトへの同時移動も順番に処理されます。
+0-9 で取ったロックを保ったまま `tx.task.update` で保存します。同じプロジェクトへの同時移動は順番に処理されます。担当者を確かめてから保存するまでの間にメンバーの削除が入ることもありません。
 
 楽観ロックは読み取った後に別の更新が入っていないことを、保存時の条件で確かめる方法です。画面から `expectedUpdatedAt` が届いた場合は編集を始めた時点の更新時刻を使います。届かなかった場合も、サーバーが先ほど読んだ `existingTask.updatedAt` を使います。完了日時を組み立ててから保存するまでの間にステータスが変わった場合も、そのまま上書きしないためです。条件に合う行がなくなると更新は失敗し、次の処理で `CONFLICT` を返します。`include` は更新後のデータにプロジェクト・作成者・担当者を含める指定です。
 
@@ -349,7 +394,7 @@ sequenceDiagram
 
 最後の矢印が失敗しているのがこの仕組みの働いた瞬間です。`updatedAt` を `where` に入れていないとこの場面で同僚の保存が黙って消えます。失敗として返ってくるほうが消えるより扱いやすい結果です。
 
-#### 0-10. ぶつかったときのエラーに変える
+#### 0-12. ぶつかったときのエラーに変える
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -374,9 +419,10 @@ sequenceDiagram
 **確認ポイント**:
 - `taskUpdateSchema` を `taskRouter` の前に、`update` を `create` の直後に足した
 - `expectedUpdatedAt` があるときは `where` に `updatedAt` を含めて書き換えのぶつかりを1回のクエリで判定している
+- 担当者の確認を `$transaction` の中に置き、ロックを取った後で `tx` を渡して呼んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
-#### 0-11. delete を書く
+#### 0-13. delete を書く
 
 最後にタスクを消す `delete` を `update` の直後に足します。
 
@@ -1327,12 +1373,13 @@ const taskUpdateSchema = z.object({
 
 `id` 以外がすべて `.optional()` なのは編集では変えたい項目だけを送るからです。そこへ `.nullable()` が重なっている項目は「送らない」と「空にする」の2つを区別します。この2つを分けておかないと担当者を外す操作と担当者を触らない操作を同じ形で表すことになり、サーバー側はどちらか一方しか実現できません。
 
-**並び順の採番ヘルパー**:
+**プロジェクト行のロック**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// position の採番
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+// プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
+// ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -1342,6 +1389,18 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+```
+
+Day 14 で作ったこの関数を今日は `update` からも直接呼びます。担当者だけを付け替える更新では並び番号が要りません。それでも担当者を確かめる前にこの行を押さえる必要があるためです。行が見つからないときに `NOT_FOUND` を投げるので呼び出し側で存在を確かめ直す必要はありません。
+
+**並び順の採番ヘルパー**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// position の採番
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -1360,10 +1419,11 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
 // 担当者の所属チェック
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -1382,7 +1442,7 @@ async function assertTaskAssigneeBelongsToProject(
 }
 ```
 
-第1引数を `projectId` にしてあるおかげで、この関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確認します。対象のタスクではなくプロジェクトを受け取る形にしておくとまだ移動していない時点の確認にも使えます。
+対象のタスクではなく `projectId` を受け取る形なので、この関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確かめます。まだ移動していない時点でも移動先のメンバーかを確かめられます。第1引数の `tx` はロックを取ったトランザクションを受け取るためのものです。呼ぶ前に `lockProject` か `getNextTaskPosition` でプロジェクト行を押さえておきます。
 
 **getAll の入力**:
 

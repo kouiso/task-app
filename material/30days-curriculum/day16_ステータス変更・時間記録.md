@@ -1280,7 +1280,9 @@ const taskUpdateSchema = z.object({
   projectId: z.string().cuid().optional(),
   assigneeId: z.string().cuid().optional().nullable(),
 });
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+// プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
+// ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -1290,6 +1292,9 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
     orderBy: { position: 'desc' },
@@ -1298,10 +1303,11 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
   return (maxPosition?.position ?? -1) + 1;
 };
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -1431,17 +1437,18 @@ export const taskRouter = createTRPCRouter({
       });
     }
     assertMemberPermission(project.members, 'canEdit');
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
     return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
@@ -1521,26 +1528,8 @@ export const taskRouter = createTRPCRouter({
       assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
       updateData.project = { connect: { id: targetProjectId } };
     }
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
+    if (data.assigneeId === null) {
+      updateData.assignee = { disconnect: true };
     }
     try {
       // 比較と更新の間に他の更新が割り込む余地をなくすため、
@@ -1548,6 +1537,27 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        } else if (data.assigneeId) {
+          await lockProject(tx, targetProjectId);
+        }
+        // 担当者の確認はプロジェクト行のロックを取ってから行う
+        if (data.assigneeId) {
+          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+          updateData.assignee = { connect: { id: data.assigneeId } };
+        } else if (data.assigneeId === undefined && isProjectChanging && existingTask.assigneeId) {
+          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
         }
         return await tx.task.update({
           where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },

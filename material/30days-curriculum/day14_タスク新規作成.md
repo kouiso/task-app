@@ -149,11 +149,11 @@ const taskCreateSchema = z.object({
 
 #### 0-2. 担当者チェックと並び順採番のヘルパーを足す
 
-最初に同じプロジェクトへ同時に複数のタスクが作られても `position` が重複しないよう、採番用ヘルパーを `taskRouter` の前に追加します。
+同じプロジェクトへ同時に複数のタスクが作られても `position` が重複しないようにします。そのためにプロジェクトの行をロックするヘルパーを `taskRouter` の前に追加します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -163,6 +163,17 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+```
+
+ロックを取る処理を採番から切り出して名前を付けておくと、どこでロックを取っているかを関数名で読めます。0-4 では担当者の確認もこのロックの後ろに置きます。行が見つからなければ `NOT_FOUND` で止めます。
+
+続けて採番用ヘルパーを書きます。最初の1行で `lockProject` を呼び、ロックを取ってから最大値を読みます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -173,7 +184,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
-ここだけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのはここ1か所だけです。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
+`lockProject` の中だけ Prisma のメソッドではなく `$queryRaw` で SQL を直接書いています。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためで、この教材で生の SQL を書くのはここ1か所だけです。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
 
 `FOR UPDATE` は同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
@@ -197,10 +208,11 @@ sequenceDiagram
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -220,6 +232,8 @@ async function assertTaskAssigneeBelongsToProject(
 ```
 
 このヘルパーは指定された担当者がそのプロジェクトの `ProjectMember`（プロジェクトに紐づくメンバー行）に存在するかを調べ、いなければ `TRPCError` を `throw` します。プロジェクト外の人を担当者にしてしまう事故を防ぎます。
+
+第1引数に `tx` を受け取り `prisma` ではなく `tx.projectMember` で読むのは、採番と同じトランザクションの中で確認するためです。`prisma` で読むとトランザクションの外の別の問い合わせになり、ロックを取った後に読んだことになりません。
 
 #### 0-3. ここが一番のヤマ場（作ってよい人かを確認する）
 
@@ -249,18 +263,24 @@ async function assertTaskAssigneeBelongsToProject(
 
 まず対象のプロジェクトを取り、そのとき `members` を「ログイン中の自分の分だけ」に絞って一緒に取ります。プロジェクトが無ければ `NOT_FOUND` で止めます。`assertMemberPermission(project.members, 'canEdit')` は自分がそのプロジェクトで編集（作成）権限を持っているかを確認し、無ければここで弾きます。これを忘れるとメンバーでない人でもタスクを作れてしまいます。
 
-#### 0-4. 担当者を確認してトランザクションを始める
+#### 0-4. トランザクションを始めて採番と担当者の確認をする
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
-
     return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
 ```
 
-担当者が指定されているときだけ、0-2 のヘルパーでメンバーかを確認します。続く採番と保存は `$transaction` の中へまとめます。途中で失敗した場合は DB への変更全体が取り消されます。
+採番と担当者の確認と保存を `$transaction` の中へまとめます。途中で失敗した場合は DB への変更全体が取り消されます。`getNextTaskPosition` は project 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため最初の番号は 0 です。
+
+担当者が指定されているときだけ 0-2 のヘルパーでメンバーかを確認します。確認を採番の後ろに置いたのはプロジェクト行のロックを取ってから担当者を調べるためです。
+
+確認がロックより前にあると次の順で外れた人が担当に入ります。まずこの作成が「Aさんはメンバー」と確認します。その直後に Day 12 で書いた `removeMember` が届いてAさんを外します。最後にこの作成が確認済みのつもりでAさんを担当にして保存します。
+
+ロックの後ろで確認しておけば同じ project 行をロックする処理はこの作成の保存が終わるまで待ちます。ただし Day 12 の `removeMember` はまだこの行をロックしていません。削除の側も同じ行を `FOR UPDATE` でロックすれば確認と保存の間に削除が割り込めなくなります。
 
 #### 0-5. 保存するデータを組み立てる
 
@@ -272,7 +292,7 @@ async function assertTaskAssigneeBelongsToProject(
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
@@ -282,7 +302,7 @@ async function assertTaskAssigneeBelongsToProject(
       };
 ```
 
-`getNextTaskPosition(tx, input.projectId)` はproject 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため最初の番号は 0 です。`project.connect` と `createdBy.connect` はすでにある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
+`position,` は `position: position,` の省略形です。0-4 で採番した番号をそのまま入れます。`project.connect` と `createdBy.connect` はすでにある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
 
 `completedAt` は最初から `DONE` で作るときだけ現在時刻を入れます。完了日時を使うレポートでも、このタスクを数えられるようにするためです。
 
@@ -328,9 +348,10 @@ async function assertTaskAssigneeBelongsToProject(
 `tx.task.create` の `tx` は0-4 で始めた同じトランザクションです。採番に使ったロックは保存が終わるまで保持されるため待っていた次の作成処理は最新の最大値を読めます。`include` は `getAll` と同じく、画面が使うプロジェクト・作成者・担当者を一緒に返す指定です。最後の `}),` で `create` を閉じます。
 
 **確認ポイント**:
-- `taskCreateSchema`・2つのヘルパーを `taskRouter` の前に、`create` を `getById` の直後に足した
+- `taskCreateSchema`・3つのヘルパーを `taskRouter` の前に、`create` を `getById` の直後に足した
 - `assertMemberPermission(project.members, 'canEdit')` で作成権限を確認している
-- `getNextTaskPosition` と保存を同じトランザクションに入れている
+- `getNextTaskPosition` と担当者の確認と保存を同じトランザクションに入れている
+- 担当者の確認が `getNextTaskPosition` の後ろにあり、`tx` を第1引数に渡している
 - `npx tsc --noEmit` で型エラーが出ていない
 
 #### 0-7. 担当者候補を取る search ルーターを作る
@@ -1770,12 +1791,12 @@ const taskCreateSchema = z.object({
 
 このスキーマがサーバー側の入口の検問です。画面のスキーマ（`task-dialog.tsx` の `taskFormSchema`）とは別物で、どちらか片方だけを直すと画面では通るのにサーバーで断られる送信が生まれます。`projectId` だけ `.optional()` が付いていないのはどのプロジェクトのタスクかが決まらないと保存先を選べないからです。
 
-**並び順の採番ヘルパー**:
+**プロジェクト行のロック**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// position の採番
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+// プロジェクト行のロック
+const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
   const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
   );
@@ -1785,6 +1806,18 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
       message: 'プロジェクトが見つかりません',
     });
   }
+};
+```
+
+戻り値を持たないのはロックを取ることだけが役目だからです。取れたロックはトランザクションが終わるまで続くので呼んだ側はそのまま次の行へ進めます。
+
+**並び順の採番ヘルパー**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// position の採番
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockProject(tx, projectId);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -1795,7 +1828,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 };
 ```
 
-第1引数には呼び出し元の `$transaction` が渡す `tx` を受け取ります。ロックの取得、採番、作成を同じトランザクション内で行うためです。`Prisma.TransactionClient` はそこで使えるメソッドを表す型ですが通常の `prisma` を渡す誤りまでは防げません。呼び出し元でも `tx` を渡していることを確認してください。
+第1引数には呼び出し元の `$transaction` が渡す `tx` を受け取ります。ロックの取得、採番、担当者の確認、作成を同じトランザクション内で行うためです。`Prisma.TransactionClient` はそこで使えるメソッドを表す型ですが通常の `prisma` を渡す誤りまでは防げません。呼び出し元でも `tx` を渡していることを確認してください。
 
 **担当者の所属チェック**:
 
@@ -1803,10 +1836,11 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
 // 担当者の所属チェック
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -1825,7 +1859,7 @@ async function assertTaskAssigneeBelongsToProject(
 }
 ```
 
-戻り値が `Promise<void>` なのはこの関数が値を返さず「駄目なときだけ止める」役だからです。呼ぶ側は結果を受け取って分岐する必要がなく、`await` して次の行へ進めます。名前を `assert` で始めてあるのも同じ理由で、真偽を判定して返す関数と読み分けられます。
+戻り値が `Promise<void>` なのはこの関数が値を返さず「駄目なときだけ止める」役だからです。呼ぶ側は結果を受け取って分岐する必要がなく、`await` して次の行へ進めます。名前を `assert` で始めてあるのも同じ理由で、真偽を判定して返す関数と読み分けられます。`tx` を受け取るのは `lockProject` がロックを取ったのと同じトランザクションの中でメンバー行を読むためです。
 
 **getAll の入力**:
 
@@ -2004,10 +2038,6 @@ export const taskRouter = createTRPCRouter({
     }
 
     assertMemberPermission(project.members, 'canEdit');
-
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
 ```
 
 `.query` ではなく `.mutation` で書くのが作る手続きの目印です。tRPC は `query` を読み取り、`mutation` を書き込みとして扱い、画面側の呼び方も `useQuery` と `useMutation` に分かれます。権限の確認を保存より先に置いてあるのは弾かれる場合に DB へ1行も書かないためです。
@@ -2018,15 +2048,26 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// create のデータ組み立て
+// create の採番と担当者の確認
     return await prisma.$transaction(async (tx) => {
+      const position = await getNextTaskPosition(tx, input.projectId);
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+      }
+```
+
+担当者の確認を `getNextTaskPosition` の後ろに置くのはプロジェクト行のロックを取ってからメンバー行を読むためです。ロックより前に確認すると確認の直後にメンバーが外され、外れた人が担当に入る順番が残ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（同じファイルの続き）
+// create のデータ組み立て
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
+        position,
         project: {
           connect: { id: input.projectId },
         },
