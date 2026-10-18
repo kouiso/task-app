@@ -1,0 +1,295 @@
+{
+ "dpi": 60,
+ "books": [
+  {
+   "book": "00-00-1_学びのロードマップ",
+   "pages": 7,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "01-00_カリキュラム目次",
+   "pages": 20,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "02-appendix_トラブルシューティング",
+   "pages": 21,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "03-appendix_参考資料",
+   "pages": 10,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "04-appendix_次のステップ",
+   "pages": 16,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "05-appendix_用語集",
+   "pages": 16,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "06-day01_開発環境を整えて、初めてのアプリを",
+   "pages": 82,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "07-day02_ダッシュボードに自分だけのメ",
+   "pages": 70,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "08-day03_GitHubに保存する",
+   "pages": 60,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "09-day04_ネットに公開",
+   "pages": 50,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "10-day05_ログイン画面のUI",
+   "pages": 81,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "11-day06_ユーザー登録画面",
+   "pages": 77,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "12-day07_ログイン体験を改善しよう",
+   "pages": 146,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "13-day08_サイドバーを完成させよう",
+   "pages": 85,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "14-day09_プロジェクト一覧画面",
+   "pages": 86,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "15-day10_プロジェクト新規作成",
+   "pages": 120,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "16-day11_プロジェクト編集・削除",
+   "pages": 160,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "17-day12_メンバー追加",
+   "pages": 169,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "18-day13_タスク一覧画面",
+   "pages": 104,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "19-day14_タスク新規作成",
+   "pages": 174,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "20-day15_タスク編集・削除",
+   "pages": 126,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "21-day16_ステータス変更・時間記録",
+   "pages": 115,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "22-day17_自分のタスクページ",
+   "pages": 161,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "23-day18_コメント投稿",
+   "pages": 105,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "24-day19_コメント編集・削除",
+   "pages": 129,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "25-day20_タスク検索機能",
+   "pages": 274,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "26-day21_統計カードを表示",
+   "pages": 86,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "27-day22_グラフを表示",
+   "pages": 56,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "28-day23_週次レポート",
+   "pages": 121,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "29-day24_ユーザー一覧（管理者用）",
+   "pages": 86,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "30-day25_プロフィール編集",
+   "pages": 202,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "31-day26_エラーページを作って、バグを",
+   "pages": 179,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "32-day27_プロジェクト詳細・アーカイブを",
+   "pages": 140,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "33-day28_タスク一括操作を実装しよう",
+   "pages": 162,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "34-day29_ユーザー詳細・編集ページを作ろ",
+   "pages": 176,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  },
+  {
+   "book": "35-day30_完成版を公開！",
+   "pages": 68,
+   "render_rc": 0,
+   "render_err": "",
+   "near_blank_pages": [],
+   "near_dark_pages": []
+  }
+ ],
+ "flagged": [],
+ "total_pages_rendered": 3740
+}

@@ -1,0 +1,182 @@
+{
+ "00-1_学びのロードマップ.pdf": {
+  "pages": 7,
+  "notdef": [],
+  "errors": []
+ },
+ "00_カリキュラム目次.pdf": {
+  "pages": 20,
+  "notdef": [],
+  "errors": []
+ },
+ "appendix_トラブルシューティング.pdf": {
+  "pages": 21,
+  "notdef": [],
+  "errors": []
+ },
+ "appendix_参考資料.pdf": {
+  "pages": 10,
+  "notdef": [],
+  "errors": []
+ },
+ "appendix_次のステップ.pdf": {
+  "pages": 16,
+  "notdef": [],
+  "errors": []
+ },
+ "appendix_用語集.pdf": {
+  "pages": 16,
+  "notdef": [],
+  "errors": []
+ },
+ "day01_開発環境を整えて、初めてのアプリを動かそう.pdf": {
+  "pages": 82,
+  "notdef": [],
+  "errors": []
+ },
+ "day02_ダッシュボードに自分だけのメッセージを追加しよう.pdf": {
+  "pages": 70,
+  "notdef": [],
+  "errors": []
+ },
+ "day03_GitHubに保存する.pdf": {
+  "pages": 60,
+  "notdef": [],
+  "errors": []
+ },
+ "day04_ネットに公開.pdf": {
+  "pages": 50,
+  "notdef": [],
+  "errors": []
+ },
+ "day05_ログイン画面のUI.pdf": {
+  "pages": 81,
+  "notdef": [],
+  "errors": []
+ },
+ "day06_ユーザー登録画面.pdf": {
+  "pages": 77,
+  "notdef": [],
+  "errors": []
+ },
+ "day07_ログイン体験を改善しよう.pdf": {
+  "pages": 146,
+  "notdef": [],
+  "errors": []
+ },
+ "day08_サイドバーを完成させよう.pdf": {
+  "pages": 85,
+  "notdef": [],
+  "errors": []
+ },
+ "day09_プロジェクト一覧画面.pdf": {
+  "pages": 86,
+  "notdef": [],
+  "errors": []
+ },
+ "day10_プロジェクト新規作成.pdf": {
+  "pages": 120,
+  "notdef": [],
+  "errors": []
+ },
+ "day11_プロジェクト編集・削除.pdf": {
+  "pages": 160,
+  "notdef": [],
+  "errors": []
+ },
+ "day12_メンバー追加.pdf": {
+  "pages": 169,
+  "notdef": [],
+  "errors": []
+ },
+ "day13_タスク一覧画面.pdf": {
+  "pages": 104,
+  "notdef": [],
+  "errors": []
+ },
+ "day14_タスク新規作成.pdf": {
+  "pages": 174,
+  "notdef": [],
+  "errors": []
+ },
+ "day15_タスク編集・削除.pdf": {
+  "pages": 126,
+  "notdef": [],
+  "errors": []
+ },
+ "day16_ステータス変更・時間記録.pdf": {
+  "pages": 115,
+  "notdef": [],
+  "errors": []
+ },
+ "day17_自分のタスクページ.pdf": {
+  "pages": 161,
+  "notdef": [],
+  "errors": []
+ },
+ "day18_コメント投稿.pdf": {
+  "pages": 105,
+  "notdef": [],
+  "errors": []
+ },
+ "day19_コメント編集・削除.pdf": {
+  "pages": 129,
+  "notdef": [],
+  "errors": []
+ },
+ "day20_タスク検索機能.pdf": {
+  "pages": 274,
+  "notdef": [],
+  "errors": []
+ },
+ "day21_統計カードを表示.pdf": {
+  "pages": 86,
+  "notdef": [],
+  "errors": []
+ },
+ "day22_グラフを表示.pdf": {
+  "pages": 56,
+  "notdef": [],
+  "errors": []
+ },
+ "day23_週次レポート.pdf": {
+  "pages": 121,
+  "notdef": [],
+  "errors": []
+ },
+ "day24_ユーザー一覧（管理者用）.pdf": {
+  "pages": 86,
+  "notdef": [],
+  "errors": []
+ },
+ "day25_プロフィール編集.pdf": {
+  "pages": 202,
+  "notdef": [],
+  "errors": []
+ },
+ "day26_エラーページを作って、バグを退治しよう.pdf": {
+  "pages": 179,
+  "notdef": [],
+  "errors": []
+ },
+ "day27_プロジェクト詳細・アーカイブを実装しよう.pdf": {
+  "pages": 140,
+  "notdef": [],
+  "errors": []
+ },
+ "day28_タスク一括操作を実装しよう.pdf": {
+  "pages": 162,
+  "notdef": [],
+  "errors": []
+ },
+ "day29_ユーザー詳細・編集ページを作ろう.pdf": {
+  "pages": 176,
+  "notdef": [],
+  "errors": []
+ },
+ "day30_完成版を公開！.pdf": {
+  "pages": 68,
+  "notdef": [],
+  "errors": []
+ }
+}

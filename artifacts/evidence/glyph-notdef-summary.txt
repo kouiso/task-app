@@ -1,0 +1,4 @@
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+
+=== notdefサマリ(描画時欠落のみ) ===
+total_pages_with_notdef_char_entries=0
