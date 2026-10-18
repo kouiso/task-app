@@ -393,7 +393,7 @@ const releaseNonMemberAssignees = async (
   );
 ```
 
-`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。
+`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。プロジェクトごとに別々の一覧を持つと、他のプロジェクトで同じ人がメンバーでも見逃してしまうので、組の文字列にしてまとめて照合します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1491,6 +1491,8 @@ const releaseNonMemberAssignees = async (
 
 ```
 
+ここまでが前半です。ロックを取り終えた後の `where` で、完了か中止で担当者のいるタスクだけを読みます。ロックの後で読むので、待っている間に確定した付け替えや退会の結果を反映した一覧になります。
+
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
   const projectIds = [
@@ -1510,6 +1512,8 @@ const releaseNonMemberAssignees = async (
     members.map((member) => `${member.projectId}:${member.userId}`)
   );
 ```
+
+`members` は、候補のプロジェクトと担当者のどちらかに当てはまるメンバー行です。ここから `projectId:userId` の文字列を作った `memberKeys` に、候補の組が無いかどうかを次の処理で調べます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1631,7 +1635,7 @@ const releaseNonMemberAssignees = async (
       }
 ```
 
-更新内容はここで決めます。完了へ変えるときだけ `completedAt` を現在時刻にし、それ以外では空にします。
+更新内容はここで決めます。完了へ変えるときだけ `completedAt` を現在時刻にし、それ以外では空にします。完了から戻すときに完了日時が残ったままだと、週次の集計に実際より多く数えられてしまうので、必ず空へ戻します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
