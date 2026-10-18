@@ -111,9 +111,6 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # この登録は不要になる。一致したまま残すと「登録が古い」として失敗するので、
 # 消し忘れは CI が拾う。
 KNOWN_DRIFT: dict[str, str] = {
-    # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
-    # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
-    "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま。追跡: #658。消す条件: 3択（教材 day26 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
     # 教材の day25 完成版は Day 08 の簡易サイドバーに Day 13〜25 の変更を積んだ形
     # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
     # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
