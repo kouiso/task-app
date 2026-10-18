@@ -324,6 +324,11 @@ const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]
       // 投げる P2025 を捕捉して CONFLICT に変換する。
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
+          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
+          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
+          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
+            await lockProject(tx, projectId);
+          }
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
@@ -331,6 +336,8 @@ const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]
 ```
 
 プロジェクトを移すときは `getNextTaskPosition` が移動先の行をロックしてから並び番号を決めます。中で Day 14 の `lockProject` を呼んでいるのでロックはここで取れています。移さずに担当者だけを付け替えるときは並び番号が要りません。それでもこのあと担当者を確かめるのでロックは要ります。だから `lockProject` を直接呼んで今のプロジェクトの行を押さえます。
+
+そのうえで移動元の行も先にロックします。移動元と移動先を `sort()` で id の順に取るのは、2つの移動が逆の順でロックを取り合って止まるのを防ぐためです。移動元を握らないと、Day 28 の一括操作が移動元で所属を確かめている最中にタスクが別のプロジェクトへ抜け出し、確認をすり抜けます。
 
 未完了へ戻す更新（`isReopening`）も同じ理由でロックを取ります。担当者の指定が無くても今の担当者がまだメンバーかをこのあと確かめるからです。
 
@@ -1869,6 +1876,11 @@ export const taskRouter = createTRPCRouter({
       // updatedAt を where に含めて1回のクエリにまとめる
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
+          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
+          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
+          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
+            await lockProject(tx, projectId);
+          }
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
@@ -2313,6 +2325,11 @@ export const taskRouter = createTRPCRouter({
       // updatedAt を where に含めて1回のクエリにまとめる
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
+          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
+          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
+          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
+            await lockProject(tx, projectId);
+          }
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);

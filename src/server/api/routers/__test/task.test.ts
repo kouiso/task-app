@@ -362,6 +362,39 @@ describe('taskRouter', () => {
       expect(after.assigneeId).toBeNull();
     });
 
+    it('プロジェクト移動は、移動元のロックが解放されるまで待つ', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const destination = await createTestProject(actor.id);
+      const task = await createTestTask(project.id, actor.id);
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 一括操作が移動元を握っている状態を作る。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const moving = caller.task.update({ id: task.id, projectId: destination.id });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const during = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(during.projectId).toBe(project.id);
+
+      release();
+      await holder;
+      await moving;
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.projectId).toBe(destination.id);
+    });
+
     it('プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる', async () => {
       const { actor, project, caller } = await setup('OWNER');
       const destination = await createTestProject(actor.id);

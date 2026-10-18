@@ -429,6 +429,11 @@ export const taskRouter = createTRPCRouter({
       // 投げる P2025 を捕捉して CONFLICT に変換する。
       return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
+          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
+          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
+          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
+            await lockProject(tx, projectId);
+          }
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         } else if (data.assigneeId || isReopening) {
           await lockProject(tx, targetProjectId);
