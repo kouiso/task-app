@@ -1132,7 +1132,7 @@ Step 0 で足した所属の絞り込みも、ここで実際に確かめます�
 - プロジェクト B に所属していない MEMBER でログインして X の詳細ページを開くと、そのタスクは「担当中のタスク」に出ない
 - ADMIN でログインして同じページを開くと、そのタスクが表示される
 
-MEMBER の画面にそのタスクが出てしまうときは、`assignedTasks` の `where` にある `members: { some: { userId: ctx.session.userId } }` の行が抜けているか、書き間違えています。型は通るので `tsc` では見つからず、画面で確かめるしかありません。
+MEMBER の画面にそのタスクが出てしまう場合は `assignedTasks` の `where` を見直します。`members: { some: { userId: ctx.session.userId } }` の行が抜けているか、書き間違えています。型は通るので `tsc` では見つからず、画面で確かめるしかありません。
 
 ---
 
