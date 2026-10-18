@@ -1,0 +1,18 @@
+{
+  "book": "day22_グラフを表示",
+  "file": "day22_グラフを表示.pdf",
+  "sha256_12": "ba192afa3b08",
+  "pages_total": 56,
+  "ranges_inspected": "p-01〜p-56 全頁単頁実見(150dpi PNG・疑義時200dpi再描)",
+  "all_pages_viewed": true,
+  "findings": [],
+  "verified": {
+    "mermaid": "全図ラベル完整・末尾切れなし[実機目視]",
+    "screenshots": "全図完整[実機目視]",
+    "toc_page_numbers": "目次頁番号ずれなし",
+    "glyph": "notdef全頁走査=0件(glyph_audit.py方式B)",
+    "must": 0,
+    "suggest": 0,
+    "note": 0
+  }
+}

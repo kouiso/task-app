@@ -1,0 +1,40 @@
+{
+  "book": "day26_エラーページを作って、バグを退治しよう",
+  "file": "day26_エラーページを作って、バグを退治しよう.pdf",
+  "sha256_12": "8fc0656f84f1",
+  "pages_total": 179,
+  "ranges_inspected": "p-001〜p-179 全頁単頁実見(150dpi PNG・疑義時200dpi再描)",
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 15, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 18, "category": "layout", "severity": "note", "detail": "手順項目の後に大空白(約25%)→次頁図4(ブラウザSS)不可分の副作用。内容欠落なし"},
+    {"page": 25, "category": "layout", "severity": "note", "detail": "箇条書き項目の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 27, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 31, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 33, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 34, "category": "layout", "severity": "note", "detail": "コードブロック終端の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 35, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 37, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 43, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 49, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 58, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 60, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 84, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 90, "category": "layout", "severity": "note", "detail": "Step3見出し+導入文の後に大空白(約35%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 91, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 93, "category": "layout", "severity": "note", "detail": "コードブロック終端の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 95, "category": "layout", "severity": "note", "detail": "Step4見出し+導入文の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 97, "category": "layout", "severity": "note", "detail": "段落の後に大空白(約25%)→次頁コードブロック不可分の副作用。内容欠落なし"},
+    {"page": 111, "category": "layout", "severity": "note", "detail": "完成コード一覧表の後に大空白(約30%)→次頁コードブロック不可分の副作用。内容欠落なし"}
+  ],
+  "verified": {
+    "mermaid": "図2(p006)+図3(p014)全ノードラベル完整・末尾切れなし[実機目視]",
+    "screenshots": "図1(p004)+図4(p018)+図5(p021)完整[実機目視]",
+    "footnotes": "footnote1-6全URL記載・裸URL問題なし",
+    "toc_page_numbers": "全一致: 振返p3/ゴールp3/前提p4/なぜp5/一覧p8/Step1 p10/Step2 p15/Step2.5 p21/Step3 p90/Step4 p95/Step5 p99/Step6 p103/Step7 p104/完成コードp107/通信エラー対応後p115/まとめp174/つまずきp174/用語p175/理解チェックp176/追加課題p177/次回予告p178/次に読むものp178/奥付p179",
+    "glyph": "全頁notdef走査=0件(glyph_audit.py方式B・フォント欠落クラス潰滅)・p35等の『ロ』は実グリフuni30ED(day24-p35誤検知と同型)",
+    "must": 0,
+    "suggest": 0,
+    "note": 20
+  }
+}

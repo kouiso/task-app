@@ -1,0 +1,24 @@
+{
+  "book": "day30_完成版を公開！",
+  "file": "day30_完成版を公開！.pdf",
+  "sha256_12": "bf0b2591e3a0",
+  "pages_total": 68,
+  "ranges_inspected": "p-01〜p-68 全頁単頁実見(150dpi PNG・疑義時200dpi再描)",
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 11, "category": "layout", "severity": "note", "detail": "Step2見出し+ゴール注記の後に大空白(約35%)→次頁docker-compose.ymlコードブロック不可分の副作用。内容欠落なし"},
+    {"page": 19, "category": "layout", "severity": "note", "detail": "Step4見出し+ゴールの後に大空白(約55%)→次頁mermaid図2(デプロイの流れ)不可分の副作用。内容欠落なし"},
+    {"page": 55, "category": "layout", "severity": "note", "detail": "読み比べ用コード終端+注記の後に大空白(約60%)→次頁ShareGraduationButtonコードブロック不可分の副作用。内容欠落なし"},
+    {"page": 58, "category": "layout", "severity": "note", "detail": "ヘッダー設定の開始部分小見出しの後に大空白(約35%)→次頁next.config.tsコードブロック不可分の副作用。内容欠落なし"},
+    {"page": 59, "category": "layout", "severity": "note", "detail": "通信と権限のヘッダーと閉じかっこ小見出しの後に大空白(約25%)→次頁next.config.ts続きコードブロック不可分の副作用。内容欠落なし"}
+  ],
+  "verified": {
+    "mermaid": "図1(p04:30日間の歩み)+図2(p20:デプロイの流れ)全ノードラベル完整・末尾切れなし[実機目視]",
+    "screenshots": "図3(p42:ログイン画面SS)+図4(p44:ダッシュボードSS)完整[実機目視]",
+    "footnotes": "footnote1-18全URL記載・裸URL問題なし",
+    "toc_page_numbers": "全一致: 振返p3/ゴールp3/なぜp3/一覧p6/Step1 p7/Step2 p11/Step2.5 p14/Step3 p17/Step4 p19/Step5 p40/Step6 p44/Step7 p46/Step8 p48/完成コードp58/まとめp61/つまずきp61/用語p62/理解チェックp62/追加課題p63/卒業p64/次に読むものp67/奥付p67",
+    "must": 0,
+    "suggest": 0,
+    "note": 5
+  }
+}

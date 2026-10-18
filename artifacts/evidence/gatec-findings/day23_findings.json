@@ -1,0 +1,32 @@
+{
+  "book": "day23_週次レポート",
+  "file": "day23_週次レポート.pdf",
+  "sha256_12": "910c49da9e4f",
+  "pages_total": 121,
+  "ranges_inspected": "p-001〜p-121 全頁単頁実見(150dpi PNG・疑義時200dpi再描)",
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 68, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(コード不可分ブロックの副作用、内容欠落なし)"},
+    {"page": 72, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 76, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 79, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 81, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 83, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 93, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 96, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 98, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 101, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 104, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 107, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"},
+    {"page": 111, "category": "layout", "severity": "note", "detail": "リード文が次頁コードブロックと頁またぎ分離し下半分が空白(同上)"}
+  ],
+  "verified": {
+    "mermaid": "全図ラベル完整[実機目視]",
+    "screenshots": "p35図4は読込中スピナー画面でほぼ白=仕様確認済",
+    "toc_page_numbers": "目次頁番号ずれなし",
+    "glyph": "notdef全頁走査=0件(glyph_audit.py方式B)",
+    "must": 0,
+    "suggest": 0,
+    "note": 13
+  }
+}

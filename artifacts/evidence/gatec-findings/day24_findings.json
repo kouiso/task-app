@@ -1,0 +1,24 @@
+{
+  "book": "day24_ユーザー一覧（管理者用）",
+  "file": "day24_ユーザー一覧（管理者用）.pdf",
+  "sha256_12": "e926f830b351",
+  "pages_total": 86,
+  "ranges_inspected": "p-001〜p-086 全頁単頁実見(150dpi PNG・疑義時200dpi再描)",
+  "all_pages_viewed": true,
+  "findings": [
+    {"page": 20, "category": "layout", "severity": "note", "detail": "見出し/段落の後に大空白(次頁コードブロック不可分の副作用、内容欠落なし)"},
+    {"page": 52, "category": "layout", "severity": "note", "detail": "見出し/段落の後に大空白(同上)"},
+    {"page": 74, "category": "layout", "severity": "note", "detail": "見出し/段落の後に大空白(同上)"},
+    {"page": 76, "category": "layout", "severity": "note", "detail": "見出し/段落の後に大空白(同上)"},
+    {"page": 80, "category": "layout", "severity": "note", "detail": "見出し/段落の後に大空白(同上)"}
+  ],
+  "verified": {
+    "mermaid": "全図ラベル完整[実機目視]",
+    "screenshots": "全図完整[実機目視]",
+    "toc_page_numbers": "目次頁番号ずれなし",
+    "glyph": "notdef全頁走査=0件・p35『ロ』豆腐化は誤検知→撤回(実グリフuni30ED・カタカナのロと正方形が同形)[実機目視+機械照合]",
+    "must": 0,
+    "suggest": 0,
+    "note": 5
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "all_pages_viewed": true,
+  "books": [
+    {
+      "file": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+      "sha256_12": "bc11d6f6db77",
+      "pages_total": 140,
+      "ranges_inspected": "p-001〜p-140 (全頁・150dpi単頁実見)",
+      "findings": [
+        {
+          "page": "p-011",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "リード文/段落/見出し/箇条書き項目/コードブロック終端の後に大空白(次頁コードブロックまたは図・段落連鎖の不可分副作用、内容欠落なし)"
+        },
+        {
+          "page": "p-012",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-013",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-014",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-019",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-020",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-022",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-024",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-026",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-029",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-030",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-041",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-044",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-050",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-051",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-055",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-066",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-069",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-076",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-078",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-082",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-092",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-100",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-101",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-102",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-103",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-106",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-109",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-112",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-113",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-114",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-116",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-117",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-118",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-119",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-123",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-124",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-125",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-128",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        },
+        {
+          "page": "p-132",
+          "category": "layout-whitespace",
+          "severity": "note",
+          "detail": "同上"
+        }
+      ]
+    }
+  ]
+}

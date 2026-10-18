@@ -1,0 +1,51 @@
+{
+  "all_pages_viewed": true,
+  "books": [
+    {
+      "file": "day28_タスク一括操作を実装しよう.pdf",
+      "sha256_12": "56cce696bbda",
+      "pages_total": 162,
+      "ranges_inspected": ["1-162"],
+      "findings": [
+        {"page": 3, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 8, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 12, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 13, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 16, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 20, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 21, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 22, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 23, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 27, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 28, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 29, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 32, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 33, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 35, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 37, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 39, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 41, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁図3不可分の副作用、内容欠落なし）"},
+        {"page": 43, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 51, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 57, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁段落の不可分副作用、内容欠落なし）"},
+        {"page": 65, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 66, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 69, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 72, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 75, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 76, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 86, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁段落の不可分副作用、内容欠落なし）"},
+        {"page": 89, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁図6不可分の副作用、内容欠落なし）"},
+        {"page": 91, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁段落の不可分副作用、内容欠落なし）"},
+        {"page": 95, "category": "layout-whitespace", "severity": "note", "detail": "段落終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 96, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 98, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 99, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 101, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁段落の不可分副作用、内容欠落なし）"},
+        {"page": 103, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 104, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"},
+        {"page": 105, "category": "layout-whitespace", "severity": "note", "detail": "コードブロック終端の後に大空白（次頁コードブロック不可分の副作用、内容欠落なし）"}
+      ]
+    }
+  ]
+}
