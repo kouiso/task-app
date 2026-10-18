@@ -168,9 +168,10 @@ const lockProjectsOfTasks = async (
 // 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
 // 先に lockProjectsOfTasks でプロジェクトを取り、removeMember などプロジェクトから取る処理とも
 // 「プロジェクト → タスク行」の順をそろえる。
+// FOR NO KEY UPDATE にするのは、コメント追加が取る外部キーの KEY SHARE を待たせないため。
 const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
   await tx.$queryRaw(
-    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`,
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`,
   );
 };
 

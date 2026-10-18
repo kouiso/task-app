@@ -236,7 +236,7 @@ const lockTaskRows = async (
   ids: string[]
 ): Promise<void> => {
   await tx.$queryRaw(
-    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`
   );
 };
 ```
@@ -1480,7 +1480,7 @@ const lockTaskRows = async (
   ids: string[]
 ): Promise<void> => {
   await tx.$queryRaw(
-    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`
   );
 };
 ```
