@@ -637,18 +637,16 @@ return (
     <p className="text-sm font-medium
       text-muted-foreground">登録日</p>
     <p className="text-base">
-      {currentUser.createdAt
-        ? format(
+      {format(
             new Date(currentUser.createdAt),
             'yyyy年MM月dd日',
-            { locale: ja })
-        : '-'}
+            { locale: ja })}
     </p>
   </div>
 </div>
 ```
 
-日付は `format(new Date(...), 'yyyy年MM月dd日', { locale: ja })` で整えます。この書き方では `yyyy` や `MM` のように数字を並べるだけなので`locale: ja` を外しても表示は同じです。付けてあるのはあとで `MMMM` のような月名の書き方へ変えたときそこだけ英語へ戻るのを防ぐためです。`new Date(...)` を挟むのは念のためで、このアプリは日時を `Date` のまま受け取る設定にしてあります。前に付いた `currentUser.createdAt ? ... : '-'` は値が無いまま `format` を呼んで例外が起き、Day 26 のエラー画面へ飛ぶのを防ぐための分岐です。日付が空のユーザーには代わりに `-` が1つ表示されます。
+日付は `format(new Date(...), 'yyyy年MM月dd日', { locale: ja })` で整えます。この書き方では `yyyy` や `MM` のように数字を並べるだけなので`locale: ja` を外しても表示は同じです。付けてあるのはあとで `MMMM` のような月名の書き方へ変えたときそこだけ英語へ戻るのを防ぐためです。このアプリは日時を `Date` のまま受け取る設定です。Prisma の User では `createdAt` と `updatedAt` が必須です。API も両方を返すため取得したユーザーの日時をそのまま整形します。読み込み中やユーザーを取得できない場合は Step 2 で先に判定しています。
 
 **確認ポイント**: 登録日が `yyyy年MM月dd日` 形式で正しく表示されていることを確認しましょう。
 
@@ -668,12 +666,10 @@ return (
       最終更新日
     </p>
     <p className="text-base">
-      {currentUser.updatedAt
-        ? format(
+      {format(
             new Date(currentUser.updatedAt),
             'yyyy年MM月dd日',
-            { locale: ja })
-        : '-'}
+            { locale: ja })}
     </p>
   </div>
 </div>
@@ -1122,11 +1118,13 @@ export default function
       onError: (error) => {
         toast.error(
           error.message
-          ?? 'パスワードの変更に失敗しました'
+          || 'パスワードの変更に失敗しました'
         );
       },
     });
 ```
+
+`Error.message` は文字列です。空文字では失敗の案内が出ないため `||` で既定の文言を使います。サーバーから文言が届いた場合はその内容を表示します。
 
 変数の名前が `changePasswordMutation` ではなく `changePassword` になっています。Day 10 から Day 24 では `createMutation` のように末尾へ `Mutation` を付けてきました。完成版のコードがこの画面では手続き名をそのまま使っているのでそれに合わせています。どちらでも動きます。
 
@@ -1134,7 +1132,7 @@ export default function
 
 **確認ポイント**:
 - `onSuccess` で toast 表示と画面遷移をしている
-- `onError` で `??` を使ってフォールバックメッセージを設定している
+- `onError` で `||` を使って空文字の場合の案内を設定している
 
 ---
 
@@ -1693,7 +1691,7 @@ export default function ProfileEditPage() {
       onError: (error) => {
         toast.error(
           error.message
-          ?? 'プロフィールの更新に失敗しました'
+          || 'プロフィールの更新に失敗しました'
         );
       },
     });
@@ -1707,7 +1705,7 @@ export default function ProfileEditPage() {
 - useQuery でデータを取得している
 - useMutation で更新APIを設定している
 - 更新後に auth キャッシュを無効化している
-- `??` でフォールバックメッセージを設定している
+- `||` で空文字の場合の案内を設定している
 
 サーバーデータでフォームを初期化します。
 
@@ -2078,20 +2076,20 @@ npm run dev
 `?.` と `??` でアクセスの形をそろえるとnull チェックの繰り返しが減り、表示ロジックが読みやすくなります。
 なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
 
+`inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。ユーザーが取得できた場合の登録日と更新日は必ず `Date` です。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
+
 #### Before（改善前のコード）
 
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import type { AppRouter } from '@/server/api/root';
 
-type CurrentUser = {
-  name: string | null;
-  email: string;
-  avatar: string | null;
-  createdAt: Date | string | null;
-  updatedAt: Date | string | null;
-} | null;
+type CurrentUser =
+  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
+  | undefined;
 
 export function buildProfileViewModel(currentUser: CurrentUser) {
   let avatarUrl = '';
@@ -2127,28 +2125,24 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
   let createdAtLabel = '-';
   if (currentUser) {
-    if (currentUser.createdAt) {
-      createdAtLabel = format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
-        locale: ja,
-      });
-    }
+    createdAtLabel = format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+      locale: ja,
+    });
   }
 
   let updatedAtLabel = '-';
   if (currentUser) {
-    if (currentUser.updatedAt) {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`initial` では入れ子が3段になりました。名前の1文字目を取り出すために、`currentUser`、`name`、`name[0]` の順で確かめています。登録日と更新日も同じ形なので表示項目を1つ足すたびに `let` と `if` が5行ずつ増えていきます。
+`initial` では入れ子が3段になりました。名前の1文字目を取り出すために、`currentUser`、`name`、`name[0]` の順で確かめています。登録日と更新日もユーザー全体の取得を確かめます。取得したユーザーの日時には値があるので日時自体の空判定は不要です。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-      updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
-        locale: ja,
-      });
-    }
+    updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+      locale: ja,
+    });
   }
 
   return {
@@ -2164,7 +2158,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 **このコードの問題点**:
 
-- `currentUser` の null チェックが何度も出てきてプロフィールで何を表示したいのかが埋もれる
+- `currentUser` の取得済み判定が何度も出てきてプロフィールで何を表示したいのかが埋もれる
 - `name[0]` のような細かいアクセスほどチェック漏れが起きやすい
 - 表示項目が増えるたびに `let` と `if` が増え、フォーム初期化でも同じ形を繰り返しやすい
 
@@ -2172,21 +2166,17 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import type { AppRouter } from '@/server/api/root';
 
-type CurrentUser = {
-  name: string | null;
-  email: string;
-  avatar: string | null;
-  createdAt: Date | string | null;
-  updatedAt: Date | string | null;
-} | null;
+type CurrentUser =
+  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
+  | undefined;
 
-function formatProfileDate(value: Date | string | null | undefined) {
-  return value
-    ? format(new Date(value), 'yyyy年MM月dd日', { locale: ja })
-    : '-';
+function formatProfileDate(value: NonNullable<CurrentUser>['createdAt']) {
+  return format(new Date(value), 'yyyy年MM月dd日', { locale: ja });
 }
 
 export function buildProfileViewModel(currentUser: CurrentUser) {
@@ -2203,8 +2193,8 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    createdAtLabel: formatProfileDate(currentUser?.createdAt),
-    updatedAtLabel: formatProfileDate(currentUser?.updatedAt),
+    createdAtLabel: currentUser ? formatProfileDate(currentUser.createdAt) : '-',
+    updatedAtLabel: currentUser ? formatProfileDate(currentUser.updatedAt) : '-',
   };
 }
 ```
@@ -2769,17 +2759,15 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">登録日</p>
                   <p className="text-base">
-                    {currentUser.createdAt
-                      ? format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+                    {format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
                           locale: ja,
-                        })
-                      : '-'}
+                        })}
                   </p>
                 </div>
               </div>
 ```
 
-`currentUser.createdAt ? ... : '-'` の分岐は値が無いまま `format` を呼んで例外が起きるのを防ぐためのものです。`locale: ja` は `yyyy` と `MM` だけの書き方では見た目に出ませんがあとで月名の書き方へ変えたときにここだけ英語へ戻るのを防ぎます。
+取得したユーザーの `createdAt` は必須です。読み込み中かどうかはページの先頭で判定しているのでここでは日付を整形します。`locale: ja` は `yyyy` と `MM` だけの書き方では見た目に出ませんがあとで月名の書き方へ変えたときにここだけ英語へ戻るのを防ぎます。
 
 **最終更新日の行**:
 
@@ -2793,11 +2781,9 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">最終更新日</p>
                   <p className="text-base">
-                    {currentUser.updatedAt
-                      ? format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+                    {format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
                           locale: ja,
-                        })
-                      : '-'}
+                        })}
                   </p>
                 </div>
               </div>
@@ -2943,11 +2929,9 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">登録日</p>
                   <p className="text-base">
-                    {currentUser.createdAt
-                      ? format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+                    {format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
                           locale: ja,
-                        })
-                      : '-'}
+                        })}
                   </p>
                 </div>
               </div>
@@ -2959,11 +2943,9 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">最終更新日</p>
                   <p className="text-base">
-                    {currentUser.updatedAt
-                      ? format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+                    {format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
                           locale: ja,
-                        })
-                      : '-'}
+                        })}
                   </p>
                 </div>
               </div>
@@ -3005,6 +2987,8 @@ export default function ProfilePage() {
 > **完成形の参考コード**: 完成版には `src/app/profile/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違いは長い名前への備えです。完成版は名前の欄に `min-w-0` と `break-words` を付けて折り返す形にし、名前が空の人はメールアドレスを代わりに出しています。見比べるときはこの指定は違って当たり前だと思って読んでください（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/component/layout/app-layout.tsx`
+
+この章のナビゲーションは Day 08 のサイドバーにプロフィールへの入口を足した形です。狭い画面では横スクロールのメニューを使います。完成アプリの `src/` は開閉できるモバイルメニューと上部の検索欄を持つ別構成です。名前の横にはプロフィール画像も出します。本教材では次のコードを使います。認証確認と管理者だけのメニュー表示とログアウト時のキャッシュ破棄は両方で維持しています。販売用 ZIP に完成アプリの `src/` は入っていません。
 
 **サイドバーのユーザー情報**:
 
@@ -3442,7 +3426,7 @@ export default function ChangePasswordPage() {
       router.push('/profile');
     },
     onError: (error) => {
-      toast.error(error.message ?? 'パスワードの変更に失敗しました');
+      toast.error(error.message || 'パスワードの変更に失敗しました');
     },
   });
 ```
@@ -3675,7 +3659,7 @@ export default function ChangePasswordPage() {
       router.push('/profile');
     },
     onError: (error) => {
-      toast.error(error.message ?? 'パスワードの変更に失敗しました');
+      toast.error(error.message || 'パスワードの変更に失敗しました');
     },
   });
 
@@ -3878,7 +3862,7 @@ export default function ProfileEditPage() {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'プロフィールの更新に失敗しました');
+      toast.error(error.message || 'プロフィールの更新に失敗しました');
     },
   });
 ```
@@ -4148,7 +4132,7 @@ export default function ProfileEditPage() {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'プロフィールの更新に失敗しました');
+      toast.error(error.message || 'プロフィールの更新に失敗しました');
     },
   });
 
@@ -4379,6 +4363,6 @@ DevTools で自力修正するデバッグ演習を行います。
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
