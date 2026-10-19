@@ -342,7 +342,6 @@ export const taskRouter = createTRPCRouter({
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
 
-
     try {
       // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めた単一の update で
