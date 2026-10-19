@@ -593,7 +593,6 @@ return (
               </Label>
               <Input id="color"
                 type="color"
-                className="h-10"
                 {...register('color')} />
             </div>
 ```
@@ -644,7 +643,7 @@ return (
         </div>
 ```
 
-> `type="color"` を指定するとブラウザ標準のカラーピッカーが表示されます。`className="h-10"` で他の入力欄と高さを揃えています。`{...register('color')}` で、選んだ色が自動的にフォームの値として管理されます。
+> `type="color"` を指定するとブラウザ標準のカラーピッカーが表示されます。共通の `Input` にある `h-9` で他の入力欄と高さをそろえています。`{...register('color')}` で、選んだ色が自動的にフォームの値として管理されます。
 
 **確認ポイント**:
 - カラー・開始日・終了日の3つの欄を書いた
@@ -1532,12 +1531,11 @@ export function ProjectDialog({
                 </Label>
                 <Input id="color"
                   type="color"
-                  className="h-10"
                   {...register('color')} />
               </div>
 ```
 
-説明欄に赤字の表示を付けていないのはこの項目が任意だからです。検証で落ちる条件を持たないので`errors.description` に値の入る場面はありません。カラー欄に `className="h-10"` を足してあるのは`type="color"` の入力欄がブラウザごとに違う既定の高さを持つためです。そのままだと隣の日付欄と高さがそろいません。
+説明欄に赤字の表示を付けていないのはこの項目が任意だからです。検証で落ちる条件を持たないので`errors.description` に値の入る場面はありません。カラー欄と日付欄には共通の `Input` を使います。`Input` の `h-9` がどちらにも適用されるため枠の高さがそろいます。
 
 **開始日と終了日の欄**:
 
@@ -1773,7 +1771,6 @@ export function ProjectDialog({
                 </Label>
                 <Input id="color"
                   type="color"
-                  className="h-10"
                   {...register('color')} />
               </div>
 
@@ -2411,6 +2408,6 @@ Day 10 終了時点のダイアログは完成版の `src/component/project/proj
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

@@ -106,7 +106,7 @@ src/
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
-| Step 0 | メンバー管理APIを `project.ts` に追加する | 20分 |
+| Step 0 | メンバー管理APIと行ロックを `project.ts` に追加する | 35分 |
 | Step 1 | プロジェクト詳細ビューの接続を確認する | 6分 |
 | Step 2 | ProjectDetailViewに渡す値を `page.tsx` に用意する | 7分 |
 | Step 3 | メンバー追加用のstateを準備する | 6分 |
@@ -116,7 +116,7 @@ src/
 | Step 7 | サーバー側の権限チェックを理解する | 5分 |
 | Step 8 | 動作確認 | 6分 |
 
-**合計時間**: 約69分です。
+**合計時間**: 約84分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -124,7 +124,7 @@ src/
 
 ---
 
-### Step 0: メンバー管理APIを `project.ts` に追加する（20分）
+### Step 0: メンバー管理APIを `project.ts` に追加する（35分）
 
 追加するのは `getAvailableUsers`、`addMember`、`removeMember`、`updateMemberRole` の4つです。
 
@@ -293,7 +293,7 @@ const projectMemberSchema = z.object({
 
 `addMember` で一番大事なのは追加する前に「もうすでにメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
 
-#### 0-3. removeMember（最後のOWNERは消せない）
+#### 0-3. removeMember（同時操作でも最後のOWNERを残す）
 
 `addMember` の下に追加します。`removeMember` は「OWNER の人数を数える」「メンバーを消す」「その人の担当タスクを外す」を1つの手続きの中で行います。途中で止まると片方だけ実行された状態が残ります。そこで全体を `prisma.$transaction` で囲みます。先に `project.ts` の import を2か所直します。1つ目は既存の `import type { Prisma }` の行の**書き換え**です。
 
@@ -315,7 +315,23 @@ import { TASK_STATUS } from '@/lib/constant/status';
 `TASK_STATUS` は担当を外すタスクの状態を判定するために使います。import を直したら入力の形とプロジェクトの行をロックする処理から書きます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
+import { Prisma } from '@prisma/client';
+```
+
+`Prisma` を値として取り込むと `Prisma.sql` を実行できます。型の注釈にも引き続き使えます。同じインポート欄へ次の1行も追加します。完了とキャンセルの担当記録を残す判定に使います。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
+import { TASK_STATUS } from '@/lib/constant/status';
+```
+
+`addMember` の下へ次のブロックを順番に貼ります。各ブロックの続きも含めて1つの `removeMember` です。
+
+削除対象はプロジェクトIDとユーザーIDの組で指定します。続けて権限確認から保存までをトランザクション（途中で失敗したら中の変更をまとめて取り消す処理）に入れます。
+
+```typescript
+// filepath: src/server/api/routers/project.ts
   removeMember: protectedProcedure
     .input(
       z.object({
@@ -371,7 +387,7 @@ sequenceDiagram
 
 削除でも最初に見るのは自分の権限です。`removeMember` は他人をプロジェクトから外す操作なので `canManageMembers` を持つ OWNER と ADMIN だけが先へ進めます。MEMBER と VIEWER はこの1行で `FORBIDDEN` になり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。Step 6 では画面側でも削除ボタンを隠しますが、このチェックはボタンの有無とは関係なく毎回動きます。ロックを取ったあとに読んだ権限は削除の完了まで変わりません。
 
-続けて削除対象のメンバーが実際に存在するかを確認します。
+ロックはこのトランザクションが終わるまで保ちます。退会と降格が同じ行をロックするため同じプロジェクトの2つの操作は順に進みます。待っていた処理は先の変更が終わってから権限と人数を読み直します。まず `tx` で操作する本人を探して権限を確かめます。プロジェクトの行をロックしても入力IDの相手を閲覧する権限は増えません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -432,9 +448,7 @@ sequenceDiagram
         }
 ```
 
-1人しかいない場合は削除を止めます。OWNER が0人になるとプロジェクトの削除とアーカイブを実行できる人がいなくなります。名前の変更やメンバー追加は ADMIN にも許可されています。MEMBER や VIEWER を削除するときはこの人数チェックを通りません。
-
-チェックを抜けたら実際に削除します。
+ADMINがOWNERを外せるとプロジェクトを乗っ取れるためOWNERの削除はOWNERに限ります。MEMBERとVIEWERは手前の権限確認で止まります。削除対象がOWNERの場合だけ追加の制限を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
@@ -477,14 +491,14 @@ sequenceDiagram
 
 最後の `return { success: true }` は削除には返せる中身が無いための返事です。Step 6 で書く画面側はこれを受け取った時点で `getById` を取り直し、消えたメンバーが一覧から居なくなったことを表示へ反映します。
 
-#### 0-4. updateMemberRole（ロール変更の手続きを用意する）
+`removeMember` の下へ次のブロックを順番に貼ります。Step 2の画面から呼ぶ役割変更の手続きです。
 
 `removeMember` の下に追加します。`ProjectDetailView` の中にはメンバーのロールを変えるセレクトボックスがあります。これは Step 2 で書く `handleUpdateMemberRole` から呼ばれ、その先でこの `updateMemberRole` procedure を叩きます。先にサーバー側の手続きを用意して Step 2 のクライアント側とつなげます。
 
 最初に `removeMember` と同じ形でトランザクションとプロジェクト行のロックを置きます。
 
 ```typescript
-// filepath: src/server/api/routers/project.ts（続き）
+// filepath: src/server/api/routers/project.ts
   updateMemberRole: protectedProcedure
     .input(
       z.object({
@@ -549,8 +563,6 @@ sequenceDiagram
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
-        // OWNERロールの付与・剥奪はOWNERのみに限定する。
-        // ADMINによる権限昇格・オーナー降格を防ぐため。
         if (
           (input.role === PROJECT_MEMBER_ROLE.OWNER ||
             targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
@@ -2050,7 +2062,7 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
 
 ロックを取ったあとで自分の権限を読みます。MEMBER と VIEWER はこの1行で止まり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。
 
-**removeMember の対象確認**:
+ロックはこのトランザクションが終わるまで保ちます。退会と降格が同じ行をロックするため同じプロジェクトの2つの操作は順に進みます。待っていた処理は先の変更が終わってから権限と人数を読み直します。まず `tx` で操作する本人を探して権限を確かめます。プロジェクトの行をロックしても入力IDの相手を閲覧する権限は増えません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
@@ -2234,9 +2246,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole のオーナー権限の変更制限
-        // OWNERロールの付与・剥奪はOWNERのみに限定する。
-        // ADMINによる権限昇格・オーナー降格を防ぐため。
+// 完成版: メンバー操作の続き
         if (
           (input.role === PROJECT_MEMBER_ROLE.OWNER ||
             targetMember.role === PROJECT_MEMBER_ROLE.OWNER) &&
@@ -2249,13 +2259,11 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-`input.role === OWNER` は誰かを新しく OWNER にする昇格、`targetMember.role === OWNER` は今の OWNER を別のロールへ変える降格です。どちらも実行する本人が OWNER かを問いたいので2つを `||` でつないで1つの条件にまとめています。別々の `if` に分けると片方だけ確認を書き忘れる余地が生まれます。
-
-**updateMemberRole の最後のオーナーの保護**:
+最後のOWNERを降格させる操作を止めます。人数確認だけをトランザクションへ入れても同時操作は防げません。ここでは確認から変更まで同じ行のロックを保つため待っていた処理が最新の人数を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の最後のオーナーの保護
+// 完成版: メンバー操作の続き
         if (
           targetMember.role === PROJECT_MEMBER_ROLE.OWNER &&
           input.role !== PROJECT_MEMBER_ROLE.OWNER
@@ -2282,7 +2290,7 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
-// 完成版: updateMemberRole の更新
+// 完成版: メンバー操作の続き
         return await tx.projectMember.update({
           where: {
             userId_projectId: {
@@ -3344,6 +3352,6 @@ Day 13 ではタスク一覧ページを作ります。プロジェクトの中�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

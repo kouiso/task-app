@@ -97,6 +97,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/component/task/task-detail-dialog.tsx": "day19 の注記で権限の確かめ方の差分を説明済み",
     "src/lib/session.ts": "day07 の注記で saveSessionCookie 切り出しの差分を説明済み",
     "src/server/api/routers/auth.ts": "day07 は行の折り方の違いで末尾のカンマの有無が3か所違う。動きは同じ",
+    "src/app/task/page.tsx": "day28 の注記で、絞り込みを URL のクエリへ書き込む処理（task-filter-query.ts）の差分を説明済み",
 }
 
 # 実ドリフトの棚卸し。src/ が後から改良されて教材が追いついていない差分、
@@ -105,19 +106,16 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # 処置は「教材を src/ に追従させる（PDF 再生成が要る）」か
 # 「src/ を教材に合わせる」か「意図的として EXPECTED_DIFFERENT へ昇格」かの
 # 3択で、解決したものから順にこの表を空にする。
+#
+# 登録の書き方: 値の末尾に「追跡: #番号」（直す場所）と「消す条件: …」を書く。
+# どの処置でも、完成版と src/ が一致するか EXPECTED_DIFFERENT へ移した時点で
+# この登録は不要になる。一致したまま残すと「登録が古い」として失敗するので、
+# 消し忘れは CI が拾う。
 KNOWN_DRIFT: dict[str, str] = {
-    # issue #446 対応で src/ のみ送信世代の照合・成功トースト・送信中の
-    # ボタン無効化を持つ。教材側は未追従（PDF 再生成が要る）
-    "src/app/my-task/page.tsx": "src/ は issue #446 の送信中書き足し対策済み。教材の完成版は旧実装のまま。追跡: #658",
     # 教材の day25 完成版は Day 08 の簡易サイドバーに Day 13〜25 の変更を積んだ形
     # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
     # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
-    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658",
-    # #634 のセキュリティ修正で src/ の user.getById の assignedTasks に
-    # 「呼び出し元が所属するプロジェクトのタスクだけ」の絞り込みが入った。
-    # 教材 day29 の完成版は絞り込み前のまま。教材追従（PDF 再生成が要る）は #655 で行い、
-    # 終わったらこの登録を消す
-    "src/server/api/routers/user.ts": "src/ は #634 で assignedTasks を呼び出し元の所属プロジェクトに絞る。教材 day29 の完成版は未追従。追跡: #655",
+    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658。消す条件: 3択（教材 day25 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
 }
 
 
