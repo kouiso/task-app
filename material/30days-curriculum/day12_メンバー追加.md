@@ -448,7 +448,7 @@ sequenceDiagram
         }
 ```
 
-ADMINがOWNERを外せるとプロジェクトを乗っ取れるためOWNERの削除はOWNERに限ります。MEMBERとVIEWERは手前の権限確認で止まります。削除対象がOWNERの場合だけ追加の制限を確かめます。
+`ownerCount` が 1 のとき、いま消そうとしている人が最後の OWNER です。そのまま削除すると OWNER が 0 人になるので `BAD_REQUEST` で止めます。`count` も `tx` で実行するため、ロックを取ったあとの人数を読みます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
