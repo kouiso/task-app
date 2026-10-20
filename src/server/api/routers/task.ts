@@ -351,7 +351,11 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         // 担当者の確認はプロジェクト行のロックを取ってから行う。
         // ロックの前に確認すると、確認のあとにメンバー削除が割り込み、外れた人が担当に入る。
-        await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        // 担当者を付けるか、プロジェクトを移すときだけ取る。タイトルや優先度だけの編集まで取ると、
+        // 同じプロジェクトのタスク更新がすべて 1 件ずつの順番待ちになる。
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
         if (isProjectChanging) {
           // 移動先プロジェクトでも canEdit 権限を持つかを確認

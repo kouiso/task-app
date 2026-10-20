@@ -1566,7 +1566,9 @@ export const taskRouter = createTRPCRouter({
 
     try {
       return await prisma.$transaction(async (tx) => {
-        await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
         if (isProjectChanging) {
           const destinationMember = await tx.projectMember.findUnique({

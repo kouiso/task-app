@@ -49,14 +49,21 @@ async function callWhileMemberIsRemoved<T>(
     markLocked = resolve;
   });
 
-  const remover = prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`;
-    markLocked();
-    await released;
-    await tx.projectMember.delete({
-      where: { userId_projectId: { userId: memberId, projectId } },
-    });
-  });
+  let removerPid = 0;
+  const remover = prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`;
+      const pid = await tx.$queryRaw<Array<{ pid: number }>>`SELECT pg_backend_pid() AS pid`;
+      removerPid = pid[0]?.pid ?? 0;
+      markLocked();
+      await released;
+      await tx.projectMember.delete({
+        where: { userId_projectId: { userId: memberId, projectId } },
+      });
+    },
+    // ポーリングの上限（約 3 秒）より長く保持できるよう、既定の 5 秒に頼らず明示する。
+    { timeout: 15_000 },
+  );
 
   await locked;
   const pending = call().then(
@@ -64,16 +71,29 @@ async function callWhileMemberIsRemoved<T>(
     (error: unknown) => ({ ok: false as const, error }),
   );
 
-  // 呼び出しがロック待ちに入るまで待つ。待たずに離すと、順序が毎回変わってしまう。
-  for (let i = 0; i < 100; i++) {
+  // 呼び出しが「このロックを持つ remover」に待たされるまで待つ。待たずに離すと、順序が毎回変わってしまう。
+  // 他のテストや別接続のロック待ちを数えないよう、remover の PID にブロックされた接続だけを見る。
+  let blocked = false;
+  for (let i = 0; i < 60; i++) {
     const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
-      SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock'`;
-    if ((waiting[0]?.n ?? 0) > 0) break;
+      SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND ${removerPid}::int = ANY(pg_blocking_pids(pid))`;
+    if ((waiting[0]?.n ?? 0) > 0) {
+      blocked = true;
+      break;
+    }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
+  // 待ちに入らないまま離すと、修正前のコードでも通ってしまう。remover を必ず解放して終わらせてから失敗にする。
   release();
   await remover;
-  return await pending;
+  const result = await pending;
+  if (!blocked) {
+    throw new Error(
+      '呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした',
+    );
+  }
+  return result;
 }
 
 describe('taskRouter', () => {

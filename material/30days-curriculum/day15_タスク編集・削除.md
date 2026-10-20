@@ -233,13 +233,15 @@ const taskUpdateSchema = z.object({
 
 #### 0-6. プロジェクトを移すときの確認
 
-先にトランザクションを始めて移動元と移動先をロックします。移動しない編集でも現在のプロジェクトをロックします。担当者の所属確認と保存の間へ退会処理が入るのを防ぐためです。移動する場合はその後に移動先の編集権限を確認します。採番は0-9で行います。
+先にトランザクションを始め、担当者を付けるときとプロジェクトを移すときだけ、移動元と移動先をロックします。担当者の所属確認と保存の間へ退会処理が入るのを防ぐためです。タイトルや優先度だけの編集でもロックすると、同じプロジェクトのタスク更新が1件ずつの順番待ちになるので、ここでは取りません。担当者を外す（`null`）操作は所属を確認しないので、ロックは要りません。移動する場合はその後に移動先の編集権限を確認します。採番は0-9で行います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
     try {
       return await prisma.$transaction(async (tx) => {
-        await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
         if (isProjectChanging) {
           // 移動先プロジェクトでも canEdit 権限を持つかを確認
@@ -1718,7 +1720,9 @@ export const taskRouter = createTRPCRouter({
 // 完成版: update のプロジェクト移動
     try {
       return await prisma.$transaction(async (tx) => {
-        await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
         if (isProjectChanging) {
           const destinationMember = await tx.projectMember.findUnique({
