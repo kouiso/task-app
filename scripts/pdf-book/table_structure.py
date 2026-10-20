@@ -6,6 +6,7 @@ import hashlib
 import html
 import math
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
@@ -65,6 +66,92 @@ def _inner(source, node):
     return source[node.inner_start:node.inner_end]
 
 
+def _rect_inside(rect, box):
+    x = (rect['left'] + rect['right']) / 2
+    y = (rect['top'] + rect['bottom']) / 2
+    return box['left'] <= x <= box['right'] and box['top'] <= y <= box['bottom']
+
+
+def cell_visual_rows(cell, code_rects):
+    """セルの見た目の行を、文の行（prose_lines）と行内コードの上端で束ねて返す。
+
+    上端の差が6px以内の断片は同じ行とする（前の断片からの連鎖で判定）。
+    脚注番号のように別の prose_lines に分かれても、上端が揃っていれば1行。
+    行の幅は含まれる断片の左端から右端まで。
+    """
+    rects = [line['rect'] for line in cell.get('prose_lines') or []]
+    if cell.get('rect'):
+        rects += [r for r in code_rects if _rect_inside(r, cell['rect'])]
+    rows = []
+    for rect in sorted(rects, key=lambda r: r['top']):
+        if rows and rect['top'] - rows[-1]['top'] <= 6:
+            rows[-1]['left'] = min(rows[-1]['left'], rect['left'])
+            rows[-1]['right'] = max(rows[-1]['right'], rect['right'])
+            rows[-1]['top'] = rect['top']
+        else:
+            rows.append({'left': rect['left'], 'right': rect['right'], 'top': rect['top']})
+    return rows
+
+
+def cell_visual_lines(cell, code_rects):
+    """セルの見た目の行数（cell_visual_rows の件数）。3の検査からも同じ関数を呼ぶ。"""
+    return len(cell_visual_rows(cell, code_rects))
+
+
+# restructure_tables() が2列・3列の表の短い列に付ける幅の見積もりに使う値（issue #477）
+TABLE_WIDTH_EM = 35
+SHORT_COLUMN_MAX_EM = 14
+SHORT_COLUMN_PADDING_EM = 2
+UNSIZED_COLUMN_MIN_EM = 13
+FULL_WIDTH_UNIT = 1.0
+NARROW_WIDTH_UNIT = 0.7
+
+
+def _estimate_text_width(text):
+    """全角の字は1、それ以外の字は0.7として幅を見積もる（行内コードの字も0.7）。"""
+    width = 0.0
+    for char in text:
+        width += FULL_WIDTH_UNIT if unicodedata.east_asian_width(char) in {'W', 'F'} else NARROW_WIDTH_UNIT
+    return width
+
+
+def _cell_width_estimate(source, cell):
+    """セルの中身の見積もり幅。<br> があれば行ごとに見積もって最大を取る。"""
+    inner = _inner(source, cell)
+    lines = re.split(r'<br\s*/?>', inner)
+    estimates = []
+    for line in lines:
+        text = html.unescape(re.sub(r'<[^>]+>', '', line))
+        estimates.append(_estimate_text_width(text))
+    return max(estimates, default=0.0)
+
+
+def _short_column_widths(source, rows, columns):
+    """短い列の見出しセルに付ける幅（em）を列番号の対応で返す。
+
+    列ごとにいちばん長いセルの幅を見積もり、いちばん大きい列を「長い列」とする。
+    長い列の見積もりが（35 ÷ 列数）− 2 以下の表は今のまま（幅を付けない）。
+    長い列のほかで見積もりが14以下の列を「短い列」とし、見積もり+2の幅を付ける。
+    幅を付けない列が1列あたり13emより狭くなるときは、いちばん広い短い列から幅を外す。
+    """
+    estimates = [0.0] * columns
+    for row in rows:
+        for index, cell in enumerate(row.children[:columns]):
+            estimates[index] = max(estimates[index], _cell_width_estimate(source, cell))
+    long_index = max(range(columns), key=lambda i: estimates[i])
+    if estimates[long_index] <= TABLE_WIDTH_EM / columns - 2:
+        return {}
+    widths = {i: est + SHORT_COLUMN_PADDING_EM
+              for i, est in enumerate(estimates)
+              if i != long_index and est <= SHORT_COLUMN_MAX_EM}
+    def unsized_too_narrow(current):
+        remaining = TABLE_WIDTH_EM - sum(current.values())
+        return remaining / (columns - len(current)) < UNSIZED_COLUMN_MIN_EM
+    while widths and unsized_too_narrow(widths):
+        del widths[max(widths, key=lambda i: widths[i])]
+    return widths
+
+
 def _attribute_text(attrs):
     return ''.join(f' {k}="{html.escape(v or "", quote=True)}"' for k, v in attrs.items())
 
@@ -97,6 +184,17 @@ def restructure_tables(markup: str, forced: dict[int, str] | None = None) -> tup
                 'layout': 'stacked-definition-list' if reason else 'table', 'reason': reason}
         report.append(item)
         if not reason:
+            if rows and columns in (2, 3):
+                widths = _short_column_widths(markup, rows, columns)
+                if widths:
+                    item['sized_columns'] = {str(i): round(w, 2) for i, w in sorted(widths.items())}
+                    for index, width in widths.items():
+                        header = rows[0].children[index]
+                        attrs = dict(header.attrs)
+                        style = f'width: {width:g}em;'
+                        attrs['style'] = (attrs.get('style', '').rstrip('; ') + '; ' + style).lstrip('; ')
+                        edits.append((header.start, header.inner_start,
+                                      '<' + header.tag + _attribute_text(attrs) + '>'))
             continue
         if not rows or not columns or any(c.tag != 'th' for c in rows[0].children):
             raise ValueError('見出し行のない表は自動変換できません')
@@ -162,6 +260,13 @@ def measured_tables_to_stack(manifest: dict, report: dict, remaining_orders: lis
     result = {}
     id_to_order = {table['id']: order for table, order in zip(tables, remaining_orders)}
     observed = {item['id']: item for item in dom.get('observed', [])}
+    code_rects_by_table: dict[str, list] = {}
+    for group in dom.get('observed', []):
+        for obs_item in group.get('items', []):
+            geometry = obs_item.get('table_geometry')
+            if geometry and obs_item.get('code_rect'):
+                code_rects_by_table.setdefault(
+                    geometry['identity']['value'], []).append(obs_item['code_rect'])
     for entry in manifest.get('entries', []):
         if not entry.get('plain_latin') or not entry.get('table_header'):
             continue
@@ -195,5 +300,11 @@ def measured_tables_to_stack(manifest: dict, report: dict, remaining_orders: lis
                 if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v <= 0 for v in (width, font)):
                     raise ValueError('本文列幅と書体の実寸がありません')
                 if width < font * 10:
-                    result[order] = 'measured_prose_width_below_10em'
+                    column_count = fragment.get('geometry', {}).get('column_count')
+                    if column_count is None or column_count > 3:
+                        # 列数の計測が無い記録は従来どおり狭いだけで縦並びにする
+                        result[order] = 'measured_prose_width_below_10em'
+                    elif cell_visual_lines(cell, code_rects_by_table.get(record['id'], [])) >= 2:
+                        # 3列までの表は狭いセルが実際に2行以上に折れたときだけ
+                        result[order] = 'measured_prose_width_below_10em'
     return result
