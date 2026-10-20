@@ -22,6 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from check_page_layout import (  # noqa: E402
+    find_loose_column_wrap_problems,
+    find_narrow_cell_wrap_problems,
     EDGE_TOLERANCE_MM,
     TEXT_BOTTOM_MM,
     TEXT_LEFT_MM,
@@ -593,6 +595,60 @@ CODE_SPLIT_CASES: list[tuple[str, int, int, bool]] = [
 ]
 
 
+def _wrap_cell(tag, text, column, width, tops, font=16):
+    return {"tag": tag, "text": text, "column_index": column,
+            "font_size_px": font,
+            "content_rect": {"left": 0, "right": width, "width": width},
+            "prose_lines": [{"rect": {"left": 0, "right": width * 0.2,
+                                      "top": top, "bottom": top + 12}}
+                            for top in tops]}
+
+
+def _wrap_report(cells, column_count=2):
+    return {"dom_audit": {
+        "table_inventory": {"tables": [{"id": "t", "fragments": [
+            {"page_index": 4, "geometry": {"column_count": column_count,
+                                           "cells": cells}}]}]},
+        "observed": []}}
+
+
+# 短い列が空いたまま別の列が折れる表（issue #477）。
+LOOSE_WRAP_CASES = [
+    ("空き列＋折れ列は指摘", _wrap_report([
+        _wrap_cell("TH", "項", 0, 200, [10]),
+        _wrap_cell("TH", "内容", 1, 200, [10]),
+        _wrap_cell("TD", "1", 0, 200, [30]),
+        _wrap_cell("TD", "長い説明", 1, 200, [30, 60]),
+    ]), 1),
+    ("全部1行なら指摘なし", _wrap_report([
+        _wrap_cell("TH", "項", 0, 200, [10]),
+        _wrap_cell("TH", "内容", 1, 200, [10]),
+        _wrap_cell("TD", "1", 0, 200, [30]),
+        _wrap_cell("TD", "短い", 1, 200, [30]),
+    ]), 0),
+    ("奥付（見出しなし）は数えない", _wrap_report([
+        _wrap_cell("TD", "1", 0, 200, [30]),
+        _wrap_cell("TD", "長い説明", 1, 200, [30, 60]),
+    ]), 0),
+]
+
+# 3列までの表で6文字以下のセルが折れる所（issue #477）。
+NARROW_CELL_WRAP_CASES = [
+    ("3列の表で短いセルが折れれば指摘", _wrap_report([
+        _wrap_cell("TD", "5分", 0, 100, [30, 60]),
+    ], column_count=3), 1),
+    ("1行に収まれば指摘なし", _wrap_report([
+        _wrap_cell("TD", "5分", 0, 100, [30]),
+    ], column_count=3), 0),
+    ("4列以上の表は対象外", _wrap_report([
+        _wrap_cell("TD", "5分", 0, 100, [30, 60]),
+    ], column_count=4), 0),
+    ("短い見出しセルの折れも指摘", _wrap_report([
+        _wrap_cell("TH", "時間", 2, 100, [10, 40]),
+    ], column_count=2), 1),
+]
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -778,6 +834,16 @@ def main() -> int:
     except ToolFailure:
         pass
 
+    for label, report, expected in LOOSE_WRAP_CASES:
+        got = len(find_loose_column_wrap_problems(report))
+        if got != expected:
+            failures.append(f"短い列の空き({label}): 期待 {expected} 実際 {got}")
+
+    for label, report, expected in NARROW_CELL_WRAP_CASES:
+        got = len(find_narrow_cell_wrap_problems(report))
+        if got != expected:
+            failures.append(f"短いセルの折れ({label}): 期待 {expected} 実際 {got}")
+
     if failures:
         print(f"❌ {len(failures)} 件失敗")
         for failure in failures:
@@ -788,9 +854,10 @@ def main() -> int:
                    + len(COLLAPSED_CASES) + len(ORPHAN_CASES) + len(IMAGE_CASES)
                    + len(SINGLE_ORPHAN_CASES) + len(URL_WRAP_CASES) + len(HYPHEN_BREAK_CASES)
                    + len(STACKED_SPLIT_CASES) + len(KEEP_NEXT_CASES) + len(SINGLE_ROW_FRAGMENT_CASES)
-                   + len(FOOTNOTE_SEPARATION_CASES) + 17)
+                   + len(FOOTNOTE_SEPARATION_CASES) + len(LOOSE_WRAP_CASES) + len(NARROW_CELL_WRAP_CASES) + 17)
     print(f"✅ {total_cases} ケースすべて通過")
     return 0
+
 
 
 if __name__ == "__main__":
