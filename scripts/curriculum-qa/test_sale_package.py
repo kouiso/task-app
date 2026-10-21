@@ -148,14 +148,82 @@ def active_lines(text: str) -> list[str]:
     return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
 
 
+def _shell_commands(text: str) -> list[str]:
+    """引用符の外の `&&` `||` `;` でコマンドを分ける。
+
+    echo の引数になった文字列を実行した呼び出しと数えないため、コマンドの先頭を見る。
+    引用符の中で割ると、本物の `|| salepkg_status=$?` まで echo 側へ吸われて判定が狂う。
+    """
+    parts: list[str] = []
+    buf: list[str] = []
+    quote = ""
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = ""
+            i += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            buf.append(ch)
+            i += 1
+            continue
+        if text.startswith("&&", i) or text.startswith("||", i):
+            parts.append("".join(buf))
+            buf = []
+            i += 2
+            continue
+        if ch == ";":
+            parts.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    parts.append("".join(buf))
+    return parts
+
+
+def _command_text(line: str) -> str:
+    """workflow の `run:` より後ろをシェル本文として返す。シェル行はそのまま。"""
+    marker = "run:"
+    idx = line.find(marker)
+    if idx == -1:
+        return line
+    return line[idx + len(marker) :]
+
+
+def _executes(line: str, needle: str) -> bool:
+    """needle を実際に実行するコマンドがある。
+
+    `echo python3 ...` のように echo の引数へ置き換えた行は文字列としては呼び出しを含むが、
+    実行されない。コメント行と同じく、呼んでいないと数える。
+    """
+    for cmd in _shell_commands(_command_text(line)):
+        if needle not in cmd:
+            continue
+        tokens = cmd.split()
+        if not tokens:
+            continue
+        if tokens[0].strip("'\"") == "echo":
+            continue
+        return True
+    return False
+
+
 def wiring_problems(workflow: str, phase: str) -> list[str]:
     """workflow と phase スクリプトの配線の不備を返す。空なら配線は生きている。"""
     problems: list[str] = []
-    if not any("bash .github/ci/run.sh material-corpus" in line for line in active_lines(workflow)):
+    if not any(
+        _executes(line, "bash .github/ci/run.sh material-corpus") for line in active_lines(workflow)
+    ):
         problems.append("material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
     phase_lines = active_lines(phase)
     if not any(
-        "scripts/curriculum-qa/test_sale_package.py" in line and "salepkg_status=$?" in line
+        _executes(line, "scripts/curriculum-qa/test_sale_package.py") and "salepkg_status=$?" in line
         for line in phase_lines
     ):
         problems.append(
@@ -174,6 +242,7 @@ def check_workflow_wiring() -> tuple[int, int]:
     実行するだけでは足りない。終了コードを最後の集計へ入れていないと、
     赤くなっても Gate 全体は緑のまま通る。
     コメント化された呼び出しは実行されないので、コメント行は数えない。
+    echo の引数へ置き換えた呼び出しも実行されないので、同じように数えない。
     """
     failed = 0
     for problem in wiring_problems(
@@ -200,6 +269,26 @@ def check_workflow_wiring() -> tuple[int, int]:
             "集計の条件式をコメント化したら落ちる",
             live_workflow,
             live_phase.replace("if [", "# if [", 1),
+            1,
+        ),
+        (
+            "phase の呼び出しを echo に置き換えたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                "python3 scripts/curriculum-qa/test_sale_package.py",
+                "echo python3 scripts/curriculum-qa/test_sale_package.py",
+                1,
+            ),
+            1,
+        ),
+        (
+            "workflow の呼び出しを echo に置き換えたら落ちる",
+            live_workflow.replace(
+                "bash .github/ci/run.sh material-corpus",
+                "echo bash .github/ci/run.sh material-corpus",
+                1,
+            ),
+            live_phase,
             1,
         ),
     ]
