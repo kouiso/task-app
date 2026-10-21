@@ -42,6 +42,13 @@ class TableBuildTest(unittest.TestCase):
                       'has_prose': True, 'font_size_px': 16,
                       'content_rect': {'left': i * 100 + 5, 'right': (i + 1) * 100 - 5,
                                        'width': 90},
+                      # 3列までの表は狭いセルが実際に2行以上に折れたときだけ
+                      # 縦並びになるので、狭いセルに上端の違う行を2つ持たせる
+                      'prose_lines': [
+                          {'rect': {'left': i * 100 + 5, 'right': (i + 1) * 100 - 5,
+                                    'top': 10, 'bottom': 20}},
+                          {'rect': {'left': i * 100 + 5, 'right': (i + 1) * 100 - 5,
+                                    'top': 34, 'bottom': 44}}],
                       'box': {'horizontal_fixed': 10}}
                      for i in range(3)]
             if self.missing_prose:
