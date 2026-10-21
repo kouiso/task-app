@@ -12,7 +12,7 @@ Day 10 で作った ProjectDialog を「編集モード」で再利用してプ�
 
 この日はまずサーバー側に `update` / `delete` / `archive` / `unarchive` と詳細取得用の `getById` の5つを自分で書きます。そのあと編集・削除・アーカイブと詳細画面の表示をつなぎます。
 
-スクリーンショット: 今日の最後に目指す編集モードの表示です。まだ自分の画面には出せません。
+下の画像は今日の最後に目指す編集モードの表示です。まだ自分の画面には出せません。
 
 ![プロジェクト編集ダイアログ。名前欄に「ポートフォリオサイト」を表示。説明欄には既存の文章を表示。ボタンは「更新」になっている](./screenshots/day11/project-edit-dialog.png)
 
@@ -604,6 +604,8 @@ const deleteMutation =
   api.project.delete.useMutation({
     onSuccess: () => {
       void utils.project.getAll.invalidate();
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
       router.push('/project');
     },
   });
@@ -611,6 +613,7 @@ const deleteMutation =
 
 **確認ポイント**:
 - `deleteMutation` が `createMutation` の直下に定義できた
+- 成功時に確認画面を閉じて対象IDを `null` へ戻す
 - 成功時に `invalidate()` で一覧を更新して `router.push` で一覧画面に戻る
 
 `handleDelete` は state を設定します。実際に削除するのは確認ダイアログの削除ボタンを押したときです。これも Day 09 で置いた受け皿があるので`const handleDelete = (projectId: string) => {` から2行下の `};` までの3行を消してから貼ってください。位置は動かしません。`handleDelete` は `handleEdit` の直下にあります。後ろには `handleProjectClick` が続きます。
@@ -811,7 +814,7 @@ const handleCreate = () => {
 
 Step 3 で書いた分岐は `initialData` がそろったここで初めて `updateMutation` の側へ入ります。Step 3 の時点では `data.id` が `undefined` のままなので新規作成の分岐に進みます。
 
-スクリーンショット: 編集後に更新された一覧の表示を確認してください。下の画像はDay 10 で作ったプロジェクトの名前を「ポートフォリオ（改）」へ変えて「更新」を押したあとの一覧です。変更後の名前は本文で指定していないので自分で付けた名前がそのまま出ていれば正しい状態です。
+下の画像はDay 10 で作ったプロジェクトの名前を「ポートフォリオ（改）」へ変えて「更新」を押したあとの一覧です。変更後の名前は本文で指定していないので自分で付けた名前がそのまま出ていれば正しい状態です。
 
 ![プロジェクト一覧。赤枠の中のカードは見出しが「ポートフォリオ（改）」に変わっている。左には初期データの「Webサイトリニューアル」が並ぶ](./screenshots/day11/project-list-after-edit.png)
 
@@ -855,7 +858,7 @@ Step 3 で書いた分岐は `initialData` がそろったここで初めて `up
 
 `onConfirm` の中で `deleteTargetId` が入っているかを先に確かめてから `mutate` を呼びます。ダイアログを開いたまま state が空に戻っても`id` の無いリクエストをサーバーへ送らずに済みます。
 
-配布済みの `DeleteConfirmDialog` は `AlertDialogAction` を使っています。「削除」を押すと `onConfirm` を呼んだ直後に `onOpenChange(false)` が働くため、成功時の `onSuccess` に閉じる処理は要りません。サーバーが削除を拒否した場合もダイアログはいったん閉じ、一覧には対象が残ります。
+配布済みの `DeleteConfirmDialog` は `event.preventDefault()` でクリック直後の自動閉じを止めています。削除が成功した親ページの `onSuccess` で確認画面を閉じ、対象IDを `null` へ戻します。サーバーが削除を拒否した場合は確認画面が開いたまま残ります。
 
 ゴミ箱ボタンはカードを見られる人全員の画面に出ます。役割による出し分けはしていません。それでも OWNER 以外がプロジェクトを消せないのはStep 0 の `delete` が `role !== PROJECT_MEMBER_ROLE.OWNER` をサーバー側で毎回見直すからです。ADMIN のアカウントで押すと `FORBIDDEN` が返ります。一覧からプロジェクトは消えません。ボタンの表示を制限すると誤操作を減らせます。APIを直接呼び出された場合にも拒否できるよう権限はサーバーで確認します。
 
@@ -877,9 +880,7 @@ Step 3 で書いた分岐は `initialData` がそろったここで初めて `up
 | `title?` | `string` | ダイアログのタイトル（省略時は `本当に削除しますか？`） |
 | `description?` | `string` | 補足説明文（省略時:「この操作は取り消せません。」） |
 
-> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違ってアプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）は通信中のボタン表示に使う値です。ただし今日の `AlertDialogAction` はクリック直後にダイアログを閉じるため「削除中...」は通常は見えません。
-
-スクリーンショット: 削除確認ダイアログの表示を確認してください。
+> `DeleteConfirmDialog` は shadcn/ui の `AlertDialog` を使った共通コンポーネントです。`window.confirm()` と違ってアプリ全体のデザインと統一されたUIで確認ダイアログを表示できます。`isPending`（mutation実行中フラグ）は通信中のボタン表示に使う値です。通信中は「削除中...」を表示し、削除とキャンセルのボタンを無効にします。連打で同じ削除を送らないためです。
 
 ![確認ダイアログ。見出しは「プロジェクトを削除しますか？」。その下に「この操作は取り消せません。」と表示。キャンセル・削除の2つのボタンが並んでいる](./screenshots/day11/project-delete-confirm.png)
 
@@ -1248,9 +1249,8 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
 
 `viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
 
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
+エラー表示は見出し・説明・移動先を組み合わせた分岐です。次の2つのブロックを順に貼ります。途中では括弧が閉じないので、2つ目の末尾まで貼ってから保存してください。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/project/page.tsx
   if (authFailed || forbidden || notFound
@@ -1276,8 +1276,13 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   ? '削除されたか、URLが正しくない可能性があります。'
                   : '通信状況を確認して、再読み込みしてください。'}
           </p>
-          <Button
-            type="button"
+```
+
+このブロックは直前のコードの続きです。閉じ括弧まで順に貼ると1つの処理になります。途中だけ保存すると括弧が合わずエラーになるため、続きも貼ってから保存してください。
+
+```tsx
+          {/* filepath: src/app/project/page.tsx（直前のブロックの続き） */}
+          <Button type="button"
             onClick={() => {
               if (authFailed) {
                 router.push('/login');
@@ -1302,7 +1307,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     );
   }
 ```
-
 401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
 
 ```tsx
@@ -1448,9 +1452,7 @@ npm run dev
 5. 名前を変更して「更新」をクリック
 6. 一覧が自動的に更新されることを確認
 
-> スクリーンショット: 編集ダイアログに既存のプロジェクト名が表示されている画面
->
-> ![プロジェクト編集ダイアログ。赤枠の中のボタンが作成モードの「作成」ではなく「更新」になっている](./screenshots/day11/project-edit-dialog-update.png)
+![プロジェクト編集ダイアログ。赤枠の中のボタンが作成モードの「作成」ではなく「更新」になっている](./screenshots/day11/project-edit-dialog-update.png)
 
 #### アーカイブフローの確認
 
@@ -1479,9 +1481,7 @@ npm run dev
 4. 再度削除ボタンをクリック → 「削除」をクリック
 5. 一覧からプロジェクトが消えて「Webサイトリニューアル」の1件だけになることを確認
 
-> スクリーンショット: 削除確認ダイアログが表示されている画面
->
-> ![削除確認ダイアログ。赤枠の中が押すと取り消せない「削除」ボタン](./screenshots/day11/project-delete-confirm-action.png)
+![削除確認ダイアログ。赤枠の中が押すと取り消せない「削除」ボタン](./screenshots/day11/project-delete-confirm-action.png)
 
 **確認ポイント**:
 - 編集で既存データが反映される
@@ -2111,9 +2111,8 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
 
 **getById**:
 
-取得条件、存在確認、閲覧権限の判定が1つの手続きです。途中だけ貼ると閉じ括弧が合わない状態になるため、`getById` 全体を1つのコピー単位にします。
+取得条件、存在確認、閲覧権限の判定を1つの手続きへまとめます。次の2つのブロックを順に貼ってから保存してください。途中で保存すると閉じ括弧が合わずエラーになります。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
 // filepath: src/server/api/routers/project.ts
 // 完成版: getById
@@ -2140,6 +2139,12 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
           },
         },
       });
+```
+
+このブロックは直前のコードの続きです。閉じ括弧まで順に貼ると1つの処理になります。途中だけ保存すると括弧が合わずエラーになるため、続きも貼ってから保存してください。
+
+```typescript
+// filepath: src/server/api/routers/project.ts（直前のブロックの続き）
 
       if (!project) {
         throw new TRPCError({
@@ -2157,7 +2162,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }),
 });
 ```
-
 1件だけを取る読み取り専用の手続きなので `.query` を使います。見つからない `id` には `NOT_FOUND` を返し、メンバー以外が直指定しても `canView` の権限チェックで弾きます。最後の `});` で `projectRouter` 全体を閉じます。
 
 ### `src/lib/query-error.ts`
@@ -2415,6 +2419,8 @@ function ProjectPageContent() {
     api.project.delete.useMutation({
       onSuccess: () => {
         void utils.project.getAll.invalidate();
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
         router.push('/project');
       },
     });
@@ -2687,9 +2693,8 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
 
 `viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
 
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
+エラー表示は見出し・説明・移動先を組み合わせた分岐です。次の2つのブロックを順に貼ります。途中では括弧が閉じないので、2つ目の末尾まで貼ってから保存してください。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   if (authFailed || forbidden || notFound
@@ -2715,8 +2720,13 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
                   ? '削除されたか、URLが正しくない可能性があります。'
                   : '通信状況を確認して、再読み込みしてください。'}
           </p>
-          <Button
-            type="button"
+```
+
+このブロックは直前のコードの続きです。閉じ括弧まで順に貼ると1つの処理になります。途中だけ保存すると括弧が合わずエラーになるため、続きも貼ってから保存してください。
+
+```tsx
+          {/* filepath: src/app/project/page.tsx（直前のブロックの続き） */}
+          <Button type="button"
             onClick={() => {
               if (authFailed) {
                 router.push('/login');
@@ -2741,7 +2751,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     );
   }
 ```
-
 401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
 
 ```tsx
@@ -2799,12 +2808,10 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
 
 **ページ見出しと操作エリア**:
 
-見出し・警告・操作ボタンは1つの JSX として閉じる必要があるため、26行の完成したコピー単位で載せます。
+見出しの後ろへ操作ボタンを並べます。下のスイッチは Day 09 で配置した部品です。アーカイブ済みの項目も取り直せるように `showArchived` を取得条件へ渡しています。
 
-<!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
 // filepath: src/app/project/page.tsx
-// 完成版: ページ見出しと操作エリア
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -2830,7 +2837,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
               </Label>
             </div>
 ```
-
 Day 09 で作った部分です。今日は変更していません。このスイッチが今日から意味を持ちます。アーカイブしたプロジェクトを見たいときはここを入れて一覧を取り直します。スイッチを `showArchived` につないであるので切り替えるだけで `getAll` の条件が変わります。
 
 **新規作成ボタンとグリッドの開始**:
@@ -2947,7 +2953,7 @@ Day 09 で作った部分です。今日は変更していません。このス�
 }
 ```
 
-`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` は処理中かどうかをボタンへ伝えます。ただし確認ダイアログはクリック直後に閉じるため閉じたことだけでは削除の成功を確認できません。一覧を再読み込みし対象が消えたかを確かめてください。
+`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` は処理中かどうかをボタンへ伝えます。成功時だけ親ページが確認画面を閉じます。失敗時は開いたままです。通信が途切れた場合は削除済みの可能性もあるので一覧を更新し、対象が消えたかを確認してください。
 
 **ページのエクスポート**:
 
@@ -3068,6 +3074,6 @@ Day 12 ではプロジェクトにメンバーを追加・管理する機能を�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

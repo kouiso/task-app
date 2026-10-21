@@ -12,8 +12,6 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 
 この日はまずサーバー側の `getById` と `update` を自分で書きます。そのあと2画面をつなぎます。
 
-スクリーンショット: ユーザー詳細ページの完成イメージの表示を確認してください。
-
 ![ユーザー詳細ページ。左にアバターと名前とロールのバッジ、右に参加プロジェクトと担当中のタスクのカードが並んでいる](./screenshots/day29/user-detail.png)
 
 > **今日のゴールライン**: 動的ルーティングでユーザーIDを受け取り、詳細表示から編集保存まで権限つきで動かせれば大丈夫です。
@@ -51,7 +49,7 @@ flowchart TD
     J --> K["編集側でも認証・認可を確認"]
 ```
 
-`page.tsx` は先に `user.getById` を呼び、ログイン状態と閲覧権限を確認します。この手続きは、本人と管理者のどちらにも当てはまらなければ対象の存在を調べる前に拒否します。他人のIDが存在するかどうかで応答を変えないためです。権限がある場合だけユーザーを取得し、見つからなければ `notFound()` で404を表示します。取得できた場合はブラウザ側の部品へIDを渡します。ブラウザからの再取得にも同じ認可が適用されます。
+`page.tsx` は先に `user.getById` を呼び、ログイン状態と閲覧権限を確認します。この手続きは、本人と管理者のどちらにも当てはまらなければ対象の存在を調べる前に拒否します。他人のIDが存在するかどうかで応答を変えないためです。権限がある場合だけユーザーを取得します。見つからない場合とIDの形式が不正な場合は `notFound()` で404を表示します。取得できた場合はブラウザ側の部品へIDを渡します。ブラウザからの再取得にも同じ認可が適用されます。
 
 ### やること / やらないこと
 
@@ -68,7 +66,7 @@ flowchart TD
 | 概念・読み方 | 役割 | 例え |
 |-------------|------|------|
 | 動的ルーティング `[id]`<br>**読み方**:<br>どうてきルーティング | URLのID部分を変数として受け取る | 「社員番号001の名簿ページ」→ URLの001が変数 |
-| `notFound()`<br>**読み方**:<br>ノットファウンド | そのIDが存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
+| `notFound()`<br>**読み方**:<br>ノットファウンド | IDの形式が不正なときや対象が存在しないときに404へ送る | 名簿にいない社員番号なら案内終了 |
 | server wrapper（サーバー側で動く入口）<br>**読み方**:<br>サーバー ラッパー | 存在確認や404判定を server 側に寄せる | 受付で本人確認してから会議室へ通す |
 | `await params`<br>**読み方**:<br>アウェイト パラムズ | URLのパラメータ（変数）を server 側で受け取る | 受付で渡された整理番号を開いて読む |
 | `useEffect`<br>**読み方**:<br>ユーズエフェクト | コンポーネント外部の変化に反応して副作用を実行するフック | 荷物が届いたら自動で棚に並べる係 |
@@ -207,6 +205,22 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+
+```typescript
+// filepath: src/server/api/routers/user.ts（続き）
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -214,7 +228,7 @@ const userUpdateSchema = z
       });
 ```
 
-`assignedTasks` は「今その人が担当している作業」の一覧です。完了済みやキャンセル済みまで混ぜると詳細ページが読みづらくなるので`notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED]` で除外しています。
+`where` の後半は見ている人によって返すタスクを変えます。ADMIN は全件を見られますが、それ以外の人は自分が所属するプロジェクトのタスクだけです。この絞り込みがないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに表示され続けます。`members: { some: { userId: ctx.session.userId } }` はメンバー一覧に自分が入っているプロジェクトのタスクだけを残す条件です。ADMIN は全件を見られる仕様なので空のオブジェクトを展開して条件を足しません。
 
 ```typescript
 // filepath: src/server/api/routers/user.ts（続き）
@@ -435,7 +449,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-未ログインはログイン画面、権限がある人から見て対象が無い場合は404、権限がない場合は拒否画面です。`getById` は対象を検索する前に本人か管理者かを調べるので、権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
+未ログインはログイン画面へ送ります。対象が無い `NOT_FOUND` は404へ送ります。`getById` は形式が正しいIDについて対象の検索前に本人か管理者かを調べます。権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
@@ -461,7 +475,9 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 **確認ポイント**:
 - `src/app/user/[id]/page.tsx` ファイルが作成できた
 - `src/app/user/[id]/page.tsx` が server wrapper になり、`trpc.user.getById` を先に呼んでいる
-- 未ログイン・権限なし・未発見・想定外エラーの4つを別々に扱っている
+- 未ログインと権限なしをそれぞれ別の画面で扱っている
+- 不正な形式のIDと権限がある人から見て未発見のIDを404へ送っている
+- 想定外のエラーを投げ直している
 - この時点ではブラウザで開かず、次の Step へ進む
 
 ---
@@ -661,13 +677,13 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     );
   }
 
-  const isAdmin = currentUser.role === USER_ROLE.ADMIN;
-  const isOwnProfile = currentUser.id === user.id;
+  const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
+  const isOwnProfile = currentUser?.id === user.id;
 ```
 
 401ではログイン、403ではダッシュボード、404では管理者だけユーザー一覧へ戻します。一時的な500相当の失敗で前回データがある場合はこの早期リターンを通らず、Step 4 で追加する警告と前回内容を表示します。本人判定にはサーバーが返した `user.id` を使います。
 
-**確認ポイント**: 存在しないIDにアクセスすると server wrapper から `notFound()` が呼ばれ、`src/app/not-found.tsx` の404画面が表示されます。client 側で再取得中に対象が消えた場合も、スピナーではなく未発見の案内が残ります。
+**確認ポイント**: 管理者で存在しないIDを開くと404画面が表示されます。client 側で再取得中に対象が消えた場合も、スピナーではなく未発見の案内が残ります。
 
 正常系の表示を書きます。次のステップで内容を充実させます。
 
@@ -707,7 +723,8 @@ URL から `getById` までの経路がつながっています。
 
 **確認ポイント**:
 - 存在するユーザーIDでアクセスするとユーザー名が表示される
-- 完成版では存在しないIDは Step 2 の `page.tsx` が404へ流す
+- 完成版では不正な形式のIDを Step 2 の `page.tsx` が404へ送る
+- 管理者が存在しないIDを開いた場合も404を表示する
 - 読み込み中はスピナーが表示される
 
 ---
@@ -792,7 +809,7 @@ import { formatDateOnly } from '@/lib/date';
         <div className="grid gap-6 md:grid-cols-12">
 ```
 
-戻るボタンを画面の先頭に置いているのはこの詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンで一覧へ帰れません。`router.push('/user')` と行き先を書いておけばどこから来ても同じ場所へ戻せます。最後の `md:grid-cols-12` で12列の枠を開き、この中に左右のカラムを入れていきます。
+戻るボタンを画面の先頭に置くのはURLを直接開いた人にも戻り先を示すためです。管理者は `/user` のユーザー一覧へ戻ります。一般ユーザーは一覧を開く権限がないため `/dashboard` へ戻します。`isAdmin` で行き先とボタンの文言をそろえます。最後の `md:grid-cols-12` で12列の枠を開きます。この中に左右のカラムを入れていきます。
 
 左カラムにアバターとユーザー基本情報を置きます。
 
@@ -801,7 +818,7 @@ import { formatDateOnly } from '@/lib/date';
           {/* 左カラム: アバター・基本情報 */}
           <div className="md:col-span-4 space-y-6">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent style={{ paddingTop: '2.5rem' }}>
                 <div className="text-center mb-6">
                   {/* アバター画像（未設定時は名前の頭文字を表示） */}
                   <Avatar className="w-24 h-24 mx-auto mb-4">
@@ -860,18 +877,16 @@ import { formatDateOnly } from '@/lib/date';
                       </p>
                       <p>
                         {user.createdAt
-                          ? format(
-                              new Date(user.createdAt),
-                              'yyyy年MM月dd日',
-                              { locale: ja }
-                            )
+                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
                           : '-'}
                       </p>
                     </div>
                   </div>
 ```
 
-表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。値が無いときに `-` を出しているのは空文字にすると「登録日」という見出しだけが値なしで残るためです。読む側はまだ読み込み中なのか、そもそも値が無いのか区別できません。`-` は「確かめたうえで空だった」という返事になります。
+表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。`getById` が返した日時を整形し、値が無いときは `-` を出します。ユーザー全体の読み込み中や取得失敗は Step 3 で先に判定しています。
 
 **確認ポイント**: 登録日がカレンダーアイコン付きで表示されることを確認してください。
 
@@ -888,11 +903,9 @@ import { formatDateOnly } from '@/lib/date';
                       </p>
                       <p>
                         {user.updatedAt
-                          ? format(
-                              new Date(user.updatedAt),
-                              'yyyy年MM月dd日',
-                              { locale: ja }
-                            )
+                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                              locale: ja,
+                            })
                           : '-'}
                       </p>
                     </div>
@@ -928,7 +941,8 @@ import { formatDateOnly } from '@/lib/date';
 - PCサイズのブラウザで左にアバター、右にスペースが表示される
 - スマホサイズに縮小すると縦に並ぶ
 - アバターが未設定のユーザーでは名前の頭文字が表示される
-- 「ユーザー一覧に戻る」ボタンが表示される
+- 管理者の「ユーザー一覧に戻る」を押すと `/user` が表示される
+- 一般ユーザーの「ダッシュボードに戻る」を押すと `/dashboard` が表示される
 
 ---
 
@@ -1101,8 +1115,6 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 
 **確認ポイント**: タスクテーブルにステータスバッジと優先度バッジが色付きで表示されることを確認してください。
 
-スクリーンショット: プロジェクト一覧とタスクテーブルの表示を確認してください。
-
 ![ユーザー詳細ページ。赤枠①が参加プロジェクトのカード、赤枠②が担当中のタスクのカード](./screenshots/day29/user-detail-projects-tasks.png)
 
 **確認ポイント**:
@@ -1110,6 +1122,20 @@ Tailwind CSS では動的な色をクラスで指定できないため`style={{ 
 - バッジをクリックするとプロジェクトページに遷移する
 - タスクの行をクリックするとタスク詳細に遷移する
 - プロジェクト・タスクがないユーザーには「ありません」メッセージが出る
+
+Step 0 で足した所属の絞り込みも、ここで実際に確かめます。詳細ページは本人か ADMIN だけが開けるので、確認は X 本人と ADMIN の2通りで行います。
+
+先に Prisma Studio（`npx prisma studio`）で次の状態を作ります。
+
+- X は MEMBER のロールで、プロジェクト B のメンバーに入っていない
+- プロジェクト B のタスクの担当者を X にする。ステータスは `DONE` と `CANCELLED` 以外にする
+
+状態ができたら次の2つを確かめます。
+
+- X でログインして自分の詳細ページを開くと、そのタスクは「担当中のタスク」に出ない
+- ADMIN でログインして X の詳細ページを開くと、そのタスクが表示される
+
+X の画面にそのタスクが出てしまう場合は `assignedTasks` の `where` を見直します。`members: { some: { userId: ctx.session.userId } }` の行が抜けているか、書き間違えています。型は通るので `tsc` では見つからず、画面で確かめるしかありません。
 
 ---
 
@@ -1189,7 +1215,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     const trpcError = getTRPCErrorFromUnknown(error);
 ```
 
-`getById` を `try` で囲むのは、権限エラーを種類別に画面へ振り分けるためです。tRPC の例外は `getTRPCErrorFromUnknown` で `code` を取り出すと、UNAUTHORIZED・NOT_FOUND・FORBIDDEN を確実に見分けられます。
+`getById` を `try` で囲むのは、権限エラーを種類別に画面へ振り分けるためです。tRPC の例外は `getTRPCErrorFromUnknown` で `code` を取り出すと、UNAUTHORIZED・BAD_REQUEST・NOT_FOUND・FORBIDDEN を見分けられます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -1215,7 +1241,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-UNAUTHORIZED はログイン画面へ、NOT_FOUND は404ページへ送ります。FORBIDDEN だけ画面内のカードで返すのは、詳細ページと同じ拒否画面にそろえて利用者を迷わせないためです。それ以外のエラーは `throw` で上位へ委ねます。
+UNAUTHORIZED はログイン画面へ送ります。NOT_FOUND は404ページへ送ります。FORBIDDEN は詳細ページと同じ拒否画面にそろえます。それ以外のエラーは `throw` で上位へ渡します。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -1226,7 +1252,7 @@ UNAUTHORIZED はログイン画面へ、NOT_FOUND は404ページへ送ります
 }
 ```
 
-詳細ページを通らず編集URLを直接開くこともできます。そのため編集側にも同じ判定が必要です。一般ユーザーが他人の実在IDと存在しないIDを開いた場合は、どちらも `FORBIDDEN` の拒否画面になります。権限のある人にだけ `NOT_FOUND` の404を返します。
+詳細ページを通らず編集URLを直接開くこともできます。そのため編集側にも同じ判定が必要です。形式が正しい他人のIDを一般ユーザーが開くと実在しても未発見でも `FORBIDDEN` の拒否画面になります。権限のある人にだけ `NOT_FOUND` の404を返します。
 
 次に client 側の取り込み、スキーマ、フォーム初期値を書きます。
 
@@ -1598,7 +1624,7 @@ import { Label } from '@/component/ui/label';
 
 CardContent 内のフォームを書きます。`register` でテキスト入力を管理し、`watch` でアバタープレビューをリアルタイム更新します。
 
-> `onSubmit` と `updateUser` は
+> `handleSubmit` と `updateUser` は
 > Step 10 で定義します。ここではJSX構造を
 > 先に書き、Step 10 の完了後に動作確認します。
 
@@ -1606,7 +1632,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx */}
 {/* フォーム開始 + アバタープレビュー */}
             <form onSubmit={
-              form.handleSubmit(onSubmit)}
+              form.handleSubmit(handleSubmit)}
               className="space-y-6">
               <div className="flex
                 justify-center mb-6">
@@ -1686,7 +1712,7 @@ CardContent 内のフォームを書きます。`register` でテキスト入力
 画面での確認は Step 10 の最後で行います。ここではコードを見ます。
 
 **確認ポイント**:
-- `<form onSubmit={form.handleSubmit(onSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
+- `<form onSubmit={form.handleSubmit(handleSubmit)}>` から名前・メール・アバターの3つの `<div>` までが書けている
 - 名前欄に `{...form.register('name')}` が入っている
 - メールアドレスの欄だけ `register` を使わず `value={user.email}` と `disabled` になっている
 
@@ -1827,7 +1853,7 @@ import { isUserRole, USER_ROLE_LABELS }
 
 `checked === true` と書くのは`onCheckedChange` が `boolean | 'indeterminate'` を受け取るためです。
 
-スクリーンショット: 完成後の編集フォームはこのように表示されます（この時点ではまだ描画されません）。
+完成後の編集フォームはこのように表示されます（この時点ではまだ描画されません）。
 
 ![ユーザー編集フォーム。名前とメールアドレスの下に、ロールを選ぶ欄と「アクティブ」のチェックボックスが並んでいる](./screenshots/day29/user-edit-form.png)
 
@@ -1886,34 +1912,31 @@ import { Alert, AlertDescription, AlertTitle }
         router.refresh();
       },
       onError: (error) => {
-        toast.error(error.message
-          ?? 'ユーザー情報の更新に'
-          + '失敗しました');
+        toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
       },
     });
 ```
+
+`??` は左側が `null` か `undefined` のときだけ右側の既定の文言を使います。サーバーから文言が届いた場合はその内容を表示します。
 
 先頭の `api.useUtils()` は tRPC の取得結果を手元で操作するための道具です。その中の `invalidate` は覚えている結果に「古い」という印を付ける命令です。いま画面に出ている分はすぐ取り直されます。取り直しが終わるまでは前の結果がそのまま表示されます。`onSuccess` で4つを `invalidate` しているのは同じ人の情報を4か所が別々に覚えているからです。詳細ページの `getById`、一覧の `getAll`、サイドバーに名前を出す `getCurrentUser`、そしてセッションです。名前を変えたのに一覧やサイドバーだけ古いままになるのはここを1つ書き忘れたときに起きます。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面遷移までたどり着きます。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/user-edit-client.tsx
-  // zodバリデーション済みの値で送信
-  const onSubmit =
-    (values: UserEditFormValues) => {
-      updateUser.mutate({
-        id: userId,
-        name: values.name,
-        avatar: values.avatar
-          || null,
-        ...(canManageAccount
-          ? { role: values.role,
-              isActive: values.isActive }
-          : {}),
-      });
-    };
+  const handleSubmit = (values: UserEditFormValues) => {
+    updateUser.mutate({
+      id: userId,
+      name: values.name,
+      avatar: normalizeAvatarValue(values.avatar),
+      // 管理者でも本人編集時は role/isActive を送らない
+      ...(canManageAccount ? { role: values.role, isActive: values.isActive } : {}),
+    });
+  };
 ```
 
-**確認ポイント**: `onSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くのでこの時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(onSubmit)}>` が指している2つがそろいました。実際に動くかどうかは`</form>` を書き終えた Step 10 の最後で確かめます。
+`normalizeAvatarValue` は空のアバター入力を `null` にそろえる関数で、ファイル先頭で `import { normalizeAvatarValue } from '@/lib/utils';` と取り込みます。
+
+**確認ポイント**: `handleSubmit` と `updateUser` が定義できた。`</form>` はこのあと書くのでこの時点ではまだ構文エラーが残ります。これで Step 8 で書いた `<form onSubmit={form.handleSubmit(handleSubmit)}>` が指している2つがそろいました。実際に動くかどうかは`</form>` を書き終えた Step 10 の最後で確かめます。
 
 サーバー側の `update` ルーターは自分のプロフィール更新で `role` や `isActive` が含まれると `FORBIDDEN` を返します。`canManageAccount` で分岐し、管理者が他人を編集するときだけ送信することで問題を防いでいます。`avatar` に空文字を送ると zod バリデーションで URL 不正になるため、空文字なら `null` に変換しています。`undefined` にすると Step 0 の `if (data.avatar !== undefined)` を通らず、すでに登録されている画像を消せません。
 
@@ -2074,7 +2097,7 @@ submitUserEditForm(
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
-import type { UserRole } from '@/lib/constant/roles';
+import { USER_ROLE, type UserRole } from '@/lib/constant/roles';
 
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
@@ -2287,6 +2310,25 @@ const userUpdateSchema = z
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+```
+
+完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。
+
+**getById が返す担当タスクの所属絞り込み**:
+
+```typescript
+// filepath: src/server/api/routers/user.ts
+// getById が返す担当タスクの所属絞り込み
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -2294,7 +2336,7 @@ const userUpdateSchema = z
       });
 ```
 
-完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
+ADMIN 以外の人には自分が所属するプロジェクトのタスクだけを返します。この条件がないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに残ります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
 
 **getById の見つからない場合**:
 
@@ -2509,6 +2551,16 @@ export const userRouter = createTRPCRouter({
               status: {
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
+              // 退会後も担当タスクが見え続けるのを防ぐため、
+              // 呼び出し元が所属するプロジェクトのタスクに絞る。
+              // ADMINは全件見られる既存仕様を維持する
+              ...(ctx.session.role === USER_ROLE.ADMIN
+                ? {}
+                : {
+                    project: {
+                      members: { some: { userId: ctx.session.userId } },
+                    },
+                  }),
             },
             orderBy: { dueDate: 'asc' },
           },
@@ -2712,7 +2764,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-401・403・404を別々に扱うため、ログインし直すべき人とURLを直すべき人へ異なる案内を出せます。403は実在するIDと存在しないIDで同じ表示になります。
+401・403・404を分けるとログインし直すべき人とURLを直すべき人へ異なる案内を出せます。形式が正しいIDの403は実在しても未発見でも同じ表示になります。
 
 **client 部品への受け渡し**:
 
@@ -3080,7 +3132,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
               <CardContent style={{ paddingTop: '2.5rem' }}>
 ```
 
-戻るボタンを自分で置いているのはこの詳細ページがURLを直接開いても表示できるからです。一覧を経由せずに来た人はブラウザの戻るボタンでは一覧へ行けません。`md:grid-cols-12` に `md:` が付いているので狭い画面では左右に割らず上下へ積まれます。スマートフォンの幅で12列を横に割ると1列がどちらも読めない幅になります。
+戻るボタンを置くとURLを直接開いた人にも戻り先を示せます。管理者はユーザー一覧へ戻します。一般ユーザーは一覧を開く権限がないためダッシュボードへ戻します。`isAdmin` で行き先と文言をそろえます。`md:grid-cols-12` に `md:` が付いているので狭い画面では左右に割らず上下へ積まれます。スマートフォンの幅で12列を横に割ると1列がどちらも読めない幅になります。
 
 **左カラムのアバターとバッジ**:
 
@@ -3144,7 +3196,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </div>
 ```
 
-表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。値が無いときに `-` を出すのは見出しだけが値なしで残る状態を避けるためです。空欄だと読み込みが終わっていないのか、そもそも値が無いのかを読者が判断できません。`-` は「確かめたうえで空だった」という返事になります。
+表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。日時が無いときは `-` を出します。ユーザー全体の取得状態を先に判定したうえで `getById` が返した日時を整形します。
 
 **左カラムの最終更新日**:
 
@@ -3713,7 +3765,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-権限がある人にだけ未発見の404を返します。権限のない人にはIDの実在を知らせず、編集できる条件を画面に残します。
+権限がある人にだけ未発見の404を返します。形式が正しいIDに権限がない人には実在を知らせません。編集できる条件を画面に残します。
 
 **client 部品への受け渡し**:
 
@@ -4897,7 +4949,7 @@ sequenceDiagram
 
 **Q1. `page.tsx` と画面側の両方で `getById` を呼んでいます。2回問い合わせるのはなぜで、存在しないIDを打ち込まれたとき返り方はどうなりますか。**
 
-A. `page.tsx` の呼び出しは描画前の検査で、ログイン切れ・権限不足・存在しないIDを画面を描く前にさばきます。通ったときだけ `UserDetailClient` が表示用にもう一度 `getById` を呼びます。`getById` は権限の確認をDBの照会より先に行うので、一般ユーザーには存在するIDと存在しないIDのどちらにも同じ「権限がありません」が返り、外からIDの実在を言い当てることはできません。404が返るのは権限チェックを通過した本人と管理者だけです。
+A. `page.tsx` は描画前にログイン状態と権限を検査します。通過したときだけ `UserDetailClient` が表示用にもう一度 `getById` を呼びます。形式が正しい他人のIDは存在しても未発見でも一般ユーザーには同じ拒否画面を返します。権限を確認してからDBを検索するためIDの実在を知らせません。未発見の404は本人か管理者にだけ返します。
 
 **Q2. 一般ユーザーが他人の `/user/他人のid` を開くと編集ボタンが消えるだけですか。**
 
@@ -4956,6 +5008,6 @@ Day 30ではいよいよ完成版をVercelに公開します。30日間コツコ
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
