@@ -1,0 +1,15 @@
+$ git rev-parse HEAD
+c8f94de640391c1c6ed8889bacde2fb4611ee740
+$ npx vitest run src/server/api/routers/__test/task.test.ts -t "メンバー削除が競合" --bail=0 --reporter=verbose --hideSkippedTests
+
+ RUN  v5.0.1 /tmp/task-app-685-after
+
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > create（作成） > 担当者の確認とメンバー削除が競合しても、外れた人を担当にしたタスクは作られない 279ms
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > 担当の指定とメンバー削除が競合しても、外れた人は担当にならない 204ms
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる 218ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 39 skipped (42)
+   Start at  10:15:26
+   Duration  2.17s (tests 85%, transform 9%, import 4%, setup 2%)
+

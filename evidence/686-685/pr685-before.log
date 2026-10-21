@@ -1,0 +1,72 @@
+$ git rev-parse HEAD
+017aa5b009ba603a4b6d746b608b4758e40fa987
+$ npx vitest run src/server/api/routers/__test/task.test.ts -t "メンバー削除が競合" --bail=0 --reporter=verbose --hideSkippedTests
+
+ RUN  v5.0.1 /tmp/task-app-685-before
+
+ × src/server/api/routers/__test/task.test.ts > taskRouter > create（作成） > 担当者の確認とメンバー削除が競合しても、外れた人を担当にしたタスクは作られない 289ms
+   → expected true to be false // Object.is equality
+ × src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > 担当の指定とメンバー削除が競合しても、外れた人は担当にならない 3224ms
+   → 呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした
+ × src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる 215ms
+   → expected 'cmvhyhzp0000ojs01tcmk46fa' to be null
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/server/api/routers/__test/task.test.ts > taskRouter > create（作成） > 担当者の確認とメンバー削除が競合しても、外れた人を担当にしたタスクは作られない
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/server/api/routers/__test/task.test.ts:238:25
+    236|       );
+    237|
+    238|       expect(result.ok).toBe(false);
+       |                         ^
+    239|       expect(String((result as { error: unknown }).error)).toContain(
+    240|         '担当者にはこのプロジェクトのメンバーを指定してください',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > 担当の指定とメンバー削除が競合しても、外れた人は担当にならない
+Error: 呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした
+ ❯ callWhileMemberIsRemoved src/server/api/routers/__test/task.test.ts:92:11
+     90|   const result = await pending;
+     91|   if (!blocked) {
+     92|     throw new Error(
+       |           ^
+     93|       '呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした',
+     94|     );
+ ❯ src/server/api/routers/__test/task.test.ts:373:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/server/api/routers/__test/task.test.ts > taskRouter > update の担当者指定とメンバー削除の競合 > プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる
+AssertionError: expected 'cmvhyhzp0000ojs01tcmk46fa' to be null
+
+- Expected:
+null
+
++ Received:
+"cmvhyhzp0000ojs01tcmk46fa"
+
+ ❯ src/server/api/routers/__test/task.test.ts:406:32
+    404|       const after = await prisma.task.findUniqueOrThrow({ where: { id:…
+    405|       expect(after.projectId).toBe(destination.id);
+    406|       expect(after.assigneeId).toBeNull();
+       |                                ^
+    407|     });
+    408|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 39 skipped (42)
+   Start at  10:15:28
+   Duration  5.11s (tests 94%, transform 4%, import 2%, setup 1%)
+

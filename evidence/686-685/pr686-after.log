@@ -1,0 +1,16 @@
+$ git rev-parse HEAD
+8ee7a77a6fdfc7c604880b4aac7a48e9db0c5683
+$ npx vitest run src/server/api/routers/__test/task.test.ts -t "TODO に戻すと、外れた人の担当" --bail=0 --reporter=verbose --hideSkippedTests
+
+ RUN  v5.0.1 /workspace
+
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > 完了・中止のタスクを未完了へ戻すときの担当者 > update: DONE のタスクを TODO に戻すと、外れた人の担当を外す 217ms
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > 完了・中止のタスクを未完了へ戻すときの担当者 > update: CANCELLED のタスクを TODO に戻すと、外れた人の担当を外す 155ms
+ ✓ src/server/api/routers/__test/task.test.ts > taskRouter > 完了・中止のタスクを未完了へ戻すときの担当者 > bulkUpdateStatus: TODO に戻すと、外れた人の担当だけを外す 297ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 54 skipped (57)
+   Start at  09:58:01
+   Duration  1.96s (tests 83%, transform 10%, import 4%, setup 3%)
+
+$ echo exit_code:$?
