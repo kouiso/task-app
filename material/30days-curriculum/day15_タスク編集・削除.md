@@ -20,7 +20,7 @@ Day 14 で学んだことは次のとおりです。
 
 今日はまずサーバー側の `update` と `delete` を自分で書きます。ここが今日いちばん長い工程です。
 
-スクリーンショット: 今日さわるタスクダイアログを、編集で開いたところです。見出しが「タスク編集」、
+下の画像は今日さわるタスクダイアログを、編集で開いたところです。見出しが「タスク編集」、
 ボタンが「更新」になり、各欄には編集前の値が入っています。Day 14 で作った新規作成のときは
 見出しが「タスク作成」、ボタンが「作成」で、各欄は空でした。
 
@@ -135,7 +135,6 @@ import {
   getUserProjectIds,
 } from './_helpers/permission';
 ```
-
 `findTaskWithPermission` は「id でタスクを1件取り、そのプロジェクトで自分が指定した権限を持っているかを確認し、無ければ弾く」共有ヘルパーです。`assertMemberPermission` と `getUserProjectIds` は前の Day で足したものなので新しく行を増やすのではなく、同じ import 文の中に並べます。
 
 #### 0-2. 入力スキーマを足す
@@ -158,7 +157,6 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().cuid().optional().nullable(),
 });
 ```
-
 `id` を除くほとんどの項目に `.optional()` が付いています。編集では「変えたい項目だけ」を送るので送られてこなかった項目はそのままにします。`.nullable()` は「空にできる」という意味で、たとえば担当者を外して未割り当てに戻す操作を表します。`expectedUpdatedAt` は少し特別で、これは 0-9 で使う「自分が編集を始めた時点のタスクの更新時刻」です。この値があとで説明する「ほかの書き換えとぶつかっていないか」の判定に効いてきます。
 
 ここに `completedAt` が無いことに気づいたでしょうか。完了日時は画面から直接送る項目ではなく、ステータスの変化からサーバーが決める値です。入力に受け付けると、完了のまま日時だけ書き換えられる道が開きます。Day 23 で作る週次レポートはこの日付でタスクを週へ分けるので、日付を後から動かせると集計がずれます。受け付けないこと自体がルールの一部です。
@@ -185,7 +183,6 @@ const taskUpdateSchema = z.object({
       updateData.description = data.description;
     }
 ```
-
 `const { id, expectedUpdatedAt, ...data } = input` は入力から `id` と `expectedUpdatedAt` を取り出し、残りの書き換え項目を `data` にまとめる書き方です。`findTaskWithPermission(id, ctx.session.userId, 'canEdit')` で、対象のタスクを取りつつ編集権限を確認します。権限が無ければここで弾かれるので他人のタスクを書き換える事故を防げます。`updateData` はこのあと「送られてきた項目だけ」を詰めていく入れ物です。`title` と `description` は値が送られてきたときだけ詰めます。
 
 #### 0-4. ステータスと完了日時を組み立てる
@@ -205,7 +202,6 @@ const taskUpdateSchema = z.object({
       }
     }
 ```
-
 ステータスが変わったときだけ、完了日時（`completedAt`）を自動で決めます。`DONE`（完了）へ変えたら今の時刻を入れ、それ以外へ戻したら `null` にします。同じステータスのままタイトルを直しても元の完了日時は変わりません。
 
 #### 0-5. 残りの項目を詰める
@@ -231,31 +227,35 @@ const taskUpdateSchema = z.object({
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
 ```
-
 前半は 0-3 と同じで、送られてきた項目だけを詰めます。`dueDate` は値があれば `new Date(...)` で日付に変換し、空なら `null` にします。最後の2行はプロジェクトの移動が起きるかどうかを判定しています。`isProjectChanging` は「新しい `projectId` が送られていてしかも今のプロジェクトと違う」ときだけ真になります。`targetProjectId` は移動するなら移動先、しないなら今のプロジェクトを指します。
 
 ここには `as string` が付いています。Day 13 では `as` を「中身を確かめずに正しいと言い張る書き方」として避けました。この行で使えるのは直前の `isProjectChanging` が `data.projectId !== undefined` を確かめ済みだからです。ただし TypeScript はその確認が別の変数に入ったことまでは追えず、`as` で人間が保証する形になっています。判定と使用を1つの条件式にまとめれば `as` は消せます。自分で書くときはまず条件の中で直接使えないかを試してください。
 
 #### 0-6. プロジェクトを移すときの確認
 
-プロジェクトを移す場合は移動先でも編集権限があるかを確認します。並び順の採番は 0-9 で行います。Day 14 のロックを使い、実際の保存と同じトランザクションへ含めます。
+先にトランザクションを始めます。担当者を付けるときとプロジェクトを移すときだけ移動元と移動先をロックします。担当者の所属確認と保存の間へ退会処理が入るのを防ぐためです。タイトルや優先度だけの編集でロックすると同じプロジェクトのタスク更新が1件ずつの順番待ちになります。そのためここでは取りません。担当者を外す（`null`）操作は所属を確認しません。だからロックは要りません。移動する場合はその後に移動先の編集権限を確認します。採番は次の手順0-9で行います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-    if (isProjectChanging) {
-      // 移動先プロジェクトでも canEdit 権限を持つかを確認
-      const destinationMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: targetProjectId,
-          },
-        },
-      });
-      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
-```
+    try {
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
+        if (isProjectChanging) {
+          // 移動先プロジェクトでも canEdit 権限を持つかを確認
+          const destinationMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: ctx.session.userId,
+                projectId: targetProjectId,
+              },
+            },
+          });
+          assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+          updateData.project = { connect: { id: targetProjectId } };
+```
 移動先のプロジェクトで自分がメンバーかを `findUnique` で調べ、`assertMemberPermission(..., 'canEdit')` で編集権限を確認します。ここを飛ばすと自分が入っていないプロジェクトへタスクを移し込めてしまいます。権限が確認できたら`updateData.project = { connect: ... }` で移動先へ付け替えます。
 
 #### 0-7. プロジェクト変更のまとまりを閉じる
@@ -264,53 +264,61 @@ const taskUpdateSchema = z.object({
 // filepath: src/server/api/routers/task.ts（続き）
     }
 ```
-
-この段階では project の接続先だけを `updateData` に入れます。`position` の最大値を先に読むだけでは同時移動した2件へ同じ番号を付ける恐れがあります。そのため0-9 で project 行をロックしてから採番します。
+この段階では project の接続先だけを `updateData` に入れます。`position` の最大値を先に読むだけでは同時移動した2件へ同じ番号を付ける恐れがあります。そのため0-6で取ったロックを保ったまま0-9で採番します。
 
 #### 0-8. 担当者の付け替え
 
-担当者の指定にも、プロジェクト内のメンバーかを確認する処理を入れます。
+担当者の所属も同じ `tx` で確認します。保存までプロジェクトのロックを保ちます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
-    }
+        if (data.assigneeId !== undefined) {
+          if (data.assigneeId === null) {
+            updateData.assignee = { disconnect: true };
+          } else {
+            await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+            updateData.assignee = { connect: { id: data.assigneeId } };
+          }
+        } else if (
+          existingTask.assigneeId &&
+          (isProjectChanging ||
+            (data.status !== undefined &&
+              data.status !== TASK_STATUS.DONE &&
+              data.status !== TASK_STATUS.CANCELLED))
+        ) {
 ```
 
-担当者が送られてきたときは `null` なら担当を外し（`disconnect`）、指定があれば Day 14 で作った `assertTaskAssigneeBelongsToProject` でメンバーかを確認してから付けます。担当者の指定が無くてもプロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあります。その場合だけ、後半の `else if` で担当を自動的に外します。
+完了やキャンセルの記録には以前の担当者が残ります。そのタスクを再開すると退会者へ作業を割り当てる恐れがあります。担当者を省略した場合も移動や再開では所属を確かめます。次のコードを直後に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+          // 履歴の担当者を残したタスクを再開しても退会者へ作業を割り当てないためです。
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
+        }
+```
+担当者の指定が `null` なら担当を外します。値があれば Day 14 の `assertTaskAssigneeBelongsToProject` で所属を確認します。指定が無い場合もプロジェクトの移動先や再開後の担当として有効かを確認します。完了やキャンセルの履歴には退会者の担当を残します。未完了へ戻すときは所属していない担当者を外します。`TODO`・`IN_PROGRESS`・`IN_REVIEW` のすべてが対象です。
 
 #### 0-9. ここが一番のヤマ場（楽観ロックで書き換える）
 
-最後に DB を書き換えます。ここで、この教材で初めて出てくる楽観ロック（optimistic lock）を使います。プロジェクトを移す場合は採番と更新を同じトランザクションへ入れます。
+最後にDBを書き換えます。0-6からトランザクションを保っています。その中で採番して保存します。楽観ロック（保存時に読み取り後の変更を検出する方法）も使います。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-    try {
       // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めた単一の update で比較と更新をまとめる。
       // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
       // 投げる P2025 を捕捉して CONFLICT に変換する。
-      return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         }
@@ -330,8 +338,7 @@ const taskUpdateSchema = z.object({
         });
       });
 ```
-
-移動時は `getNextTaskPosition` が移動先 project をロックし、そのロックを保った `tx.task.update` で保存します。これで同じプロジェクトへの同時移動も順番に処理されます。
+移動元と移動先のロックを保ったまま採番して保存します。プロジェクトIDを並べ替えてからロックするため互いに逆向きへ移す操作でも取得順が揃います。デッドロック（互いのロック解放を待って進めなくなる状態）を避けるためです。
 
 楽観ロックは読み取った後に別の更新が入っていないことを、保存時の条件で確かめる方法です。画面から `expectedUpdatedAt` が届いた場合は編集を始めた時点の更新時刻を使います。届かなかった場合も、サーバーが先ほど読んだ `existingTask.updatedAt` を使います。完了日時を組み立ててから保存するまでの間にステータスが変わった場合も、そのまま上書きしないためです。条件に合う行がなくなると更新は失敗し、次の処理で `CONFLICT` を返します。`include` は更新後のデータにプロジェクト・作成者・担当者を含める指定です。
 
@@ -368,7 +375,6 @@ sequenceDiagram
     }
   }),
 ```
-
 更新時刻の条件に合わず対象が見つからないと Prisma は `P2025` というコードのエラーを投げます。それを `catch` で受け取り、`CONFLICT`（ぶつかった）という意味の `TRPCError` に変えて画面へ返します。画面はこの合図を見て「内容が更新されています。読み込み直してください」と伝えられます。`P2025` 以外のエラーは`throw err` でそのまま上へ伝えます。最後の `}),` で `update` を閉じます。
 
 **確認ポイント**:
@@ -394,7 +400,6 @@ sequenceDiagram
       return { success: true };
     }),
 ```
-
 `delete` はまず `findTaskWithPermission` で対象のタスクを取り、`assertMemberPermission(task.project.members, 'canDelete')` で削除権限を確認します。編集はできても削除はできない、という権限の分け方があるため`update` の `'canEdit'` とは別に `'canDelete'` を確認します。権限が通ったら `prisma.task.delete` で1件消し、`{ success: true }` を返して「消せた」と画面へ伝えます。
 
 **確認ポイント**:
@@ -578,12 +583,9 @@ const handleEdit = (taskId: string) => {
 
 **実装**:
 
-```typescript
-// filepath: src/app/task/page.tsx
-import toast from 'react-hot-toast';
-```
+Day 14 の `toast` と `notifyMutationError` を使います。Day 11 で作った `src/lib/query-error.ts` を引き継ぎます。import や関数を重複して追加せず、`createMutation` の `onError` も残してください。次の `updateMutation` は `createMutation` の直後へ追加します。
 
-`toast` は画面の隅に短い通知を出す道具です。更新は自分の入力ミス以外でも失敗するので失敗を伝える先を先に用意しておきます。次のブロックの `onError` からこれを呼びます。取り込みを忘れると保存に失敗した瞬間だけ `toast is not defined` というエラーが出て画面が固まったように見えます。
+通信が途切れたときは保存済みの場合もあるため、更新でも `notifyMutationError` を使います。401なら再ログインを案内します。応答の `data` が無ければ結果不明の通知と一覧を再取得します。403やCONFLICTの応答が届いた場合はサーバーの理由を表示します。理由が空なら更新失敗の文言を使います。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -601,9 +603,9 @@ const updateMutation =
       }
       setDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error(error.message);
-    },
+    onError: (error) => notifyMutationError(
+      error, 'タスクの更新に失敗しました',
+    ),
   });
 ```
 
@@ -647,6 +649,8 @@ const updateMutation =
 // filepath: src/app/task/page.tsx
 import { dateOnlyToUtcStartIso }
   from '@/lib/date';
+import { isAuthError, isUnknownResult }
+  from '@/lib/query-error';
 ```
 
 入力欄が持っている期限は `2026-07-26` という日付だけの文字列ですがStep 0 で書いた `update` が受け取るのは時刻まで含んだ形です。`dateOnlyToUtcStartIso` はその変換を1か所にまとめた関数で、Day 14 の作成処理でも同じものを使いました。ここを自前の `new Date(...)` で済ませると渡す文字列の形で読まれ方が変わります。日付だけなら世界共通の基準時刻（UTC）の0時、時刻まで書いて末尾に `Z` が無ければブラウザの時間帯の0時です。この差を取り違えると期限が前日として保存されます。
@@ -798,7 +802,7 @@ const [deleteTargetId, setDeleteTargetId]
   = useState<string | null>(null);
 ```
 
-ダイアログを開くかと削除対象のIDは別々の state で覚えます。次に mutation を通信処理の並びへ追加します。
+ダイアログを開くかと削除対象のIDは別々の state で覚えます。Day 11 で使った配布部品は `event.preventDefault()` で自動閉じを止めるため、成功した親ページが閉じます。次に mutation を通信処理の並びへ追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -808,14 +812,16 @@ const deleteMutation =
     onSuccess: () => {
       // 一覧のキャッシュを更新
       utils.task.getAll.invalidate();
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
     },
-    onError: (error) => {
-      toast.error(error.message);
-    },
+    onError: (error) => notifyMutationError(
+      error, 'タスクの削除に失敗しました',
+    ),
   });
 ```
 
-権限不足や通信エラーで削除に失敗した場合は、`onError` が理由を画面上部に表示します。カードが残った理由を利用者が判断できるため、失敗を無反応のままにしません。
+削除でも `notifyMutationError` を使います。権限不足の理由と再ログインの案内を表示します。通信が途切れた場合は結果不明として一覧を取り直します。対象が消えたか確認してから次の操作を決めてください。
 
 > `window.confirm()` ではなく
 > `DeleteConfirmDialog` コンポーネントを使います。
@@ -826,6 +832,7 @@ const deleteMutation =
 **確認ポイント**:
 - `DeleteConfirmDialog` のインポートを追加できた
 - stateとmutationが定義できた
+- 削除の成功時だけ確認画面を閉じて対象IDを `null` へ戻す
 
 ---
 
@@ -879,8 +886,6 @@ const handleDelete = (taskId: string) => {
 - 削除ボタンで確認ダイアログが出る
 - 確認ボタンでタスクが削除される
 - キャンセルで何も起こらない
-
-スクリーンショット: 削除確認ダイアログの表示を確認してください。
 
 ![見出しが「本当に削除しますか？」の確認ダイアログ。キャンセルと削除のボタンが並ぶ](./screenshots/day15/task-delete-confirm.png)
 
@@ -998,7 +1003,7 @@ const handleCreate = () => {
 - カードの編集ボタンで編集モードが開く
 - カードの削除ボタンで確認→削除される
 
-スクリーンショット: 下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
+下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
 
 ![赤枠の「API仕様書作成」の優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
 
@@ -1030,7 +1035,7 @@ npm run dev
 - 削除後に一覧が更新される
 - 「新規タスク」で空のフォームが開く
 
-編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残り画面上部にエラーも出ない場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。画面上部にエラーが出た場合は削除が失敗しています。`onError` が表示した理由を確かめてください。
+編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残り画面上部にエラーも出ない場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。通知が出た場合は理由を確かめてください。「応答を確認できませんでした」の場合は削除済みの可能性もあります。通信を戻して一覧を更新し、対象が残るか確認します。
 
 ---
 
@@ -1056,6 +1061,9 @@ const updateMutation =
       }
       setDialogOpen(false);
     },
+    onError: (error) => notifyMutationError(
+      error, 'タスクの更新に失敗しました',
+    ),
   });
 ```
 
@@ -1181,18 +1189,24 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
 
       return { previousTasks };
     },
-    onError: (_error, _updatedTask, context) => {
+    onError: (error, _updatedTask, context) => {
       utils.task.getAll.setData(
         taskListInput,
         context?.previousTasks,
       );
+      notifyMutationError(error, 'タスクの更新に失敗しました');
     },
-    onSettled: () => {
 ```
 
+読み比べ用の続きです。ここではキャッシュを前の値へ戻した後に通知する処理を読みます。ダイアログを閉じる判断は成功時にだけ置くため、エラーの通知後も入力を確かめられます。
+
+```typescript
+// filepath: 読み比べ用サンプル（直前のブロックの続き）
+    onSettled: () => {
+```
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`onError` は控えておいた `previousTasks` をそのままキャッシュへ書き戻します。ここが無いとStep 0 の楽観ロックが CONFLICT を返して保存が失敗しても画面だけは新しい内容に変わったまま残ります。読者が「保存できた」と思い込む嘘の表示です。`onSettled` は成功と失敗のどちらでも最後に必ず走る出口で、次のブロックでその中身を書きます。
+`onError` は控えておいた `previousTasks` をキャッシュへ書き戻して通知します。通信が途切れた場合の通知は結果不明になります。ダイアログを閉じるのは `onSuccess` だけなので入力が残ります。ここが無いとStep 0 の楽観ロックが CONFLICT を返して保存が失敗しても画面だけは新しい内容に変わったまま残ります。読者が「保存できた」と思い込む嘘の表示です。`onSettled` は成功と失敗のどちらでも最後に必ず走る出口で、次のブロックでその中身を書きます。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1204,8 +1218,8 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
           id: selectedTask,
         });
       }
-      setDialogOpen(false);
     },
+    onSuccess: () => setDialogOpen(false),
   });
 ```
 
@@ -1254,7 +1268,7 @@ const handleSubmit = (data: TaskFormData) => {
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。断片を貼り重ねる作業が続いたので途中でどこへ貼ったか分からなくなった場合は各ファイルの最後にある全文のブロックでファイルを置き換えてください。見出しの下の断片は Step で書いた順に並べてあります。そのファイルの全文は見出しの下の最後のブロックです。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
+今日は2つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1267,7 +1281,7 @@ const handleSubmit = (data: TaskFormData) => {
 
 ```typescript
 // filepath: src/server/api/routers/task.ts
-// インポート
+// 完成版: インポート
 import { Prisma } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -1283,14 +1297,13 @@ import {
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 ```
-
 `_helpers/permission` から借りている3つが権限のかかる処理の入口です。今日足したのは真ん中の `findTaskWithPermission` だけで、新しい `import` 文を増やさず同じ中括弧の中へ並べます。同じファイルを指す `import` が2本並んでも動きますが`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本へまとめ直します。
 
 **create の入力スキーマ**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// create の入力スキーマ
+// 完成版: create の入力スキーマ
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
@@ -1302,14 +1315,13 @@ const taskCreateSchema = z.object({
   assigneeId: z.string().cuid().optional(),
 });
 ```
-
 作成のスキーマには `.nullable()` が1つもありません。まだ存在しない行を作る手続きなので「この項目を空にする」という指示そのものが要らないからです。この違いが次の更新のスキーマとの見分けどころになります。
 
 **update の入力スキーマ**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の入力スキーマ
+// 完成版: update の入力スキーマ
 const taskUpdateSchema = z.object({
   id: z.string().cuid(),
   expectedUpdatedAt: z.string().datetime().optional(),
@@ -1324,24 +1336,34 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().cuid().optional().nullable(),
 });
 ```
-
 `id` 以外がすべて `.optional()` なのは編集では変えたい項目だけを送るからです。そこへ `.nullable()` が重なっている項目は「送らない」と「空にする」の2つを区別します。この2つを分けておかないと担当者を外す操作と担当者を触らない操作を同じ形で表すことになり、サーバー側はどちらか一方しか実現できません。
 
 **並び順の採番ヘルパー**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// position の採番
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
-  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
-  );
-  if (lockedProjects.length === 0) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'プロジェクトが見つかりません',
-    });
+// 完成版: position の採番
+const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string[]) => {
+  // 退会処理と担当者の確認・保存を直列化します。相互移動でもロックの順序を揃えるためです。
+  for (const projectId of [...new Set(projectIds)].sort()) {
+    const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    if (lockedProjects.length === 0) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
   }
+};
+```
+同じファイルへ採番用の関数を続けます。退会処理と担当者の確認を同じロックへ入れるためロック用の関数を分けました。採番の直前だけロックしても先に済ませた所属の確認は守れません。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（直前のブロックの続き）
+const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
+  await lockTaskProjects(tx, [projectId]);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -1351,19 +1373,19 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
   return (maxPosition?.position ?? -1) + 1;
 };
 ```
-
-今日この関数の出番が増えます。作成のときだけでなく、タスクを別のプロジェクトへ移すときにも新しい並び番号が要るからです。ロックと採番を同じトランザクション内で行うため呼び出し元の `$transaction` が渡す `tx` を使います。引数の型だけでは通常の `prisma` を渡す誤りを防げないので呼び出し側も確認してください。
+移動元と移動先はID順にロックします。逆向きの移動でも取得順を揃えるためです。今日この関数の出番が増えます。作成のときだけでなく、タスクを別のプロジェクトへ移すときにも新しい並び番号が要るからです。ロックと採番を同じトランザクション内で行うため呼び出し元の `$transaction` が渡す `tx` を使います。引数の型だけでは通常の `prisma` を渡す誤りを防げないので呼び出し側も確認してください。
 
 **担当者の所属チェック**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// 担当者の所属チェック
+// 完成版: 担当者の所属チェック
 async function assertTaskAssigneeBelongsToProject(
+  tx: Prisma.TransactionClient,
   projectId: string,
   assigneeId: string,
 ): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
+  const member = await tx.projectMember.findUnique({
     where: {
       userId_projectId: {
         userId: assigneeId,
@@ -1381,14 +1403,13 @@ async function assertTaskAssigneeBelongsToProject(
   }
 }
 ```
-
 第1引数を `projectId` にしてあるおかげで、この関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確認します。対象のタスクではなくプロジェクトを受け取る形にしておくとまだ移動していない時点の確認にも使えます。
 
 **getAll の入力**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getAll の入力
+// 完成版: getAll の入力
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1408,14 +1429,13 @@ export const taskRouter = createTRPCRouter({
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 ```
-
 `limit` と `offset` に `??` の既定値が二重に書いてあるのは `input` そのものが `undefined` のときにスキーマの `.default(...)` が働かないからです。スキーマの既定値は「オブジェクトは来たが項目が無い」場合にだけ効きます。
 
 **getAll の絞り込み**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getAll の絞り込み
+// 完成版: getAll の絞り込み
       const projectIds = await getUserProjectIds(ctx.session.userId);
 
       where.projectId = { in: projectIds };
@@ -1434,14 +1454,13 @@ export const taskRouter = createTRPCRouter({
       if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 ```
-
 `where.projectId` を先に自分のプロジェクトへ固定してから指定があれば1つに狭める順番が要点です。逆順で書くと指定されたプロジェクトが自分の一覧に無くても素通りします。
 
 **getAll の取得**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getAll の取得
+// 完成版: getAll の取得
       return await prisma.task.findMany({
         where,
         include: {
@@ -1462,28 +1481,26 @@ export const taskRouter = createTRPCRouter({
           },
         },
 ```
-
 `include` で関連を一緒に取っておくと画面側は追加の通信なしでカードを描けます。`createdBy` と `assignee` に `USER_SELECT` を挟んであるのは`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで運ばれるためです。
 
 **getAll の並び順**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getAll の並び順
+// 完成版: getAll の並び順
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         take: limit,
         skip: offset,
       });
     }),
 ```
-
 第1条件が `position` の昇順なので採番した番号がそのまま画面の並びになります。今日の更新でタスクを別のプロジェクトへ移すと新しい番号が振られ、移動先の末尾へ並びます。
 
 **getById の取得**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getById の取得
+// 完成版: getById の取得
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1504,14 +1521,13 @@ export const taskRouter = createTRPCRouter({
             select: USER_SELECT,
           },
 ```
-
 `project` の中で `members` を自分だけに絞って取っているのでこの1件を見るだけで閲覧してよい相手かが分かります。絞り込みを外すと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
 
 **getById の権限確認**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// getById の権限確認
+// 完成版: getById の権限確認
           comments: {
             include: {
               user: {
@@ -1535,38 +1551,43 @@ export const taskRouter = createTRPCRouter({
       return task;
     }),
 ```
-
 `assertMemberPermission` に第2引数を渡していないのは閲覧に必要な権限がメンバーであること自体だからです。今日書く更新と削除ではここへ `'canEdit'` と `'canDelete'` を渡して要求を1段上げます。
 
 **create の権限確認**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// create の権限確認
+// 完成版: create の権限確認
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
-    const project = await prisma.project.findUnique({
-      where: { id: input.projectId },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
+    return await prisma.$transaction(async (tx) => {
+      await lockTaskProjects(tx, [input.projectId]);
+      const project = await tx.project.findUnique({
+        where: { id: input.projectId },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
         },
-      },
-    });
-
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
       });
-    }
 
-    assertMemberPermission(project.members, 'canEdit');
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
 
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
+      assertMemberPermission(project.members, 'canEdit');
+
+      if (input.assigneeId) {
+        await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
+```
+同じファイルへ続けて貼ります。ここはトランザクションを開いたままなので途中では保存しません。権限の確認と担当者の確認が終わるまで次のブロックへ進んでください。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（直前のブロックの続き）
     }
 ```
-
 権限の確認を保存より先に置いてあるのは弾かれる場合に DB へ1行も書かないためです。作成の対象はまだ存在しないタスクなので確認の相手はプロジェクトになります。この点が対象のタスクから確認を始める更新との違いです。
 
 **create のデータ組み立て**:
@@ -1575,8 +1596,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// create のデータ組み立て
-    return await prisma.$transaction(async (tx) => {
+// 完成版: create のデータ組み立て
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
@@ -1599,14 +1619,13 @@ export const taskRouter = createTRPCRouter({
         createData.estimatedHours = input.estimatedHours;
       }
 ```
-
 `createdBy` を `ctx.session.userId` から取っているのは作成者を画面に決めさせないためです。画面から送られた値を使うと他人の名前でタスクを作る送信を止められません。
 
 **create の保存**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// create の保存
+// 完成版: create の保存
       if (input.assigneeId) {
         createData.assignee = {
           connect: { id: input.assigneeId },
@@ -1628,14 +1647,13 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 ```
-
 `prisma.task.create` ではなく `tx.task.create` を呼ぶところがこの部分でいちばん間違えやすい箇所です。`prisma` のまま書くとトランザクションの外で保存され、採番のロックが効きません。
 
 **update の下ごしらえ**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の下ごしらえ
+// 完成版: update の下ごしらえ
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, expectedUpdatedAt, ...data } = input;
 
@@ -1649,14 +1667,13 @@ export const taskRouter = createTRPCRouter({
       updateData.description = data.description;
     }
 ```
-
 `const { id, expectedUpdatedAt, ...data } = input` で3つに分けているのはこの3つの使い道が違うからです。`id` は対象を指す値、`expectedUpdatedAt` はぶつかりの判定に使う値、`data` は書き換える中身です。同じ `input` のまま扱うと書き換え項目を詰める処理へ `id` まで紛れ込みます。
 
 **update のステータスと完了日時**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update のステータスと完了日時
+// 完成版: update のステータスと完了日時
     if (data.status !== undefined) {
       updateData.status = data.status;
       if (data.status !== existingTask.status) {
@@ -1668,14 +1685,13 @@ export const taskRouter = createTRPCRouter({
       }
     }
 ```
-
 完了日時を自動で変えるのはステータスが変わったときだけです。同じ `DONE` のままタイトルを直した場合は元の完了日時を保ちます。完了日時そのものは入力スキーマに無いので、画面から直接送られてくることはありません。
 
 **update の残りの項目**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の残りの項目
+// 完成版: update の残りの項目
     if (data.priority !== undefined) {
       updateData.priority = data.priority;
     }
@@ -1693,69 +1709,84 @@ export const taskRouter = createTRPCRouter({
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
 ```
-
 判定に `!== undefined` を使い、`if (data.priority)` と書いていないのが要点です。後者だと `0` や空文字が偽と見なされ、`estimatedHours` を0時間へ直す編集が黙って無視されます。日付の2つが `? :` で分かれているのは値があれば `Date` へ、空なら `null` へ、と行き先が2つあるためです。
 
 **update のプロジェクト移動**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update のプロジェクト移動
-    if (isProjectChanging) {
-      const destinationMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: targetProjectId,
-          },
-        },
-      });
-      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
-    }
-```
+// 完成版: update のプロジェクト移動
+    try {
+      return await prisma.$transaction(async (tx) => {
+        if (isProjectChanging || typeof data.assigneeId === 'string') {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
 
+        if (isProjectChanging) {
+          const destinationMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: ctx.session.userId,
+                projectId: targetProjectId,
+              },
+            },
+          });
+          assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+          updateData.project = { connect: { id: targetProjectId } };
+        }
+```
 移動元で編集できることは移動先で編集できることを意味しません。だから移動先でも `'canEdit'` を確認します。ここを飛ばすと自分が入っていないプロジェクトへタスクを送り込めてしまいます。`destinationMember ? [destinationMember] : []` と配列に包むのは`assertMemberPermission` が一覧を受け取る形だからです。
 
 **update の担当者**:
 
 ```typescript
-// filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の担当者
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
-    }
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: update の担当者条件
+        if (data.assigneeId !== undefined) {
+          if (data.assigneeId === null) {
+            updateData.assignee = { disconnect: true };
+          } else {
+            await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+            updateData.assignee = { connect: { id: data.assigneeId } };
+          }
+        } else if (
+          existingTask.assigneeId &&
+          (isProjectChanging ||
+            (data.status !== undefined &&
+              data.status !== TASK_STATUS.DONE &&
+              data.status !== TASK_STATUS.CANCELLED))
+        ) {
 ```
 
-`null` と `undefined` の使い分けがここでいちばん効いています。`null` なら担当を外し、値があれば所属を確かめて付け替えます。`undefined` は「触らない」なのでふつうは何もしません。ただしプロジェクトを移した結果、今までの担当者が移動先のメンバーでなくなることがあるためその場合だけ後半の `else if` で自動的に外します。
+完了やキャンセルの記録には以前の担当者が残ります。そのタスクを再開すると退会者へ作業を割り当てる恐れがあります。担当者を省略した場合も移動や再開では所属を確かめます。次のコードを直後に足します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: update の担当者所属
+          // 履歴の担当者を残したタスクを再開しても退会者へ作業を割り当てないためです。
+          const assigneeStillMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: existingTask.assigneeId,
+                projectId: targetProjectId,
+              },
+            },
+            select: { id: true },
+          });
+          if (!assigneeStillMember) {
+            updateData.assignee = { disconnect: true };
+          }
+        }
+```
+`null` は担当を外す指定です。値があれば所属を確認して付け替えます。`undefined` は通常の編集では担当を保ちます。ただしプロジェクトの移動や未完了への再開では所属を確認します。所属していない担当者だけを外すため有効な担当者は残ります。完了やキャンセルのままタイトルを編集しても履歴の担当者は変わりません。
 
 **update の保存**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の保存
-    try {
+// 完成版: update の保存
       // 比較と更新の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めて1回のクエリにまとめる
-      return await prisma.$transaction(async (tx) => {
         if (isProjectChanging) {
           updateData.position = await getNextTaskPosition(tx, targetProjectId);
         }
@@ -1775,14 +1806,13 @@ export const taskRouter = createTRPCRouter({
         });
       });
 ```
-
 `where` に `updatedAt` を混ぜているのが楽観ロックの本体です。先に読んで比べてから書く形にすると比べた後・書く前の隙間に別の書き換えが入れます。条件を `where` へ入れて1回の問い合わせにまとめるとその隙間そのものが無くなります。`expectedUpdatedAt` が送られてこない場合も、サーバーが読み取った `existingTask.updatedAt` と比較します。読み取り後に別の更新が入れば `CONFLICT` を返します。
 
 **update の競合エラー**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// update の競合エラー
+// 完成版: update の競合エラー
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         throw new TRPCError({
@@ -1796,14 +1826,13 @@ export const taskRouter = createTRPCRouter({
     }
   }),
 ```
-
 `P2025` だけを `CONFLICT` へ変え、それ以外は `throw err` でそのまま上へ渡します。全部を `CONFLICT` にすると接続エラーや書式の誤りまで「誰かが先に更新しました」と表示され、読者は直しようのない案内を受け取ります。文言で「他の人」と断定していないのは自分の別の操作でも更新時刻が動くからです。
 
 **delete**:
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
-// delete
+// 完成版: delete
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -1817,392 +1846,7 @@ export const taskRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
-
-<!-- code-block-length-exception: complete-copy-unit -->
-```typescript
-// filepath: src/server/api/routers/task.ts
-// 完成版: ファイル全体
-import { Prisma } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
-import { TASK_PRIORITY } from '@/lib/constant/priority';
-import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
-import { TASK_STATUS } from '@/lib/constant/status';
-import { prisma } from '@/lib/prisma';
-import { createTRPCRouter, protectedProcedure } from '../trpc';
-import {
-  assertMemberPermission,
-  findTaskWithPermission,
-  getUserProjectIds,
-} from './_helpers/permission';
-import { USER_SELECT } from './_helpers/select';
-
-const taskCreateSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です'),
-  description: z.string().optional(),
-  status: taskStatusSchema.default(TASK_STATUS.TODO),
-  priority: taskPrioritySchema.default(TASK_PRIORITY.MEDIUM),
-  dueDate: z.string().datetime().optional(),
-  estimatedHours: z.number().min(0).optional(),
-  projectId: z.string().cuid(),
-  assigneeId: z.string().cuid().optional(),
-});
-
-const taskUpdateSchema = z.object({
-  id: z.string().cuid(),
-  expectedUpdatedAt: z.string().datetime().optional(),
-  title: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-  status: taskStatusSchema.optional(),
-  priority: taskPrioritySchema.optional(),
-  dueDate: z.string().datetime().optional().nullable(),
-  estimatedHours: z.number().min(0).optional().nullable(),
-  actualHours: z.number().min(0).optional(),
-  projectId: z.string().cuid().optional(),
-  assigneeId: z.string().cuid().optional().nullable(),
-});
-
-const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
-  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
-  );
-  if (lockedProjects.length === 0) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'プロジェクトが見つかりません',
-    });
-  }
-
-  const maxPosition = await tx.task.findFirst({
-    where: { projectId },
-    orderBy: { position: 'desc' },
-    select: { position: true },
-  });
-  return (maxPosition?.position ?? -1) + 1;
-};
-
-async function assertTaskAssigneeBelongsToProject(
-  projectId: string,
-  assigneeId: string,
-): Promise<void> {
-  const member = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: {
-        userId: assigneeId,
-        projectId,
-      },
-    },
-    select: { id: true },
-  });
-
-  if (!member) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: '担当者にはこのプロジェクトのメンバーを指定してください',
-    });
-  }
-}
-
-export const taskRouter = createTRPCRouter({
-  getAll: protectedProcedure
-    .input(
-      z
-        .object({
-          projectId: z.string().cuid().optional(),
-          status: taskStatusSchema.optional(),
-          priority: taskPrioritySchema.optional(),
-          assigneeId: z.string().cuid().optional(),
-          limit: z.number().int().min(1).max(100).default(100),
-          offset: z.number().int().min(0).default(0),
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) => {
-      const where: Prisma.TaskWhereInput = {};
-      const limit = input?.limit ?? 100;
-      const offset = input?.offset ?? 0;
-
-      const projectIds = await getUserProjectIds(ctx.session.userId);
-
-      where.projectId = { in: projectIds };
-
-      if (input?.projectId) {
-        if (!projectIds.includes(input.projectId)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'このプロジェクトへのアクセス権限がありません',
-          });
-        }
-        where.projectId = input.projectId;
-      }
-
-      if (input?.status) where.status = input.status;
-      if (input?.priority) where.priority = input.priority;
-      if (input?.assigneeId) where.assigneeId = input.assigneeId;
-
-      return await prisma.task.findMany({
-        where,
-        include: {
-          project: true,
-          createdBy: {
-            select: USER_SELECT,
-          },
-          assignee: {
-            select: USER_SELECT,
-          },
-          comments: {
-            include: {
-              user: {
-                select: USER_SELECT,
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-          },
-        },
-
-        orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
-        take: limit,
-        skip: offset,
-      });
-    }),
-
-  getById: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .query(async ({ ctx, input }) => {
-      const task = await prisma.task.findUnique({
-        where: { id: input.id },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: ctx.session.userId },
-              },
-            },
-          },
-          createdBy: {
-            select: USER_SELECT,
-          },
-          assignee: {
-            select: USER_SELECT,
-          },
-
-          comments: {
-            include: {
-              user: {
-                select: USER_SELECT,
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-          },
-        },
-      });
-
-      if (!task) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'タスクが見つかりません',
-        });
-      }
-
-      assertMemberPermission(task.project.members);
-
-      return task;
-    }),
-
-  create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
-    const project = await prisma.project.findUnique({
-      where: { id: input.projectId },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
-        },
-      },
-    });
-
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-
-    assertMemberPermission(project.members, 'canEdit');
-
-    if (input.assigneeId) {
-      await assertTaskAssigneeBelongsToProject(input.projectId, input.assigneeId);
-    }
-
-    return await prisma.$transaction(async (tx) => {
-      const createData: Prisma.TaskCreateInput = {
-        title: input.title,
-        status: input.status,
-        completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
-        priority: input.priority,
-        dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position: await getNextTaskPosition(tx, input.projectId),
-        project: {
-          connect: { id: input.projectId },
-        },
-        createdBy: {
-          connect: { id: ctx.session.userId },
-        },
-      };
-
-      if (input.description !== undefined) {
-        createData.description = input.description;
-      }
-      if (input.estimatedHours !== undefined) {
-        createData.estimatedHours = input.estimatedHours;
-      }
-
-      if (input.assigneeId) {
-        createData.assignee = {
-          connect: { id: input.assigneeId },
-        };
-      }
-
-      return await tx.task.create({
-        data: createData,
-        include: {
-          project: true,
-          createdBy: {
-            select: USER_SELECT,
-          },
-          assignee: {
-            select: USER_SELECT,
-          },
-        },
-      });
-    });
-  }),
-
-  update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
-    const { id, expectedUpdatedAt, ...data } = input;
-
-    const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
-
-    const updateData: Prisma.TaskUpdateInput = {};
-    if (data.title !== undefined) {
-      updateData.title = data.title;
-    }
-    if (data.description !== undefined) {
-      updateData.description = data.description;
-    }
-
-    if (data.status !== undefined) {
-      updateData.status = data.status;
-      if (data.status !== existingTask.status) {
-        if (data.status === TASK_STATUS.DONE) {
-          updateData.completedAt = new Date();
-        } else {
-          updateData.completedAt = null;
-        }
-      }
-    }
-
-    if (data.priority !== undefined) {
-      updateData.priority = data.priority;
-    }
-    if (data.estimatedHours !== undefined) {
-      updateData.estimatedHours = data.estimatedHours;
-    }
-    if (data.actualHours !== undefined) {
-      updateData.actualHours = data.actualHours;
-    }
-    if (data.dueDate !== undefined) {
-      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-    }
-
-    const isProjectChanging =
-      data.projectId !== undefined && data.projectId !== existingTask.projectId;
-    const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
-
-    if (isProjectChanging) {
-      const destinationMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: targetProjectId,
-          },
-        },
-      });
-      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
-    }
-
-    if (data.assigneeId !== undefined) {
-      if (data.assigneeId === null) {
-        updateData.assignee = { disconnect: true };
-      } else {
-        await assertTaskAssigneeBelongsToProject(targetProjectId, data.assigneeId);
-        updateData.assignee = { connect: { id: data.assigneeId } };
-      }
-    } else if (isProjectChanging && existingTask.assigneeId) {
-      const assigneeStillMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: existingTask.assigneeId,
-            projectId: targetProjectId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!assigneeStillMember) {
-        updateData.assignee = { disconnect: true };
-      }
-    }
-
-    try {
-      // 比較と更新の間に他の更新が割り込む余地をなくすため、
-      // updatedAt を where に含めて1回のクエリにまとめる
-      return await prisma.$transaction(async (tx) => {
-        if (isProjectChanging) {
-          updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        }
-
-        return await tx.task.update({
-          where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
-          data: updateData,
-          include: {
-            project: true,
-            createdBy: {
-              select: USER_SELECT,
-            },
-            assignee: {
-              select: USER_SELECT,
-            },
-          },
-        });
-      });
-
-    } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message:
-            'タスクの内容が更新されています。' +
-            '最新の内容を再読み込みしてください',
-        });
-      }
-      throw err;
-    }
-  }),
-
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().cuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const task = await findTaskWithPermission(input.id, ctx.session.userId);
-      assertMemberPermission(task.project.members, 'canDelete');
-
-      await prisma.task.delete({
-        where: { id: input.id },
-      });
-      return { success: true };
-    }),
-});
-```
+`src/server/api/routers/task.ts` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
 
 `findTaskWithPermission` に第3引数を渡さず、その後で `'canDelete'` を確かめているのが更新との違いです。編集はできても削除はできない権限があるため要求する権限を分けます。最後の `});` で `taskRouter` 全体が閉じます。
 
@@ -2212,7 +1856,7 @@ export const taskRouter = createTRPCRouter({
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// React と部品のインポート
+// 完成版: React と部品のインポート
 'use client';
 
 import { Plus } from 'lucide-react';
@@ -2234,13 +1878,13 @@ import {
 } from '@/component/task/task-dialog';
 ```
 
-今日足したのは `toast` の行です。`react-hot-toast` だけ中括弧が付いていないのはこの取り込みが既定の書き出しを受け取る形だからです。このライブラリは `toast` を既定と名前付きの両方で出しているので中括弧を付けた `import { toast }` でも動きます。この教材では既定の形に揃えています。中括弧が要るかどうかは借りる側では決められません。借りられる側のファイルが何をどう書き出しているかで決まります。
+`toast` は Day 14 で追加済みです。`react-hot-toast` だけ中括弧が付いていないのはこの取り込みが既定の書き出しを受け取る形だからです。このライブラリは `toast` を既定と名前付きの両方で出しているので中括弧を付けた `import { toast }` でも動きます。この教材では既定の形に揃えています。中括弧が要るかどうかは借りる側では決められません。借りられる側のファイルが何をどう書き出しているかで決まります。
 
 **選択欄と定数のインポート**:
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 選択欄と定数のインポート
+// 完成版: 選択欄と定数のインポート
 import { Button }
   from '@/component/ui/button';
 import { DeleteConfirmDialog } from
@@ -2259,7 +1903,7 @@ import {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 定数と道具のインポート
+// 完成版: 定数と道具のインポート
 import {
   hasPermission, isProjectMemberRole,
   type ProjectMemberRole,
@@ -2271,6 +1915,8 @@ import {
 } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso }
   from '@/lib/date';
+import { isAuthError, isUnknownResult }
+  from '@/lib/query-error';
 import { taskToFormData }
   from '@/lib/task-form';
 import { api } from '@/trpc/react';
@@ -2282,7 +1928,7 @@ import { api } from '@/trpc/react';
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 画面の状態
+// 完成版: 画面の状態
 function TaskPageContent() {
   const [filterProject, setFilterProject] =
     useState<string>('all');
@@ -2308,7 +1954,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// URL と取得
+// 完成版: URL と取得
   const searchParams = useSearchParams();
   const taskIdParam =
     searchParams.get('taskId');
@@ -2338,7 +1984,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 権限の判定
+// 完成版: 権限の判定
   const myRoleByProject = useMemo(() => {
     const map = new Map<string, ProjectMemberRole>();
     const userId = session?.user?.id;
@@ -2363,7 +2009,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 編集と削除の可否
+// 完成版: 編集と削除の可否
   const canEditProject = useCallback(
     (projectId: string) => {
       const role = myRoleByProject.get(projectId);
@@ -2387,7 +2033,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// URL からの詳細表示
+// 完成版: URL からの詳細表示
   useEffect(() => {
     if (taskIdParam) {
       setSelectedTask(taskIdParam);
@@ -2402,15 +2048,46 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 作成と更新の通信
+// 完成版: 作成と更新の通信
+  const notifyMutationError = (
+    error: { message?: string }, fallback: string,
+  ) => {
+    if (isAuthError(error)) {
+      toast.error('ログインの有効期限が切れました');
+      return;
+    }
+    if (isUnknownResult(error)) {
+      toast.error(
+        '応答を確認できませんでした。'
+        + '一覧を更新して結果を確認してください。',
+      );
+      void utils.task.getAll.invalidate();
+      return;
+    }
+    toast.error(error.message || fallback);
+  };
+```
+
+次にタスクの作成処理を追加します。成功時は一覧を取り直して入力画面を閉じます。エラー時は通知関数を呼ぶだけなので、入力を残して作成結果を確かめられます。
+
+```typescript
+// filepath: src/app/task/page.tsx（直前のブロックの続き）
   const createMutation =
     api.task.create.useMutation({
       onSuccess: () => {
         utils.task.getAll.invalidate();
         setDialogOpen(false);
       },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの作成に失敗しました',
+      ),
     });
+```
 
+次にタスクの更新処理を追加します。成功時は一覧と開いている詳細を取り直して入力画面を閉じます。エラー時は共通の通知関数を呼び、入力を残して更新結果を確かめられます。
+
+```typescript
+// filepath: src/app/task/page.tsx（直前のブロックの続き）
   const updateMutation =
     api.task.update.useMutation({
       onSuccess: () => {
@@ -2422,37 +2099,38 @@ function TaskPageContent() {
         }
         setDialogOpen(false);
       },
-      onError: (error) => {
-        toast.error(error.message);
-      },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの更新に失敗しました',
+      ),
     });
 ```
-
-更新にだけ `onError` が付いているのは更新が自分の入力ミス以外でも失敗するからです。誰かが先に保存していればサーバーは競合の合図を返します。`toast.error(error.message)` はその文言を画面の隅へ出すので保存されなかったことに気づけます。詳細を `selectedTask` があるときだけ取り直すのは開いていない画面のために通信を増やさないためです。
+作成と更新は共通の `notifyMutationError` で通知します。401は再ログインを案内し、応答の `data` が無い場合は結果不明として一覧を取り直します。競合などの応答が届いた場合はサーバーの理由を表示します。理由が空でも通知が空欄にならないように各操作の失敗文言を渡します。詳細を `selectedTask` があるときだけ取り直すのは開いていない画面のために通信を増やさないためです。
 
 **削除の通信**:
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 削除の通信
+// 完成版: 削除の通信
   const deleteMutation =
     api.task.delete.useMutation({
       onSuccess: () => {
         utils.task.getAll.invalidate();
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
       },
-      onError: (error) => {
-        toast.error(error.message);
-      },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの削除に失敗しました',
+      ),
     });
 ```
 
-削除では `setDialogOpen(false)` を呼びません。閉じる相手が入力ダイアログではなく確認ダイアログで、そちらは `DeleteConfirmDialog` が自分で閉じるからです。`invalidate()` を忘れると DB からは消えているのにカードが残り、再読み込みするまで消えたことが分かりません。`onError` は削除できなかった理由を toast で伝えます。
+削除が成功したら `setDeleteDialogOpen(false)` で確認画面を閉じ、対象IDを `null` へ戻します。入力用の `dialogOpen` とは別の state です。失敗時は確認画面を閉じません。`invalidate()` を忘れると DB からは消えているのにカードが残り、再読み込みするまで消えたことが分かりません。`onError` は削除の理由または結果不明の通知を表示します。
 
 **3つのハンドラー**:
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 3つのハンドラー
+// 完成版: 3つのハンドラー
   const handleCreate = () => {
     setEditingTask(undefined);
     setDialogOpen(true);
@@ -2479,7 +2157,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 送信ハンドラーの更新分岐
+// 完成版: 送信ハンドラーの更新分岐
   const handleSubmit =
     (data: TaskFormData) => {
       if (data.id) {
@@ -2511,7 +2189,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 送信ハンドラーの作成分岐
+// 完成版: 送信ハンドラーの作成分岐
       if (!session?.user?.id) return;
       createMutation.mutate({
         title: data.title,
@@ -2538,7 +2216,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// カードのハンドラー
+// 完成版: カードのハンドラー
   const handleTaskClick =
     (taskId: string) => {
       setSelectedTask(taskId);
@@ -2564,7 +2242,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 見出しとフィルター
+// 完成版: 見出しとフィルター
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -2596,7 +2274,7 @@ function TaskPageContent() {
 
 ```typescript
               {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-              {/* プロジェクトの絞り込み */}
+              {/* 完成版: プロジェクトの絞り込み */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのプロジェクト
@@ -2617,7 +2295,7 @@ function TaskPageContent() {
 
 ```typescript
           {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-          {/* ステータスの絞り込み */}
+          {/* 完成版: ステータスの絞り込み */}
           <div className="w-[200px]">
             <Select value={filterStatus}
               onValueChange={(value) => {
@@ -2637,7 +2315,7 @@ function TaskPageContent() {
 
 ```typescript
               {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-              {/* ステータスの選択肢 */}
+              {/* 完成版: ステータスの選択肢 */}
               <SelectContent>
                 <SelectItem value="all">
                   すべてのステータス
@@ -2661,7 +2339,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* カードの一覧 */}
+        {/* 完成版: カードの一覧 */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -2691,7 +2369,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// 空のときの表示
+// 完成版: 空のときの表示
           ) : (
             <div className="col-span-full flex
               flex-col items-center
@@ -2713,7 +2391,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* 3つのダイアログ */}
+        {/* 完成版: 3つのダイアログ */}
         <TaskDetailDialog
           open={detailOpen}
           taskId={selectedTask}
@@ -2735,7 +2413,7 @@ function TaskPageContent() {
 
 ```typescript
         {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
-        {/* 削除の確認ダイアログ */}
+        {/* 完成版: 削除の確認ダイアログ */}
         <DeleteConfirmDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
@@ -2760,7 +2438,7 @@ function TaskPageContent() {
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
-// ページ本体
+// 完成版: ページ本体
 export default function TaskPage() {
   return (
     <Suspense
@@ -2771,393 +2449,7 @@ export default function TaskPage() {
 }
 ```
 
-完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
-
-<!-- code-block-length-exception: complete-copy-unit -->
-```typescript
-// filepath: src/app/task/page.tsx
-// 完成版: ファイル全体
-'use client';
-
-import { Plus } from 'lucide-react';
-import { useSearchParams }
-  from 'next/navigation';
-import {
-  Suspense, useCallback,
-  useEffect, useMemo, useState,
-} from 'react';
-import toast from 'react-hot-toast';
-import { AppLayout }
-  from '@/component/layout/app-layout';
-import { TaskCard }
-  from '@/component/task/task-card';
-import { TaskDetailDialog }
-  from '@/component/task/task-detail-dialog';
-import {
-  TaskDialog, type TaskFormData,
-} from '@/component/task/task-dialog';
-
-import { Button }
-  from '@/component/ui/button';
-import { DeleteConfirmDialog } from
-  '@/component/ui/delete-confirm-dialog';
-import { PageLoadingSpinner }
-  from '@/component/ui/loading-spinner';
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from '@/component/ui/select';
-
-import {
-  hasPermission, isProjectMemberRole,
-  type ProjectMemberRole,
-} from '@/lib/constant/roles';
-import {
-  isTaskStatus,
-  TASK_STATUS_LABELS,
-  type TaskStatus,
-} from '@/lib/constant/status';
-import { dateOnlyToUtcStartIso }
-  from '@/lib/date';
-import { taskToFormData }
-  from '@/lib/task-form';
-import { api } from '@/trpc/react';
-
-function TaskPageContent() {
-  const [filterProject, setFilterProject] =
-    useState<string>('all');
-  const [filterStatus, setFilterStatus] =
-    useState<TaskStatus | 'all'>('all');
-  const [selectedTask, setSelectedTask] =
-    useState<string | null>(null);
-  const [detailOpen, setDetailOpen] =
-    useState(false);
-  const [dialogOpen, setDialogOpen] =
-    useState(false);
-  const [editingTask, setEditingTask] =
-    useState<TaskFormData | undefined>();
-  const [deleteDialogOpen, setDeleteDialogOpen]
-    = useState(false);
-  const [deleteTargetId, setDeleteTargetId]
-    = useState<string | null>(null);
-
-  const searchParams = useSearchParams();
-  const taskIdParam =
-    searchParams.get('taskId');
-
-  const {
-    data: tasks,
-    isLoading: tasksLoading,
-  } = api.task.getAll.useQuery(
-    {
-      projectId: filterProject === 'all'
-        ? undefined : filterProject,
-      status: filterStatus === 'all'
-        ? undefined : filterStatus,
-    },
-    { refetchOnWindowFocus: false },
-  );
-  const { data: projects } =
-    api.project.getAll.useQuery();
-  const { data: session } =
-    api.auth.getSession.useQuery();
-  const utils = api.useUtils();
-
-  const myRoleByProject = useMemo(() => {
-    const map = new Map<string, ProjectMemberRole>();
-    const userId = session?.user?.id;
-    if (!userId || !projects) {
-      return map;
-    }
-    for (const project of projects) {
-      const me = project.members?.find(
-        (member) => member.userId === userId,
-      );
-      if (me && isProjectMemberRole(me.role)) {
-        map.set(project.id, me.role);
-      }
-    }
-    return map;
-  }, [projects, session?.user?.id]);
-
-  const canEditProject = useCallback(
-    (projectId: string) => {
-      const role = myRoleByProject.get(projectId);
-      return role ? hasPermission(role, 'canEdit') : false;
-    },
-    [myRoleByProject],
-  );
-
-  const canDeleteProject = useCallback(
-    (projectId: string) => {
-      const role = myRoleByProject.get(projectId);
-      return role ? hasPermission(role, 'canDelete') : false;
-    },
-    [myRoleByProject],
-  );
-
-  useEffect(() => {
-    if (taskIdParam) {
-      setSelectedTask(taskIdParam);
-      setDetailOpen(true);
-    }
-  }, [taskIdParam]);
-
-  const createMutation =
-    api.task.create.useMutation({
-      onSuccess: () => {
-        utils.task.getAll.invalidate();
-        setDialogOpen(false);
-      },
-    });
-
-  const updateMutation =
-    api.task.update.useMutation({
-      onSuccess: () => {
-        utils.task.getAll.invalidate();
-        if (selectedTask) {
-          utils.task.getById.invalidate(
-            { id: selectedTask }
-          );
-        }
-        setDialogOpen(false);
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
-
-  const deleteMutation =
-    api.task.delete.useMutation({
-      onSuccess: () => {
-        utils.task.getAll.invalidate();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
-
-  const handleCreate = () => {
-    setEditingTask(undefined);
-    setDialogOpen(true);
-  };
-
-  const handleEdit = (taskId: string) => {
-    const task =
-      tasks?.find((t) => t.id === taskId);
-    if (task) {
-      setEditingTask(taskToFormData(task));
-      setDialogOpen(true);
-    }
-  };
-
-  const handleDelete = (taskId: string) => {
-    setDeleteTargetId(taskId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleSubmit =
-    (data: TaskFormData) => {
-      if (data.id) {
-        updateMutation.mutate({
-          id: data.id,
-          title: data.title,
-          description:
-            data.description || null,
-          status: data.status,
-          priority: data.priority,
-          dueDate: data.dueDate
-            ? dateOnlyToUtcStartIso(data.dueDate)
-            : null,
-          estimatedHours:
-            data.estimatedHours ?? null,
-          projectId: data.projectId,
-          assigneeId:
-            data.assigneeId || null,
-          expectedUpdatedAt:
-            data.expectedUpdatedAt,
-        });
-        return;
-      }
-
-      if (!session?.user?.id) return;
-      createMutation.mutate({
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        projectId: data.projectId,
-        dueDate: data.dueDate
-          ? dateOnlyToUtcStartIso(
-              data.dueDate
-            )
-          : undefined,
-        estimatedHours:
-          data.estimatedHours ?? undefined,
-        assigneeId:
-          data.assigneeId || undefined,
-      });
-    };
-
-  const handleTaskClick =
-    (taskId: string) => {
-      setSelectedTask(taskId);
-      setDetailOpen(true);
-    };
-  const handleDetailClose = () => {
-    setDetailOpen(false);
-    setSelectedTask(null);
-  };
-
-  if (tasksLoading) {
-    return (
-      <AppLayout>
-        <PageLoadingSpinner />
-      </AppLayout>
-    );
-  }
-
-  return (
-    <AppLayout>
-      <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold
-          tracking-tight">
-          タスク
-        </h1>
-        <Button size="sm"
-          className="w-full sm:w-auto"
-          onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          新規タスク
-        </Button>
-        <div className="flex gap-2 w-full
-          sm:w-auto ml-auto">
-          <div className="w-[200px]">
-            <Select value={filterProject}
-              onValueChange={setFilterProject}>
-              <SelectTrigger
-                aria-label="プロジェクトで絞り込み">
-                <SelectValue placeholder=
-                  "すべてのプロジェクト" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="all">
-                  すべてのプロジェクト
-                </SelectItem>
-                {projects?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="w-[200px]">
-            <Select value={filterStatus}
-              onValueChange={(value) => {
-                if (value === 'all'
-                  || isTaskStatus(value))
-                  setFilterStatus(value);
-              }}>
-              <SelectTrigger>
-                <SelectValue placeholder=
-                  "すべてのステータス" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="all">
-                  すべてのステータス
-                </SelectItem>
-                {Object.entries(
-                  TASK_STATUS_LABELS
-                ).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid gap-6
-          sm:grid-cols-2 lg:grid-cols-3
-          xl:grid-cols-4">
-          {tasks && tasks.length > 0 ? (
-            tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                id={task.id}
-                title={task.title}
-                description={task.description}
-                status={task.status}
-                priority={task.priority}
-                dueDate={task.dueDate}
-                assignee={task.assignee}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onClick={handleTaskClick}
-                canEdit={canEditProject(task.projectId)}
-                canDelete={canDeleteProject(task.projectId)}
-              />
-            ))
-
-          ) : (
-            <div className="col-span-full flex
-              flex-col items-center
-              justify-center py-12
-              text-center
-              text-muted-foreground">
-              <p>タスクが見つかりません。</p>
-              {filterProject === 'all' && filterStatus === 'all' && (
-                <p>最初のタスクを作成しましょう！</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <TaskDetailDialog
-          open={detailOpen}
-          taskId={selectedTask}
-          onClose={handleDetailClose}
-        />
-
-        <TaskDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleSubmit}
-          initialData={editingTask}
-          projects={projects ?? []}
-        />
-
-        <DeleteConfirmDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={() => {
-            if (deleteTargetId) {
-              deleteMutation.mutate(
-                { id: deleteTargetId }
-              );
-            }
-          }}
-          isPending={deleteMutation.isPending}
-        />
-      </div>
-    </AppLayout>
-  );
-}
-
-export default function TaskPage() {
-  return (
-    <Suspense
-      fallback={<PageLoadingSpinner />}>
-      <TaskPageContent />
-    </Suspense>
-  );
-}
-```
+`src/app/task/page.tsx` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
 
 `export default` を付けた関数がそのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのは中で `useSearchParams` を使っているからです。境界の外に置くとビルド時にエラーで止まります。
 
@@ -3249,6 +2541,6 @@ Day 16 ではタスクのステータス変更と作業時間の
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

@@ -10,8 +10,6 @@ Day 21 ではサーバー側で集計済みのデータを返す `api.report.get
 
 Recharts（React 用のグラフ描画ライブラリ）を使ってレポートページに円グラフを追加します。`getOverview` が返す集計済みデータからステータス別・優先度別のタスク分布を表示します。
 
-スクリーンショット: レポートページにステータス別・優先度別の円グラフが並んだ完成イメージです。
-
 ![レポートページ。統計カード4枚の下に、ステータス別タスクと優先度別タスクの円グラフが横に2枚並んでいる](./screenshots/day22/report.png)
 
 > **今日のゴールライン**: サーバーが集計したタスク分布を受け取り、Recharts の部品を組み合わせて円グラフとして画面に出せればOKです。
@@ -553,7 +551,7 @@ Card 枠と `Pie` の設定です。
 - `isTaskPriority` 型ガードで色を決定している
 - 2つの円グラフが表示される
 
-スクリーンショット: 下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で足した2つの円グラフです。この Step の時点では横に並ばず、縦に積まれた形で出ます。横並びにするのは Step 8 です。
+下の画像は Step 8 まで書き終えた完成後の画面です。赤枠の中がこの Step で足した2つの円グラフです。この Step の時点では横に並ばず、縦に積まれた形で出ます。横並びにするのは Step 8 です。
 
 ![完成後のレポートページ。赤枠①がステータス別タスクの円グラフ、赤枠②が優先度別タスクの円グラフ](./screenshots/day22/report-pie-charts.png)
 
@@ -630,7 +628,7 @@ npm run dev
 - 色がステータス/優先度に対応している
 - Tooltip で件数が確認できる
 
-スクリーンショット: 統計カード4枚の下に円グラフ2つがグリッド配置された完成画面です。
+下の画像は統計カード4枚の下に円グラフ2つがグリッド配置された完成画面です。
 
 ![完成後のレポートページ。赤枠の中に、2枚の円グラフが横に並んだグリッドが出ている](./screenshots/day22/report-chart-grid.png)
 
@@ -822,7 +820,7 @@ export default function ReportPage() {
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -831,7 +829,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -849,7 +847,7 @@ export default function ReportPage() {
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
           {/* 統計カード（作業時間の合計と平均） */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -858,7 +856,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -1138,7 +1136,7 @@ export default function ReportPage() {
         <div className="grid grid-cols-1
           sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -1147,7 +1145,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -1157,7 +1155,7 @@ export default function ReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -1166,7 +1164,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -1393,6 +1391,6 @@ Day 23ではプロジェクト別の統計テーブルと週次レポート機�
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

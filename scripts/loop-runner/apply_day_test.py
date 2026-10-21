@@ -368,6 +368,43 @@ class MustReviewFixes(unittest.TestCase):
         self.assertTrue(outs)
         self.assertNotIn("完成版:", outs[0][1])
 
+    def test_kansei_all_not_first_for_two_independent_listings(self):
+        # 独立した完成版リスティングが2本あると全結合は宣言が重複する。
+        # 先頭候補は全結合ではなく後ろの完成版にする
+        def mk(body):
+            return ad.Part(cont=False, body=body, kansei=True,
+                           unmarked=False, prose="", directive=None)
+        parts = [mk("// 完成版: ファイル全体\nimport { a } from './a';\nexport const x = a;"),
+                 mk("// 完成版: ファイル全体\nimport { a } from './a';\nexport const x = a + 1;")]
+        outs = list(ad.candidates(parts))
+        self.assertTrue(outs)
+        self.assertNotEqual(outs[0][0], "kansei-all")
+        self.assertEqual(outs[0][1].count("export const x"), 1)
+
+    def test_kansei_all_first_for_section_listings(self):
+        # 節別リスティング（先頭だけがファイル頭）は従来どおり全結合を先に試す
+        def mk(body):
+            return ad.Part(cont=False, body=body, kansei=True,
+                           unmarked=False, prose="", directive=None)
+        parts = [mk("// 完成版: 前半\n'use client';\nimport { a } from './a';"),
+                 mk("// 完成版: 後半\nexport const x = a;")]
+        outs = list(ad.candidates(parts))
+        self.assertEqual(outs[0][0], "kansei-all")
+
+    def test_kansei_all_first_when_import_groups_are_stacked(self):
+        # 節別リスティングの import 群は、2節目以降も import から始まる。
+        # 宣言が重複しない限り独立した完成版ではないので、全結合を先に試す
+        def mk(body):
+            return ad.Part(cont=False, body=body, kansei=True,
+                           unmarked=False, prose="", directive=None)
+        parts = [mk("// 完成版: 外部\n'use client';\nimport { a } from './a';"),
+                 mk("// 完成版: UI\nimport { b } from './b';"),
+                 mk("// 完成版: 道具\nimport { c } from './c';"),
+                 mk("// 完成版: 本体\nexport default function Page() {\n  return a + b + c;\n}")]
+        outs = list(ad.candidates(parts))
+        self.assertEqual(outs[0][0], "kansei-all")
+        self.assertIn("'use client'", outs[0][1])
+
     def test_blob_locate_absorbs_line_folds(self):
         # 断片と oracle で行折り返しが違っても一致を拾う
         base = ["const a =", "  foo(", "    1", "  )", "const b = 2;"]

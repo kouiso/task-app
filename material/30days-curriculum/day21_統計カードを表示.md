@@ -772,7 +772,7 @@ if (isLoading) {
   sm:grid-cols-2 lg:grid-cols-4
   gap-4">
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         タスク数</p>
@@ -792,7 +792,7 @@ if (isLoading) {
 {/* filepath: src/app/report/page.tsx */}
 {/* 統計カード: 完了率カード */}
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         完了率</p>
@@ -812,7 +812,7 @@ if (isLoading) {
 {/* filepath: src/app/report/page.tsx */}
 {/* 統計カード: 合計と平均の作業時間 */}
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         合計作業時間</p>
@@ -832,7 +832,7 @@ if (isLoading) {
 {/* filepath: src/app/report/page.tsx */}
 {/* 統計カード: 平均作業時間 + grid閉じ */}
   <Card>
-    <CardContent className="pt-6">
+    <CardContent className="pt-6 sm:pt-6">
       <p className="text-sm
         text-muted-foreground mb-1">
         平均作業時間/タスク</p>
@@ -1780,7 +1780,7 @@ export default function ReportPage() {
           sm:grid-cols-2 lg:grid-cols-4
           gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -1789,7 +1789,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -1809,7 +1809,7 @@ export default function ReportPage() {
           {/* filepath: src/app/report/page.tsx（同じファイルの続き） */}
           {/* JSX — 統計カードの後半2枚 */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -1818,7 +1818,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -1971,7 +1971,7 @@ export default function ReportPage() {
           sm:grid-cols-2 lg:grid-cols-4
           gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 タスク数</p>
@@ -1980,7 +1980,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 完了率</p>
@@ -1990,7 +1990,7 @@ export default function ReportPage() {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 合計作業時間</p>
@@ -1999,7 +1999,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <p className="text-sm
                 text-muted-foreground mb-1">
                 平均作業時間/タスク</p>
@@ -2435,6 +2435,6 @@ Day 22 ではレポートページにグラフを追加
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->

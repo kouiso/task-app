@@ -32,6 +32,70 @@ async function setup(role: MemberRole) {
   return { actor, project, caller };
 }
 
+// プロジェクト行のロックを別のトランザクションで握り、その間に呼び出しを走らせてから、
+// メンバーを削除してロックを離す。呼び出しが「確認 → ロック → 保存」のどこで割り込まれても、
+// 毎回同じ順序（呼び出しがロックを待つ間にメンバーが削除される）になる。
+async function callWhileMemberIsRemoved<T>(
+  projectId: string,
+  memberId: string,
+  call: () => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false; error: unknown }> {
+  let release: () => void = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let markLocked: () => void = () => {};
+  const locked = new Promise<void>((resolve) => {
+    markLocked = resolve;
+  });
+
+  let removerPid = 0;
+  const remover = prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`;
+      const pid = await tx.$queryRaw<Array<{ pid: number }>>`SELECT pg_backend_pid() AS pid`;
+      removerPid = pid[0]?.pid ?? 0;
+      markLocked();
+      await released;
+      await tx.projectMember.delete({
+        where: { userId_projectId: { userId: memberId, projectId } },
+      });
+    },
+    // ポーリングの上限（約 3 秒）より長く保持できるよう、既定の 5 秒に頼らず明示する。
+    { timeout: 15_000 },
+  );
+
+  await locked;
+  const pending = call().then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+
+  // 呼び出しが「このロックを持つ remover」に待たされるまで待つ。待たずに離すと、順序が毎回変わってしまう。
+  // 他のテストや別接続のロック待ちを数えないよう、remover の PID にブロックされた接続だけを見る。
+  let blocked = false;
+  for (let i = 0; i < 60; i++) {
+    const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
+      SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND ${removerPid}::int = ANY(pg_blocking_pids(pid))`;
+    if ((waiting[0]?.n ?? 0) > 0) {
+      blocked = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  // 待ちに入らないまま離すと、修正前のコードでも通ってしまう。remover を必ず解放して終わらせてから失敗にする。
+  release();
+  await remover;
+  const result = await pending;
+  if (!blocked) {
+    throw new Error(
+      '呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした',
+    );
+  }
+  return result;
+}
+
 describe('taskRouter', () => {
   describe('getAll（一覧）', () => {
     it('自分のプロジェクトのタスクを返す', async () => {
@@ -159,6 +223,27 @@ describe('taskRouter', () => {
 
       expect(new Set(tasks.map((task) => task.position)).size).toBe(tasks.length);
     });
+
+    it('担当者の確認とメンバー削除が競合しても、外れた人を担当にしたタスクは作られない', async () => {
+      const { project, caller } = await setup('OWNER');
+      const member = await createTestUser({ email: uniqueEmail('task-removed-member') });
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      const result = await callWhileMemberIsRemoved(project.id, member.id, () =>
+        caller.task.create({ title: '競合', projectId: project.id, assigneeId: member.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        '担当者にはこのプロジェクトのメンバーを指定してください',
+      );
+      const leaked = await prisma.task.findMany({
+        where: { projectId: project.id, assigneeId: member.id },
+      });
+      expect(leaked).toEqual([]);
+    });
   });
 
   describe('update（更新）', () => {
@@ -273,6 +358,52 @@ describe('taskRouter', () => {
       ]);
 
       expect(new Set(moved.map((task) => task.position)).size).toBe(moved.length);
+    });
+  });
+
+  describe('update の担当者指定とメンバー削除の競合', () => {
+    it('担当の指定とメンバー削除が競合しても、外れた人は担当にならない', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const member = await createTestUser({ email: uniqueEmail('task-removed-assignee') });
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, actor.id);
+
+      const result = await callWhileMemberIsRemoved(project.id, member.id, () =>
+        caller.task.update({ id: task.id, assigneeId: member.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        '担当者にはこのプロジェクトのメンバーを指定してください',
+      );
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.assigneeId).toBeNull();
+    });
+
+    it('プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const destination = await createTestProject(actor.id);
+      const member = await createTestUser({ email: uniqueEmail('task-moving-assignee') });
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: destination.id, role: 'MEMBER' },
+      });
+      await prisma.projectMember.create({
+        data: { userId: member.id, projectId: project.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, actor.id);
+      await prisma.task.update({ where: { id: task.id }, data: { assigneeId: member.id } });
+
+      // 移動先のメンバーが削除される間に移動する。担当者は移動先のメンバーでなくなる。
+      const result = await callWhileMemberIsRemoved(destination.id, member.id, () =>
+        caller.task.update({ id: task.id, projectId: destination.id }),
+      );
+
+      expect(result.ok).toBe(true);
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.projectId).toBe(destination.id);
+      expect(after.assigneeId).toBeNull();
     });
   });
 
