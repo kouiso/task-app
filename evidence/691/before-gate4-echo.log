@@ -1,0 +1,6 @@
+ubuntu@task-app:~/task-app$ python3 scripts/curriculum-qa/test_sale_package.py
+  ❌ 配線検査 phase の呼び出しを echo に置き換えたら落ちる: 期待 1 / 実際 0
+  ❌ 配線検査 workflow の呼び出しを echo に置き換えたら落ちる: 期待 1 / 実際 0
+❌ sale_package 自己テスト 2/38 失敗
+ubuntu@task-app:~/task-app$ echo exit:$?
+exit:1

@@ -1,0 +1,4 @@
+ubuntu@task-app:~/task-app$ python3 scripts/curriculum-qa/test_sale_package.py
+✅ sale_package 自己テスト 38/38 合格
+ubuntu@task-app:~/task-app$ echo exit:$?
+exit:0
