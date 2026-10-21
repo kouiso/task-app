@@ -65,5 +65,109 @@ class TableStructureTest(unittest.TestCase):
         self.assertEqual(measured_tables_to_stack(manifest, report, [3]), {3: 'measured_prose_width_below_10em'})
 
 
+
+def _measured_report(cells, column_count, code_rects=None):
+    table = {'id': 't', 'fragments': [{'geometry': {
+        'column_count': column_count, 'cells': cells}}]}
+    observed = []
+    if code_rects:
+        observed = [{'id': 'g', 'items': [
+            {'table_geometry': {'identity': {'value': 't'}, 'target': {'row_index': 0}},
+             'code_rect': rect} for rect in code_rects]}]
+    return {'dom_audit': {'ready_state': 'complete',
+                          'table_inventory': {'tables': [table]},
+                          'observed': observed}}
+
+
+def _narrow_cell(lines_tops):
+    return {'has_prose': True, 'font_size_px': 17,
+            'content_rect': {'left': 0, 'right': 100, 'width': 100},
+            'rect': {'left': 0, 'right': 108, 'top': 0, 'bottom': 200},
+            'prose_lines': [{'rect': {'left': 0, 'right': 90, 'top': top, 'bottom': top + 12}}
+                            for top in lines_tops]}
+
+
+class MeasuredStackThreeColumnTest(unittest.TestCase):
+    def test_narrow_cell_wrapped_to_two_lines_stacks_three_column_table(self):
+        manifest = {'tables': [{'id': 't', 'source_order': 0}]}
+        report = _measured_report([_narrow_cell([10, 40])], 3)
+        self.assertEqual(measured_tables_to_stack(manifest, report, [3]),
+                         {3: 'measured_prose_width_below_10em'})
+
+    def test_narrow_cell_on_one_line_keeps_three_column_table(self):
+        manifest = {'tables': [{'id': 't', 'source_order': 0}]}
+        report = _measured_report([_narrow_cell([10])], 3)
+        self.assertEqual(measured_tables_to_stack(manifest, report, [3]), {})
+
+    def test_footnote_split_prose_lines_with_same_top_count_as_one_line(self):
+        cell = _narrow_cell([10, 15])  # 上端の差が6px以内なら同じ行（脚注番号が別行に分かれる形）
+        manifest = {'tables': [{'id': 't', 'source_order': 0}]}
+        report = _measured_report([cell], 3)
+        self.assertEqual(measured_tables_to_stack(manifest, report, [3]), {})
+
+    def test_code_rect_tops_count_toward_visual_lines(self):
+        manifest = {'tables': [{'id': 't', 'source_order': 0}]}
+        code_rect = {'left': 4, 'right': 60, 'top': 40, 'bottom': 52}
+        report = _measured_report([_narrow_cell([10])], 3, [code_rect])
+        self.assertEqual(measured_tables_to_stack(manifest, report, [3]),
+                         {3: 'measured_prose_width_below_10em'})
+
+    def test_four_column_table_still_stacks_on_narrow_width_alone(self):
+        manifest = {'tables': [{'id': 't', 'source_order': 0}]}
+        report = _measured_report([_narrow_cell([10])], 4)
+        self.assertEqual(measured_tables_to_stack(manifest, report, [3]),
+                         {3: 'measured_prose_width_below_10em'})
+
+
+class ShortColumnWidthTest(unittest.TestCase):
+    def test_short_columns_get_estimated_width_on_header_only(self):
+        source = ('<table><thead><tr><th>項</th><th>作業内容の見出しです</th><th>時</th></tr></thead>'
+                  '<tbody><tr><td>1</td><td>画面の骨組みを自分で書いて動かしてみる長い説明</td>'
+                  '<td>5分</td></tr></tbody></table>')
+        markup, report = restructure_tables(source)
+        self.assertIn('<th style="width: 3em;">項</th>', markup)
+        self.assertIn('<th style="width: 3.7em;">時</th>', markup)
+        self.assertIn('<th>作業内容の見出しです</th>', markup)  # 長い列には幅を付けない
+        self.assertEqual(report[0]['sized_columns'], {'0': 3.0, '2': 3.7})
+
+    def test_table_without_short_columns_gets_no_width(self):
+        source = ('<table><thead><tr><th>作業の内容です</th><th>作業内容の詳細な説明です</th></tr></thead>'
+                  '<tbody><tr><td>画面を作る長めの説明文</td><td>補足の説明文です</td></tr></tbody></table>')
+        markup, report = restructure_tables(source)
+        self.assertEqual(markup, source)
+        self.assertNotIn('sized_columns', report[0])
+
+    def test_balanced_table_gets_no_width(self):
+        source = ('<table><thead><tr><th>短い</th><th>短め</th></tr></thead>'
+                  '<tbody><tr><td>短文</td><td>短文</td></tr></tbody></table>')
+        markup, _ = restructure_tables(source)
+        self.assertEqual(markup, source)
+
+    def test_four_column_table_gets_no_estimated_width(self):
+        source = ('<table><thead><tr><th>項</th><th>長い説明の列ですよ</th><th>時</th><th>備考</th></tr></thead>'
+                  '<tbody><tr><td>1</td><td>画面の骨組みを自分で書いて動かしてみる長い説明</td>'
+                  '<td>5分</td><td>なし</td></tr></tbody></table>')
+        markup, _ = restructure_tables(source)
+        self.assertEqual(markup, source)
+
+    def test_widest_short_column_drops_width_when_unsized_would_shrink_below_13em(self):
+        source = ('<table><thead><tr><th>手順の短い見出しですよね</th><th>作業内容の見出しです</th><th>時間の短い見出</th></tr></thead>'
+                  '<tbody><tr><td>短い説明</td><td>画面の骨組みを自分で書いて動かしてみる長い説明ですよ</td>'
+                  '<td>短い説明</td></tr></tbody></table>')
+        markup, report = restructure_tables(source)
+        # 12emと7emの短い列: 両方に幅を付けると残り12emで13emを割るので広いほうを外す
+        # （外したあとは残り26em÷2列=13emで要件を満たす）
+        sized = report[0].get('sized_columns', {})
+        self.assertEqual(sized, {'2': 9.0})
+        self.assertEqual(markup.count('width: 9em;'), 1)
+
+    def test_br_splits_cell_width_estimate_per_line(self):
+        source = ('<table><thead><tr><th>項</th><th>作業内容の見出しです</th></tr></thead>'
+                  '<tbody><tr><td>短い<br>説明です</td>'
+                  '<td>画面の骨組みを自分で書いて動かしてみる長い説明</td></tr></tbody></table>')
+        markup, report = restructure_tables(source)
+        self.assertIn('width: 6em;', markup)  # 「説明です」の4+2（<br>後の行で見積もる）
+        self.assertEqual(report[0]['sized_columns'], {'0': 6.0})
+
 if __name__ == '__main__':
     unittest.main()
