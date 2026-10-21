@@ -80,15 +80,18 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 // プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
 // ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
-const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
-  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
-  );
-  if (lockedProjects.length === 0) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'プロジェクトが見つかりません',
-    });
+// 複数のプロジェクトを取るときは ID 順にそろえる。相互に移動する 2 件が逆順で待ち合わないようにするため。
+const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string[]) => {
+  for (const projectId of [...new Set(projectIds)].sort()) {
+    const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    if (lockedProjects.length === 0) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
   }
 };
 
@@ -97,7 +100,7 @@ const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
 const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
 
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
-  await lockProject(tx, projectId);
+  await lockTaskProjects(tx, [projectId]);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -168,7 +171,7 @@ const lockProjectsOfTasks = async (
       });
     }
     for (const projectId of pending.sort()) {
-      await lockProject(tx, projectId);
+      await lockTaskProjects(tx, [projectId]);
       locked.add(projectId);
       highest = projectId;
     }
@@ -309,29 +312,29 @@ export const taskRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
-    const project = await prisma.project.findUnique({
-      where: { id: input.projectId },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
-        },
-      },
-    });
-
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-
-    assertMemberPermission(project.members, 'canEdit');
-
     return await prisma.$transaction(async (tx) => {
-      const position = await getNextTaskPosition(tx, input.projectId);
+      await lockTaskProjects(tx, [input.projectId]);
+      const project = await tx.project.findUnique({
+        where: { id: input.projectId },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+
+      assertMemberPermission(project.members, 'canEdit');
       if (input.assigneeId) {
         await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
       }
+      const position = await getNextTaskPosition(tx, input.projectId);
 
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
@@ -424,24 +427,6 @@ export const taskRouter = createTRPCRouter({
       isClosedStatus(existingTask.status) &&
       !isClosedStatus(data.status);
 
-    if (isProjectChanging) {
-      // 移動先プロジェクトでも canEdit 権限を持つかを確認
-      const destinationMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: targetProjectId,
-          },
-        },
-      });
-      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
-    }
-
-    if (data.assigneeId === null) {
-      updateData.assignee = { disconnect: true };
-    }
-
     try {
       // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
       // updatedAt を where に含めた単一の update で
@@ -449,27 +434,36 @@ export const taskRouter = createTRPCRouter({
       // 条件不一致（他ユーザーの更新・削除で updatedAt がずれた）は Prisma が
       // 投げる P2025 を捕捉して CONFLICT に変換する。
       return await prisma.$transaction(async (tx) => {
-        if (isProjectChanging) {
-          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
-          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
-          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
-            await lockProject(tx, projectId);
-          }
-          updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId || isReopening) {
-          await lockProject(tx, targetProjectId);
-        }
-
         // 担当者の確認はプロジェクト行のロックを取ってから行う。
         // ロックの前に確認すると、確認のあとにメンバー削除が割り込み、外れた人が担当に入る。
-        if (data.assigneeId) {
-          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
-          updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (
-          data.assigneeId === undefined &&
-          (isProjectChanging || isReopening) &&
-          existingTask.assigneeId
-        ) {
+        // 担当者を付ける・プロジェクトを移す・未完了へ戻すときだけ取る。タイトルや優先度だけの編集まで取ると、
+        // 同じプロジェクトのタスク更新がすべて 1 件ずつの順番待ちになる。
+        if (isProjectChanging || typeof data.assigneeId === 'string' || isReopening) {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+        }
+
+        if (isProjectChanging) {
+          // 移動先プロジェクトでも canEdit 権限を持つかを確認
+          const destinationMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: ctx.session.userId,
+                projectId: targetProjectId,
+              },
+            },
+          });
+          assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+          updateData.project = { connect: { id: targetProjectId } };
+        }
+
+        if (data.assigneeId !== undefined) {
+          if (data.assigneeId === null) {
+            updateData.assignee = { disconnect: true };
+          } else {
+            await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+            updateData.assignee = { connect: { id: data.assigneeId } };
+          }
+        } else if ((isProjectChanging || isReopening) && existingTask.assigneeId) {
           // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
@@ -483,6 +477,10 @@ export const taskRouter = createTRPCRouter({
           if (!assigneeStillMember) {
             updateData.assignee = { disconnect: true };
           }
+        }
+
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
         }
 
         return await tx.task.update({

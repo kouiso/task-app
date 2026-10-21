@@ -21,7 +21,7 @@ Day 15 で学んだことは次のとおりです。
 
 この日はまずサーバー側の作業時間記録 API（`addTime`）を自分で書きます。そのあと画面をつなぎます。
 
-スクリーンショット: 今日を始める前のタスク詳細ダイアログです。ステータスは表示されるだけで、ここから変える操作はまだありません。ステータスの変更にはカードの鉛筆ボタンから開く編集ダイアログを使います。今日はカードに作業時間の記録ボタンも足します。
+下の画像は今日を始める前のタスク詳細ダイアログです。ステータスは表示されるだけで、ここから変える操作はまだありません。ステータスの変更にはカードの鉛筆ボタンから開く編集ダイアログを使います。今日はカードに作業時間の記録ボタンも足します。
 
 ![タスク詳細ダイアログ。ステータスは表示だけで、ここから変える操作はない](./screenshots/day16/task-detail-dialog.png)
 
@@ -178,17 +178,28 @@ Day 15 の `handleSubmit` は `api.task.update` を
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// Day 15 で作成済みの updateMutation（抜粋）
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      setDialogOpen(false);
-    },
-  });
+// Day 15 で作成済みの updateMutation
+  const updateMutation =
+    api.task.update.useMutation({
+      onSuccess: () => {
+        utils.task.getAll.invalidate();
+        if (selectedTask) {
+          utils.task.getById.invalidate(
+            { id: selectedTask }
+          );
+        }
+        setDialogOpen(false);
+      },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの更新に失敗しました',
+      ),
+    });
+
+// filepath: src/app/task/page.tsx（同じファイルの続き）
+// 完成版: 削除の通信
 ```
 
-このブロックは抜粋です。Day 15 で書いた `getById.invalidate` の分岐は手元のファイルにそのまま残しておいてください。
+Day 15 の更新処理をそのまま使います。成功時は一覧と開いている詳細を取り直します。失敗時は `notifyMutationError` が理由や再ログインの案内を表示します。入力画面は成功したときだけ閉じます。
 
 `onSuccess` の中で `getAll.invalidate()` を呼ぶのが
 このコードの肝です。`invalidate` はキャッシュを
@@ -633,7 +644,7 @@ Day 15 の編集ダイアログは開いたときに今の値が入っている�
 - `time-log-dialog.tsx` を保存できた
 - `npx tsc --noEmit` がエラーなしで終了する
 
-スクリーンショット: 下の画像は Step 3 まで書き終えてカードの「時間記録」ボタンから開いた状態です。いまの自分の画面にはまだこれを開く入口がありません。入口は Step 3 で足します。
+下の画像は Step 3 まで書き終えてカードの「時間記録」ボタンから開いた状態です。いまの自分の画面にはまだこれを開く入口がありません。入口は Step 3 で足します。
 
 ![作業時間の記録ダイアログ。「時間」と「分」の2つの入力欄と「時間を追加」ボタンが並ぶ](./screenshots/day16/task-timer.png)
 
@@ -946,8 +957,6 @@ npm run dev
 - 時間を記録すると合計作業時間が増える
 - 続けて記録すると合計に加算される
 
-スクリーンショット: カードの下段に合計作業時間の行が増えたことを確認してください。
-
 ![タスクカードの下段に「合計作業時間」と「時間記録」ボタンが並んだ一覧画面](./screenshots/day16/task-list.png)
 
 初期データのタスクには作業時間があらかじめ入っているので `12h 0m` や `20h 0m` のように0でない数字が並びます。3枚目の `1h 15m` はいまの手順で1時間15分を記録した直後の状態です。記録した時間はもともと入っていた合計へ足されます。
@@ -1243,7 +1252,7 @@ Day 12 の `removeMember` はメンバーを外すときに完了と中止のタ
 
 Day 15 の `update` で、完了か中止から未完了へ戻す更新を `isReopening` として見分け、担当者の所属を確かめるようにしました。今日の `update` でステータスだけを変える呼び出しも、同じ経路を通ります。新しく書き足すコードはありません。
 
-たとえば完了のタスクを `TODO` に戻す操作では `isReopening` が `true` になります。このときは `lockProject` でプロジェクト行をロックしてから、担当者がまだメンバーかを確かめます。外れていれば `disconnect` で担当を外し、メンバーのままなら担当は残します。確認の前にロックを取るのは、確認の直後に `removeMember` が割り込むと外された人が担当に残るからです。
+たとえば完了のタスクを `TODO` に戻す操作では `isReopening` が `true` になります。このときは `lockTaskProjects` でプロジェクト行をロックしてから、担当者がまだメンバーかを確かめます。外れていれば `disconnect` で担当を外し、メンバーのままなら担当は残します。確認の前にロックを取るのは、確認の直後に `removeMember` が割り込むと外された人が担当に残るからです。
 
 完了のままタイトルを直す編集や、完了から中止への変更では `isReopening` は `false` です。どちらも終わったタスクなので、実績として担当を残す扱いは変わりません。
 
@@ -1267,6 +1276,7 @@ import {
   getUserProjectIds,
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
+
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です'),
   description: z.string().optional(),
@@ -1277,6 +1287,7 @@ const taskCreateSchema = z.object({
   projectId: z.string().cuid(),
   assigneeId: z.string().cuid().optional(),
 });
+
 const taskUpdateSchema = z.object({
   id: z.string().cuid(),
   expectedUpdatedAt: z.string().datetime().optional(),
@@ -1290,24 +1301,29 @@ const taskUpdateSchema = z.object({
   projectId: z.string().cuid().optional(),
   assigneeId: z.string().cuid().optional().nullable(),
 });
-// プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
-// ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
-const lockProject = async (tx: Prisma.TransactionClient, projectId: string) => {
-  const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
-  );
-  if (lockedProjects.length === 0) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'プロジェクトが見つかりません',
-    });
+
+const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string[]) => {
+  // 退会処理と担当者の確認・保存を直列化します。相互移動でもロックの順序を揃えるためです。
+  for (const projectId of [...new Set(projectIds)].sort()) {
+    const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
+    );
+    if (lockedProjects.length === 0) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'プロジェクトが見つかりません',
+      });
+    }
   }
 };
+
 // 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
 const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
 const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
-  await lockProject(tx, projectId);
+  await lockTaskProjects(tx, [projectId]);
+
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
     orderBy: { position: 'desc' },
@@ -1315,6 +1331,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
   });
   return (maxPosition?.position ?? -1) + 1;
 };
+
 async function assertTaskAssigneeBelongsToProject(
   tx: Prisma.TransactionClient,
   projectId: string,
@@ -1329,6 +1346,7 @@ async function assertTaskAssigneeBelongsToProject(
     },
     select: { id: true },
   });
+
   if (!member) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -1336,10 +1354,12 @@ async function assertTaskAssigneeBelongsToProject(
     });
   }
 }
+
 const taskTimeUpdateSchema = z.object({
   id: z.string().cuid(),
   minutesToAdd: z.number().int().min(0),
 });
+
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(
@@ -1358,8 +1378,11 @@ export const taskRouter = createTRPCRouter({
       const where: Prisma.TaskWhereInput = {};
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
+
       const projectIds = await getUserProjectIds(ctx.session.userId);
+
       where.projectId = { in: projectIds };
+
       if (input?.projectId) {
         if (!projectIds.includes(input.projectId)) {
           throw new TRPCError({
@@ -1369,9 +1392,11 @@ export const taskRouter = createTRPCRouter({
         }
         where.projectId = input.projectId;
       }
+
       if (input?.status) where.status = input.status;
       if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
+
       return await prisma.task.findMany({
         where,
         include: {
@@ -1391,11 +1416,13 @@ export const taskRouter = createTRPCRouter({
             orderBy: { createdAt: 'desc' },
           },
         },
+
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         take: limit,
         skip: offset,
       });
     }),
+
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -1415,6 +1442,7 @@ export const taskRouter = createTRPCRouter({
           assignee: {
             select: USER_SELECT,
           },
+
           comments: {
             include: {
               user: {
@@ -1425,43 +1453,52 @@ export const taskRouter = createTRPCRouter({
           },
         },
       });
+
       if (!task) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'タスクが見つかりません',
         });
       }
+
       assertMemberPermission(task.project.members);
+
       return task;
     }),
+
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
-    const project = await prisma.project.findUnique({
-      where: { id: input.projectId },
-      include: {
-        members: {
-          where: { userId: ctx.session.userId },
-        },
-      },
-    });
-    if (!project) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-    assertMemberPermission(project.members, 'canEdit');
     return await prisma.$transaction(async (tx) => {
-      const position = await getNextTaskPosition(tx, input.projectId);
+      await lockTaskProjects(tx, [input.projectId]);
+      const project = await tx.project.findUnique({
+        where: { id: input.projectId },
+        include: {
+          members: {
+            where: { userId: ctx.session.userId },
+          },
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'プロジェクトが見つかりません',
+        });
+      }
+
+      assertMemberPermission(project.members, 'canEdit');
+
       if (input.assigneeId) {
         await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
-      }
+
+    }
+
       const createData: Prisma.TaskCreateInput = {
         title: input.title,
         status: input.status,
         completedAt: input.status === TASK_STATUS.DONE ? new Date() : null,
         priority: input.priority,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        position,
+        position: await getNextTaskPosition(tx, input.projectId),
         project: {
           connect: { id: input.projectId },
         },
@@ -1469,17 +1506,20 @@ export const taskRouter = createTRPCRouter({
           connect: { id: ctx.session.userId },
         },
       };
+
       if (input.description !== undefined) {
         createData.description = input.description;
       }
       if (input.estimatedHours !== undefined) {
         createData.estimatedHours = input.estimatedHours;
       }
+
       if (input.assigneeId) {
         createData.assignee = {
           connect: { id: input.assigneeId },
         };
       }
+
       return await tx.task.create({
         data: createData,
         include: {
@@ -1494,9 +1534,12 @@ export const taskRouter = createTRPCRouter({
       });
     });
   }),
+
   update: protectedProcedure.input(taskUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id, expectedUpdatedAt, ...data } = input;
+
     const existingTask = await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
+
     const updateData: Prisma.TaskUpdateInput = {};
     if (data.title !== undefined) {
       updateData.title = data.title;
@@ -1504,6 +1547,7 @@ export const taskRouter = createTRPCRouter({
     if (data.description !== undefined) {
       updateData.description = data.description;
     }
+
     if (data.status !== undefined) {
       updateData.status = data.status;
       if (data.status !== existingTask.status) {
@@ -1514,6 +1558,7 @@ export const taskRouter = createTRPCRouter({
         }
       }
     }
+
     if (data.priority !== undefined) {
       updateData.priority = data.priority;
     }
@@ -1526,6 +1571,7 @@ export const taskRouter = createTRPCRouter({
     if (data.dueDate !== undefined) {
       updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     }
+
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
@@ -1535,45 +1581,35 @@ export const taskRouter = createTRPCRouter({
       data.status !== undefined &&
       isClosedStatus(existingTask.status) &&
       !isClosedStatus(data.status);
-    if (isProjectChanging) {
-      const destinationMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: ctx.session.userId,
-            projectId: targetProjectId,
-          },
-        },
-      });
-      assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
-      updateData.project = { connect: { id: targetProjectId } };
-    }
-    if (data.assigneeId === null) {
-      updateData.assignee = { disconnect: true };
-    }
+
     try {
-      // 比較と更新の間に他の更新が割り込む余地をなくすため、
-      // updatedAt を where に含めて1回のクエリにまとめる
       return await prisma.$transaction(async (tx) => {
-        if (isProjectChanging) {
-          // 移動元もロックする。一括で未完了へ戻す処理が移動元を握っている間に、
-          // タスクが抜け出して所属の確認をすり抜けるのを防ぐ。
-          for (const projectId of [existingTask.projectId, targetProjectId].sort()) {
-            await lockProject(tx, projectId);
-          }
-          updateData.position = await getNextTaskPosition(tx, targetProjectId);
-        } else if (data.assigneeId || isReopening) {
-          await lockProject(tx, targetProjectId);
+        if (isProjectChanging || typeof data.assigneeId === 'string' || isReopening) {
+          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
         }
-        // 担当者の確認はプロジェクト行のロックを取ってから行う
-        if (data.assigneeId) {
-          await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
-          updateData.assignee = { connect: { id: data.assigneeId } };
-        } else if (
-          data.assigneeId === undefined &&
-          (isProjectChanging || isReopening) &&
-          existingTask.assigneeId
-        ) {
-          // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
+
+        if (isProjectChanging) {
+          const destinationMember = await tx.projectMember.findUnique({
+            where: {
+              userId_projectId: {
+                userId: ctx.session.userId,
+                projectId: targetProjectId,
+              },
+            },
+          });
+          assertMemberPermission(destinationMember ? [destinationMember] : [], 'canEdit');
+          updateData.project = { connect: { id: targetProjectId } };
+        }
+
+        if (data.assigneeId !== undefined) {
+          if (data.assigneeId === null) {
+            updateData.assignee = { disconnect: true };
+          } else {
+            await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
+            updateData.assignee = { connect: { id: data.assigneeId } };
+          }
+        } else if ((isProjectChanging || isReopening) && existingTask.assigneeId) {
+          // 履歴の担当者を残したタスクを再開しても退会者へ作業を割り当てないためです。
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {
@@ -1587,6 +1623,13 @@ export const taskRouter = createTRPCRouter({
             updateData.assignee = { disconnect: true };
           }
         }
+
+      // 比較と更新の間に他の更新が割り込む余地をなくすため、
+      // updatedAt を where に含めて1回のクエリにまとめる
+        if (isProjectChanging) {
+          updateData.position = await getNextTaskPosition(tx, targetProjectId);
+        }
+
         return await tx.task.update({
           where: { id, updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt },
           data: updateData,
@@ -1601,6 +1644,7 @@ export const taskRouter = createTRPCRouter({
           },
         });
       });
+
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         throw new TRPCError({
@@ -1613,11 +1657,13 @@ export const taskRouter = createTRPCRouter({
       throw err;
     }
   }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
       const task = await findTaskWithPermission(input.id, ctx.session.userId);
       assertMemberPermission(task.project.members, 'canDelete');
+
       await prisma.task.delete({
         where: { id: input.id },
       });
@@ -1625,6 +1671,7 @@ export const taskRouter = createTRPCRouter({
     }),
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
     await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+
     return await prisma.task.update({
       where: { id: input.id },
       data: {
@@ -2671,6 +2718,8 @@ import {
 } from '@/lib/constant/status';
 import { dateOnlyToUtcStartIso }
   from '@/lib/date';
+import { isAuthError, isUnknownResult }
+  from '@/lib/query-error';
 import { taskToFormData }
   from '@/lib/task-form';
 import { api } from '@/trpc/react';
@@ -2754,13 +2803,35 @@ function TaskPageContent() {
       setDetailOpen(true);
     }
   }, [taskIdParam]);
+  const notifyMutationError = (
+    error: { message?: string }, fallback: string,
+  ) => {
+    if (isAuthError(error)) {
+      toast.error('ログインの有効期限が切れました');
+      return;
+    }
+    if (isUnknownResult(error)) {
+      toast.error(
+        '応答を確認できませんでした。'
+        + '一覧を更新して結果を確認してください。',
+      );
+      void utils.task.getAll.invalidate();
+      return;
+    }
+    toast.error(error.message || fallback);
+  };
+
   const createMutation =
     api.task.create.useMutation({
       onSuccess: () => {
         utils.task.getAll.invalidate();
         setDialogOpen(false);
       },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの作成に失敗しました',
+      ),
     });
+
 
   const updateMutation =
     api.task.update.useMutation({
@@ -2773,19 +2844,23 @@ function TaskPageContent() {
         }
         setDialogOpen(false);
       },
-      onError: (error) => {
-        toast.error(error.message);
-      },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの更新に失敗しました',
+      ),
     });
+
   const deleteMutation =
     api.task.delete.useMutation({
       onSuccess: () => {
         utils.task.getAll.invalidate();
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
       },
-      onError: (error) => {
-        toast.error(error.message);
-      },
+      onError: (error) => notifyMutationError(
+        error, 'タスクの削除に失敗しました',
+      ),
     });
+
   const handleCreate = () => {
     setEditingTask(undefined);
     setDialogOpen(true);
@@ -3089,6 +3164,6 @@ Day 17 では自分に割り当てられたタスクだけを
 
 © 2026 磯貝光佑
 
-本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は、形態を問わず禁止します。
+本書は購入者個人の利用に限ります。本書に掲載されたコードの写経、および自分のプロジェクトへの転用・改変は自由です。本書（PDF・Markdown）および付属コードの再配布・転売・第三者との共有は形態を問わず禁止します。
 
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period, ja-technical-writing/no-doubled-conjunction, ja-technical-writing/no-exclamation-question-mark -->
