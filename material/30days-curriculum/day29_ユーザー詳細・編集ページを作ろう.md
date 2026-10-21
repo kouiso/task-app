@@ -428,7 +428,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
@@ -449,7 +449,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-未ログインはログイン画面へ送ります。対象が無い `NOT_FOUND` は404へ送ります。`getById` は形式が正しいIDについて対象の検索前に本人か管理者かを調べます。権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
+未ログインはログイン画面へ送ります。対象が無い `NOT_FOUND` とIDの形式が不正な `BAD_REQUEST` は404へ送ります。`getById` は形式が正しいIDについて対象の検索前に本人か管理者かを調べます。権限のない人には実在するIDと存在しないIDのどちらでも同じ拒否画面が出ます。
 
 ```tsx
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
@@ -800,10 +800,10 @@ import { formatDateOnly } from '@/lib/date';
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -1220,7 +1220,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
@@ -1241,7 +1241,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-UNAUTHORIZED はログイン画面へ送ります。NOT_FOUND は404ページへ送ります。FORBIDDEN は詳細ページと同じ拒否画面にそろえます。それ以外のエラーは `throw` で上位へ渡します。
+UNAUTHORIZED はログイン画面へ送ります。対象が無い NOT_FOUND とIDの形式が不正な BAD_REQUEST は404ページへ送ります。FORBIDDEN は詳細ページと同じ拒否画面にそろえます。それ以外のエラーは `throw` で上位へ渡します。
 
 ```tsx
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
@@ -2743,7 +2743,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 // filepath: src/app/user/[id]/page.tsx（同じファイルの続き）
 // エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
@@ -2805,7 +2805,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
@@ -3120,10 +3120,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -3553,10 +3553,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -3744,7 +3744,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 // filepath: src/app/user/[id]/edit/page.tsx（同じファイルの続き）
 // エラーごとの行き先
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>
@@ -3806,7 +3806,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>

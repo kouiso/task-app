@@ -1,0 +1,177 @@
+PASS all Step, recap and complete-file copies covered
+PASS 0 isAllSelected: none
+PASS 0 isAllSelected: partial
+PASS 0 isAllSelected: all
+FAIL 0 isAllSelected: only stale selection: Expected values to be strictly equal:
+
+true !== false
+
+FAIL 0 isAllSelected: stale selection with partial current selection: Expected values to be strictly equal:
+
+true !== false
+
+FAIL 0 isAllSelected: all current plus stale: Expected values to be strictly equal:
+
+false !== true
+
+PASS 0 isAllSelected: no selectable tasks
+PASS 1 selectAllState: none
+PASS 1 selectAllState: partial
+PASS 1 selectAllState: all
+FAIL 1 selectAllState: only stale selection: Expected values to be strictly equal:
+
+true !== false
+
+FAIL 1 selectAllState: stale selection with partial current selection: Expected values to be strictly equal:
++ actual - expected
+
++ true
+- 'indeterminate'
+
+FAIL 1 selectAllState: all current plus stale: Expected values to be strictly equal:
++ actual - expected
+
++ 'indeterminate'
+- true
+
+PASS 1 selectAllState: no selectable tasks
+FAIL 2 bulkComplete: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+FAIL 3 bulkUpdateStatus: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+PASS 4 selectAllState: none
+PASS 4 selectAllState: partial
+PASS 4 selectAllState: all
+FAIL 4 selectAllState: only stale selection: Expected values to be strictly equal:
+
+true !== false
+
+FAIL 4 selectAllState: stale selection with partial current selection: Expected values to be strictly equal:
++ actual - expected
+
++ true
+- 'indeterminate'
+
+FAIL 4 selectAllState: all current plus stale: Expected values to be strictly equal:
++ actual - expected
+
++ 'indeterminate'
+- true
+
+PASS 4 selectAllState: no selectable tasks
+FAIL 5 bulkComplete: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+FAIL 6 bulkUpdateStatus: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+FAIL 7 bulkComplete: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+FAIL 8 bulkUpdateStatus: error notifies and preserves selection; success clears: Expected values to be strictly equal:
++ actual - expected
+
++ 'undefined'
+- 'function'
+
+PASS 9 selectAllState: none
+PASS 9 selectAllState: partial
+PASS 9 selectAllState: all
+FAIL 9 selectAllState: only stale selection: Expected values to be strictly equal:
+
+true !== false
+
+FAIL 9 selectAllState: stale selection with partial current selection: Expected values to be strictly equal:
++ actual - expected
+
++ true
+- 'indeterminate'
+
+FAIL 9 selectAllState: all current plus stale: Expected values to be strictly equal:
++ actual - expected
+
++ 'indeterminate'
+- true
+
+PASS 9 selectAllState: no selectable tasks
+FAIL 10 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 10 server routing: NOT_FOUND
+PASS 10 server routing: FORBIDDEN
+PASS 10 server routing: UNAUTHORIZED
+PASS 11 back button: admin
+FAIL 11 back button: ordinary user: Expected values to be strictly equal:
++ actual - expected
+
++ '/user'
+- '/dashboard'
+
+FAIL 12 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 12 server routing: NOT_FOUND
+PASS 12 server routing: FORBIDDEN
+PASS 12 server routing: UNAUTHORIZED
+FAIL 13 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 13 server routing: NOT_FOUND
+PASS 13 server routing: FORBIDDEN
+PASS 13 server routing: UNAUTHORIZED
+FAIL 14 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 14 server routing: NOT_FOUND
+PASS 14 server routing: FORBIDDEN
+PASS 14 server routing: UNAUTHORIZED
+PASS 15 back button: admin
+FAIL 15 back button: ordinary user: Expected values to be strictly equal:
++ actual - expected
+
++ '/user'
+- '/dashboard'
+
+PASS 16 back button: admin
+FAIL 16 back button: ordinary user: Expected values to be strictly equal:
++ actual - expected
+
++ '/user'
+- '/dashboard'
+
+FAIL 17 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 17 server routing: NOT_FOUND
+PASS 17 server routing: FORBIDDEN
+PASS 17 server routing: UNAUTHORIZED
+FAIL 18 server routing: BAD_REQUEST: Expected values to be strictly equal:
+
+0 !== 1
+
+PASS 18 server routing: NOT_FOUND
+PASS 18 server routing: FORBIDDEN
+PASS 18 server routing: UNAUTHORIZED
+{"passed":38,"failed":27,"copies":{"404":6,"mutation":6,"selection":4,"back":3}}

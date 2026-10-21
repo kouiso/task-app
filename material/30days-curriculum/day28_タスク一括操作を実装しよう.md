@@ -808,18 +808,18 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なのでまずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
-次の `isAllSelected` は Step 1の `handleSelectAll` が終わる `};` の直後へ置きます。`selectableTasks` と `selectedTaskList` が定義済みの位置なので2つの配列の件数を読めます。
+次の `isAllSelected` は Step 1の `handleSelectAll` が終わる `};` の直後へ置きます。選択できるタスクのうち `selectedTasks` に id が入っている件数を数えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// まずシンプルに boolean で管理する
+// 権限を失った選択済みタスクは全選択の件数に含めない
+const selectedSelectableCount = selectableTasks.filter((t) => selectedTasks.has(t.id)).length;
 const isAllSelected =
   selectableTasks.length > 0
-  && selectedTaskList.length
-    === selectableTasks.length;
+  && selectedSelectableCount === selectableTasks.length;
 ```
 
-`isAllSelected` は「タスクが存在し、全タスクの ID が `selectedTasks` に入っているか」を判定するだけのシンプルな `boolean` です。
+`isAllSelected` は選択できるタスクが存在してそのすべての id が `selectedTasks` に入っているかを判定する `boolean` です。選択後に権限を失ったタスクの id が残っていても件数に含めません。
 
 まずファイル先頭のimport欄へ次の1行を追加します。`Label` はチェックボックスの説明と入力を結び付ける部品です。importは `TaskPageContent` の関数や `return` の中へ入れません。
 
@@ -881,9 +881,9 @@ Step 3 で書いた `isAllSelected`（boolean）を、3 状態を返す `selectA
 // isAllSelected を削除して、以下に置き換える
 const selectAllState =
   selectableTasks.length > 0
-    ? selectedTaskList.length === 0
+    ? selectedSelectableCount === 0
       ? false
-      : selectedTaskList.length === selectableTasks.length
+      : selectedSelectableCount === selectableTasks.length
         ? true
         : 'indeterminate'
     : false;
@@ -895,7 +895,7 @@ const selectAllState =
 - 選択が0件か
 - 選択の数が操作できるタスクの数と一致するか
 
-この順に絞り込むと`false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。
+この順に絞り込むと`false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。Step 3 の `selectedSelectableCount` は残して使います。権限を失ったタスクが選択に残っていても全選択の表示には数えません。
 
 分母を `tasks` ではなく `selectableTasks` にしているところが大事な点です。閲覧専用のタスクまで分母に入れると選べるものを全部選んでも数が足りず、チェックボックスがいつまでも部分選択のままになります。読者から見ると「全部選んだのに全チェックにならない」という不可解な動きです。
 
@@ -1006,9 +1006,9 @@ React で「条件が真のときだけ描画する」
 
 **ゴール**: 「完了にする」ボタンを押すと選択したタスクの `status` と `completedAt` がまとめて更新されるようにします。
 
-一括完了の mutation には `onSuccess` だけを書きます。
-失敗時の `onError` は付けません。
-Day 20 で作った `notifyMutationError` は Step 7 の一括削除で使います。
+一括完了の mutation には `onSuccess` と `onError` を書きます。
+失敗した理由を画面に表示するため `onError` から Day 20 で作った `notifyMutationError` を呼びます。
+一括削除とステータスの一括変更でもこの通知関数を使います。
 選択を解除するのは成功が確認できた `onSuccess` だけです。
 失敗したときは選択が残るので、対象を確かめてからやり直せます。
 
@@ -1024,6 +1024,7 @@ const bulkCompleteMutation = api.task.bulkComplete.useMutation({
     utils.task.getAll.invalidate();
     setSelectedTasks(new Set());
   },
+  onError: (error) => notifyMutationError(error, 'タスクの一括完了に失敗しました'),
 });
 ```
 
@@ -1223,10 +1224,11 @@ const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
     utils.task.getAll.invalidate();
     setSelectedTasks(new Set());
   },
+  onError: (error) => notifyMutationError(error, 'ステータスの一括変更に失敗しました'),
 });
 ```
 
-成功時だけ一覧を再取得して選択を解除します。失敗したときは選択がそのまま残るので、変えたかったタスクを画面で確かめてから操作をやり直せます。
+成功時だけ一覧を再取得して選択を解除します。失敗時は `notifyMutationError` が理由を表示します。選択はそのまま残るので変えたかったタスクを画面で確かめてから操作をやり直せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -1837,18 +1839,19 @@ const handleSelectAll = (checked: boolean) => {
 
 ```typescript
 // filepath: src/app/task/page.tsx
-// 全選択チェックボックスの3状態
+// 権限を失った選択済みタスクは全選択の件数に含めない
+const selectedSelectableCount = selectableTasks.filter((t) => selectedTasks.has(t.id)).length;
 const selectAllState =
   selectableTasks.length > 0
-    ? selectedTaskList.length === 0
+    ? selectedSelectableCount === 0
       ? false
-      : selectedTaskList.length === selectableTasks.length
+      : selectedSelectableCount === selectableTasks.length
         ? true
         : 'indeterminate'
     : false;
 ```
 
-分母を `selectableTasks` にそろえてあるのは上の `handleSelectAll` が選ぶ範囲と一致させるためです。分母だけ `tasks` にすると全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので読者は自分の操作が効いたのかどうか判断できなくなります。
+`selectedSelectableCount` は `selectableTasks` のうち選択中の件数です。権限を失ったタスクも含む `selectedTaskList` の件数を使うと未選択のタスクがあっても全選択と表示されることがあります。分母も `selectableTasks` にそろえて `handleSelectAll` が選ぶ範囲と一致させます。分母だけ `tasks` にすると全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので読者は自分の操作が効いたのかどうか判断できなくなります。
 
 **一括完了の mutation とハンドラー**:
 
@@ -1860,10 +1863,11 @@ const bulkCompleteMutation = api.task.bulkComplete.useMutation({
     utils.task.getAll.invalidate();
     setSelectedTasks(new Set());
   },
+  onError: (error) => notifyMutationError(error, 'タスクの一括完了に失敗しました'),
 });
 ```
 
-成功したときだけ一覧を再取得して選択を解除します。失敗したときは選択が残るので、どのタスクが対象だったかを画面で確認してからもう一度押せます。
+成功したときだけ一覧を再取得して選択を解除します。失敗時は通知関数で理由を表示して選択を残します。どのタスクが対象だったかを画面で確認してからもう一度押せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -1914,10 +1918,11 @@ const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
     utils.task.getAll.invalidate();
     setSelectedTasks(new Set());
   },
+  onError: (error) => notifyMutationError(error, 'ステータスの一括変更に失敗しました'),
 });
 ```
 
-ステータスの一括変更も成功時だけ一覧を再取得して選択を解除します。失敗したときは選択が残るので、変えたかったタスクを確かめてからもう一度選び直さずに押せます。
+ステータスの一括変更も成功時だけ一覧を再取得して選択を解除します。失敗時は通知関数で理由を表示して選択を残します。変えたかったタスクを確かめてからもう一度選び直さずに押せます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -2138,6 +2143,7 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => notifyMutationError(error, 'タスクの一括完了に失敗しました'),
   });
 
   const bulkDeleteMutation = api.task.bulkDelete.useMutation({
@@ -2154,6 +2160,7 @@ function TaskPageContent() {
       utils.task.getAll.invalidate();
       setSelectedTasks(new Set());
     },
+    onError: (error) => notifyMutationError(error, 'ステータスの一括変更に失敗しました'),
   });
 
   const handleCreate = () => {
@@ -2264,11 +2271,13 @@ function TaskPageContent() {
     }
   };
 
+  // 権限を失った選択済みタスクは全選択の件数に含めない
+  const selectedSelectableCount = selectableTasks.filter((t) => selectedTasks.has(t.id)).length;
   const selectAllState =
     selectableTasks.length > 0
-      ? selectedTaskList.length === 0
+      ? selectedSelectableCount === 0
         ? false
-        : selectedTaskList.length === selectableTasks.length
+        : selectedSelectableCount === selectableTasks.length
           ? true
           : 'indeterminate'
       : false;

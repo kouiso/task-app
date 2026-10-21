@@ -1,0 +1,16 @@
+
+> task-app@1.0.0 test
+> vitest run src/app/task src/app/user
+
+
+ RUN  v5.0.1 /Users/kouiso/Documents/Codex/2026-10-21/task-2/task-app-684-verify
+
+
+ Test Files  6 passed (6)
+      Tests  35 passed (35)
+   Start at  04:26:01
+   Duration  5.17s (import 54%, environment 27%, transform 7%, setup 6%, tests 6%)
+
+     Import  59 modules were evaluated 88 times · 2.59s total, 54% of tracked time
+             ~853ms faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
