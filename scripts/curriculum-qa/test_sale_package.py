@@ -144,24 +144,130 @@ GATE4_PHASE = REPO_ROOT / ".github/ci/phase/material-corpus.sh"
 
 
 def active_lines(text: str) -> list[str]:
-    """コメント行を除いた行。コメント化された呼び出しを「呼んでいる」と数えないために使う。"""
+    """コメント行を除いた行。行頭が `#` の呼び出しは実行されないので数えない。"""
     return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+
+
+def _command_text(line: str) -> str:
+    """workflow の `run:` より後ろをシェル本文として返す。シェル行はそのまま。"""
+    marker = "run:"
+    idx = line.find(marker)
+    if idx == -1:
+        return line
+    return line[idx + len(marker) :]
+
+
+def _strip_unquoted_comment(text: str) -> str:
+    """引用符の外にある `#` 以降を落とす。
+
+    `true # bash ...` は bash を実行しない。引用符の中の `#` は引数の文字なので残す。
+    """
+    out: list[str] = []
+    quote = ""
+    for ch in text:
+        if quote:
+            out.append(ch)
+            if ch == quote:
+                quote = ""
+            continue
+        if ch in "'\"":
+            quote = ch
+            out.append(ch)
+            continue
+        if ch == "#":
+            break
+        out.append(ch)
+    return "".join(out)
+
+
+def _split_commands(text: str) -> list[str]:
+    """引用符の外の `&&` `||` `;` でコマンドを分ける。"""
+    parts: list[str] = []
+    buf: list[str] = []
+    quote = ""
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = ""
+            i += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            buf.append(ch)
+            i += 1
+            continue
+        if text.startswith("&&", i) or text.startswith("||", i):
+            parts.append("".join(buf))
+            buf = []
+            i += 2
+            continue
+        if ch == ";":
+            parts.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    parts.append("".join(buf))
+    return parts
+
+
+def _tokenize(command: str) -> list[str]:
+    """空白で語に分け、囲みの引用符は外す。引用符の中の空白は区切らない。"""
+    tokens: list[str] = []
+    buf: list[str] = []
+    quote = ""
+    for ch in command:
+        if quote:
+            if ch == quote:
+                quote = ""
+            else:
+                buf.append(ch)
+            continue
+        if ch in "'\"":
+            quote = ch
+            continue
+        if ch.isspace():
+            if buf:
+                tokens.append("".join(buf))
+                buf = []
+            continue
+        buf.append(ch)
+    if buf:
+        tokens.append("".join(buf))
+    return tokens
+
+
+def _argv(line: str) -> list[list[str]]:
+    """その行で実行される各コマンドの、プログラムと引数。
+
+    部分文字列では `echo` や `printf` の引数、行内コメントまで呼び出しに数えてしまう。
+    実際に起動する語の並びだけを見る。
+    """
+    text = _strip_unquoted_comment(_command_text(line))
+    return [_tokenize(command) for command in _split_commands(text)]
+
+
+# 本物の Gate 4 の起動。語の並びがこれと一致するときだけ配線が生きている。
+_GATE4_WORKFLOW = ["bash", ".github/ci/run.sh", "material-corpus"]
+_GATE4_PHASE = ["python3", "scripts/curriculum-qa/test_sale_package.py"]
+_GATE4_STATUS = ["salepkg_status=$?"]
 
 
 def wiring_problems(workflow: str, phase: str) -> list[str]:
     """workflow と phase スクリプトの配線の不備を返す。空なら配線は生きている。"""
     problems: list[str] = []
-    if not any("bash .github/ci/run.sh material-corpus" in line for line in active_lines(workflow)):
+    if not any(_GATE4_WORKFLOW in _argv(line) for line in active_lines(workflow)):
         problems.append("material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
     phase_lines = active_lines(phase)
-    if not any(
-        "scripts/curriculum-qa/test_sale_package.py" in line and "salepkg_status=$?" in line
-        for line in phase_lines
-    ):
+    if not any(_GATE4_PHASE in _argv(line) and _GATE4_STATUS in _argv(line) for line in phase_lines):
         problems.append(
             "material-corpus.sh の Gate 4 が test_sale_package.py を呼び、終了コードを salepkg_status に受けていない"
         )
-    if not any('"$salepkg_status" -ne 0' in line for line in phase_lines):
+    if not any('"$salepkg_status" -ne 0' in _strip_unquoted_comment(line) for line in phase_lines):
         problems.append("test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
     return problems
 
@@ -174,6 +280,8 @@ def check_workflow_wiring() -> tuple[int, int]:
     実行するだけでは足りない。終了コードを最後の集計へ入れていないと、
     赤くなっても Gate 全体は緑のまま通る。
     コメント化された呼び出しは実行されないので、コメント行は数えない。
+    引用符の外の `#` より後ろも実行されない。echo や printf の引数に呼び出しの
+    文字列が入っていても、起動するプログラムと引数が本物と一致しなければ数えない。
     """
     failed = 0
     for problem in wiring_problems(
@@ -200,6 +308,66 @@ def check_workflow_wiring() -> tuple[int, int]:
             "集計の条件式をコメント化したら落ちる",
             live_workflow,
             live_phase.replace("if [", "# if [", 1),
+            1,
+        ),
+        (
+            "phase の呼び出しを echo に置き換えたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                "python3 scripts/curriculum-qa/test_sale_package.py",
+                "echo python3 scripts/curriculum-qa/test_sale_package.py",
+                1,
+            ),
+            1,
+        ),
+        (
+            "workflow の呼び出しを echo に置き換えたら落ちる",
+            live_workflow.replace(
+                "bash .github/ci/run.sh material-corpus",
+                "echo bash .github/ci/run.sh material-corpus",
+                1,
+            ),
+            live_phase,
+            1,
+        ),
+        (
+            "workflow の呼び出しを行内コメントに置いたら落ちる",
+            live_workflow.replace(
+                "bash .github/ci/run.sh material-corpus",
+                "true # bash .github/ci/run.sh material-corpus",
+                1,
+            ),
+            live_phase,
+            1,
+        ),
+        (
+            "phase の呼び出しを行内コメントに置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                "python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?",
+                "true # python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?",
+                1,
+            ),
+            1,
+        ),
+        (
+            "workflow の呼び出しを printf の引数に置いたら落ちる",
+            live_workflow.replace(
+                "bash .github/ci/run.sh material-corpus",
+                "printf '%s' 'bash .github/ci/run.sh material-corpus'",
+                1,
+            ),
+            live_phase,
+            1,
+        ),
+        (
+            "phase の呼び出しを printf の引数に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                "python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?",
+                "printf '%s' 'python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?'",
+                1,
+            ),
             1,
         ),
     ]
