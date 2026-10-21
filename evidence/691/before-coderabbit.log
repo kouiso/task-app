@@ -1,0 +1,8 @@
+ubuntu@task-app:~/task-app$ python3 scripts/curriculum-qa/test_sale_package.py
+  ❌ 配線検査 workflow の呼び出しを行内コメントに置いたら落ちる: 期待 1 / 実際 0
+  ❌ 配線検査 phase の呼び出しを行内コメントに置いたら落ちる: 期待 1 / 実際 0
+  ❌ 配線検査 workflow の呼び出しを printf の引数に置いたら落ちる: 期待 1 / 実際 0
+  ❌ 配線検査 phase の呼び出しを printf の引数に置いたら落ちる: 期待 1 / 実際 0
+❌ sale_package 自己テスト 4/42 失敗
+ubuntu@task-app:~/task-app$ echo exit:$?
+exit:1
