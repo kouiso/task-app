@@ -32,6 +32,19 @@ async function setup(role: MemberRole) {
   return { actor, project, caller };
 }
 
+// 別のトランザクションのロックを待っている接続が現れるまで待つ。現れなければテストを失敗させる。
+// 固定時間の待ちでは遅い環境で順序が崩れるので、実際にロック待ちに入ったことを確かめる。
+async function waitUntilSomeoneWaitsForLock(): Promise<void> {
+  for (let i = 0; i < 250; i++) {
+    const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
+      SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+    if ((waiting[0]?.n ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('ロック待ちに入った接続が見つかりませんでした');
+}
+
 // プロジェクト行のロックを別のトランザクションで握り、その間に呼び出しを走らせてから、
 // メンバーを削除してロックを離す。呼び出しが「確認 → ロック → 保存」のどこで割り込まれても、
 // 毎回同じ順序（呼び出しがロックを待つ間にメンバーが削除される）になる。
@@ -382,6 +395,39 @@ describe('taskRouter', () => {
       expect(after.assigneeId).toBeNull();
     });
 
+    it('プロジェクト移動は、移動元のロックが解放されるまで待つ', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const destination = await createTestProject(actor.id);
+      const task = await createTestTask(project.id, actor.id);
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 一括操作が移動元を握っている状態を作る。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const moving = caller.task.update({ id: task.id, projectId: destination.id });
+      await waitUntilSomeoneWaitsForLock();
+      const during = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(during.projectId).toBe(project.id);
+
+      release();
+      await holder;
+      await moving;
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.projectId).toBe(destination.id);
+    });
+
     it('プロジェクト移動とメンバー削除が競合しても、移動先のメンバーでない担当者は外れる', async () => {
       const { actor, project, caller } = await setup('OWNER');
       const destination = await createTestProject(actor.id);
@@ -404,6 +450,248 @@ describe('taskRouter', () => {
       const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
       expect(after.projectId).toBe(destination.id);
       expect(after.assigneeId).toBeNull();
+    });
+  });
+
+  describe('完了・中止のタスクを未完了へ戻すときの担当者', () => {
+    // removeMember は完了・中止の担当者を実績として残す。退会後の状態を直接作って確かめる。
+    async function setupClosedTaskWithAssignee(status: 'DONE' | 'CANCELLED', stillMember: boolean) {
+      const { actor, project, caller } = await setup('OWNER');
+      const assignee = await createTestUser({ email: uniqueEmail('task-reopen-assignee') });
+      await prisma.projectMember.create({
+        data: { userId: assignee.id, projectId: project.id, role: 'MEMBER' },
+      });
+      const task = await createTestTask(project.id, actor.id, { status });
+      await prisma.task.update({ where: { id: task.id }, data: { assigneeId: assignee.id } });
+      if (!stillMember) {
+        await prisma.projectMember.delete({
+          where: { userId_projectId: { userId: assignee.id, projectId: project.id } },
+        });
+      }
+      return { project, caller, task, assignee };
+    }
+
+    it.each([
+      'DONE',
+      'CANCELLED',
+    ] as const)('update: %s のタスクを TODO に戻すと、外れた人の担当を外す', async (status) => {
+      const { caller, task } = await setupClosedTaskWithAssignee(status, false);
+      const result = await caller.task.update({ id: task.id, status: 'TODO' });
+      expect(result.assigneeId).toBeNull();
+    });
+
+    it('update: まだメンバーの担当者は、TODO に戻しても担当のまま', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await caller.task.update({ id: task.id, status: 'TODO' });
+      expect(result.assigneeId).toBe(assignee.id);
+    });
+
+    it('update: 完了のまま編集しても、外れた人の担当は実績として残る', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', false);
+      const result = await caller.task.update({ id: task.id, title: '完了後に題名だけ直す' });
+      expect(result.assigneeId).toBe(assignee.id);
+    });
+
+    it('bulkUpdateStatus: TODO に戻すと、外れた人の担当だけを外す', async () => {
+      const gone = await setupClosedTaskWithAssignee('DONE', false);
+      const kept = await setupClosedTaskWithAssignee('DONE', true);
+      await expect(
+        gone.caller.task.bulkUpdateStatus({ ids: [gone.task.id], status: 'TODO' }),
+      ).resolves.toEqual({ count: 1 });
+      await expect(
+        kept.caller.task.bulkUpdateStatus({ ids: [kept.task.id], status: 'TODO' }),
+      ).resolves.toEqual({ count: 1 });
+
+      const goneAfter = await prisma.task.findUniqueOrThrow({ where: { id: gone.task.id } });
+      const keptAfter = await prisma.task.findUniqueOrThrow({ where: { id: kept.task.id } });
+      expect(goneAfter.assigneeId).toBeNull();
+      expect(keptAfter.assigneeId).toBe(kept.assignee.id);
+    });
+
+    it('update: 戻す処理がロックを待つ間にメンバーが外れたら、担当を外して戻す', async () => {
+      const { project, caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await callWhileMemberIsRemoved(project.id, assignee.id, () =>
+        caller.task.update({ id: task.id, status: 'TODO' }),
+      );
+      expect(result.ok).toBe(true);
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBeNull();
+    });
+
+    it('bulkUpdateStatus: 戻す処理がロックを待つ間にメンバーが外れたら、担当を外して戻す', async () => {
+      const { project, caller, task, assignee } = await setupClosedTaskWithAssignee('DONE', true);
+      const result = await callWhileMemberIsRemoved(project.id, assignee.id, () =>
+        caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' }),
+      );
+      expect(result.ok).toBe(true);
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBeNull();
+    });
+
+    it('bulkUpdateStatus: ロックを待つ間に付け替えられた担当は、外さずに残す', async () => {
+      const { project, caller, task } = await setupClosedTaskWithAssignee('DONE', false);
+      const newcomer = await createTestUser({ email: uniqueEmail('task-reopen-newcomer') });
+      await prisma.projectMember.create({
+        data: { userId: newcomer.id, projectId: project.id, role: 'MEMBER' },
+      });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の更新がロックを握ったまま、外れた人から現メンバーへ担当を付け替える。
+      const reassign = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+        await tx.task.update({ where: { id: task.id }, data: { assigneeId: newcomer.id } });
+      });
+
+      await locked;
+      const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' });
+      // 一括操作がロック待ちに入ってから付け替えを確定させる。
+      await waitUntilSomeoneWaitsForLock();
+      release();
+      await reassign;
+      await reopen;
+
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('TODO');
+      expect(after.assigneeId).toBe(newcomer.id);
+    });
+
+    it('bulkUpdateStatus: ロック待ちの間にタスクが小さい id のプロジェクトへ移ったら、CONFLICT で戻す', async () => {
+      const { actor, caller } = await setup('OWNER');
+      const first = await createTestProject(actor.id);
+      const second = await createTestProject(actor.id);
+      const [low, high] = [first.id, second.id].sort();
+      const task = await createTestTask(high as string, actor.id, { status: 'DONE' });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の更新が両方のプロジェクトを握ったまま、タスクを id の小さい側へ移す。
+      const mover = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" IN (${low}, ${high}) ORDER BY "id" FOR UPDATE`;
+        markLocked();
+        await released;
+        await tx.task.update({ where: { id: task.id }, data: { projectId: low as string } });
+      });
+
+      await locked;
+      const reopen = caller.task.bulkUpdateStatus({ ids: [task.id], status: 'TODO' }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await waitUntilSomeoneWaitsForLock();
+      release();
+      await mover;
+      const error = await reopen;
+
+      expect(String(error)).toContain('他の操作と重なりました');
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.status).toBe('DONE');
+    });
+
+    it.each([
+      'bulkComplete',
+      'bulkDelete',
+      'bulkUpdateStatus',
+    ] as const)('%s: プロジェクトのロックが解放されるまで待つ', async (operation) => {
+      const { actor, project, caller } = await setup('OWNER');
+      const task = await createTestTask(project.id, actor.id, { status: 'IN_PROGRESS' });
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // removeMember などがプロジェクトを握っている状態を作る。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${project.id} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const running =
+        operation === 'bulkComplete'
+          ? caller.task.bulkComplete({ ids: [task.id] })
+          : operation === 'bulkDelete'
+            ? caller.task.bulkDelete({ ids: [task.id] })
+            : caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
+      await waitUntilSomeoneWaitsForLock();
+      const during = await prisma.task.findUnique({ where: { id: task.id } });
+      expect(during?.status).toBe('IN_PROGRESS');
+
+      release();
+      await holder;
+      await running;
+      const after = await prisma.task.findUnique({ where: { id: task.id } });
+      expect(after?.status ?? null).toBe(operation === 'bulkDelete' ? null : 'DONE');
+    });
+
+    it('bulkComplete: 書き込みの前に対象のタスク行を id の順にロックする', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const first = await createTestTask(project.id, actor.id, { status: 'TODO' });
+      const second = await createTestTask(project.id, actor.id, { status: 'DONE' });
+      const [lowId, highId] = [first.id, second.id].sort() as [string, string];
+
+      let release: () => void = () => {};
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let markLocked: () => void = () => {};
+      const locked = new Promise<void>((resolve) => {
+        markLocked = resolve;
+      });
+      // 別の処理が id の大きい行を握っている間に、一括操作を走らせる。
+      const holder = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${highId} FOR UPDATE`;
+        markLocked();
+        await released;
+      });
+
+      await locked;
+      const completing = caller.task.bulkComplete({ ids: [lowId, highId] });
+      await waitUntilSomeoneWaitsForLock();
+
+      // id の小さい行は、待っている間にもう取られている。
+      const probe = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${lowId} FOR UPDATE NOWAIT`;
+      });
+      await expect(probe).rejects.toThrow();
+
+      // 行を握られていても、コメント追加が外部キーの確認で取る KEY SHARE は待たされない。
+      // NOWAIT なので、待たされるなら固定時間を待たずに即エラーになる。
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "tasks" WHERE "id" = ${lowId} FOR KEY SHARE NOWAIT`;
+      });
+
+      release();
+      await holder;
+      await completing;
+    });
+
+    it('bulkUpdateStatus: 完了へ変える一括操作は担当者に触れない', async () => {
+      const { caller, task, assignee } = await setupClosedTaskWithAssignee('CANCELLED', false);
+      await caller.task.bulkUpdateStatus({ ids: [task.id], status: 'DONE' });
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.assigneeId).toBe(assignee.id);
     });
   });
 

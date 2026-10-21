@@ -103,7 +103,7 @@ flowchart TD
 
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
-| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 20 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
+| Step 0 | タスク一括操作 API（bulk 3種）を自分で書く | 25 分 | `task.ts` | 3 つの bulk API を写経して登録できる |
 | Step 1 | 選択状態を管理する state を作る | 7 分 | `src/app/task/page.tsx` | state が正しく動作する |
 | Step 2 | チェックボックス付きタスクカードを作る | 8 分 | `src/app/task/page.tsx` | 各カードにチェックボックスが表示される |
 | Step 3 | まず「全選択 / 全解除」チェックボックスを作る | 4 分 | `src/app/task/page.tsx` | 全選択・全解除が切り替わる |
@@ -114,7 +114,7 @@ flowchart TD
 | Step 8 | DropdownMenu でステータス一括変更を実装する | 7 分 | `src/app/task/page.tsx` | ステータス変更が動作する |
 | Step 9 | 動作確認と仕上げ | 4 分 | — | 一括操作が一通り動く |
 
-**合計時間**: 約 73 分です。
+**合計時間**: 約 78 分です。
 
 この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
 
@@ -122,7 +122,7 @@ flowchart TD
 
 ---
 
-### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（20 分）
+### Step 0: タスク一括操作 API（bulk 3種）を自分で書く（25 分）
 
 **ゴール**: 複数のタスクをまとめて処理する `bulkComplete`・`bulkDelete`・`bulkUpdateStatus` を自分で書き、`api.task.bulkComplete` などを呼べる状態にします。この3つはこのあと Step 6〜8 で画面のボタンから呼び出します。
 
@@ -225,6 +225,75 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 一括操作は最初の権限確認と DB への書き込みの間にロールが変わる可能性も考えます。書き込み側の `where` でも現在のロールを確認し、件数がずれたらトランザクション（途中で失敗した場合に変更全体を取り消すまとまり）を失敗させます。
 
+続けて一括操作どうしが行の取り合いで止まらないようにする部品を追加します。コード内の `FOR NO KEY UPDATE`（キー列を更新しない行ロック）は、すぐ下で説明します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const lockTaskRows = async (
+  tx: Prisma.TransactionClient,
+  ids: string[]
+): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`
+  );
+};
+```
+
+`updateMany` や `deleteMany` が行に触る順番は実行計画しだいで、呼び出しごとに変わります。2つの一括操作が同じタスクを逆の順番で取り合うと、互いに相手の解放を待って止まり、PostgreSQL が片方を取り消します。そこで書き込みの前に、対象のタスク行を `ORDER BY "id"` の順でまとめてロックします。全員が id の順に取れば待ち合いは輪になりません。
+
+ロックの種類を `FOR NO KEY UPDATE` にしているのには理由があります。Day 12・14・15 で使った `FOR UPDATE` は一番強いロックです。コメントを足す操作まで待たせます。コメントを足すとき PostgreSQL は紐づくタスクが消えていないことを確かめるために親にあたるタスク行へ一番弱い共有ロック（`KEY SHARE`）を掛けます。`FOR UPDATE` はこれと両立しないため一括操作の最中はコメントが入りません。`FOR NO KEY UPDATE` はキーを書き換えない更新と同じ強さです。`KEY SHARE` とは両立します。一括操作どうしの取り合いは今まで通り起きるので、順序を固定する役目は変わりません。
+
+続けて対象のタスクが属するプロジェクトをすべてロックする関数を書きます。`removeMember` やタスクの移動はプロジェクトの行を先にロックしてから動きます。一括操作も同じ行を先に取っておかないと担当者の確認をしている途中でメンバーを外されたり、タスクを別のプロジェクトへ移されたりします。置き場所は `lockTaskRows` の直後です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（lockTaskRows の直後に追加）
+const lockProjectsOfTasks = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const locked = new Set<string>();
+  let highest = '';
+  for (;;) {
+    const rows = await tx.task.findMany({
+      where,
+      select: { projectId: true },
+      distinct: ['projectId'],
+    });
+    const pending = rows
+      .map((row) => row.projectId)
+      .filter((id) => !locked.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
+```
+
+ここまでで、まだロックしていないプロジェクトを見つけます。取り済みより小さい id が混ざっていれば `CONFLICT` で戻します。問題が無ければ見つけたプロジェクトを id の順に取ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    for (const projectId of pending.sort()) {
+      await lockTaskProjects(tx, [projectId]);
+      locked.add(projectId);
+      highest = projectId;
+    }
+  }
+};
+```
+
+`removeMember` も同じプロジェクトの行をロックします。確かめる前に対象のプロジェクトをすべてロックしておけば、確かめている途中でメンバーが外されることはありません。ロックを取る前に読んだ一覧は、ロックを待つ間に古くなります。そのため対象の一覧は、ロックを取った後に必ず読み直します。
+
+ロックを待つ間に `update` がタスクを別のプロジェクトへ移すことがあります。そこで一覧を読み直し、ロックしていないプロジェクトが出てきたら足してロックします。ロック済みの集合に収まったところで終わります。読み直しですでに取ったより小さい id のプロジェクトが現れたときは、ロックの順序が逆になってデッドロックし得ます。その場合はロックを取らずに `CONFLICT` を返します。利用者にはもう一度操作してもらいます。ロックを取り終えた後にタスクが別のプロジェクトへ抜け出せないのは、Day 15 の `update` が移動元と移動先の両方をロックするからです。移動元を握っている間、移動は待たされます。
+
+ロックの前に `sort()` で id の順に並べるのはデッドロック（2つの処理が互いに相手のロックの解放を待って止まる状態）を避けるためです。一括操作 A がプロジェクト P1 から P2 の順にロックするとします。同時に一括操作 B は P2 から P1 の順にロックします。A は P1 を取って P2 を待ちます。B は P2 を取って P1 を待ちます。
+
+この状態になると PostgreSQL は片方のトランザクションをエラーで取り消します。全員が id の順に取れば先に P1 を取った側だけが進むので待ち合いが輪になりません。
+
 #### 0-3. bulkComplete を書く（まとめて完了にする）
 
 まず選んだタスクをまとめて完了にする `bulkComplete` を、Day 16 で書いた `addTime` の直後に足します。
@@ -242,9 +311,11 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
 ```
 
-入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。
+入力の `ids` は「1件以上、100件以下のタスク id の配列」に絞ります。まず入力全体の編集権限を確認します。書き込み時にも `where` で id と現在の編集権限を同時に絞ります。トランザクションに入ったら書き込みの前に `lockProjectsOfTasks` で対象のプロジェクトをロックします。続けて `lockTaskRows` で対象の行を id の順にロックします。後で書く `bulkDelete` と `bulkUpdateStatus` も同じ「プロジェクト、タスク行」の順で取ります。Day 12 の `removeMember` もプロジェクトから取るので、どの組み合わせで重なっても待ち合いが輪になりません。
 
 続けて完了済みと未完了のタスクを分けて更新します。
 
@@ -287,9 +358,10 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
-        });
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        const result = await tx.task.deleteMany({ where });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
       });
@@ -298,7 +370,96 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 流れは `bulkComplete` とよく似ていますが権限の確認と書き込み条件が削除用になっています。`TASK_DELETE_ROLES` を使うため編集はできても削除はできない MEMBER を書き込み直前にも除外できます。件数がずれた場合は削除全体を取り消します。
 
-#### 0-5. bulkUpdateStatus を書く（まとめてステータス変更・前半）
+#### 0-5. 未完了へ戻すタスクの担当者を確かめる部品を作る
+
+3つ目の `bulkUpdateStatus` は完了したタスクを `TODO` へ戻すこともできます。ここで Day 12 の `removeMember` を思い出してください。メンバーを外すと未完了タスクの担当は外れます。完了と中止のタスクの担当は実績として残しました。
+
+なので完了済みのタスクの担当者欄にはもうプロジェクトにいない人が残っていることがあります。そのまま一括で `TODO` へ戻すと外れた人が未完了タスクの担当に戻ります。1件ずつ戻す Day 15 の `update` でも同じことが起きます。一括操作も戻す前に担当者の所属を確かめる必要があります。
+
+「完了と中止」を表す定数 `CLOSED_STATUSES` と判定の `isClosedStatus` を、`lockTaskProjects` の直後に次の2行で作ります。Day 15 で作った人は同じ内容なので、そのまま使い回してください。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（lockTaskProjects の直後に追加）
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+```
+
+`update` と `bulkUpdateStatus` は、この定数と関数で完了か中止かを判定します。
+
+`CLOSED_STATUSES` は Day 12 の `removeMember` が担当を残す2つの状態と同じ組です。`DONE` と `CANCELLED` を使う場所ごとに書くと、片方で `CANCELLED` を書き忘れたときに中止のタスクだけ確かめずに戻ります。1か所に置いてあるので `update` と `bulkUpdateStatus` で判定がずれません。
+
+次に、担当者がまだメンバーかを確かめる関数の前半を書きます。置き場所は `lockProjectsOfTasks` の直後です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（lockProjectsOfTasks の直後に追加）
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null },
+    },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+```
+
+引数の `where` には、一括操作が作った権限つきの条件をそのまま受け取ります。そこへ「完了か中止」と「担当者がいる」を足して確かめる候補を絞ります。未完了のタスクは候補に入れません。メンバーを外した時点で Day 12 の `removeMember` が担当を外しているからです。この関数はプロジェクトのロックを取った後で呼ぶ前提です。そのため読んだ一覧は他の処理が確定させた結果です。
+
+後半では候補の担当者がまだメンバーかをまとめて調べます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+  const projectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ];
+  const assigneeIds = [
+    ...new Set(candidates.map((task) => task.assigneeId as string))
+  ];
+  const members = await tx.projectMember.findMany({
+    where: {
+      projectId: { in: projectIds },
+      userId: { in: assigneeIds }
+    },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(
+    members.map((member) => `${member.projectId}:${member.userId}`)
+  );
+```
+
+`memberKeys` は「プロジェクトと担当者の組」の一覧です。この一覧に無い組が、外れた人の担当です。プロジェクトごとに別々の一覧を持つと、他のプロジェクトで同じ人がメンバーでも見逃してしまうので、組の文字列にしてまとめて照合します。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({
+      where: { id: { in: orphanIds } },
+      data: { assigneeId: null }
+    });
+  }
+};
+```
+
+Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ確かめました。同じ書き方を候補の数だけ繰り返すと100件で100回の問い合わせになります。ここでは `tx.projectMember.findMany` の1回で「候補のプロジェクトのどれか」と「候補の担当者のどれか」に当てはまるメンバー行をまとめて取ります。
+
+ただしこの条件は余分な組も返します。田中さんは P1 のメンバーで P2 からは外れたとします。候補に P1 と P2 の田中さん担当のタスクがあると `findMany` は P1 の田中さんの行を返します。担当者の id だけで照合すると P2 のタスクも田中さんがメンバーだと見なして見逃します。
+
+そこで `projectId:userId` の形の文字列を作って「プロジェクトと担当者の組」で照合します。組が `memberKeys` に無いタスクだけが外れた人の担当です。その id を集めて `updateMany` で `assigneeId` を `null` にします。
+
+`task.assigneeId as string` と書くのは `findMany` の条件で `null` を除いても型は `string | null` のままだからです。候補には担当者のいるタスクしか入りません。だからここでは `string` として扱えます。
+
+#### 0-6. bulkUpdateStatus を書く（まとめてステータス変更・前半）
 
 最後に選んだタスクのステータスをまとめて変える `bulkUpdateStatus` を、`bulkDelete` の直後に足します。まず入力と権限確認までを書きます。
 
@@ -320,7 +481,7 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 入力は id の配列に加えて変更後の `status`（`taskStatusSchema` で検証）も受け取ります。ここまでは `bulkComplete` と同じで、まとめてタスクを取り、`for` で1件ずつ `'canEdit'` 権限を確かめます。ステータスの変更は編集にあたるので確認する権限は `'canEdit'` です。
 
-#### 0-6. bulkUpdateStatus を書く（後半・完了日時の管理）
+#### 0-7. bulkUpdateStatus を書く（後半・完了日時の管理）
 
 続けて更新するデータを組み立てて `updateMany` を呼びます。
 
@@ -340,71 +501,17 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 `data` に型を付けるとあとから追加する `completedAt` も検査できます。完了に変える場合は現在時刻を用意し、それ以外では `null` に戻します。
 
-再開時の担当者も確認してから更新します。完了とキャンセルだけを履歴として扱います。それ以外のステータスへ変更するときは現在の所属を確認します。
+続けてトランザクションを開きます。未完了へ戻すときは最初に 0-5 の部品を呼びます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
-        if (input.status !== TASK_STATUS.DONE && input.status !== TASK_STATUS.CANCELLED) {
-          const projectIds = tasks.map((task) => task.projectId);
-          await lockTaskProjects(tx, projectIds);
-          // 待機中の担当変更を取り消さず退会処理との間に未所属の担当を残さないためです。
-          const currentTasks = await tx.task.findMany({
-            where,
-            select: { id: true, projectId: true, assigneeId: true },
-          });
-          assertBulkWriteCount(currentTasks.length, input.ids.length);
-          if (currentTasks.some((task) => !projectIds.includes(task.projectId))) {
-            throw new TRPCError({
-              code: 'CONFLICT',
-              message: 'タスクのプロジェクトが変更されました。もう一度お試しください',
-            });
-          }
-```
-
-Day 14 の `lockTaskProjects` で退会処理と保存の順序をそろえます。待機前の担当者情報は使わずロック後に対象を読み直します。待機中にロック対象外のプロジェクトへ移ったタスクがあれば全体を取り消します。次のコードも同じ関数の直後に足します。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-          const pairs = currentTasks.flatMap((task) =>
-            task.assigneeId ? [{ projectId: task.projectId, userId: task.assigneeId }] : [],
-          );
-          const members =
-            pairs.length > 0
-              ? await tx.projectMember.findMany({
-                  where: { OR: pairs },
-                  select: { projectId: true, userId: true },
-                })
-              : [];
-          const memberKeys = new Set(
-            members.map((member) => `${member.projectId}:${member.userId}`),
-          );
-```
-
-担当者の所属はプロジェクトIDとユーザーIDの組で確認します。別のプロジェクトに所属していてもこのタスクの担当者として有効とは限りません。`OR` でまとめて取得するためタスクごとにデータベースへ問い合わせません。次のコードも同じ関数の直後に足します。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-          const unavailableIds = currentTasks
-            .filter(
-              (task) => task.assigneeId && !memberKeys.has(`${task.projectId}:${task.assigneeId}`),
-            )
-            .map((task) => task.id);
-          if (unavailableIds.length > 0) {
-            await tx.task.updateMany({
-              where: { ...where, id: { in: unavailableIds } },
-              data: { assigneeId: null },
-            });
-          }
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
         }
-```
-
-未完了へ戻す対象から所属していない担当者だけを外します。所属している担当者と未割り当てのタスクは変更しません。担当者の解除とステータス更新を同じトランザクションで行います。次のコードも同じ関数の直後に足します。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-        // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE
             ? await tx.task.updateMany({
@@ -412,6 +519,16 @@ Day 14 の `lockTaskProjects` で退会処理と保存の順序をそろえま�
                 data: { status: TASK_STATUS.DONE },
               })
             : { count: 0 };
+```
+
+`lockProjectsOfTasks` と `lockTaskRows` は、変更先がどの状態でも先に呼びます。続く `releaseNonMemberAssignees` の呼び出しは、変更先が `TODO` や `IN_PROGRESS` のときだけです。変更先が完了か中止なら担当者には触れません。終わったタスクの担当は「誰が終えたか」の記録です。Day 12 の `removeMember` と同じく外れた人でも実績として残します。
+
+呼ぶ位置は `updateMany` より前です。ステータスを書き換えたあとでは候補を「完了か中止」で探せません。呼び出しは同じトランザクションの中にあります。このあと件数がずれて全体を取り消すときは外した担当も元に戻ります。
+
+残りは完了済みの日時を保ちながら更新する部分です。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
         const changed = await tx.task.updateMany({
           where:
             input.status === TASK_STATUS.DONE
@@ -433,6 +550,7 @@ Day 14 の `lockTaskProjects` で退会処理と保存の順序をそろえま�
 - 3つの `ids` が1件以上・`MAX_BULK_TASKS` 件以下に制限されている
 - `findTasksWithPermission`（複数形）で権限を確認してから `updateMany` / `deleteMany` を呼んでいる
 - 書き込み側でも現在のロールを確認し、件数がずれたら全体を取り消している
+- `lockProjectsOfTasks` と `lockTaskRows` でロックしてから、未完了へ戻すときだけ `releaseNonMemberAssignees` を `updateMany` より前に呼んでいる
 - `npx tsc --noEmit` で型エラーが出ていない
 
 ---
@@ -1345,6 +1463,132 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 
 入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は読者からは原因の見えない不具合になります。
 
+**タスク行を id の順にロックする関数**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+const lockTaskRows = async (
+  tx: Prisma.TransactionClient,
+  ids: string[]
+): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`
+  );
+};
+```
+
+`updateMany` や `deleteMany` が行に触る順番は実行計画しだいで、呼び出しごとに変わります。2つの一括操作が同じタスクを逆の順番で取り合うと、互いに相手の解放を待って止まり、PostgreSQL が片方を取り消します。そこで書き込みの前に、対象のタスク行を `ORDER BY "id"` の順でまとめてロックします。全員が id の順に取れば待ち合いは輪になりません。
+
+ロックの種類を `FOR NO KEY UPDATE` にしているのには理由があります。Day 12・14・15 で使った `FOR UPDATE` は一番強いロックです。コメントを足す操作まで待たせます。コメントを足すとき PostgreSQL は紐づくタスクが消えていないことを確かめるために親にあたるタスク行へ一番弱い共有ロック（`KEY SHARE`）を掛けます。`FOR UPDATE` はこれと両立しないため一括操作の最中はコメントが入りません。`FOR NO KEY UPDATE` はキーを書き換えない更新と同じ強さです。`KEY SHARE` とは両立します。一括操作どうしの取り合いは今まで通り起きるので、順序を固定する役目は変わりません。
+
+**完了と中止をまとめた定数と判定**は Day 15 で `lockTaskProjects` の直後に追加した2行をそのまま使います。`bulkUpdateStatus` はこの判定で「未完了へ戻す操作か」を見分けます。
+
+**対象のプロジェクトをロックする関数と、外れた担当者を外す関数**:
+
+```typescript
+// filepath: src/server/api/routers/task.ts
+const lockProjectsOfTasks = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const locked = new Set<string>();
+  let highest = '';
+  for (;;) {
+    const rows = await tx.task.findMany({
+      where,
+      select: { projectId: true },
+      distinct: ['projectId'],
+    });
+    const pending = rows
+      .map((row) => row.projectId)
+      .filter((id) => !locked.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
+```
+
+ここまでで、まだロックしていないプロジェクトを見つけます。取り済みより小さい id が混ざっていれば `CONFLICT` で戻します。問題が無ければ見つけたプロジェクトを id の順に取ります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+    for (const projectId of pending.sort()) {
+      await lockTaskProjects(tx, [projectId]);
+      locked.add(projectId);
+      highest = projectId;
+    }
+  }
+};
+```
+
+この2つは `export const taskRouter` の行の上に置きます。ロックは先に取り、確かめる関数はロックの後で呼びます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックする理由は、複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: 外れた担当者を外す関数（前半）
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: {
+      ...where,
+      status: { in: [...CLOSED_STATUSES] },
+      assigneeId: { not: null },
+    },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+```
+
+ここまでが前半です。ロックを取り終えた後の `where` で、完了か中止で担当者のいるタスクだけを読みます。ロックの後で読むので、待っている間に確定した付け替えや退会の結果を反映した一覧になります。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+  const projectIds = [
+    ...new Set(candidates.map((task) => task.projectId))
+  ];
+  const assigneeIds = [
+    ...new Set(candidates.map((task) => task.assigneeId as string))
+  ];
+  const members = await tx.projectMember.findMany({
+    where: {
+      projectId: { in: projectIds },
+      userId: { in: assigneeIds }
+    },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(
+    members.map((member) => `${member.projectId}:${member.userId}`)
+  );
+```
+
+`members` は、候補のプロジェクトに属し、かつ候補の担当者であるメンバー行です。ここから `projectId:userId` の文字列を作った `memberKeys` に、候補の組が無いかどうかを次の処理で調べます。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({
+      where: { id: { in: orphanIds } },
+      data: { assigneeId: null }
+    });
+  }
+};
+```
+
+メンバー行は `findMany` の1回でまとめて取ります。`projectId` と `userId` の `in` は余分な組も返します。だから「プロジェクトと担当者の組」の文字列で照合します。
+
 **bulkComplete**:
 
 ```typescript
@@ -1361,6 +1605,8 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
 ```
 
 書き込み直前にも同じ権限条件を使います。ここから完了済みと未完了を分けることで、完了済みタスクが持っている日時を新しい値で上書きしません。
@@ -1401,9 +1647,10 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
-        });
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        const result = await tx.task.deleteMany({ where });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
       });
@@ -1449,74 +1696,17 @@ const assertBulkWriteCount = (count: number, expected: number) => {
       }
 ```
 
-変更先が完了なら現在時刻を用意します。それ以外では完了日時を消します。タスクの状態と完了日時をそろえるためです。Day 23 の週次集計では状態が `DONE` のタスクだけを数えます。実際の書き込みではすでに完了しているタスクの日時を保ちます。
+更新内容はここで決めます。完了へ変えるときだけ `completedAt` を現在時刻にし、それ以外では空にします。完了から戻すときに完了日時が残ったままだと、週次の集計に実際より多く数えられてしまうので、必ず空へ戻します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
-// 完成版: bulkUpdateStatus の保存1
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
-        if (input.status !== TASK_STATUS.DONE && input.status !== TASK_STATUS.CANCELLED) {
-          const projectIds = tasks.map((task) => task.projectId);
-          await lockTaskProjects(tx, projectIds);
-          // 待機中の担当変更を取り消さず退会処理との間に未所属の担当を残さないためです。
-          const currentTasks = await tx.task.findMany({
-            where,
-            select: { id: true, projectId: true, assigneeId: true },
-          });
-          assertBulkWriteCount(currentTasks.length, input.ids.length);
-          if (currentTasks.some((task) => !projectIds.includes(task.projectId))) {
-            throw new TRPCError({
-              code: 'CONFLICT',
-              message: 'タスクのプロジェクトが変更されました。もう一度お試しください',
-            });
-          }
-```
-
-Day 14 の `lockTaskProjects` で退会処理と保存の順序をそろえます。待機前の担当者情報は使わずロック後に対象を読み直します。待機中にロック対象外のプロジェクトへ移ったタスクがあれば全体を取り消します。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-// 完成版: bulkUpdateStatus の保存2
-          const pairs = currentTasks.flatMap((task) =>
-            task.assigneeId ? [{ projectId: task.projectId, userId: task.assigneeId }] : [],
-          );
-          const members =
-            pairs.length > 0
-              ? await tx.projectMember.findMany({
-                  where: { OR: pairs },
-                  select: { projectId: true, userId: true },
-                })
-              : [];
-          const memberKeys = new Set(
-            members.map((member) => `${member.projectId}:${member.userId}`),
-          );
-```
-
-担当者の所属はプロジェクトIDとユーザーIDの組で確認します。別のプロジェクトに所属していてもこのタスクの担当者として有効とは限りません。`OR` でまとめて取得するためタスクごとにデータベースへ問い合わせません。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-// 完成版: bulkUpdateStatus の保存3
-          const unavailableIds = currentTasks
-            .filter(
-              (task) => task.assigneeId && !memberKeys.has(`${task.projectId}:${task.assigneeId}`),
-            )
-            .map((task) => task.id);
-          if (unavailableIds.length > 0) {
-            await tx.task.updateMany({
-              where: { ...where, id: { in: unavailableIds } },
-              data: { assigneeId: null },
-            });
-          }
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
         }
-```
-
-未完了へ戻す対象から所属していない担当者だけを外します。所属している担当者と未割り当てのタスクは変更しません。担当者の解除とステータス更新を同じトランザクションで行います。
-
-```typescript
-// filepath: src/server/api/routers/task.ts（続き）
-// 完成版: bulkUpdateStatus の保存4
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE
@@ -1525,6 +1715,15 @@ Day 14 の `lockTaskProjects` で退会処理と保存の順序をそろえま�
                 data: { status: TASK_STATUS.DONE },
               })
             : { count: 0 };
+```
+
+未完了へ戻すときは最初に担当者の所属を確かめます。完了・中止の担当は Day 12 の `removeMember` が実績として残します。そのため外れた人が担当のまま残っていることがあります。完了か中止へ変えるときは実績を残すため呼びません。
+
+変更先が `DONE` の場合だけ完了済みの行を先に更新します。`completedAt` を含めないため、すでに週次集計へ入っている完了日時は変わりません。
+
+```typescript
+// filepath: src/server/api/routers/task.ts（続き）
+// 完成版: bulkUpdateStatus の対象更新
         const changed = await tx.task.updateMany({
           where:
             input.status === TASK_STATUS.DONE
