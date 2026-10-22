@@ -45,7 +45,21 @@ required_files=(
   "scripts/verify-scaffold-database.cjs"
 )
 
+reject_source_symlinks() {
+  local relative_path="$1"
+  local source_path="${PROJECT_ROOT}/${relative_path}"
+  # 末端だけの確認では doc/ などのリンク経由で外部データをコピーしてしまう。
+  while [ "${source_path}" != "${PROJECT_ROOT}" ]; do
+    if [ -L "${source_path}" ]; then
+      echo "配布元にシンボリックリンクがあります: ${relative_path}" >&2
+      return 1
+    fi
+    source_path="$(dirname "${source_path}")"
+  done
+}
+
 for relative_path in "${required_files[@]}"; do
+  reject_source_symlinks "${relative_path}"
   source_path="${PROJECT_ROOT}/${relative_path}"
   if [ ! -f "${source_path}" ]; then
     echo "必要な配布ファイルが見つかりません: ${relative_path}" >&2
@@ -77,9 +91,16 @@ support_directories=(
 )
 
 for directory in "${support_directories[@]}"; do
+  reject_source_symlinks "scripts/${directory}"
   source_directory="${PROJECT_ROOT}/scripts/${directory}"
   if [ ! -d "${source_directory}" ]; then
     echo "必要な scaffold 補助ディレクトリが見つかりません: scripts/${directory}" >&2
+    exit 1
+  fi
+  # zip はリンク先を読み込むため、補助ツリー内のリンクも配布対象にできない。
+  source_symlink="$(find "${source_directory}" -type l -print -quit)"
+  if [ -n "${source_symlink}" ]; then
+    echo "scaffold 補助ディレクトリにシンボリックリンクがあります: scripts/${directory}" >&2
     exit 1
   fi
   mkdir -p "${BUILD_DIR}/scripts/${directory}"
