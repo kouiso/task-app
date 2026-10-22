@@ -1,0 +1,8 @@
+Windows native, main 2289189 + this change, Postgres 16 on port 25532 (docker), 
+python scripts/curriculum-qa/build_day_snapshots.py --all --verify
+
+結果: day01-day30 のうち 29 日が ツリー OK / Prisma OK / tsc OK / build OK。
+day21 だけ build NG: `An error occurred in next/font ... TypeError: Cannot read properties of null (reading '1')`
+(Google Fonts の取得に失敗する形。ネットワークの一時的な失敗)。
+day21 だけを同じ手順で2回やり直した結果: 2回とも ツリー OK / Prisma OK / tsc OK / build OK(106 ファイル)。
+(--all を1回で全日通した記録ではありません。)
