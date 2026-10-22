@@ -298,13 +298,30 @@ def _hash_tree_stably(root: Path) -> dict:
     return {"file_count": count, "size": size, "sha256": digest.hexdigest()}
 
 
+def _bin_launcher(modules: Path, name: str, windows: bool | None = None) -> str:
+    """node_modules/.bin の道具を subprocess で起動できる形のパスにする。
+
+    .bin の拡張子なしファイルは sh スクリプトで、Windows は直接起動できず
+    WinError 193 になる。同じ場所に npm が置く .cmd があればそちらを使う。
+    Linux・Mac・CI では従来どおり拡張子なしのパスを返す。
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    plain = modules / ".bin" / name
+    if windows:
+        windows_launcher = plain.with_name(name + ".cmd")
+        if windows_launcher.exists():
+            return str(windows_launcher)
+    return str(plain)
+
+
 def _toolchain_paths(root: Path) -> dict[str, str]:
     modules = root / "node_modules"
     return {
         "root": str(root),
-        "vivliostyle_bin": str(modules / ".bin" / "vivliostyle"),
-        "vfm_bin": str(modules / ".bin" / "vfm"),
-        "mermaid_bin": str(modules / ".bin" / "mmdc"),
+        "vivliostyle_bin": _bin_launcher(modules, "vivliostyle"),
+        "vfm_bin": _bin_launcher(modules, "vfm"),
+        "mermaid_bin": _bin_launcher(modules, "mmdc"),
         "theme_path": str(modules / "@vivliostyle" / "theme-techbook"),
     }
 
@@ -1013,6 +1030,9 @@ def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
 _CACHE_LAYOUT_PATTERNS = (
     "chromium-*/chrome-linux64/chrome",
     "chromium-*/chrome-linux/chrome",
+    # Windows の Playwright は chrome-win64（旧レイアウトは chrome-win）へ入れる
+    "chromium-*/chrome-win64/chrome.exe",
+    "chromium-*/chrome-win/chrome.exe",
     "chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
     "chromium-*/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
     "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
@@ -1078,6 +1098,10 @@ def find_browser() -> str | None:
         Path.home() / ".cache" / "ms-playwright",
         Path.home() / "Library" / "Caches" / "ms-playwright",
     ]
+    # Windows の Playwright の既定の置き場所
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        roots.append(Path(local_app_data) / "ms-playwright")
     # (キャッシュの順位, リビジョン, レイアウトの優先位, パス) で全部の実体を集める。
     # パターンごとに早期 return すると旧レイアウトの古い版が新しい版を潰すので、
     # レイアウトをまたいでリビジョンの大小を見る
@@ -1761,9 +1785,12 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
 
     # ページ数は進捗表示のためだけに読む。poppler が無い環境でも組版は続ける
     try:
+        # poppler の Windows 版は表題などを OS の文字コードで出す。既定の復号のままだと
+        # 読めない文字で復号が止まり stdout が None になるので、置き換えて読む
         pages = subprocess.run(
-            ["pdfinfo", str(output)], capture_output=True, text=True, timeout=60
-        ).stdout
+            ["pdfinfo", str(output)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=60,
+        ).stdout or ""
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pages = ""
     page_count = pages.split("Pages:")[1].split()[0] if "Pages:" in pages else "?"
