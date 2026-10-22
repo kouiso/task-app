@@ -360,11 +360,14 @@ function TaskPageContent() {
     }
   };
 
+  // selectedTaskList は権限を失った選択済みタスクも含むので、件数の比較には使わない。
+  // 数だけ一致して選択可能なタスクが未選択のまま「全選択」と表示されるのを防ぐ
+  const selectedSelectableCount = selectableTasks.filter((t) => selectedTasks.has(t.id)).length;
   const selectAllState =
     selectableTasks.length > 0
-      ? selectedTaskList.length === 0
+      ? selectedSelectableCount === 0
         ? false
-        : selectedTaskList.length === selectableTasks.length
+        : selectedSelectableCount === selectableTasks.length
           ? true
           : 'indeterminate'
       : false;
