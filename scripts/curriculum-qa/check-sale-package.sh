@@ -135,6 +135,45 @@ for relative_path in "${required_support_files[@]}"; do
   fi
 done
 
+# 補助ディレクトリの作業メモや秘密ファイルを販売物へ混ぜないため
+# 必須ファイルの宣言を許可リストとして使う。新しい配布物もここで明示する。
+allowed_entries=("${required_entries[@]}")
+for relative_path in "${required_support_files[@]}"; do
+  allowed_entries+=("task-app/scripts/${relative_path}")
+done
+
+python3 - "${ZIP_PATH}" "${allowed_entries[@]}" <<'PYTHON'
+import stat
+import sys
+import zipfile
+from pathlib import PurePosixPath
+
+allowed_files = set(sys.argv[2:])
+allowed_directories = {
+    str(parent) + "/"
+    for name in allowed_files
+    for parent in PurePosixPath(name).parents
+    if str(parent) != "."
+}
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    seen = set()
+    for entry in archive.infolist():
+        name = entry.filename
+        if name in seen:
+            sys.exit(f"販売用 ZIP に重複エントリーがあります: {name}")
+        seen.add(name)
+        permitted = allowed_directories if entry.is_dir() else allowed_files
+        if name not in permitted:
+            sys.exit(f"販売用 ZIP に未承認のファイルが混入しています: {name}")
+        kind = stat.S_IFMT(entry.external_attr >> 16)
+        expected = stat.S_IFDIR if entry.is_dir() else stat.S_IFREG
+        if kind not in (0, expected):
+            sys.exit(f"販売用 ZIP に通常ファイル以外が混入しています: {name}")
+    damaged = archive.testzip()
+    if damaged:
+        sys.exit(f"販売用 ZIP のデータが破損しています: {damaged}")
+PYTHON
+
 # build-zip.sh が選んだ代表ファイルだけでなく、scaffold が利用できる補助ファイルを
 # すべて照合する。配布処理に新しいディレクトリや除外条件を足したときも、
 # 元ファイルと ZIP のずれをここで検出する。

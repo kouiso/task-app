@@ -1,0 +1,10 @@
+Poppler extraction coverage: 4412/4412 nonblank fenced-code lines across 2 PDFs
+Not built in this run (not checked): 34 sources
+Explicit exclusion: Mermaid 5 blocks / 67 lines (rendered diagrams, not copyable code)
+UNVERIFIED: visual indentation and exact whitespace counts in code
+UNVERIFIED: blank code lines
+UNVERIFIED: text provenance and visual code-block boundaries
+UNVERIFIED: standalone extra lines between or after code blocks
+UNVERIFIED: clipboard output from browsers and PDF viewers
+POPLER EXTRACTION DIAGNOSTIC PASSED
+Actual viewer copy verification is still required before release.

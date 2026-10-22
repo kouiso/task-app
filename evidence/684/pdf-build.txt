@@ -1,0 +1,8 @@
+組版ブラウザ: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome（Google Chrome 155.0.8059.85）
+2本を組む（出力: dist/pdf）
+[1/2] 組み始め: day28_タスク一括操作を実装しよう.md
+  day28_タスク一括操作を実装しよう  141ページ / 見出し24 / 図2
+[2/2] 組み始め: day29_ユーザー詳細・編集ページを作ろう.md
+  day29_ユーザー詳細・編集ページを作ろう  231ページ / 見出し27 / 図3
+
+2本すべて生成した

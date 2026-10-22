@@ -1,0 +1,252 @@
+{
+  "acceptance_condition": "#684: day28/day29 Step and complete code follow PR #675/#676/#677 source behavior",
+  "base_sha": "90ae08e121e41d5991b068bced41257a56a89ea9",
+  "reference_heads": {
+    "675": "2858e3f32d8fcc3144eb8770043ad2405944804f",
+    "676": "fa74899d186a448cc3e6a868d45ddb4648578f72",
+    "677": "d185897078a8f502225a282469ebdef7a1324f77"
+  },
+  "checks": [
+    {
+      "condition": "bulkComplete matches PR #676 in Step/recap/complete file",
+      "copies": 3,
+      "pass": true
+    },
+    {
+      "condition": "bulkUpdateStatus matches PR #676 in Step/recap/complete file",
+      "copies": 3,
+      "pass": true
+    },
+    {
+      "condition": "selectedSelectableCount matches PR #677 in all copies",
+      "copies": 3,
+      "pass": true
+    },
+    {
+      "condition": "selectAllState matches PR #677 in all copies",
+      "copies": 3,
+      "pass": true
+    },
+    {
+      "condition": "detail/edit 404 routing matches PR #675 in Step/recap/complete files",
+      "copies": 6,
+      "pass": true
+    },
+    {
+      "condition": "detail back button onClick={() => router.push(isAdmin ? '/user' : '/dashboard')} matches PR #675",
+      "copies": 3,
+      "pass": true
+    },
+    {
+      "condition": "detail back button {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'} matches PR #675",
+      "copies": 3,
+      "pass": true
+    }
+  ],
+  "source_files": {
+    "material/30days-curriculum/day28_タスク一括操作を実装しよう.md": "3be6fccdb95e7746942c5641a2fa1e5a54fa0d88fa297b3f88025968de2a30d9",
+    "material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md": "1ca4a291414872f4020e1c8adaa5f34eab0ad78fe78f38307909749951b95ba5"
+  },
+  "pdf_validation": {
+    "scope": "Only day28 and day29; verification build, not a release candidate",
+    "command": "python3 scripts/pdf-book/build_pdf_book.py material/30days-curriculum/day28_タスク一括操作を実装しよう.md material/30days-curriculum/day29_ユーザー詳細・編集ページを作ろう.md",
+    "formal_generator": "Same build_pdf_book.py used by Makefile book-pdf-one, two explicit input files",
+    "node": "22.22.2",
+    "browser": "Google Chrome 155.0.8059.85 macOS",
+    "artifacts": [
+      {
+        "pages": 141,
+        "sha256": "1f0a3be639fa8212a4d1f5dc13988c96bddad6c28075589e4fdedc971d9e3c33",
+        "file": "day28_タスク一括操作を実装しよう.pdf"
+      },
+      {
+        "pages": 231,
+        "sha256": "d63605e0175bf7aa0ca982a9e3b20bd07719c8de83875fb876c119af01ed35dd",
+        "file": "day29_ユーザー詳細・編集ページを作ろう.pdf"
+      }
+    ],
+    "product_check": {
+      "exit": 0,
+      "books": 2,
+      "log": "pdf-check.txt"
+    },
+    "copy_diagnostic": {
+      "exit": 0,
+      "matched_nonblank_code_lines": 4412,
+      "total_nonblank_code_lines": 4412,
+      "excluded_mermaid_lines": 67,
+      "unbuilt_sources": 34,
+      "log": "pdf-copy.txt",
+      "limits": [
+        "Viewer clipboard output unverified",
+        "Blank lines and exact whitespace counts unverified"
+      ]
+    },
+    "visual_review": {
+      "pages_reviewed": 19,
+      "selected_by": "All pages containing the modified selection/error/routing/back-label code tokens",
+      "reviewed_pages": [
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 28,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 43,
+          "tokens": ["isAdmin?'ユーザー一覧に戻る':'ダッシュボードに戻る'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 63,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 130,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 132,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 146,
+          "tokens": ["isAdmin?'ユーザー一覧に戻る':'ダッシュボードに戻る'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 165,
+          "tokens": ["isAdmin?'ユーザー一覧に戻る':'ダッシュボードに戻る'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 173,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "page": 176,
+          "tokens": ["trpcError.code==='NOT_FOUND'||trpcError.code==='BAD_REQUEST'"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 53,
+          "tokens": ["selectedSelectableCount"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 56,
+          "tokens": ["selectedSelectableCount"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 63,
+          "tokens": ["タスクの一括完了に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 71,
+          "tokens": ["ステータスの一括変更に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 102,
+          "tokens": ["selectedSelectableCount"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 103,
+          "tokens": ["タスクの一括完了に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 105,
+          "tokens": ["ステータスの一括変更に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 115,
+          "tokens": ["タスクの一括完了に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 116,
+          "tokens": ["ステータスの一括変更に失敗しました"]
+        },
+        {
+          "book": "day28_タスク一括操作を実装しよう.pdf",
+          "page": 120,
+          "tokens": ["selectedSelectableCount"]
+        }
+      ],
+      "result": "Modified code and labels readable; no clipping in the changed lines; PDF line wrapping preserves visible operators and message text."
+    },
+    "source_inputs_identical_to_local_commit": true,
+    "build_log": "pdf-build.txt"
+  },
+  "browser_validation": {
+    "environment": "macOS Chrome + isolated localhost PostgreSQL; pending source PRs #675/#676/#677 overlaid; not a distribution candidate",
+    "results": [
+      {
+        "name": "detail and edit invalid IDs return HTTP 404",
+        "pass": true
+      },
+      {
+        "name": "admin back button returns to user list",
+        "pass": true
+      },
+      {
+        "name": "bulkComplete displays failure and keeps selection and DB status",
+        "pass": true
+      },
+      {
+        "name": "bulkUpdateStatus displays failure and keeps selection and DB status",
+        "pass": true
+      },
+      {
+        "name": "ordinary user back button returns to dashboard",
+        "pass": true
+      },
+      {
+        "name": "permission loss preserves partial select-all state",
+        "pass": true,
+        "scope": "Real Chrome renders the actual modified app; API responses are controlled fixtures changing MEMBER to VIEWER. Not a database integration claim. Local OrbStack daemon became unavailable after the first five scenarios."
+      }
+    ]
+  },
+  "component_tests": {
+    "command": "npm test -- src/app/task src/app/user",
+    "environment": "jsdom, Node 22.22.2",
+    "files_passed": 6,
+    "tests_passed": 35,
+    "log": "component-tests.txt"
+  },
+  "scope": "Only curriculum changes. Pending src PRs #675/#676/#677 were overlaid for local quality/browser checks; they are not included in this branch. Two verification PDFs, not a release candidate. No Windows verification. Local OrbStack later became unavailable; final role-change UI test uses controlled API fixtures.",
+  "extracted_code": {
+    "command": "python3 evidence/684/verify_extracted_code.py",
+    "before": {
+      "passed": 38,
+      "failed": 27,
+      "log": "before.txt"
+    },
+    "after": {
+      "passed": 65,
+      "failed": 0,
+      "log": "after.txt"
+    }
+  },
+  "quality_gate": {
+    "exit": 0,
+    "result": "ALL CHECKS PASS",
+    "log": "quality-with-source-prs.txt",
+    "scope": "Source PR overlay; current main without #675 still has three day29 correspondence failures"
+  },
+  "textlint": {
+    "exit": 0,
+    "errors": 0,
+    "log": "textlint.txt"
+  }
+}

@@ -19,7 +19,8 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   } catch (error) {
     const trpcError = getTRPCErrorFromUnknown(error);
     if (trpcError.code === 'UNAUTHORIZED') redirect('/login');
-    if (trpcError.code === 'NOT_FOUND') notFound();
+    // 形式が不正なID（cuid でない文字列）は入力検証で BAD_REQUEST になる。存在しないIDと同じ 404 にする
+    if (trpcError.code === 'NOT_FOUND' || trpcError.code === 'BAD_REQUEST') notFound();
     if (trpcError.code === 'FORBIDDEN') {
       return (
         <AppLayout>

@@ -1,0 +1,66 @@
+PASS all Step, recap and complete-file copies covered
+PASS 0 isAllSelected: none
+PASS 0 isAllSelected: partial
+PASS 0 isAllSelected: all
+PASS 0 isAllSelected: only stale selection
+PASS 0 isAllSelected: stale selection with partial current selection
+PASS 0 isAllSelected: all current plus stale
+PASS 0 isAllSelected: no selectable tasks
+PASS 1 selectAllState: none
+PASS 1 selectAllState: partial
+PASS 1 selectAllState: all
+PASS 1 selectAllState: only stale selection
+PASS 1 selectAllState: stale selection with partial current selection
+PASS 1 selectAllState: all current plus stale
+PASS 1 selectAllState: no selectable tasks
+PASS 2 bulkComplete: error notifies and preserves selection; success clears
+PASS 3 bulkUpdateStatus: error notifies and preserves selection; success clears
+PASS 4 selectAllState: none
+PASS 4 selectAllState: partial
+PASS 4 selectAllState: all
+PASS 4 selectAllState: only stale selection
+PASS 4 selectAllState: stale selection with partial current selection
+PASS 4 selectAllState: all current plus stale
+PASS 4 selectAllState: no selectable tasks
+PASS 5 bulkComplete: error notifies and preserves selection; success clears
+PASS 6 bulkUpdateStatus: error notifies and preserves selection; success clears
+PASS 7 bulkComplete: error notifies and preserves selection; success clears
+PASS 8 bulkUpdateStatus: error notifies and preserves selection; success clears
+PASS 9 selectAllState: none
+PASS 9 selectAllState: partial
+PASS 9 selectAllState: all
+PASS 9 selectAllState: only stale selection
+PASS 9 selectAllState: stale selection with partial current selection
+PASS 9 selectAllState: all current plus stale
+PASS 9 selectAllState: no selectable tasks
+PASS 10 server routing: BAD_REQUEST
+PASS 10 server routing: NOT_FOUND
+PASS 10 server routing: FORBIDDEN
+PASS 10 server routing: UNAUTHORIZED
+PASS 11 back button: admin
+PASS 11 back button: ordinary user
+PASS 12 server routing: BAD_REQUEST
+PASS 12 server routing: NOT_FOUND
+PASS 12 server routing: FORBIDDEN
+PASS 12 server routing: UNAUTHORIZED
+PASS 13 server routing: BAD_REQUEST
+PASS 13 server routing: NOT_FOUND
+PASS 13 server routing: FORBIDDEN
+PASS 13 server routing: UNAUTHORIZED
+PASS 14 server routing: BAD_REQUEST
+PASS 14 server routing: NOT_FOUND
+PASS 14 server routing: FORBIDDEN
+PASS 14 server routing: UNAUTHORIZED
+PASS 15 back button: admin
+PASS 15 back button: ordinary user
+PASS 16 back button: admin
+PASS 16 back button: ordinary user
+PASS 17 server routing: BAD_REQUEST
+PASS 17 server routing: NOT_FOUND
+PASS 17 server routing: FORBIDDEN
+PASS 17 server routing: UNAUTHORIZED
+PASS 18 server routing: BAD_REQUEST
+PASS 18 server routing: NOT_FOUND
+PASS 18 server routing: FORBIDDEN
+PASS 18 server routing: UNAUTHORIZED
+{"passed":65,"failed":0,"copies":{"404":6,"mutation":6,"selection":4,"back":3}}
