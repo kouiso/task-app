@@ -981,14 +981,19 @@ def join_cjk_soft_breaks(markup: str) -> str:
 
 def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
     """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
+    # text=True で渡すと Windows では改行が \r\n に変わり、node 側の範囲が1行ごとに1文字ずれる。
+    # ずれた範囲で置き換えると、末尾の奥付の表が壊れる。バイト列のまま渡して改行を変えない。
     result = subprocess.run(
-        ['node', '-e', LINK_SCAN_JS], input=text, text=True, capture_output=True,
+        ['node', '-e', LINK_SCAN_JS], input=text.encode('utf-8'), capture_output=True,
         cwd=REPO_ROOT, timeout=60,
     )
     if result.returncode:
-        raise ValueError(f'リンクを解析できません。npm installを確認してください: {result.stderr[-300:]}')
+        raise ValueError(
+            'リンクを解析できません。npm installを確認してください: '
+            f'{result.stderr.decode("utf-8", "replace")[-300:]}'
+        )
     edits = []
-    for link in json.loads(result.stdout):
+    for link in json.loads(result.stdout.decode('utf-8')):
         if 'html' in link:
             parser = HtmlLinks()
             parser.feed(link['html'])

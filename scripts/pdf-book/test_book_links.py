@@ -34,6 +34,26 @@ class BookLinksTest(unittest.TestCase):
         self.assertIn('`[例](missing.md)`', result)
         self.assertIn('~~~md\n[例](missing.md)\n~~~', result)
 
+    def test_links_resolve_when_the_platform_translates_text_mode_newlines(self):
+        # Windows は text=True で渡した文字列の \n を \r\n に変える。node 側の範囲が1行ごとに
+        # 1文字ずれて、末尾の奥付の表を壊した。Mac でも同じ条件を作って、バイト列で渡していることを見る。
+        real_run = build_pdf_book.subprocess.run
+
+        def windows_like_run(*args, **kwargs):
+            data = kwargs.get('input')
+            if isinstance(data, str):
+                kwargs['input'] = data.replace('\n', '\r\n')
+            return real_run(*args, **kwargs)
+
+        body = ''.join(f'行{i}\n' for i in range(30))
+        source = f'{body}\n[次](./day02.md)\n\n| 版 | 第1版 |\n|---|---|\n'
+        with patch.object(build_pdf_book.subprocess, 'run', side_effect=windows_like_run):
+            result = self.rewrite(source)
+        self.assertEqual(
+            result,
+            f'{body}\n[次](<{self.mapping["day02.pdf"]}>)\n\n| 版 | 第1版 |\n|---|---|\n',
+        )
+
     def test_external_and_same_book_anchors_are_unchanged(self):
         source = '[外](https://example.com/a.md#x) [内](#section)'
         self.assertEqual(self.rewrite(source, {}), source)
