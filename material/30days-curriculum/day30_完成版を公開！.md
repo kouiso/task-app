@@ -52,10 +52,10 @@ flowchart TD
 
 > **ローカル DB と本番 DB の違い**:
 > Docker の PostgreSQL はローカル開発専用です。
-> 本番では Neon（ネオン。PostgreSQL をクラウド上で提供するサービス）などの
+> 本番では Neon（ネオン。PostgreSQL をクラウド上で提供するサービス）の
 > マネージド DB を使います。Vercel Marketplace から Neon を連携すると、本番 DB の
-> 接続文字列が `DATABASE_URL` として自動で設定されます。連携時に変数名の接頭辞を追加した場合や、
-> Supabase などの別サービスを使う場合は、発行された接続文字列をこのアプリの `DATABASE_URL` に設定します。
+> 接続文字列が `DATABASE_URL` として自動で設定されます。連携時に変数名の接頭辞を追加した場合は、
+> 発行された接続文字列をこのアプリの `DATABASE_URL` に設定します。
 
 ### 新しく学ぶ概念
 
@@ -105,7 +105,7 @@ flowchart TD
 > 本番用の `DATABASE_URL` はクラウド DB
 > サービスで用意します。Vercel Marketplace で Neon を選び、
 > データベースを対象プロジェクトに接続すると `DATABASE_URL` が自動で追加されます。
-> Supabase などの別サービスで作る場合は、発行された接続文字列を
+> 変数名に接頭辞を付けて連携した場合は、発行された接続文字列を
 > このアプリ用の `DATABASE_URL` に設定します。Day 04 の初回デプロイ時に
 > 設定済みなら、その接続文字列をそのまま使います。
 >
