@@ -1,0 +1,5 @@
+Windows native, main a244bac, python scripts/curriculum-qa/build_day_snapshots.py --day 28 --verify
+
+day28: ツリー OK(120 ファイル) / Prisma生成 未実行 / tsc 未実行 / build 未実行
+    Prisma生成を起動できません: OSError: [WinError 193] %1 は有効な Win32 アプリケーションではありません。
+exit=1
