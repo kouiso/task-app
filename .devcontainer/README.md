@@ -56,7 +56,7 @@ claude --dangerously-skip-permissions
 - **ホストの`~/.gitconfig`と`~/.ssh`をマウント**（コンテナ内でもgit操作可能）
 
 ### Dockerfile
-- Node.js 25.6.1ベース
+- Node.js 22.23.4ベース
 - 必要な開発ツールをインストール
 - ZSH + Powerline10kテーマ
 - Claude Code CLIをグローバルインストール

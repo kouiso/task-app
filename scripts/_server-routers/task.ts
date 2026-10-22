@@ -95,6 +95,10 @@ const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string
   }
 };
 
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
+
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
   await lockTaskProjects(tx, [projectId]);
 
@@ -128,6 +132,81 @@ async function assertTaskAssigneeBelongsToProject(
     });
   }
 }
+
+// 一括操作の対象のタスク行を id の順にロックする。updateMany が行を触る順は実行計画しだいなので、
+// 一括操作どうしが逆の順で行を取り合ってデッドロックしないよう、書き込みの前に順序を固定する。
+// 先に lockProjectsOfTasks でプロジェクトを取り、removeMember などプロジェクトから取る処理とも
+// 「プロジェクト → タスク行」の順をそろえる。
+// FOR NO KEY UPDATE にするのは、コメント追加が取る外部キーの KEY SHARE を待たせないため。
+const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promise<void> => {
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`,
+  );
+};
+
+// 対象のタスクが属するプロジェクトを id の順にロックする。ロックを待つ間にタスクが別の
+// プロジェクトへ移ることがあるため、読み直してもロック済みの集合に収まるまで繰り返す。
+// 読み直しで取り済みより小さい id が現れたら、順序が逆転してデッドロックし得るので、
+// ロックを取らずに CONFLICT で返す（トランザクション全体が取り消される）。
+const lockProjectsOfTasks = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const locked = new Set<string>();
+  let highest = '';
+  for (;;) {
+    const rows = await tx.task.findMany({
+      where,
+      select: { projectId: true },
+      distinct: ['projectId'],
+    });
+    const pending = rows.map((row) => row.projectId).filter((id) => !locked.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+    if (pending.some((id) => id < highest)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: '他の操作と重なりました。もう一度お試しください',
+      });
+    }
+    for (const projectId of pending.sort()) {
+      await lockTaskProjects(tx, [projectId]);
+      locked.add(projectId);
+      highest = projectId;
+    }
+  }
+};
+
+// 完了・中止のタスクを未完了へ戻す前に、担当者がまだプロジェクトのメンバーか確かめ、
+// 外れていれば担当を外す。呼ぶ前に lockProjectsOfTasks で対象のプロジェクトを
+// すべてロックしておくこと。ロックの後で読むので、他の処理が確定させた結果を見て判断できる。
+const releaseNonMemberAssignees = async (
+  tx: Prisma.TransactionClient,
+  where: Prisma.TaskWhereInput,
+): Promise<void> => {
+  const candidates = await tx.task.findMany({
+    where: { ...where, status: { in: [...CLOSED_STATUSES] }, assigneeId: { not: null } },
+    select: { id: true, projectId: true, assigneeId: true },
+  });
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const projectIds = [...new Set(candidates.map((task) => task.projectId))];
+  const assigneeIds = [...new Set(candidates.map((task) => task.assigneeId as string))];
+  const members = await tx.projectMember.findMany({
+    where: { projectId: { in: projectIds }, userId: { in: assigneeIds } },
+    select: { projectId: true, userId: true },
+  });
+  const memberKeys = new Set(members.map((member) => `${member.projectId}:${member.userId}`));
+  const orphanIds = candidates
+    .filter((task) => !memberKeys.has(`${task.projectId}:${task.assigneeId}`))
+    .map((task) => task.id);
+  if (orphanIds.length > 0) {
+    await tx.task.updateMany({ where: { id: { in: orphanIds } }, data: { assigneeId: null } });
+  }
+};
 
 export const taskRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -341,6 +420,12 @@ export const taskRouter = createTRPCRouter({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    // 完了・中止に残った担当者は、退会後もそのまま残っていることがある。
+    // 未完了へ戻すときに所属を確かめ直さないと、外れた人が担当に戻る。
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 
     try {
       // 比較（read）と更新（write）の間に他の更新が割り込む余地をなくすため、
@@ -351,9 +436,9 @@ export const taskRouter = createTRPCRouter({
       return await prisma.$transaction(async (tx) => {
         // 担当者の確認はプロジェクト行のロックを取ってから行う。
         // ロックの前に確認すると、確認のあとにメンバー削除が割り込み、外れた人が担当に入る。
-        // 担当者を付けるか、プロジェクトを移すときだけ取る。タイトルや優先度だけの編集まで取ると、
+        // 担当者を付ける・プロジェクトを移す・未完了へ戻すときだけ取る。タイトルや優先度だけの編集まで取ると、
         // 同じプロジェクトのタスク更新がすべて 1 件ずつの順番待ちになる。
-        if (isProjectChanging || typeof data.assigneeId === 'string') {
+        if (isProjectChanging || typeof data.assigneeId === 'string' || isReopening) {
           await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
         }
 
@@ -378,8 +463,8 @@ export const taskRouter = createTRPCRouter({
             await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
             updateData.assignee = { connect: { id: data.assigneeId } };
           }
-        } else if (isProjectChanging && existingTask.assigneeId) {
-          // プロジェクト変更時に既存担当者が新プロジェクトのメンバーでない場合は外す
+        } else if ((isProjectChanging || isReopening) && existingTask.assigneeId) {
+          // プロジェクト変更時や未完了へ戻すときに、既存担当者がメンバーでなければ外す
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
               userId_projectId: {
@@ -465,6 +550,8 @@ export const taskRouter = createTRPCRouter({
       const completedAt = new Date();
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
         // 完了済みの行を先に更新・ロックし、完了日時を保ったまま全対象の権限を再確認する。
         const unchanged = await tx.task.updateMany({
           where: { ...where, status: TASK_STATUS.DONE },
@@ -489,9 +576,10 @@ export const taskRouter = createTRPCRouter({
       }
 
       return await prisma.$transaction(async (tx) => {
-        const result = await tx.task.deleteMany({
-          where: buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES),
-        });
+        const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_DELETE_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        const result = await tx.task.deleteMany({ where });
         assertBulkWriteCount(result.count, input.ids.length);
         return result;
       });
@@ -522,6 +610,11 @@ export const taskRouter = createTRPCRouter({
 
       return await prisma.$transaction(async (tx) => {
         const where = buildBulkPermissionWhere(input.ids, ctx.session.userId, TASK_EDIT_ROLES);
+        await lockProjectsOfTasks(tx, where);
+        await lockTaskRows(tx, input.ids);
+        if (!isClosedStatus(input.status)) {
+          await releaseNonMemberAssignees(tx, where);
+        }
         // 完了済みの行を先にロックし、後続の未完了行更新との二重計上を防ぐ。
         const unchanged =
           input.status === TASK_STATUS.DONE

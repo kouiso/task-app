@@ -1246,6 +1246,16 @@ const taskTimeUpdateSchema = z.object({
   }),
 ```
 
+**ステータスを戻したときの担当者**:
+
+Day 12 の `removeMember` はメンバーを外すときに完了と中止のタスクの担当を消しません。誰が終わらせたかを実績として残すためです。そのまま完了のタスクを未完了へ戻すとプロジェクトから外れた人が未完了タスクの担当に戻ってしまいます。そこで `update` は戻す操作を見分けます。
+
+Day 15 の `update` は、完了か中止から未完了へ戻す更新を `isReopening` として見分けます。見分けたら担当者がまだメンバーかを確かめます。今日の `update` でステータスだけを変える呼び出しも同じ経路を通ります。新しく書き足すコードはありません。
+
+たとえば完了のタスクを `TODO` に戻す操作では `isReopening` が `true` になります。このときは先に `lockTaskProjects` でプロジェクト行をロックします。そのあと担当者がまだメンバーかを確かめます。外れていれば `disconnect` で担当を外します。メンバーのままなら担当は残します。先にロックを取る理由は、確認の直後に `removeMember` が割り込むと外された人が担当に残るからです。
+
+完了のままタイトルを直す編集や完了から中止への変更では `isReopening` は `false` です。どちらも終わったタスクです。実績として担当を残す扱いは変わりません。
+
 完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
@@ -1306,6 +1316,10 @@ const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string
     }
   }
 };
+
+// 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
+const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
+const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
 
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
   await lockTaskProjects(tx, [projectId]);
@@ -1561,10 +1575,16 @@ export const taskRouter = createTRPCRouter({
     const isProjectChanging =
       data.projectId !== undefined && data.projectId !== existingTask.projectId;
     const targetProjectId = isProjectChanging ? (data.projectId as string) : existingTask.projectId;
+    // 完了・中止に残った担当者は、退会後もそのまま残っていることがある。
+    // 未完了へ戻すときに所属を確かめ直さないと、外れた人が担当に戻る。
+    const isReopening =
+      data.status !== undefined &&
+      isClosedStatus(existingTask.status) &&
+      !isClosedStatus(data.status);
 
     try {
       return await prisma.$transaction(async (tx) => {
-        if (isProjectChanging || typeof data.assigneeId === 'string') {
+        if (isProjectChanging || typeof data.assigneeId === 'string' || isReopening) {
           await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
         }
 
@@ -1588,14 +1608,7 @@ export const taskRouter = createTRPCRouter({
             await assertTaskAssigneeBelongsToProject(tx, targetProjectId, data.assigneeId);
             updateData.assignee = { connect: { id: data.assigneeId } };
           }
-        } else if (
-          existingTask.assigneeId &&
-          (isProjectChanging ||
-            (data.status !== undefined &&
-              data.status !== TASK_STATUS.DONE &&
-              data.status !== TASK_STATUS.CANCELLED))
-        ) {
-
+        } else if ((isProjectChanging || isReopening) && existingTask.assigneeId) {
           // 履歴の担当者を残したタスクを再開しても退会者へ作業を割り当てないためです。
           const assigneeStillMember = await tx.projectMember.findUnique({
             where: {
