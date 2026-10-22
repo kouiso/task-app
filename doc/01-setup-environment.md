@@ -103,8 +103,7 @@ docker --version
 
 **選択肢2: クラウドデータベース**
 
-ローカルにPostgreSQLをインストールしたくない場合、以下のサービスが無料で使えます:
-- [Supabase](https://supabase.com/) - 無料枠あり
+ローカルにPostgreSQLをインストールしたくない場合、次のサービスが無料で使えます:
 - [Neon](https://neon.tech/) - 無料枠あり
 
 **確認方法**:

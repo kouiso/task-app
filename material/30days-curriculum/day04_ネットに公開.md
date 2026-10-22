@@ -461,14 +461,13 @@ Environment は `Production` を必ず選び、追加内容を保存します。
 #### DATABASE_URL を用意する
 
 Vercel から接続できる PostgreSQL が1つ必要です。
-無料枠のあるサービスに [Neon](https://neon.tech) や
-[Supabase](https://supabase.com)（PostgreSQL を無料枠から使えるクラウドサービス）があります。
-どちらかでアカウントを作ってデータベースを1つ作成すると
+このカリキュラムでは、無料枠のある [Neon](https://neon.tech) を使います。
+アカウントを作ってデータベースを1つ作成すると
 `postgresql://` で始まる接続文字列
 （ホスト名やパスワードをまとめた1行の接続情報）が発行されます。
 それを Key `DATABASE_URL` の Value として追加します。
 
-ここでは Neon を例に、実際の手順を書きます。
+Neon での手順は次のとおりです。
 
 1. `https://neon.tech` を開き、`Sign up` から GitHub アカウントで登録する
 2. 登録後の画面で `Create project` を押す
@@ -481,7 +480,6 @@ Vercel から接続できる PostgreSQL が1つ必要です。
 
 画面の見た目はサービスの更新で変わります。ボタンの名前が違っていても
 やることは「プロジェクトを作る」「接続文字列をコピーする」の2つだけです。
-Supabase を使う場合も、この2つに当たる操作を探してください。
 
 本番データベースの本格的な運用（テーブル作成やデータ投入）は
 後日の Day で扱います。
