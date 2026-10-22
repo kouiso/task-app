@@ -2502,7 +2502,12 @@ function TaskPageContent() {
             projects={editableProjects}
           />
 
-          <TaskDetailDialog open={detailOpen} taskId={selectedTask} onClose={handleDetailClose} />
+          <TaskDetailDialog
+            open={detailOpen}
+            taskId={selectedTask}
+            onClose={handleDetailClose}
+            canEditProject={canEditProject}
+          />
         </div>
       )}
 
