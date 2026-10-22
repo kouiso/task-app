@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -1468,11 +1469,49 @@ def run_step(cmd: list[str], cwd: Path) -> tuple[bool, tuple[str, ...], tuple[st
     表示用と判定用を分けるのは、3行に切った標本で赤の理由を判定すると、
     後ろに並んだ本物の失敗が視界から落ちるため。
     """
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    # Windows の既定の文字コードだと、npm や tsc の UTF-8 の出力で復号が止まるので置き換えて読む
+    proc = subprocess.run(
+        cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        check=False,
+    )
     if proc.returncode == 0:
         return True, (), ()
     pool = error_line_pool(f"{proc.stdout}\n{proc.stderr}")
     return False, pool[:3], pool
+
+
+def link_entry(link: Path, target: Path) -> None:
+    """link から target を指す。symlink を張れない Windows だけ代用する。
+
+    Windows の symlink は開発者モードか管理者権限が要る。ディレクトリはジャンクション、
+    ファイルはコピーで代用して、権限が無くても Gate B が止まらないようにする。
+    Linux・Mac・CI では従来どおり symlink で、挙動は変えない。
+    """
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+        return
+    except OSError:
+        if os.name != "nt":
+            raise
+    if target.is_dir():
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+            check=True, capture_output=True,
+        )
+    else:
+        shutil.copy2(target, link)
+
+
+def node_bin(modules: Path, name: str) -> Path:
+    """node_modules/.bin の道具を起動できる形のパスにする。
+
+    .bin の拡張子なしファイルは sh スクリプトで、Windows は直接起動できず
+    WinError 193 になる。npm が同じ場所に置く .cmd があればそちらを使う。
+    """
+    plain = modules / ".bin" / name
+    if os.name == "nt" and plain.with_name(name + ".cmd").is_file():
+        return plain.with_name(name + ".cmd")
+    return plain
 
 
 def link_node_modules(dest: Path) -> None:
@@ -1494,9 +1533,9 @@ def link_node_modules(dest: Path) -> None:
                 if package.name == "client":
                     shutil.copytree(package, scope / package.name)
                 else:
-                    (scope / package.name).symlink_to(package, target_is_directory=package.is_dir())
+                    link_entry(scope / package.name, package)
         else:
-            (modules / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
+            link_entry(modules / entry.name, entry)
 
 
 def verify_tree(dest: Path) -> TreeVerification:
@@ -1513,8 +1552,8 @@ def verify_tree(dest: Path) -> TreeVerification:
         message = f"依存の準備に失敗: {type(error).__name__}: {error}"
         return TreeVerification(NOT_RUN, NOT_RUN, NOT_RUN, (message,), verification_error=message)
 
-    prisma = dest / "node_modules" / ".bin" / "prisma"
-    tsc = dest / "node_modules" / ".bin" / "tsc"
+    prisma = node_bin(dest / "node_modules", "prisma")
+    tsc = node_bin(dest / "node_modules", "tsc")
     missing = [path for path in (prisma, tsc) if not path.is_file()]
     if missing:
         names = ", ".join(str(path.relative_to(dest)) for path in missing)
