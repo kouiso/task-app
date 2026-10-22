@@ -1,4 +1,4 @@
-FROM node:25.6.1
+FROM node:22.23.4
 
 ARG TZ
 ENV TZ="$TZ"

@@ -57,6 +57,11 @@ describe('ユーザー編集のserver認可', () => {
     await expect(UserEditPage(props('missing-self'))).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
+  it('形式が不正なIDのBAD_REQUESTも404にする', async () => {
+    mocks.getById.mockRejectedValue(new TRPCError({ code: 'BAD_REQUEST' }));
+    await expect(UserEditPage(props('not-a-cuid'))).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
   it('未認証はログインへ送る', async () => {
     mocks.getById.mockRejectedValue(new TRPCError({ code: 'UNAUTHORIZED' }));
     await expect(UserEditPage(props('user-1'))).rejects.toThrow('NEXT_REDIRECT:/login');
