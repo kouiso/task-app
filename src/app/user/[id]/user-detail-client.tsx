@@ -174,10 +174,10 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         <Button
           variant="ghost"
           className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => router.push('/user')}
+          onClick={() => router.push(isAdmin ? '/user' : '/dashboard')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          ユーザー一覧に戻る
+          {isAdmin ? 'ユーザー一覧に戻る' : 'ダッシュボードに戻る'}
         </Button>
 
         <div className="grid gap-6 md:grid-cols-12">

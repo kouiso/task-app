@@ -62,6 +62,24 @@ beforeEach(() => {
   mocks.userQuery.mockReset().mockReturnValue(queryResult(user, undefined, mocks.refetchUser));
 });
 
+describe('ユーザー詳細の戻るボタン', () => {
+  it('管理者はユーザー一覧へ戻る', () => {
+    render(<UserDetailClient userId="user-1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'ユーザー一覧に戻る' }));
+    expect(mocks.push).toHaveBeenCalledWith('/user');
+  });
+
+  it('管理者以外は利用できない一覧ではなくダッシュボードへ戻る', () => {
+    mocks.currentUserQuery.mockReturnValue(
+      queryResult({ id: 'user-1', role: 'USER' }, undefined, mocks.refetchCurrentUser),
+    );
+    render(<UserDetailClient userId="user-1" />);
+    expect(screen.queryByText('ユーザー一覧に戻る')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ダッシュボードに戻る' }));
+    expect(mocks.push).toHaveBeenCalledWith('/dashboard');
+  });
+});
+
 describe('ユーザー詳細の取得状態', () => {
   it('初回500を永久ローディングにしない', () => {
     mocks.userQuery.mockReturnValue(queryResult(undefined, 500, mocks.refetchUser));
