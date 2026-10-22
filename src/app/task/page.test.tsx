@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
     onSuccess?: () => void;
     onError?: (error: ErrorShape) => void;
   },
+  bulkCompleteOptions: null as null | { onError?: (error: ErrorShape) => void },
+  bulkStatusOptions: null as null | { onError?: (error: ErrorShape) => void },
   deleteTask: vi.fn(),
   invalidateTasks: vi.fn(),
   replace: vi.fn(),
@@ -135,9 +137,19 @@ vi.mock('@/trpc/react', () => ({
           return { mutate: mocks.deleteTask, isPending: false };
         },
       },
-      bulkComplete: { useMutation: () => ({ mutate: vi.fn() }) },
+      bulkComplete: {
+        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+          mocks.bulkCompleteOptions = options;
+          return { mutate: vi.fn() };
+        },
+      },
       bulkDelete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
-      bulkUpdateStatus: { useMutation: () => ({ mutate: vi.fn() }) },
+      bulkUpdateStatus: {
+        useMutation: (options: { onError?: (error: ErrorShape) => void }) => {
+          mocks.bulkStatusOptions = options;
+          return { mutate: vi.fn() };
+        },
+      },
     },
     useUtils: () => ({ task: { getAll: { invalidate: mocks.invalidateTasks } } }),
   },
@@ -147,6 +159,8 @@ beforeEach(() => {
   mocks.createOptions = null;
   mocks.updateOptions = null;
   mocks.deleteOptions = null;
+  mocks.bulkCompleteOptions = null;
+  mocks.bulkStatusOptions = null;
   mocks.deleteTask.mockReset();
   mocks.invalidateTasks.mockReset();
   mocks.replace.mockReset();
@@ -235,5 +249,40 @@ describe('タスク保存の失敗表示', () => {
       mocks.updateOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
     });
     expect(mocks.toastError).toHaveBeenCalledWith('ログインの有効期限が切れました');
+  });
+});
+
+describe('一括操作の失敗表示', () => {
+  it('一括完了の失敗は失敗トーストを出す', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.bulkCompleteOptions?.onError?.({
+        data: { httpStatus: 403 },
+        message: '一括操作の途中で権限が変更されました',
+      });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('一括操作の途中で権限が変更されました');
+  });
+
+  it('一括ステータス変更の失敗は、メッセージが無ければ既定の文言を出す', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.bulkStatusOptions?.onError?.({ data: { httpStatus: 500 }, message: '' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith('ステータスの一括変更に失敗しました');
+  });
+
+  it('一括完了と一括ステータス変更の401は再ログインが必要と伝える', () => {
+    render(<TaskPage />);
+
+    act(() => {
+      mocks.bulkCompleteOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
+      mocks.bulkStatusOptions?.onError?.({ data: { httpStatus: 401 }, message: 'UNAUTHORIZED' });
+    });
+    expect(mocks.toastError).toHaveBeenCalledTimes(2);
+    expect(mocks.toastError).toHaveBeenNthCalledWith(1, 'ログインの有効期限が切れました');
+    expect(mocks.toastError).toHaveBeenNthCalledWith(2, 'ログインの有効期限が切れました');
   });
 });
