@@ -1,0 +1,7 @@
+Windows native, main 069292e + this change, PDF_BOOK_BROWSER not set.
+組版ブラウザ: C:\Users\suker\AppData\Local\ms-playwright\chromium-1223\chrome-win64\chrome.exe
+python scripts/pdf-book/build_pdf_book.py (day14, then all books in one run; day14-16 shown)
+
+day14  168 pages  sha256 1c51536d8d0c713d90d759385d6c934236907d7ff61e49245e1d9fee2c3d0255
+day15  122 pages  sha256 5575424c4908cdd8982f946b9fecd1fe96c93459eb9ff368d3e7ef282e906711
+day16  132 pages  sha256 e79a4d243aa6e2028bd6efe63945d6a626f3f5cf67d455b67332140e887048f3

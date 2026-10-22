@@ -58,8 +58,8 @@ class FindBrowserTest(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def plant_chromium(self, cache_root, revision, layout="chrome-linux64"):
-        executable = cache_root / f"chromium-{revision}" / layout / "chrome"
+    def plant_chromium(self, cache_root, revision, layout="chrome-linux64", name="chrome"):
+        executable = cache_root / f"chromium-{revision}" / layout / name
         executable.parent.mkdir(parents=True, exist_ok=True)
         executable.touch()
         return executable
@@ -91,6 +91,8 @@ class FindBrowserTest(unittest.TestCase):
         environment = {
             "PLAYWRIGHT_BROWSERS_PATH": str(self.env_cache),
             "PDF_BOOK_BROWSER": "",
+            # 実機の Windows に値があってもテストの結果が揺れないよう空にする
+            "LOCALAPPDATA": "",
         }
         if env:
             environment.update(env)
@@ -147,6 +149,17 @@ class FindBrowserTest(unittest.TestCase):
             self.mac_cache, 1000, layout="chrome-mac", app="Chromium"
         )
         self.assertEqual(self.find(), str(hit))
+
+    def test_windows_local_app_data_cache_is_searched(self):
+        # Windows の Playwright は %LOCALAPPDATA%\\ms-playwright\\chromium-<rev>\\chrome-win64\\chrome.exe へ入れる
+        local = self.root / "local" / "ms-playwright"
+        hit = self.plant_chromium(local, 1223, layout="chrome-win64", name="chrome.exe")
+        self.assertEqual(self.find(env={"LOCALAPPDATA": str(self.root / "local")}), str(hit))
+
+    def test_windows_old_chrome_win_layout_is_also_found(self):
+        local = self.root / "local" / "ms-playwright"
+        hit = self.plant_chromium(local, 1000, layout="chrome-win", name="chrome.exe")
+        self.assertEqual(self.find(env={"LOCALAPPDATA": str(self.root / "local")}), str(hit))
 
     def test_newest_revision_wins_within_a_cache(self):
         self.plant_chromium(self.env_cache, 1000)

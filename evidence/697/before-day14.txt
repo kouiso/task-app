@@ -1,0 +1,8 @@
+Windows native, main 90ae08e1, PDF_BOOK_BROWSER not set.
+python scripts/pdf-book/build_pdf_book.py material/30days-curriculum/day14_*.md
+
+未解決:
+  - 図1 の描画に失敗: mermaid-cli を起動できません: [WinError 193] %1 は有効な Win32 アプリケーションではありません。
+  - 図2 の描画に失敗: mermaid-cli を起動できません: [WinError 193] %1 は有効な Win32 アプリケーションではありません。
+  - day14: HTML変換コマンドを起動できません: [WinError 193] %1 は有効な Win32 アプリケーションではありません。
+PDF: 0 本
