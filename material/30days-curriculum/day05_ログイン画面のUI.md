@@ -592,16 +592,12 @@ import { api } from '@/trpc/react';
 import { useSearchParams }
   from 'next/navigation';
 import { useState } from 'react';
-// トースト通知ライブラリ（画面上部にメッセージを表示）
-import toast from 'react-hot-toast';
 ```
 
 **確認ポイント**:
-- `isValidRedirectUrl` / `api` / `useSearchParams` / `useState` / `toast` の import を追加した
+- `isValidRedirectUrl` / `api` / `useSearchParams` / `useState` の import を追加した
 - `npm run dev` でエラーが出ていない
 
-> `react-hot-toast` はログイン成功時に通知メッセージを表示するライブラリです。Day 01の初期セットアップでインストール済みなのでimport するだけで使えます。
->
 > `useSearchParams` を使うコンポーネントには `Suspense` ラッパーが必要です。Step 9で追加するのでこのステップではエラーが出る場合があります。
 
 次にLoginForm 内の先頭に以下を追加します。
@@ -653,10 +649,7 @@ tRPCのログインAPI呼び出しを定義します。
 // tRPCのログインAPI呼び出し
 const loginMutation =
   api.auth.login.useMutation({
-    onSuccess: (data) => {
-      toast.success(
-        `おかえりなさい、${data.user.name}さん`
-      );
+    onSuccess: () => {
       window.location
         .replace(callbackUrl);
     },
@@ -1059,7 +1052,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
 
@@ -1145,10 +1137,7 @@ function LoginForm() {
 // ログイン通信の登録
   const loginMutation =
     api.auth.login.useMutation({
-      onSuccess: (data) => {
-        toast.success(
-          `おかえりなさい、${data.user.name}さん`
-        );
+      onSuccess: () => {
         window.location
           .replace(callbackUrl);
       },
@@ -1360,7 +1349,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 
 import {
@@ -1406,10 +1394,7 @@ function LoginForm() {
 
   const loginMutation =
     api.auth.login.useMutation({
-      onSuccess: (data) => {
-        toast.success(
-          `おかえりなさい、${data.user.name}さん`
-        );
+      onSuccess: () => {
         window.location
           .replace(callbackUrl);
       },
@@ -1587,7 +1572,6 @@ export function isValidRedirectUrl(
 | `register is not a function` | useForm の呼び出しが間違っている | `useForm<LoginFormData>({resolver: ...})` を確認 |
 | バリデーションが効かない | `resolver` の設定忘れ | `useForm` に `resolver: zodResolver(loginSchema)` を渡す |
 | `useSearchParams` エラー | Suspense が不足 | LoginPage を `<Suspense>` でラップする |
-| `toast is not a function` | `react-hot-toast` が見つからない | Day 01の初期セットアップで導入済みのはず。見つからない場合は `npm i react-hot-toast` を実行 |
 
 ## 今日学んだ用語
 

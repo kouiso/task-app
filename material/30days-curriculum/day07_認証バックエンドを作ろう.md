@@ -53,7 +53,6 @@ sequenceDiagram
     T->>T: bcrypt でパスワード照合
     T->>T: JWT トークン生成（jose）
     T->>B: Cookie 保存 + レスポンス
-    B->>B: トースト表示「おかえりなさい、管理者さん」
     B->>U: ダッシュボードへ遷移
 ```
 
@@ -1400,7 +1399,9 @@ flowchart TD
     style H fill:#ffebee
 ```
 
-> **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため`cookies()` を使う `session.ts` は import できません。`jose` を直接使って JWT 検証します。
+> **なぜ middleware で `session.ts` を import しない？** middleware は Edge Runtime で動くため`cookies()` を使う `session.ts` は import できません。JWT の検証は `jose/jwt/verify` を直接読み込んで行います。
+>
+> 読み込み口を `jose` にしないのにも理由があります。`jose` から読むとビルドは middleware が使わない暗号化の部品までたどります。その部品が使う `CompressionStream` を Next.js は Edge Runtime で使えない機能として扱います。そのため `npm run build` が警告を出します。
 
 > **`isValidCallbackPath` の役割**: `callbackUrl` に外部 URL を仕込む Open Redirect 攻撃を防ぎます。判定の本体は Day 05 で作った `src/lib/redirect.ts` の `isValidRedirectUrl` です。`/` で始まること、`//` では始まらないこと、`\` やタブ・改行・復帰を含まないことを、そちらが確かめます。ここで足しているのは `://` を含まないという条件だけです。同じ規則を2か所へ書き写すと片方だけ直したときに緩いほうが残ります。
 
@@ -1451,8 +1452,7 @@ npm run db:seed
 たとえば「管理者だけに見える画面」を確かめるときは`user1@example.com` でログインし直します。
 
 1. メールとパスワードを入力してログインボタンを押す
-2. 「おかえりなさい、管理者さん」トーストが表示される
-3. ダッシュボードに遷移する
+2. ダッシュボードに遷移する
 
 ![ダッシュボード。Personal Message のカードに大きな見出しが出て下に OWNER・TODAY・NEXT の3枚のカードが並んでいる](./screenshots/day02/dashboard-message.png)
 
@@ -1460,7 +1460,6 @@ npm run db:seed
 
 **確認ポイント**:
 - [ ] `npm run dev` でエラーが出ない
-- [ ] ログインが成功してトーストが表示される
 - [ ] ダッシュボードに遷移する
 
 > **うまくいかないとき**: ターミナルのエラーメッセージを確認します。よくある原因は「つまずきポイント」セクションにまとめてあります。
@@ -2889,7 +2888,7 @@ function isPublicPath(pathname: string): boolean {
 }
 ```
 
-`session.ts` ではなく jose を直接読み込んでいます。middleware は Edge Runtime という軽い実行環境で動き、そこでは `cookies()` を使う `session.ts` を読み込めないためです。`isPublicPath` は `/login` と `/register`、およびその配下を公開扱いにします。
+`session.ts` ではなく jose を直接読み込んでいます。読み込み口を `jose/jwt/verify` にした理由は Step 5 の「なぜ middleware で `session.ts` を import しないか」に書きました。middleware は Edge Runtime という軽い実行環境で動き、そこでは `cookies()` を使う `session.ts` を読み込めないためです。`isPublicPath` は `/login` と `/register`、およびその配下を公開扱いにします。
 
 **戻り先の検証と鍵**:
 
@@ -3115,7 +3114,7 @@ export const config = {
 | `JWT_SECRET is not set` | `.env` に JWT_SECRET がない | scaffold が自動設定するので `.env` を確認。なければ 32 文字以上の文字列を追加 |
 | `Cannot find module '@/lib/session'` | ファイルパスの typo | `src/lib/session.ts` にあるか確認 |
 | `Cannot find module '@/server/api/root'` | root.ts が未作成 | Step 4 の root.ts を作成 |
-| ログインしてもトーストが出ない | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
+| ログインボタンを押すと赤い帯に `No procedure found on path "auth.login"` が出る | auth ルーターが root.ts に登録されていない | root.ts で `auth: authRouter` を確認 |
 | `UNAUTHORIZED: ログインが必要です` | Cookie が保存されていない | DevTools → Application → Cookies で `session` を確認 |
 | `prisma.user.findUnique is not a function` | Prisma Client が生成されていない | `npx prisma generate` を実行 |
 | ``The table `public.users` does not exist in the current database.`` | DB にテーブルがない | `npm run db:push && npm run db:seed` を実行 |

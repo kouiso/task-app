@@ -808,10 +808,10 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なのでまずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
-次の `isAllSelected` は Step 1の `handleSelectAll` が終わる `};` の直後へ置きます。選択できるタスクのうち `selectedTasks` に id が入っている件数を数えます。
+次の `isAllSelected` は Step 1の `handleSelectAll` が終わる `};` の直後へ置きます。選択できるタスクのうち `selectedTasks` に id が入っている件数を数えます。state の近くに貼ると `selectableTasks` を宣言より前に読んでしまい、画面が表示されなくなります。
 
 ```typescript
-// filepath: src/app/task/page.tsx
+// filepath: src/app/task/page.tsx（handleSelectAll の直後に追加）
 // 権限を失った選択済みタスクは全選択の件数に含めない
 const selectedSelectableCount = selectableTasks.filter((t) => selectedTasks.has(t.id)).length;
 const isAllSelected =
