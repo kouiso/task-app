@@ -281,6 +281,36 @@ def _expired_output(error: subprocess.TimeoutExpired) -> str:
     return "\n".join(parts)
 
 
+def _run_logged(
+    command: list[str],
+    *,
+    label: str,
+    slug: str = "_toolchain",
+    **kwargs,
+) -> subprocess.CompletedProcess:
+    """subprocess.run の共通ラッパー。タイムアウトと 0 以外の終了を必ず組版ログに落とす。
+
+    ログ書きが呼び出し側任せだと漏れる（mermaid・vfm・npm ci 等は失敗しても
+    組版ログに何も残らなかった、#616）。ここで一律に落とす。冊に紐付く呼び出しは
+    slug を渡し、toolchain 解決や探索系の呼び出しは既定の "_toolchain" にまとめる。
+    例外は変換せずそのまま上げる。呼び出し側の既存の失敗経路（CompletedProcess への
+    変換や problems への追記）はそのまま働く。
+    """
+    try:
+        result = subprocess.run(command, **kwargs)
+    except subprocess.TimeoutExpired as error:
+        timeout = kwargs.get("timeout", "?")
+        _append_build_log(slug, f"{label} timeout {timeout}s", _expired_output(error))
+        raise
+    if result.returncode != 0:
+        _append_build_log(
+            slug,
+            f"{label} exit {result.returncode}",
+            f"stdout:\n{result.stdout or ''}\nstderr:\n{result.stderr or ''}",
+        )
+    return result
+
+
 def _hash_tree_stably(root: Path) -> dict:
     """実行時に解決した npm パッケージ群の名前・リンク先・実バイトを固定する。"""
     if not root.is_dir():
@@ -353,8 +383,8 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
             if not source.exists():
                 raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
             shutil.copyfile(source, staging / name)
-        result = subprocess.run(
-            ["npm", "ci", "--ignore-scripts"],
+        result = _run_logged(
+            ["npm", "ci", "--ignore-scripts"], label="npm ci",
             cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
         )
         if result.returncode != 0:
@@ -995,8 +1025,9 @@ def rewrite_book_links(text: str, source: Path, mapping: dict[str, str]) -> str:
     """実在する同梱原稿へのリンクを、明示された配布先へ解決する。"""
     # text=True で渡すと Windows では改行が \r\n に変わり、node 側の範囲が1行ごとに1文字ずれる。
     # ずれた範囲で置き換えると、末尾の奥付の表が壊れる。バイト列のまま渡して改行を変えない。
-    result = subprocess.run(
-        ['node', '-e', LINK_SCAN_JS], input=text.encode('utf-8'), capture_output=True,
+    result = _run_logged(
+        ['node', '-e', LINK_SCAN_JS], label="book link scan",
+        input=text.encode('utf-8'), capture_output=True,
         cwd=REPO_ROOT, timeout=60,
     )
     if result.returncode:
@@ -1157,8 +1188,9 @@ def find_browser() -> str | None:
 def browser_version(executable: str) -> str:
     """ブラウザの --version 出力を1行で返す。取れなければ「版不明」。"""
     try:
-        result = subprocess.run(
-            [executable, "--version"], capture_output=True, text=True, timeout=30
+        result = _run_logged(
+            [executable, "--version"], label="browser --version",
+            capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
         return "版不明"
@@ -1314,11 +1346,12 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
                 if "PDF_BOOK_MERMAID_BIN" in env
                 else ["npx", "--yes", MERMAID_CLI]
             )
-            result = subprocess.run(
+            result = _run_logged(
                 [*mermaid_command,
                  "-i", str(source), "-o", str(svg), "-b", "transparent",
                  "-c", str(work / "mermaid.json"),
                  "-p", str(work / "puppeteer.json")],
+                label="mermaid-cli", slug=stem,
                 capture_output=True, text=True, cwd=work, env=env,
                 timeout=MERMAID_TIMEOUT,
             )
@@ -1563,8 +1596,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             if "PDF_BOOK_VFM_BIN" in env
             else ["npx", "--yes", VFM_CLI]
         )
-        converted = subprocess.run(
+        converted = _run_logged(
             [*vfm_command, "--language", "ja", "--title", title, document.name],
+            label="vfm", slug=slug,
             capture_output=True, text=True, cwd=WORK_DIR, env=env,
             timeout=VFM_TIMEOUT,
         )
@@ -1679,8 +1713,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         # 変換後は同じHTMLを再計測し、古い表の寸法を最終PDFへ流用しない。
         for attempt in range(len(table_structure) + 1):
             measurement_file.unlink(missing_ok=True)
-            subprocess.run(
-                measure_command, capture_output=True, text=True, cwd=WORK_DIR,
+            _run_logged(
+                measure_command, label="inline measurement", slug=slug,
+                capture_output=True, text=True, cwd=WORK_DIR,
                 env=audit_env, timeout=BUILD_TIMEOUT,
             )
             measured = json.loads(measurement_file.read_text(encoding="utf-8"))
@@ -1731,8 +1766,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             ) + "\n", encoding="utf-8"
         )
     except (OSError, ValueError, subprocess.TimeoutExpired) as error:
-        if isinstance(error, subprocess.TimeoutExpired):
-            _append_build_log(slug, f"measurement timeout {BUILD_TIMEOUT}s", _expired_output(error))
+        # タイムアウトの組版ログは _run_logged が書く（ここで書くと二重になる）
         problems.append(f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: {error}")
         return problems
     finally:
@@ -1741,23 +1775,19 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     if output.exists():
         output.unlink()
     try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, cwd=WORK_DIR, env=audit_env,
+        result = _run_logged(
+            command, label="vivliostyle", slug=slug,
+            capture_output=True, text=True, cwd=WORK_DIR, env=audit_env,
             timeout=BUILD_TIMEOUT,
         )
-    except subprocess.TimeoutExpired as error:
+    except subprocess.TimeoutExpired:
         # 例外のまま抜けると、ここまでに集めた他の冊の問題ごと落ちる
-        _append_build_log(slug, f"vivliostyle timeout {BUILD_TIMEOUT}s", _expired_output(error))
         problems.append(f"{path.name}: 組版が{BUILD_TIMEOUT}秒を超えました")
         return problems
     except OSError as error:
         problems.append(f"{path.name}: 組版コマンドを起動できません: {error}")
         return problems
     if result.returncode != 0 or not output.exists() or output.stat().st_size <= 0:
-        _append_build_log(
-            slug, f"vivliostyle exit {result.returncode}",
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
-        )
         problems.append(
             f"{path.name}: 組版に失敗: {(result.stderr or result.stdout).strip()[-300:]}"
         )
@@ -1768,12 +1798,13 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     pdf_audit_file = WORK_DIR / f"{slug}.inline-pdf.json"
     pdf_audit_file.unlink(missing_ok=True)
     try:
-        audited = subprocess.run(
+        audited = _run_logged(
             ["node", str(Path(__file__).with_name("verify-inline-pdf.mjs")),
              "--manifest", str(manifest_file),
              "--dom-report", audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"],
              "--pdf", str(output), "--toolchain", str(TOOLCHAIN_DIR),
              "--report", str(pdf_audit_file)],
+            label="verify-inline-pdf", slug=slug,
             capture_output=True, text=True, cwd=WORK_DIR, env=env, timeout=BUILD_TIMEOUT,
         )
         pdf_audit = json.loads(pdf_audit_file.read_text(encoding="utf-8"))
@@ -1804,8 +1835,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
     try:
         # poppler の Windows 版は表題などを OS の文字コードで出す。既定の復号のままだと
         # 読めない文字で復号が止まり stdout が None になるので、置き換えて読む
-        pages = subprocess.run(
-            ["pdfinfo", str(output)], capture_output=True, text=True,
+        pages = _run_logged(
+            ["pdfinfo", str(output)], label="pdfinfo", slug=slug,
+            capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=60,
         ).stdout or ""
     except (FileNotFoundError, subprocess.TimeoutExpired):
