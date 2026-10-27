@@ -1,0 +1,82 @@
+# 「Chromium を用意 → 全冊を組める状態」を pdf-book-full / pdf-book-gate で共有する。
+# 2本の workflow に同じ準備を書き連ねると、片方だけ直して実行条件がずれる
+# （実績: ゲートだけ timeout を上げて週次側が残った系。ずれは #501 系の事故源）。
+name: pdf-book 環境の用意
+description: Node.js / npm ci / apt ロック上限 / poppler / Chromium を整える
+
+inputs:
+  with_poppler:
+    description: poppler-utils を入れるか（PDF を実際に組む時だけ true。撮影まわり専用の実行では false）
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Node.js を用意
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .node-version
+        cache: npm
+
+    - name: 依存をインストール
+      shell: bash
+      run: npm ci
+
+    - name: apt のロック待ち上限を設定
+      shell: bash
+      # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
+      # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
+      # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
+      # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる。
+      # poppler の step に置いとくと、撮影まわりだけを触った実行であの step が飛ぶので、
+      # apt を叩く step の手前へ独立させる。
+      run: echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
+
+    - name: poppler を用意
+      if: ${{ inputs.with_poppler == 'true' }}
+      # pdftotext / pdfinfo / pdffonts が無いと check_pdf_book.py は exit 2 で止まる
+      shell: bash
+      # composite の run step は timeout-minutes を受け付けんので coreutils の
+      # timeout で上限を切る（workflow 側の 10 分相当）
+      run: |
+        timeout 540 sudo apt-get install -y -qq poppler-utils \
+          || { timeout 300 sudo apt-get update -qq && timeout 540 sudo apt-get install -y -qq poppler-utils; }
+        pdftotext -v
+
+    - name: Chromium をキャッシュから復元
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+        key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
+
+    - name: Chromium を用意
+      shell: bash
+      # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る。
+      # composite の run step は timeout-minutes を受け付けんので timeout コマンドで切る（15分相当）
+      run: |
+        # --with-deps も内部で apt を叩く。ロック競合は上の設定で上限が付いとるが、
+        # 掴み損ねた時のために1回だけやり直す
+        timeout 840 npx playwright install --with-deps chromium \
+          || timeout 840 npx playwright install --with-deps chromium
+        # Ubuntu 24.04 は AppArmor で非特権 user namespace を止めとる。
+        # build_pdf_book.py は非rootではサンドボックスを外さん方針なので、
+        # これが有効なままやと mermaid の puppeteer が起動直後に死んで図が全滅する。
+        # サンドボックスを外すのやのうて、張れるようにする
+        if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+          sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
+        fi
+        # find_browser() は「見つからなければ黙って None」で、そのまま組むと
+        # mermaid-cli の puppeteer が図ごとに約650MBの Chrome を取りに行く。
+        # ここで実体を突き止めて PDF_BOOK_BROWSER に渡す。見つからんかったら
+        # 静かな劣化やのうて失敗として出す
+        browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -type f -regextype posix-extended \
+          -regex '.*/chromium-[0-9]+/chrome-linux(64)?/chrome' 2>/dev/null \
+          | sort -V | tail -n 1 || true)"
+        if [ -z "$browser" ]; then
+          echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
+          find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 2 -type d 2>/dev/null || true
+          exit 1
+        fi
+        echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
+        echo "Chromium: $browser"

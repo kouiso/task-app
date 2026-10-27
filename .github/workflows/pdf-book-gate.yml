@@ -156,7 +156,7 @@ jobs:
                 ;;
               # 36冊すべての見た目が変わりうる変更。markdown_scan.py は build_pdf_book.py と
               # check_pdf_book.py の両方が import しとるので、フェンス解釈が変われば全冊変わる
-              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml)
+              material/style/book.css|scripts/pdf-book/*|scripts/curriculum-qa/markdown_scan.py|Makefile|.github/workflows/pdf-book-gate.yml|.github/actions/pdf-book-env/*)
                 blast=1
                 ;;
               material/30days-curriculum/screenshots/*)
@@ -215,7 +215,7 @@ jobs:
           # 走行が一度も無いまま material-gate の SKIP で緑になる**。`scripts/curriculum-qa/` の
           # 中を触ったら走らせる、へ広げてある（削除・改名も拾う一覧を見る）。
           browser_qa=0
-          if grep -qzE '^(scripts/curriculum-qa/.+|\.github/ci/.+|\.github/workflows/pdf-book-gate\.yml|package(-lock)?\.json|\.node-version)$' "$RUNNER_TEMP/changed-with-deletes.z"; then
+          if grep -qzE '^(scripts/curriculum-qa/.+|\.github/ci/.+|\.github/actions/pdf-book-env/.+|\.github/workflows/pdf-book-gate\.yml|package(-lock)?\.json|\.node-version)$' "$RUNNER_TEMP/changed-with-deletes.z"; then
             browser_qa=1
           fi
 
@@ -227,73 +227,14 @@ jobs:
             none)   echo "PDFの出力に影響する変更が無いため、組版と検査は行わん" ;;
           esac
 
-      - name: Node.js を用意
+      # Node → npm ci → apt ロック上限 → poppler → Chromium の準備は
+      # pdf-book-full と同じ composite action を使う（#617: 実行条件のずれ防止）。
+      # poppler は PDF を実際に組む時（scope != none）だけ要るので input で切る
+      - name: 組版環境を用意
         if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: ./.github/actions/pdf-book-env
         with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: 依存をインストール
-        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
-        run: npm ci
-
-      - name: apt のロック待ち上限を設定
-        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
-        # runner 起動直後は unattended-upgrades が dpkg のロックを握っとることがある。
-        # 既定の apt はロックを無期限に待つので、待ち上限を切らんとジョブの持ち時間を
-        # 丸ごと食う（update -qq が40分、playwright の --with-deps が15分ハングした）。
-        # コマンドラインの -o では playwright が内部で呼ぶ apt に効かんので設定で入れる。
-        # poppler の step に置いとくと、撮影まわりだけを触った PR（scope=none かつ
-        # browser_qa=1）であの step が飛ぶので、apt を叩く step の手前へ独立させる。
-        run: echo 'DPkg::Lock::Timeout "180";' | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
-
-      - name: poppler を用意
-        if: steps.select.outputs.scope != 'none'
-        # pdftotext / pdfinfo / pdffonts が無いと check_pdf_book.py は exit 2 で止まる
-        timeout-minutes: 10
-        run: |
-          sudo apt-get install -y -qq poppler-utils \
-            || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils; }
-          pdftotext -v
-
-      - name: Chromium をキャッシュから復元
-        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: pw-chromium-ubuntu-24.04-${{ hashFiles('package-lock.json') }}
-
-      - name: Chromium を用意
-        if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
-        # --with-deps が apt を叩くので、poppler と同じ理由で上限を切る
-        timeout-minutes: 15
-        run: |
-          # --with-deps も内部で apt を叩く。ロック競合は上の設定で上限が付いとるが、
-          # 掴み損ねた時のために1回だけやり直す
-          npx playwright install --with-deps chromium \
-            || npx playwright install --with-deps chromium
-          # Ubuntu 24.04 は AppArmor で非特権 user namespace を止めとる。
-          # build_pdf_book.py は非rootではサンドボックスを外さん方針なので、
-          # これが有効なままやと mermaid の puppeteer が起動直後に死んで図が全滅する。
-          # サンドボックスを外すのやのうて、張れるようにする
-          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
-            sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
-          fi
-          # find_browser() は「見つからなければ黙って None」で、そのまま組むと
-          # mermaid-cli の puppeteer が図ごとに約650MBの Chrome を取りに行く。
-          # ここで実体を突き止めて PDF_BOOK_BROWSER に渡す。見つからんかったら
-          # 静かな劣化やのうて失敗として出す
-          browser="$(find "$PLAYWRIGHT_BROWSERS_PATH" -type f -regextype posix-extended \
-            -regex '.*/chromium-[0-9]+/chrome-linux(64)?/chrome' 2>/dev/null \
-            | sort -V | tail -n 1 || true)"
-          if [ -z "$browser" ]; then
-            echo "::error::Chromium が $PLAYWRIGHT_BROWSERS_PATH に見つからん"
-            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 2 -type d 2>/dev/null || true
-            exit 1
-          fi
-          echo "PDF_BOOK_BROWSER=$browser" >> "$GITHUB_ENV"
-          echo "Chromium: $browser"
+          with_poppler: ${{ steps.select.outputs.scope != 'none' }}
 
       # 撮影の収束待ちを実物のブラウザで確かめる検査は、Chromium が無いと自分から
       # 退ける（SKIP・exit 0）。material-gate 側は Chromium を入れてへんので、そこだけに
