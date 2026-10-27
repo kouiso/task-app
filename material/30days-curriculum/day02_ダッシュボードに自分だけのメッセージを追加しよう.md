@@ -818,7 +818,7 @@ flowchart TB
     end
     subgraph BRW["ブラウザ側"]
       B1["HTML を表示する"]
-      B2["JavaScript を受け取って動かす"]
+      B2["JavaScript を<br/>受け取って動かす"]
     end
     S2 --> B1
     S2 -.->|"'use client' のときだけ"| B2

@@ -38,14 +38,14 @@ Day 28 では **タスク一括操作**を実装しました。チェックボ�
 ```mermaid
 flowchart TD
     A["URL: /user/abc123"] --> B["server page.tsx"]
-    B --> C["user.getByIdで認証・認可"]
+    B --> C["user.getByIdで<br/>認証・認可"]
     C -->|未ログイン| D["ログイン画面"]
     C -->|権限なし| E["アクセス拒否画面"]
     C -->|権限あり| F["対象ユーザーを取得"]
     F -->|見つからない| G["notFound()"]
-    F -->|見つかる| H["client componentにuserIdを渡す"]
+    F -->|見つかる| H["client componentに<br/>userIdを渡す"]
     H --> I["詳細データを取得して表示"]
-    I --> J["編集ボタンから/user/abc123/editへ"]
+    I --> J["編集ボタンから<br/>/user/abc123/editへ"]
     J --> K["編集側でも認証・認可を確認"]
 ```
 
@@ -1736,7 +1736,7 @@ flowchart TB
     C -->|"自分自身"| NG
     A -->|"管理者"| B{"編集の相手は誰か"}
     B -->|"他人"| OK["role と isActive を送れる"]
-    B -->|"自分自身"| NG["role と isActive は送らない<br/>送ると FORBIDDEN"]
+    B -->|"自分自身"| NG["role と isActive は<br/>送らない<br/>送ると FORBIDDEN"]
 ```
 
 管理者かどうかだけでは決まらず、相手が誰かでもう一度分かれます。右下の枝があるのは管理者が自分の権限を下げたり自分を停止したりして誰も管理できなくなる状態を防ぐためです。

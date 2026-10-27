@@ -33,7 +33,7 @@ Day 01 からここまで進めてきた作業が今日の公開でひととお�
 flowchart LR
     A[GitHub に push 済み<br/>Day 03 で完了] --> D[Vercel が Deploy]
     B[npm run build が<br/>手元で通る] --> D
-    C[環境変数 2本<br/>DATABASE_URL と JWT_SECRET] --> D
+    C[環境変数 2本<br/>DATABASE_URL と<br/>JWT_SECRET] --> D
     D --> E[公開 URL が発行される]
 
     style A fill:#e3f2fd
@@ -50,7 +50,7 @@ build や環境変数に問題があると Deploy が途中で止まります。
 flowchart LR
     A[Project Name<br/>Step 5 で自分が決める] --> C[公開 URL]
     B[.vercel.app<br/>Vercel が付ける] --> C
-    C --> D[Step 8 で別の端末から開いて<br/>本当に公開できたかを確かめる]
+    C --> D[Step 8 で別の<br/>端末から開いて<br/>本当に公開できたかを<br/>確かめる]
 
     style C fill:#e8f5e9
 ```
@@ -432,7 +432,7 @@ Vercel 上でも同じ検証が走るため
 flowchart TB
     ENV[".env<br/>手元の本物の値<br/>GitHub へは送らない"]
     EX[".env.example<br/>名前だけの見本<br/>GitHub へ送る"]
-    VER["Vercel の Environment Variables<br/>公開版の本物の値"]
+    VER["Vercel の<br/>Environment<br/>Variables<br/>公開版の本物の値"]
     NEON[("Neon の PostgreSQL")]
     ENV -.->|"名前だけ写す"| EX
     EX -.->|"同じ名前で登録する"| VER

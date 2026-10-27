@@ -53,16 +53,16 @@ Day 26ではエラーページ（404・500）を実装し、予期せぬエラ�
 
 ```mermaid
 flowchart TD
-    A["/project 一覧表示"] -->|"カードをクリック"| B["router.push('/project?projectId=...')"]
-    B --> C["page.tsx が searchParams.projectId を読む"]
-    C --> D["projectIdParam を selectedProject として使う"]
-    D --> E["api.project.getById を取得"]
-    E --> F["ProjectDetailView をインライン表示"]
+    A["/project 一覧表示"] -->|"カードをクリック"| B["router.push(<br/>'/project?<br/>projectId=...')"]
+    B --> C["page.tsx が<br/>searchParams.projectId<br/>を読む"]
+    C --> D["projectIdParam を<br/>selectedProject<br/>として使う"]
+    D --> E["api.project.getById<br/>を取得"]
+    E --> F["ProjectDetailView を<br/>インライン表示"]
     F --> G["メンバー一覧"]
     F --> H["タスク一覧"]
     F --> I["アーカイブ / アーカイブ解除"]
-    I --> J["tRPC: project.archive / unarchive"]
-    J --> K["一覧を invalidate して /project に戻る"]
+    I --> J["tRPC:<br/>project.archive /<br/>unarchive"]
+    J --> K["一覧を invalidate<br/>して /project に戻る"]
 ```
 
 この図で目を留めてほしいのは B から C の流れです。カードをクリックしたとき`selectedProject` を直接書き換えてはいません。いったん URL を書き換え、そのあと `page.tsx` が URL を読み直します。`selectedProject` は読み取った値の別名です。遠回りに見えますが画面の状態を決める大元が URL 1か所にそろいます。だから再読み込みしてもリンクを人に送っても同じ詳細画面が開きます。
@@ -174,11 +174,11 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 
 ```mermaid
 flowchart TB
-    U["User<br/>名前・メール"] --- M["ProjectMember<br/>userId / projectId / role"]
-    P["Project<br/>name / description / isArchived<br/>役割は載っていない"] --- M
-    M --> Q{"role の canArchive は true か"}
+    U["User<br/>名前・メール"] --- M["ProjectMember<br/>userId / projectId /<br/>role"]
+    P["Project<br/>name / description /<br/>isArchived<br/>役割は載っていない"] --- M
+    M --> Q{"role の canArchive は<br/>true か"}
     Q -->|"true（OWNER のみ）"| OK["アーカイブできる"]
-    Q -->|"false（行が無い / 他の役割）"| NG["FORBIDDEN"]
+    Q -->|"false（行が無い / 他の<br/>役割）"| NG["FORBIDDEN"]
 ```
 
 役割が載っているのは `ProjectMember` だけで、上の2つには入っていません。行が1つも見つからない人はそのプロジェクトに参加していない人です。

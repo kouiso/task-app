@@ -213,8 +213,8 @@ Day 09 で書いた一覧のように描画の途中で `undefined` のプロパ
 ```mermaid
 flowchart TB
     E["例外が投げられた"] --> Q{"投げた場所はどこか"}
-    Q -->|"描画の最中・useEffect の中"| A["error.tsx が受け止める<br/>画面がエラー表示に変わる"]
-    Q -->|"onClick・タイマー・非同期の続き"| B["error.tsx は反応しない<br/>Console に赤い行が出るだけ"]
+    Q -->|"描画の最中・<br/>useEffect の中"| A["error.tsx が受け止める<br/>画面がエラー表示に変わる"]
+    Q -->|"onClick・タイマー・<br/>非同期の続き"| B["error.tsx は<br/>反応しない<br/>Console に赤い行が<br/>出るだけ"]
     N["存在しない URL を開いた"] --> C["not-found.tsx の担当"]
 ```
 

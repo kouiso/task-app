@@ -177,11 +177,11 @@ export const reportRouter = createTRPCRouter({
 
 ```mermaid
 flowchart TB
-    P["projectScope<br/>参加中 かつ アーカイブしていない"]
-    P --> A["activeTasksFilter<br/>projectScope に CANCELLED 除外を足す"]
-    P --> S["ステータス別の件数<br/>完了・進行中・レビュー中・未対応"]
+    P["projectScope<br/>参加中 かつ<br/>アーカイブしていない"]
+    P --> A["activeTasksFilter<br/>projectScope に<br/>CANCELLED 除外を足す"]
+    P --> S["ステータス別の件数<br/>完了・進行中・<br/>レビュー中・未対応"]
     A --> TT["総タスク数（母数）"]
-    A --> G["作業時間の合計・直近5件・groupBy 3本"]
+    A --> G["作業時間の合計・<br/>直近5件・groupBy 3本"]
 ```
 
 外側の条件を内側が取り込む入れ子です。完了件数が `projectScope` のままなのは取り消し済みのタスクはそもそも完了ではなく、除外しても件数が変わらないためです。母数の側だけが `CANCELLED` を外した条件を使います。
