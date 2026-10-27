@@ -1367,8 +1367,8 @@ useEffect(() => {
 
 ```mermaid
 flowchart LR
-    F["フォームの入力欄"] -->|"handleSearch<br/>exclude の項目は書き出さない"| U["URL のクエリ"]
-    U -->|"useEffect<br/>載っていない項目は empty に戻す"| F
+    F["フォームの入力欄"] -->|"handleSearch<br/>exclude の項目は<br/>書き出さない"| U["URL のクエリ"]
+    U -->|"useEffect<br/>載っていない項目は<br/>empty に戻す"| F
 ```
 書き出しと読み戻しは同じ輪の上にあり、`exclude` と `empty` が対になっています。`status` を「すべて」にすると `exclude` でURLから消え、次に読み戻すときは載っていないので `empty` の `'all'` が入ります。片方だけ直すと消したはずの条件が画面に残ります。
 
@@ -2228,10 +2228,11 @@ export const searchRouter = createTRPCRouter({
 ```
 検索結果に含めるのは、「このユーザーが閲覧できるタスク」と「検索条件に合うタスク」の両方を満たすものです。AND で結ぶ条件の並び順を変えてもこの条件は変わりません。
 
+<!-- figure-caption: 閲覧できて検索条件にも合うタスクだけを返す -->
 ```mermaid
 flowchart LR
-    A["自分が閲覧できるタスクの集合<br/>（projectId が参加プロジェクト内）"]
-    B["検索条件に合うタスクの集合<br/>（キーワード・ステータス等）"]
+    A["自分が<br/>閲覧できるタスクの集合<br/>（projectId が<br/>参加プロジェクト内）"]
+    B["検索条件に合うタスクの<br/>集合<br/>（キーワード・<br/>ステータス等）"]
     A --> M{"両方を満たすものだけ"}
     B --> M
     M --> R["検索結果"]

@@ -190,7 +190,7 @@ const findCommentAndAssertOwnership = async (
 flowchart TB
     S["update / delete の依頼"] --> G1{"そのコメントは存在するか"}
     G1 -->|"無い"| E1["NOT_FOUND"]
-    G1 -->|"有る"| G2{"そのプロジェクトのメンバーか"}
+    G1 -->|"有る"| G2{"そのプロジェクトの<br/>メンバーか"}
     G2 -->|"違う"| E2["FORBIDDEN"]
     G2 -->|"メンバー"| G3{"自分が書いたコメントか"}
     G3 -->|"他人のもの"| E3["FORBIDDEN"]

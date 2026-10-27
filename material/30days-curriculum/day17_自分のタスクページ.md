@@ -32,7 +32,7 @@ flowchart TD
     D --> G[今後の予定]
     D --> H[期限なし]
 
-    B --> I["api.task.getAll({ assigneeId })"]
+    B --> I["api.task.getAll({<br/>assigneeId })"]
     C --> I
     I --> J[TaskCard表示]
 

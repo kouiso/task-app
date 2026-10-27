@@ -34,7 +34,7 @@ flowchart TD
     B --> D[パスワード変更ボタン]
     B --> E[ユーザー管理ボタン]
     C --> F["/profile/edit"]
-    D --> G["/profile/change-password"]
+    D --> G["/profile/<br/>change-password"]
     E --> H["/user"]
     F --> I[バリデーション]
     G --> I
@@ -1482,7 +1482,7 @@ npm run dev
 ```mermaid
 flowchart TB
     A[getCurrentUser] --> B[useEffect]
-    B --> C[form.reset で初期値セット]
+    B --> C[form.reset で<br/>初期値セット]
     C --> D[フォーム入力 register]
     D --> E[form.handleSubmit]
     E --> F[updateProfile.mutate]

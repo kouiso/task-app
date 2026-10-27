@@ -46,12 +46,12 @@ Day 21・22 では「今この瞬間」の数字を見てきました。
 ```mermaid
 flowchart TD
     A["/report ページ"] --> B[プロジェクト統計テーブル]
-    A --> C["/report/weekly へのリンク"]
+    A --> C["/report/weekly への<br/>リンク"]
     C --> D[週次レポートページ]
     D --> E[サマリーカード 3枚]
     D --> F[週別完了タスク折れ線グラフ]
     D --> G[優先度別棒グラフ]
-    D --> H[完了タスクの優先度別積み上げ棒グラフ]
+    D --> H[完了タスクの<br/>優先度別<br/>積み上げ棒グラフ]
 
     style A fill:#e3f2fd
     style B fill:#fff3e0
@@ -882,9 +882,9 @@ const priorityData = reportData?.weeklyData.map((week) => ({
 
 ```mermaid
 flowchart LR
-    W["weeklyData の1週分<br/>week / totalCompleted<br/>byPriority は入れ子"]
-    W --> C["chartData の1週分<br/>name / completed / high / urgent"]
-    W --> S["priorityData の1週分<br/>name / low / medium / high / urgent"]
+    W["weeklyData の1週分<br/>week /<br/>totalCompleted<br/>byPriority は入れ子"]
+    W --> C["chartData の1週分<br/>name / completed /<br/>high / urgent"]
+    W --> S["priorityData の1週分<br/>name / low / medium<br/>/ high / urgent"]
 ```
 
 左は入れ子、右は入れ子のないひと並びです。Recharts に渡すときは右の形がいちばん素直なので同じ材料から2種類のひと並びを作ります。グラフの棒が出ないときは`dataKey` に書いた名前が右側の列名と合っているかを見てください。

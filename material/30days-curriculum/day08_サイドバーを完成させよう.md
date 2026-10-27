@@ -212,7 +212,7 @@ flowchart TD
     B -->|Yes| C[ローディング表示]
     B -->|No| D{ログイン済み？}
     D -->|No| E["/login にリダイレクト"]
-    D -->|Yes| F[サイドバー + コンテンツ表示]
+    D -->|Yes| F[サイドバー +<br/>コンテンツ表示]
 
     style C fill:#fff3e0
     style E fill:#ffebee
@@ -611,11 +611,11 @@ Day 09 以降も、各ページを同じ方法で AppLayout の中へ入れま�
 
 ```mermaid
 flowchart TD
-    A["src/app/layout.tsx (Providers)"] --> B["dashboard/page.tsx"]
+    A["src/app/layout.tsx<br/>(Providers)"] --> B["dashboard/page.tsx"]
     A --> C["login/page.tsx"]
     A --> D["register/page.tsx"]
     B --> E["AppLayout"]
-    E --> F["Day 02 で作った dashboard の中身"]
+    E --> F["Day 02 で作った<br/>dashboard の中身"]
 
     style E fill:#e8f5e9
     style C fill:#fff3e0

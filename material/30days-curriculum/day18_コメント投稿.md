@@ -178,11 +178,11 @@ Day 12 で作ったプロジェクトメンバーの一覧がここまで効い�
 
 ```mermaid
 flowchart TB
-    Q["findUnique: taskId で1件だけ引く"] --> T["Task"]
+    Q["findUnique: taskId<br/>で1件だけ引く"] --> T["Task"]
     T --> P["Project"]
-    P --> M["members（where userId は本人だけ）"]
+    P --> M["members（where<br/>userId は本人だけ）"]
     M -->|"1件ある"| OK["メンバーなので通す"]
-    M -->|"0件"| NG["メンバーでないので FORBIDDEN"]
+    M -->|"0件"| NG["メンバーでないので<br/>FORBIDDEN"]
 ```
 
 コメントしてよい人かどうかの判定がこの1回の問い合わせの中に入っています。`include` の中の `where` で本人の行だけに絞るため返ってきた配列の長さがそのまま答えになります。コメント用の権限テーブルを別に作らずに済むのはこの形のおかげです。
@@ -1607,20 +1607,21 @@ const canEditComments = !!taskDetail &&
 
 `key={comment.id}` は「この項目は前回のどれか」をReactに伝える目印です。配列の番号をkeyにすると、先頭に新しいコメントが入ったときに同じ番号が別のコメントを指すようになります。Reactは同じkeyなら前の状態を引き継ぐので、入力途中の内容が別のコメントの行へ移ることがあります。追加や並べ替えがあっても変わらないコメントIDをkeyに使うと、この取り違えが起きません。
 
+<!-- figure-caption: key の選び方で下書きが付く行が変わる -->
 ```mermaid
 flowchart TB
     subgraph BEFORE["追加前（key=位置の番号）"]
-        B1["key=0 → コメント c1（下書き入力中）"]
+        B1["key=0 → コメント c1<br/>（下書き入力中）"]
         B2["key=1 → コメント c2"]
     end
     subgraph IDX["先頭に c9 を追加したとき index を key にした場合"]
-        I1["key=0 → コメント c9 ＝ c1 の下書きが c9 の行へ付く"]
-        I2["key=1 → コメント c1 ＝ c1 の下書きは失われる"]
+        I1["key=0 → コメント c9 ＝<br/>c1 の下書きが<br/>c9 の行へ付く"]
+        I2["key=1 → コメント c1<br/>＝ c1 の下書きは<br/>失われる"]
         I3["key=2 → コメント c2"]
     end
     subgraph IDK["同じ追加を comment.id を key にした場合"]
-        K1["key=c9 → コメント c9（新規・下書きなし）"]
-        K2["key=c1 → コメント c1（下書きが c1 に残る）"]
+        K1["key=c9 → コメント c9<br/>（新規・下書きなし）"]
+        K2["key=c1 → コメント c1<br/>（下書きが c1 に残る）"]
         K3["key=c2 → コメント c2"]
     end
     BEFORE --> IDX

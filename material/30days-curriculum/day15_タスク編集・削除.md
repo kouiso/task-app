@@ -51,12 +51,12 @@ flowchart TD
     A[タスクカードの編集ボタン] --> B{handleEdit}
     B --> C[タスクデータを取得]
     C --> D[TaskFormDataに変換]
-    D --> E[TaskDialog 編集モード で開く]
+    D --> E[TaskDialog<br/>編集モード で開く]
     E --> F[api.task.update.mutate]
     F --> G[キャッシュ更新]
 
     H[タスクカードの削除ボタン] --> I{handleDelete}
-    I --> J[DeleteConfirmDialog を開く]
+    I --> J[DeleteConfirmDialog<br/>を開く]
     J -->|確認| K[api.task.delete.mutate]
     J -->|キャンセル| L[何もしない]
     K --> G

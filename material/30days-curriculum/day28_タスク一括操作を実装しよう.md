@@ -54,19 +54,19 @@ Day 27 では`/project?projectId=...` で
 ```mermaid
 flowchart TD
     A[タスク一覧表示] --> B[チェックボックスをクリック]
-    B --> C{selectedTasks.size > 0?}
-    C -->|Yes| D[ヘッダーに一括操作ボタンが現れる]
+    B --> C{selectedTasks.size ><br/>0?}
+    C -->|Yes| D[ヘッダーに<br/>一括操作ボタンが現れる]
     C -->|No| E[通常表示のまま]
     D --> F{操作を選ぶ}
-    F -->|まとめて完了| G[bulkComplete API 呼び出し]
-    F -->|ステータス変更| H[bulkUpdateStatus API 呼び出し]
+    F -->|まとめて完了| G[bulkComplete API<br/>呼び出し]
+    F -->|ステータス変更| H[bulkUpdateStatus<br/>API 呼び出し]
     F -->|まとめて削除| I[確認ダイアログを表示]
-    I --> J[OK クリック → bulkDelete API 呼び出し]
-    G --> K[トランザクションで更新または削除]
+    I --> J[OK クリック →<br/>bulkDelete API<br/>呼び出し]
+    G --> K[トランザクションで<br/>更新または削除]
     H --> K
     J --> K
     K --> L[一覧を再取得・画面更新]
-    L --> M[selectedTasks を空に戻す]
+    L --> M[selectedTasks を空に<br/>戻す]
 ```
 
 この図で目を留めてほしいのはG・H・J の3本が K に合流するところです。どの操作も、トランザクションで選択したタスクを処理し、一覧を取り直して選択を空に戻します。更新には `updateMany`、削除には `deleteMany` を使います。ステータスを完了へ変える処理は、すでに完了したタスクの日時を保つため、対象を分けて2回更新します。だから Step 6 以降で操作を増やすときに新しく考えるのは呼ぶ API の名前だけになります。
@@ -631,7 +631,7 @@ flowchart TB
       RO["閲覧しかできない"]
       SL["selectedTaskList<br/>Set に id があり<br/>いまも並んでいる"]
     end
-    ST["selectedTasks: id の Set<br/>消えた id も残る"]
+    ST["selectedTasks: id の<br/>Set<br/>消えた id も残る"]
     ST -.->|"突き合わせる"| SL
     SE -->|"全選択の分母"| CB["3つの状態を決める"]
 ```

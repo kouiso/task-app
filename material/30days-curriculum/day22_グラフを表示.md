@@ -50,9 +50,9 @@ Day 21 で見た通り、この集計はすでに `getOverview` の中で終わ�
 ```mermaid
 flowchart TD
     A[サーバー: getOverview] --> B[statusData 集計済み配列]
-    A --> C[priorityData 集計済み配列]
-    B --> D[map で name ラベルを足す]
-    C --> E[map で name ラベルを足す]
+    A --> C[priorityData<br/>集計済み配列]
+    B --> D[map で name ラベルを<br/>足す]
+    C --> E[map で name ラベルを<br/>足す]
     D --> F[PieChart ステータス]
     E --> G[PieChart 優先度]
     F --> H[Cell で色分け]
@@ -406,9 +406,9 @@ Card とグラフ枠を作ります。
 
 ```mermaid
 flowchart LR
-    R["statusData の1件<br/>key: DONE / name: 完了 / value: 12"]
+    R["statusData の1件<br/>key: DONE<br/>name: 完了<br/>value: 12"]
     R -->|"dataKey='value'"| A["扇の大きさになる"]
-    R -->|"nameKey='name'"| B["凡例とツールチップの見出しになる"]
+    R -->|"nameKey='name'"| B["凡例とツールチップの<br/>見出しになる"]
     R -->|"entry.key で色を引く"| C["fill に渡す色になる"]
 ```
 

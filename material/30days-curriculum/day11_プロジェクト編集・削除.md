@@ -29,13 +29,13 @@ Day 10 で「プロジェクト作成」ができるようになりました。�
 ```mermaid
 flowchart TD
     A[カードの編集ボタン] --> B[既存データを取得]
-    B --> C[ProjectDialogを編集モードで開く]
+    B --> C[ProjectDialogを<br/>編集モードで開く]
     C --> D[フォームを変更]
     D --> E[api.project.update.mutate]
-    E --> F[invalidateでキャッシュ無効化]
+    E --> F[invalidateで<br/>キャッシュ無効化]
 
     G[カードの削除ボタン] --> H[deleteTargetId をセット]
-    H --> I[DeleteConfirmDialog を表示]
+    H --> I[DeleteConfirmDialog<br/>を表示]
     I -->|削除| J[api.project.delete.mutate]
     I -->|キャンセル| K[何もしない]
     J --> F
@@ -748,9 +748,9 @@ const handleSubmit = (
 
 ```mermaid
 flowchart LR
-    BEFORE["更新前の1行<br/>startDate: 2026-09-01"]
+    BEFORE["更新前の1行<br/>startDate:<br/>2026-09-01"]
     BEFORE -->|"null を送る"| AFTER1["startDate: 空<br/>列の中身が消える"]
-    BEFORE -->|"項目そのものを送らない"| AFTER2["startDate: 2026-09-01<br/>列は変わらない"]
+    BEFORE -->|"項目そのものを送らない"| AFTER2["startDate:<br/>2026-09-01<br/>列は変わらない"]
 ```
 
 日付を消したい場合は `null` を送ります。図の左側は変更前のデータです。右側で更新結果を比較しています。`undefined` を渡して項目が送信されなかった場合は既存の日付が残ります。
@@ -911,9 +911,9 @@ flowchart TD
     A[詳細画面のアーカイブボタン] --> B{現在の状態}
     B -->|isArchived = false| C[archiveMutation.mutate]
     B -->|isArchived = true| D[unarchiveMutation.mutate]
-    C --> E[setArchiveStatus: isArchived=true]
-    D --> F[setArchiveStatus: isArchived=false]
-    E --> G[invalidateでキャッシュ無効化]
+    C --> E[setArchiveStatus:<br/>isArchived=true]
+    D --> F[setArchiveStatus:<br/>isArchived=false]
+    E --> G[invalidateで<br/>キャッシュ無効化]
     F --> G
     G --> H[一覧が自動更新される]
 

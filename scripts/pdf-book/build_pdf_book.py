@@ -554,6 +554,19 @@ ANCHOR_SUFFIX_RE = re.compile(r"\s*\{#[^}]*\}\s*$")
 # Step 見出しの末尾に付く所要時間の目安「（ルート保護・8分）」「（5分）」。
 # 作業時間は手順の説明であって図の説明ではないので、キャプションへは入れない。
 DURATION_SUFFIX_RE = re.compile(r"\s*（[^（）]*[0-9０-９]+\s*分）\s*$")
+# 図の直前に置くキャプションの印。置き方は code-block-length-exception と同じで、
+# 印の次の行は必ず mermaid の開始フェンスにする（書き損じは errors へ報告する）。
+FIGURE_CAPTION_MARKER_RE = re.compile(r"<!--\s*figure-caption:\s*(.+?)\s*-->")
+# キャプションがファイルパスだけだと読者は図の意味を読み取れない。
+# `4-3. dashboard/page.tsx を作る` のように文として読める見出しは当たらない。
+PATH_ONLY_CAPTION_RE = re.compile(
+    r"(?:[\w.\-]+/)+[\w.\-]+\.\w+"
+    r"|[\w.\-]+\.(?:tsx?|mjs|cjs|json|prisma|css|ya?ml)"
+    r"|\.env[\w.]*"
+)
+# mermaid のノードは1行が 200px を超えると語の途中でも自動で折れる。
+# 1行の高さは今の設定（16px × line-height 1.5）で 24px。
+MERMAID_LABEL_LINE_HEIGHT = 24
 # どの見出しよりも前に置かれた図は、引ける見出しが無く一律「図解」になっていた。
 # 該当する図だけここで個別に決める。キーは（冊のファイル名の拡張子除いたもの, 図の通し番号）。
 PRE_HEADING_CAPTION_OVERRIDES: dict[tuple[str, int], str] = {
@@ -1248,6 +1261,31 @@ def relabel_tsx_fences(lines: list[str]) -> list[str]:
     return out
 
 
+def find_auto_wrapped_labels(markup: str) -> list[str]:
+    """mermaid が自動で折り返したラベルの文字だけを SVG から拾う。
+
+    自動折り返しの判定は2つを両方満たすラベルに限る。
+    break-spaces が付いても1行に収まる長い識別子があるので、
+    スタイルの有無だけでは折れたと数えない。
+    """
+    labels: list[str] = []
+    for match in re.finditer(
+            r"<foreignObject\b([^>]*)>(.*?)</foreignObject>",
+            markup, re.S):
+        attrs, inner = match.groups()
+        if not re.search(
+                r"<div\b[^>]*white-space:\s*break-spaces", inner):
+            continue
+        height = re.search(r'height="([\d.]+)"', attrs)
+        if not height:
+            continue
+        breaks = len(re.findall(r"<br\s*/?>", inner))
+        if float(height.group(1)) > (breaks + 1) * MERMAID_LABEL_LINE_HEIGHT:
+            text = re.sub(r"<[^>]+>", "", inner)
+            labels.append(html.unescape(text).strip())
+    return labels
+
+
 def convert_mermaid(body: list[str], stem: str, work: Path,
                     env: dict[str, str],
                     source_stem: str = "") -> tuple[list[str], int, list[str]]:
@@ -1265,9 +1303,27 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
     # 何を置くかであり、ここに「図1」と書くと「図 1: 図1」と二重になる。
     # 空は「まだ見出しを見ていない」の意味で、あとの代入が追跡に使う。
     caption = ""
+    # figure-caption の印が直前にあった図だけ、見出しより先に印の文を使う。
+    marker_caption: str | None = None
+    explicit_caption = ""
 
     for _, line, state, fence in fence_states("\n".join(body)):
+        if marker_caption is not None:
+            # 印の次の行が mermaid の開始行でなければ書き損じなので報告する
+            marker_text, marker_caption = marker_caption, None
+            if state == "open" and fence.lang == "mermaid":
+                explicit_caption = marker_text
+            else:
+                errors.append(
+                    f"{source_stem}: 図の印の次に mermaid がない: {marker_text}"
+                )
+
         if state == "outside":
+            marker = FIGURE_CAPTION_MARKER_RE.fullmatch(line.strip())
+            if marker:
+                # 印の行は出力に残さない
+                marker_caption = marker.group(1)
+                continue
             heading = HEADING_RE.match(line)
             if heading:
                 # parse_source が H2 に付けた {#sN} は見出し文ではないので落とす
@@ -1293,6 +1349,9 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
             out.append(line)
             continue
         count += 1
+        # 印のキャプションはこの図だけに使う。焼き損ねても次の図へ持ち越さない
+        figure_marker_caption = explicit_caption
+        explicit_caption = ""
         svg = work / f"{stem}-{count}.svg"
         source = work / f"{stem}-{count}.mmd"
         source.write_text("\n".join(buffer) + "\n", encoding="utf-8")
@@ -1324,8 +1383,19 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
             )
         if svg.exists():
             embed_font(svg)
-            figure_caption = caption or PRE_HEADING_CAPTION_OVERRIDES.get(
-                (source_stem, count), "図解")
+            # 印 → 直前の見出し → 表の上書き → 「図解」の順でキャプションを決める
+            figure_caption = (
+                figure_marker_caption or caption
+                or PRE_HEADING_CAPTION_OVERRIDES.get(
+                    (source_stem, count), "図解"))
+            if PATH_ONLY_CAPTION_RE.fullmatch(figure_caption):
+                errors.append(
+                    f"{source_stem}: 図{count} "
+                    f"のキャプションがファイルパスだけ: {figure_caption}")
+            for label in find_auto_wrapped_labels(
+                    svg.read_text(encoding="utf-8")):
+                errors.append(
+                    f"{source_stem}: 図{count} のラベルが自動で折れた: {label}")
             out += ["", f"![{figure_caption}]({svg.name})", ""]
         else:
             errors.append(
@@ -1334,6 +1404,11 @@ def convert_mermaid(body: list[str], stem: str, work: Path,
             )
             out.extend(["```mermaid", *buffer, "```"])
         in_mermaid = False
+
+    if marker_caption is not None:
+        # 文書の末尾が印で終わっていた。次の行が無いので書き損じと同じ扱い
+        errors.append(
+            f"{source_stem}: 図の印の次に mermaid がない: {marker_caption}")
 
     return out, count, errors
 

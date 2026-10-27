@@ -901,7 +901,7 @@ IP だけで数えると接続元を変えながら同じアカウントを狙�
 flowchart TD
     A[メール・パスワード受信] --> B{試行回数は上限内？}
     B -->|No| I[TOO MANY REQUESTS]
-    B -->|Yes| C{ユーザーとパスワードは正しい？}
+    B -->|Yes| C{ユーザーとパスワードは<br/>正しい？}
     C -->|No| E[UNAUTHORIZED エラー]
     C -->|Yes| D{アカウント有効？}
     D -->|No| F[FORBIDDEN エラー]
@@ -1324,8 +1324,8 @@ middleware が守っているのはページの表示だけで、API 側の守�
 ```mermaid
 flowchart TB
     REQ["ブラウザからのアクセス"] --> K{"何を取りに来たか"}
-    K -->|"ページ /dashboard など"| MW["middleware<br/>Cookie を検証し、駄目ならログイン画面へ送る"]
-    K -->|"API /api/trpc/..."| PP["protectedProcedure<br/>Cookie を検証し、駄目なら UNAUTHORIZED を返す"]
+    K -->|"ページ /dashboard など"| MW["middleware<br/>Cookie を検証し、<br/>駄目ならログイン画面へ<br/>送る"]
+    K -->|"API /api/trpc/..."| PP["protectedProcedure<br/>Cookie を検証し、<br/>駄目なら<br/>UNAUTHORIZED を返す"]
     MW --> PAGE["ページを表示する"]
     PP --> DATA["データを返す"]
 ```
