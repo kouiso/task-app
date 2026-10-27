@@ -771,6 +771,64 @@ const view = (
     if unsafe_runs(ok_shrink):
         failures.append("unsafe_runs が縮小済みの安全な行を誤検出した")
 
+    # ── 文章系ブロックの実幅計測・64桁上限・禁則（issue #455）──────────────
+    # md・markdown・text は同梱フォントだけで描くため、ASCII=1桁・非ASCII=1.67桁
+    # で数え、上限を64桁にする。開きかっこの直後は候補から外し、和文の字間を
+    # 禁則つきで候補に足す。紙面で `(fetch)` の割れや「Day 03」だけ残る
+    # 中途半端な改行を直すためのテスト
+    def tpre(lang: str, inner: str) -> str:
+        return f'<pre class="language-{lang}"><code class="language-{lang}">{inner}</code></pre>'
+
+    def break_marker(out: str) -> str:
+        # 強制改行の直後に入る空き要素を除き、改行位置だけを見やすい形にする
+        return re.sub(r'<span class="cw-hang"[^>]*></span>', "", out)
+
+    # T1/T2: 実幅では収まる md 行へ強制改行を入れない
+    for line in [
+        "Day 03 時点では、自分用のダッシュボード画面まで進んでいます。",
+        "- Day 02: ダッシュボードに自分だけのメッセージを追加しました。",
+    ]:
+        if "cw-force" in wrap_code_in_html(tpre("md", line)):
+            failures.append(f"T1/T2: 収まる md 行に cw-force が入った: {line[:20]}")
+
+    # T3/T4: 実幅64桁の (fetch)/(push) 行は1行に収まる
+    for suffix in ["fetch", "push"]:
+        line = f"origin  https://github.com/&#x3C;your-user-name>/task-app.git ({suffix})"
+        if "cw-force" in wrap_code_in_html(tpre("text", line)):
+            failures.append(f"T3/T4: ({suffix}) 行に cw-force が入った")
+
+    # T5: md は32桁以降の空白の直後を最優先で折る（写した先に跡が残らない）
+    t5 = "ブラウザで `http://localhost:3000` を開きます。データベースを使う前に `.env` を自分の環境に合わせて書き換えます。"
+    out5 = wrap_code_in_html(tpre("md", t5))
+    if out5.count('class="cw-force"') != 1:
+        failures.append(f"T5: 改行が1か所でない: {out5}")
+    elif '使う前に <br class="cw-force">' not in break_marker(out5):
+        failures.append(f"T5: 「使う前に 」の空白の直後で折れていない: {out5}")
+
+    # T6: 「。」の前では折れず、「来」と「る」の間（字間）で折れる
+    t6 = "この見本の行は折り返しの位置を確かめるために長く書いた文で終わりに句点が来る。次の文もある"
+    for lang in ["md", "text"]:
+        out6 = wrap_code_in_html(tpre(lang, t6))
+        if '来<br class="cw-force">る' not in break_marker(out6):
+            failures.append(f"T6({lang}): 「来」「る」の間で折れていない: {out6}")
+
+    # T7: 「（」の後では折れず、「こ」と「（」の間で折れる（行末禁則）
+    t7 = "この見本の行は折り返しの位置を確かめるために長く書いた文でその最後にかっこ（補足）を置く"
+    for lang in ["md", "text"]:
+        out7 = wrap_code_in_html(tpre(lang, t7))
+        if 'こ<br class="cw-force">（' not in break_marker(out7):
+            failures.append(f"T7({lang}): 「こ」「（」の間で折れていない: {out7}")
+        if '（<br class="cw-force">' in break_marker(out7):
+            failures.append(f"T7({lang}): 「（」の直後で折ってしまった: {out7}")
+
+    # T8: text は上限内の最後の候補（.git 後の空白）で折れる。`(` と `<` の後は不可
+    t8 = "origin  https://github.com/&#x3C;your-user-name>/my-task-app.git (fetch)"
+    out8 = wrap_code_in_html(tpre("text", t8))
+    if '.git <br class="cw-force">(fetch)' not in break_marker(out8):
+        failures.append(f"T8: .git 後の空白で折れていない: {out8}")
+    if '(<br class="cw-force">' in break_marker(out8) or '&#x3C;<br class="cw-force">' in break_marker(out8):
+        failures.append(f"T8: 開きかっこの直後で折ってしまった: {out8}")
+
     if failures:
         print(f"❌ {len(failures)} 件失敗")
         for failure in failures:
