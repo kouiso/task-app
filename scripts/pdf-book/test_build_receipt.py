@@ -640,3 +640,69 @@ class BuildReceiptTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RunLoggedTest(unittest.TestCase):
+    """_run_logged は 0 以外の終了とタイムアウトを必ず組版ログへ落とす（#616）。"""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.work = self.root / "work"
+        self.work.mkdir()
+
+    def test_nonzero_exit_is_logged_with_outputs(self):
+        with patch.object(build_pdf_book, "WORK_DIR", self.work):
+            with patch.object(
+                build_pdf_book.subprocess, "run",
+                return_value=build_pdf_book.subprocess.CompletedProcess(
+                    ["false"], 3, stdout="out-text", stderr="err-text",
+                ),
+            ):
+                result = build_pdf_book._run_logged(["false"], label="probe", slug="book-x")
+        self.assertEqual(result.returncode, 3)
+        body = (self.work / "logs" / "book-x.log").read_text(encoding="utf-8")
+        self.assertIn("probe exit 3", body)
+        self.assertIn("out-text", body)
+        self.assertIn("err-text", body)
+
+    def test_timeout_is_logged_then_reraised(self):
+        def explode(command, **kwargs):
+            raise build_pdf_book.subprocess.TimeoutExpired(
+                command, kwargs.get("timeout", 0), output=b"partial-out",
+            )
+
+        with patch.object(build_pdf_book, "WORK_DIR", self.work):
+            with patch.object(build_pdf_book.subprocess, "run", side_effect=explode):
+                with self.assertRaises(build_pdf_book.subprocess.TimeoutExpired):
+                    build_pdf_book._run_logged(
+                        ["sleep", "99"], label="vfm", slug="book-y", timeout=120,
+                    )
+        body = (self.work / "logs" / "book-y.log").read_text(encoding="utf-8")
+        self.assertIn("vfm timeout 120s", body)
+        self.assertIn("partial-out", body)
+
+    def test_zero_exit_writes_no_log(self):
+        with patch.object(build_pdf_book, "WORK_DIR", self.work):
+            with patch.object(
+                build_pdf_book.subprocess, "run",
+                return_value=build_pdf_book.subprocess.CompletedProcess(["true"], 0, "ok", ""),
+            ):
+                build_pdf_book._run_logged(["true"], label="probe", slug="book-z")
+        self.assertFalse((self.work / "logs" / "book-z.log").exists())
+
+    def test_default_slug_collects_global_calls(self):
+        with patch.object(build_pdf_book, "WORK_DIR", self.work):
+            with patch.object(
+                build_pdf_book.subprocess, "run",
+                return_value=build_pdf_book.subprocess.CompletedProcess(
+                    ["npm"], 1, "", "npm error",
+                ),
+            ):
+                build_pdf_book._run_logged(["npm", "ci"], label="npm ci")
+        self.assertTrue((self.work / "logs" / "_toolchain.log").is_file())
+
+
+if __name__ == "__main__":
+    unittest.main()
