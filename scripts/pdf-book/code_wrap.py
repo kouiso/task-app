@@ -29,8 +29,28 @@ from pathlib import Path
 # 実測の折れ桁は65。それより短い行は触らない。
 # 強制境界間の上限もこれで検査する。余裕はフォントの個体差ぶん。
 SAFE_COLS = 58
+# md・markdown・text は文章や端末出力を載せるブロックで、出る文字はすべて
+# 組版に同梱したフォントで描かれる。実測の折れ桁65から1桁だけ空けた上限を
+# 別に持つ（試作で64桁の行が1行に収まることを確かめた）。
+TEXT_LANGS = {"md", "markdown", "text"}
+TEXT_SAFE_COLS = 64
 # コメント中の長い同種文字列へ候補を足す間隔。
 FORCE_SEGMENT = 40
+
+# md・markdown・text の禁則。行頭禁則の文字の前と、行末禁則の文字の後では
+# 強制改行しない（日本語組版と同じ考え方）。
+TEXT_NO_BREAK_BEFORE = (
+    "、。，．）」』】ー・：；！？"
+    ")]}>,.;:!?"
+    "ぁぃぅぇぉっゃゅょゎゕゖ"
+    "ァィゥェォッャュョヮヵヶ"
+)
+TEXT_NO_BREAK_AFTER = "（「『【([{<"
+
+
+def safe_cols(lang: str) -> float:
+    """その言語の安全桁。文章系ブロックだけ上限を広げ、コード系は従来どおり。"""
+    return TEXT_SAFE_COLS if lang in TEXT_LANGS else SAFE_COLS
 
 PRE_RE = re.compile(r"<pre\b[^>]*>.*?</pre>", re.DOTALL | re.IGNORECASE)
 TAG_RE = re.compile(r"<[^>]+>")
@@ -598,11 +618,11 @@ def break_before(
         same = i < len(text_atoms) and kinds[i] == kinds[run_start]
         if same:
             continue
-        run_len = sum(char_width(atom_char(a)) for a in text_atoms[run_start:i])
-        if run_len > SAFE_COLS:
+        run_len = line_width(text_atoms[run_start:i], lang)
+        if run_len > safe_cols(lang):
             col = 0
             for j in range(run_start, i):
-                col += char_width(atom_char(text_atoms[j]))
+                col += _atom_width(text_atoms[j], lang)
                 if (
                     col >= FORCE_SEGMENT
                     and j + 1 < i
@@ -614,8 +634,18 @@ def break_before(
     return marks
 
 
-def line_width(text_atoms: list[str]) -> float:
-    return sum(char_width(atom_char(a)) for a in text_atoms)
+def _atom_width(atom: str, lang: str) -> float:
+    """原子1個の表示桁。md・markdown・text は同梱フォントだけで描くので、
+    ASCII を1桁・それ以外を実測最大の1.0em ÷ 0.6em ≒ 1.67桁で数える。
+    それ以外の言語は描画書体の送り幅を使う（過少見積もりはしない）。"""
+    char = atom_char(atom)
+    if lang in TEXT_LANGS:
+        return 1.0 if ord(char) < 128 else 1.0 / _MONO_ADVANCE_EM
+    return char_width(char)
+
+
+def line_width(text_atoms: list[str], lang: str = "") -> float:
+    return sum(_atom_width(a, lang) for a in text_atoms)
 
 
 def _leading_indent(text_atoms: list[str]) -> tuple[int, int]:
@@ -813,7 +843,23 @@ def forced_breaks(
                         and atom_char(text_atoms[index - 1]) in JS_SAFE_BREAK_AFTER
                     )
                     or (
+                        lang in TEXT_LANGS
+                        and (
+                            # 文章・端末出力は和文の字間でも折れる（空白の無い
+                            # 長い和文行が縮小へ回って組版を止めるのを防ぐ）。
+                            # 禁則の絞り込みはこの後のフィルタで行う
+                            classify(text_atoms[index - 1]) == "WIDE"
+                            or classify(text_atoms[index]) == "WIDE"
+                            or (
+                                len(atom_char(text_atoms[index - 1])) == 1
+                                and ord(atom_char(text_atoms[index - 1])) < 128
+                                and not atom_char(text_atoms[index - 1]).isspace()
+                            )
+                        )
+                    )
+                    or (
                         lang not in JS_LANGS
+                        and lang not in TEXT_LANGS
                         and
                         len(atom_char(text_atoms[index - 1])) == 1
                         and ord(atom_char(text_atoms[index - 1])) < 128
@@ -823,6 +869,16 @@ def forced_breaks(
             )
         )
     ]
+    if lang in TEXT_LANGS:
+        # 行頭禁則の文字の前・行末禁則の文字の後では折れない。
+        # `(` や `（` の直後が候補から外れるので `(fetch)` のような
+        # 括弧つきの出力を保てる
+        candidates = [
+            index
+            for index in candidates
+            if atom_char(text_atoms[index]) not in TEXT_NO_BREAK_BEFORE
+            and atom_char(text_atoms[index - 1]) not in TEXT_NO_BREAK_AFTER
+        ]
     # 字下げの中と直後は区切りにしない。直後で折ると1行目が空白だけに
     # なり、続きの本体が字下げを失って左端に出る
     indent_atoms, indent_cols = _leading_indent(text_atoms)
@@ -830,21 +886,43 @@ def forced_breaks(
     # 続き行の頭に乗る空き（cw-hang の width）。2本目以降の区切りは
     # 空き込みの幅で58桁と比べる
     hang = indent_cols + HANG_EXTRA_COLS
+    limit = safe_cols(lang)
     selected: set[int] = set()
     start = 0
-    while line_width(text_atoms[start:]) + (hang if start else 0) > SAFE_COLS:
+    while line_width(text_atoms[start:], lang) + (hang if start else 0) > limit:
         reserve = hang if start else 0
         fitting = [
             index
             for index in candidates
             if index > start
-            and line_width(text_atoms[start:index]) <= SAFE_COLS - reserve
+            and line_width(text_atoms[start:index], lang) <= limit - reserve
         ]
         if not fitting:
             later = [index for index in candidates if index > start]
             if not later:
                 break
             boundary = later[0]
+        elif lang in {"md", "markdown"}:
+            # md の見本は読者がそのまま写す。和文の字間で折ると写した先に
+            # 半角空白が残るため、空白の直後（写しても跡が残らない）を最優先。
+            # 次に「。」「、」の直後。どちらも無いときだけ全候補の最後を使う。
+            # 桁は区切りの頭（直前の強制改行）から数え、短い頭出しを避ける
+            space_fit = [
+                index
+                for index in fitting
+                if atom_char(text_atoms[index - 1]) == " "
+                and line_width(text_atoms[start:index], lang) >= 32
+            ]
+            if space_fit:
+                boundary = space_fit[-1]
+            else:
+                punct_fit = [
+                    index
+                    for index in fitting
+                    if atom_char(text_atoms[index - 1]) in "。、"
+                    and line_width(text_atoms[start:index], lang) >= 32
+                ]
+                boundary = punct_fit[-1] if punct_fit else fitting[-1]
         else:
             boundary = fitting[-1]
         selected.add(boundary)
@@ -853,21 +931,21 @@ def forced_breaks(
 
 
 def _shrink_pct(
-    text_atoms: list[str], hard_marks: set[int], hang: int
+    text_atoms: list[str], hard_marks: set[int], hang: int, lang: str = ""
 ) -> int:
     """行を1行分の高さへ収める縮小率(%)。続き行は空き込みの実効幅で最大を取る。
 
-    空きを足さないと縮小率が実際より大きくなり、縮めた続き行が58桁を
+    空きを足さないと縮小率が実際より大きくなり、縮めた続き行が安全桁を
     超えて Vivliostyle に語中で折られる。
     """
     if not text_atoms:
         return 100
     bounds = [0] + sorted(hard_marks) + [len(text_atoms)]
     max_row = max(
-        line_width(text_atoms[b1:b2]) + (hang if index else 0)
+        line_width(text_atoms[b1:b2], lang) + (hang if index else 0)
         for index, (b1, b2) in enumerate(zip(bounds, bounds[1:]))
     )
-    return min(100, int(SAFE_COLS * 100 / max_row))
+    return min(100, int(safe_cols(lang) * 100 / max_row))
 
 
 def wrap_layout(
@@ -884,10 +962,10 @@ def wrap_layout(
     hard_marks = forced_breaks(text_atoms, states, marks, lang)
     _, indent_cols = _leading_indent(text_atoms)
     hang = indent_cols + HANG_EXTRA_COLS
-    pct = _shrink_pct(text_atoms, hard_marks, hang)
+    pct = _shrink_pct(text_atoms, hard_marks, hang, lang)
     while hard_marks and hang > 0 and pct < SHRINK_MIN_PCT:
         hang -= 1
-        pct = _shrink_pct(text_atoms, hard_marks, hang)
+        pct = _shrink_pct(text_atoms, hard_marks, hang, lang)
     return hard_marks, hang, pct
 
 
@@ -915,8 +993,8 @@ def _emit_line(
         for ai, atom in enumerate(atoms(body)):
             text_atoms.append(atom)
             origin.append((ci, ai))
-    width = line_width(text_atoms)
-    if width <= SAFE_COLS:
+    width = line_width(text_atoms, lang)
+    if width <= safe_cols(lang):
         return "".join(body for _, body in chunks)
     hard_marks, hang, pct = wrap_layout(text_atoms, states, lang)
     if pct < SHRINK_MIN_PCT and lang in JS_LANGS and all(
@@ -927,8 +1005,8 @@ def _emit_line(
         indent = 0
         while indent < len(text_atoms) and atom_char(text_atoms[indent]) in {" ", "\t"}:
             indent += 1
-        content_width = line_width(text_atoms[indent:])
-        if indent and content_width and int(SAFE_COLS * 100 / content_width) >= SHRINK_MIN_PCT:
+        content_width = line_width(text_atoms[indent:], lang)
+        if indent and content_width and int(safe_cols(lang) * 100 / content_width) >= SHRINK_MIN_PCT:
             remaining = indent
             trimmed: list[tuple[str, str]] = []
             for kind, body in chunks:
@@ -1059,9 +1137,9 @@ def rewrite_pre_inner(
     # font-size を付けたPDFはChromeのコピーで隣接行が結合した実測があるため、
     # env/dotenv だけは最長行に合わせてコードブロック全体を同率で縮小する。
     if lang in BLOCK_UNIFORM_LANGS and lines_atoms:
-        widest = max(lines_atoms, key=line_width)
-        max_width = line_width(widest)
-        pct = min(100, int(SAFE_COLS * 100 / max_width))
+        widest = max(lines_atoms, key=lambda a: line_width(a, lang))
+        max_width = line_width(widest, lang)
+        pct = min(100, int(safe_cols(lang) * 100 / max_width))
         if pct < SHRINK_MIN_PCT:
             residuals.append("".join(atom_char(a) for a in widest)[:80])
             return inner
@@ -1205,6 +1283,9 @@ def unsafe_runs(html_text: str) -> list[str]:
         block = match.group(0)
         if BLOCK_SHRINK_CLASS in block:
             continue
+        # 言語ごとの数え方と上限に合わせる（pre の class から言語を読む）
+        lang_m = LANG_RE.search(block[: block.index(">") + 1])
+        lang = lang_m.group(1).lower() if lang_m else ""
         inner = block[block.index(">") + 1:-len("</pre>")]
         # 強制改行だけを境界として論理行を切る。<wbr> は取り除く。
         inner = re.sub(
@@ -1218,8 +1299,8 @@ def unsafe_runs(html_text: str) -> list[str]:
                 hang_m = HANG_RE.match(run)
                 hang = float(hang_m.group(1)) if hang_m else 0
                 text = html.unescape(TAG_RE.sub("", run))
-                run_width = line_width(atoms(text))
-                if (hang + run_width) * pct / 100 > SAFE_COLS:
+                run_width = line_width(atoms(text), lang)
+                if (hang + run_width) * pct / 100 > safe_cols(lang):
                     bad.append(line_text.strip()[:80])
                     break
     return bad

@@ -32,6 +32,7 @@ from code_wrap import (  # noqa: E402
     classify_block,
     code_filepath_label,
     line_width,
+    safe_cols,
     wrap_layout,
 )
 
@@ -265,7 +266,7 @@ def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[
     組版と同じ空き込み・字下げ込みの wrap_layout で行う。
     """
     marks = break_before(text_atoms, states, lang)
-    if line_width(text_atoms) > SAFE_COLS:
+    if line_width(text_atoms, lang) > safe_cols(lang):
         marks |= wrap_layout(text_atoms, states, lang)[0]
     return marks
 
