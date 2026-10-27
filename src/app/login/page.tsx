@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/component/ui/alert';
 import { Button } from '@/component/ui/button';
@@ -41,8 +40,7 @@ function LoginForm() {
   });
 
   const loginMutation = api.auth.login.useMutation({
-    onSuccess: (data) => {
-      toast.success(`おかえりなさい、${data.user.name}さん`);
+    onSuccess: () => {
       // tRPC レスポンスで Set-Cookie された session を確実にブラウザへ反映してから
       // middleware 配下のページへ遷移する。router.push/refresh だと
       // cookie 反映と RSC 再フェッチのタイミング次第で middleware が未認証と判断し

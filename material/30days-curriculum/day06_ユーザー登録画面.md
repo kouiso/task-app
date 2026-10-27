@@ -1384,7 +1384,6 @@ export default function RegisterPage() {
 | アイコン背景色 | グラデーション（blue→indigo） | グラデーション（blue→indigo） |
 | フィールド数 | 2つ（email, password） | 4つ（name, email, password, confirmPassword） |
 | バリデーション | 基本チェックのみ | `.refine()` でクロスチェック |
-| トースト通知 | `react-hot-toast` で成功通知 | なし（登録後はそのままダッシュボードへ遷移する設計のため省略） |
 | Suspense | 必要（`useSearchParams` 使用） | 不要（`useSearchParams` 未使用） |
 
 完成コードを書き終えたらターミナルで `npm run type-check` を実行してください。
