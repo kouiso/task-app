@@ -91,14 +91,26 @@ EXPECTED_RELEASE_BOOKS = 36
 # 持ち込み、`npm audit --audit-level=high` の CI を通らない。
 # @mermaid-js/mermaid-cli は puppeteer(フル版)を連れてきて Chrome を約650MB 落とす。
 # どちらも教材PDFを組むときだけ要る道具で、`npm ci` が走る CI と Vercel には要らない。
-# 要求する版はここで固定する。全冊ビルドでは隔離環境へ解決したあと、その実バイトも
-# receipt に含めるため、同じ識別文字列から別の内容が実行された場合も区別できる。
-VIVLIOSTYLE_CLI = "@vivliostyle/cli@11.1.0"
-# cli@11.1.0 が内部で使う vfm と同じ版。md→HTML を自前で回して <wbr> を挿入するため、
-# 別版で変換すると Prism の出力構造がずれ得るので版を合わせる
-VFM_CLI = "@vivliostyle/vfm@2.7.0"
-THEME = "@vivliostyle/theme-techbook@2.0.2"
-MERMAID_CLI = "@mermaid-js/mermaid-cli@11.16.0"
+# 要求する版は toolchain/package.json の dependencies を唯一の正本として読む。
+# ここに文字列で別途持つと、renovate が package.json と lockfile だけを上げたときに
+# 定数と食い違い、隔離環境の実測照合で必ず落ちる（#618）。vfm の版は cli が内部で使う
+# ものと同じでなければならない（md→HTML を自前で回して <wbr> を挿入するため、別版で
+# 変換すると Prism の出力構造がずれ得る）ので、cli の版が上がるときは vfm も揃える。
+# 全冊ビルドでは隔離環境へ解決したあと、その実バイトも receipt に含めるため、
+# 同じ識別文字列から別の内容が実行された場合も区別できる。
+_TOOLCHAIN_DEPENDENCIES: dict[str, str] = json.loads(
+    (TOOLCHAIN_SRC_DIR / "package.json").read_text(encoding="utf-8")
+)["dependencies"]
+
+
+def _toolchain_spec(name: str) -> str:
+    return f"{name}@{_TOOLCHAIN_DEPENDENCIES[name]}"
+
+
+VIVLIOSTYLE_CLI = _toolchain_spec("@vivliostyle/cli")
+VFM_CLI = _toolchain_spec("@vivliostyle/vfm")
+THEME = _toolchain_spec("@vivliostyle/theme-techbook")
+MERMAID_CLI = _toolchain_spec("@mermaid-js/mermaid-cli")
 # 外部プロセスが返らんときの上限。36本を通しで回すので、1本の停止で全体を落とさない
 BUILD_TIMEOUT = 900
 MERMAID_TIMEOUT = 180
