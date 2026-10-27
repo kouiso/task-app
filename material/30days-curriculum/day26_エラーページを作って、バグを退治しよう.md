@@ -100,7 +100,7 @@ Elements にはいま画面に出ている HTML と当たっている CSS の現
 | ステップ | 作業内容 | 所要時間 | 触るファイル | 成功状態 |
 |---------|---------|---------|-------------|---------|
 | Step 1 | error.tsxを作る | 4分 | src/app/error.tsx | Error Boundaryが分かる |
-| Step 2 | error.tsxの動作を確認する | 5分 | src/app/not-found.tsx・dashboard/page.tsx | エラーページが表示される |
+| Step 2 | not-found.tsx を作って error.tsx の動きを確かめる | 5分 | src/app/not-found.tsx・dashboard/page.tsx | エラーページが表示される |
 | Step 2.5 | 通信エラーを状態ごとに表示する | 35分 | 3画面・3テスト・Vitest設定 | 初回500・再取得500・401・403を区別できる |
 | Step 3 | バグA: Optional Chainingなし | 7分 | 教材内演習 | Console赤エラーを修正 |
 | Step 4 | バグB: useEffect依存配列ミス | 7分 | 教材内演習 | 無限リクエストを修正 |
@@ -110,7 +110,7 @@ Elements にはいま画面に出ている HTML と当たっている CSS の現
 
 **合計時間**: 約72分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
+表と Step 見出しの分数は説明とコードを読んで中身をつかむまでの目安です。コードを打ち込む Step では打ち込む時間と詰まって調べる時間がこの分数に加わります。
 
 開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
 
@@ -224,7 +224,7 @@ flowchart TB
 
 ---
 
-### Step 2: error.tsxの動作を確認する（5分）
+### Step 2: not-found.tsx を作って error.tsx の動きを確かめる（5分）
 
 **ゴール**: 作成した Error Boundary が
 どう動くか体験します。
