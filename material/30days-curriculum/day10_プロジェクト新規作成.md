@@ -1873,6 +1873,7 @@ function ProjectPageContent() {
   const {
     data: projects,
     isLoading: projectsLoading,
+    error: projectsError,
   } = api.project.getAll.useQuery({
     isArchived: showArchived,
   });
@@ -1943,6 +1944,10 @@ function ProjectPageContent() {
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
 // 読み込み中の表示
+  const projectAccessDenied =
+    projectsError?.data?.code === 'UNAUTHORIZED' ||
+    projectsError?.data?.code === 'FORBIDDEN';
+
   if (projectsLoading) {
     return (
       <AppLayout>
@@ -1953,6 +1958,26 @@ function ProjectPageContent() {
 ```
 
 この分岐をここへ置いてあるのは`projects` がまだ `undefined` の状態で下の描画へ進ませないためです。スピナーも `AppLayout` で囲むのは読み込み中だけサイドバーとログイン確認が画面から消えないようにするためです。
+
+**最初の取得失敗を表示する部分**:
+
+```typescript
+// filepath: src/app/project/page.tsx（同じファイルの続き）
+// 最初の取得失敗
+  if (projectsError && (!projects || projectAccessDenied)) {
+    return (
+      <AppLayout>
+        <p role="alert">
+          {projectAccessDenied
+            ? 'この一覧を表示する権限がありません。'
+            : 'プロジェクトを読み込めませんでした。'}
+        </p>
+      </AppLayout>
+    );
+  }
+```
+
+最初の取得に失敗した場合は、0件のメッセージを出さず取得失敗を表示します。認証・認可の失敗なら、前回の `projects` が残っていてもカードを表示しません。それ以外の再取得失敗では、取得済みのカードを表示し続けます。
 
 **ページ見出しと操作エリア**:
 
@@ -1999,6 +2024,18 @@ function ProjectPageContent() {
           </div>
         </div>
 
+        {projectsError && projects && !projectAccessDenied && (
+          <p role="alert" className="text-sm text-destructive">
+            最新の一覧を取得できませんでした。
+            前回の一覧を表示しています。
+          </p>
+        )}
+```
+
+再取得に失敗したあとも前回の一覧が残っているときだけ出る警告です。表示する権限が無くなった一覧を、過去のキャッシュから見せないためです。
+
+```typescript
+            {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
@@ -2137,6 +2174,7 @@ function ProjectPageContent() {
   const {
     data: projects,
     isLoading: projectsLoading,
+    error: projectsError,
   } = api.project.getAll.useQuery({
     isArchived: showArchived,
   });
@@ -2183,10 +2221,26 @@ function ProjectPageContent() {
     });
   };
 
+  const projectAccessDenied =
+    projectsError?.data?.code === 'UNAUTHORIZED' ||
+    projectsError?.data?.code === 'FORBIDDEN';
+
   if (projectsLoading) {
     return (
       <AppLayout>
         <PageLoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (projectsError && (!projects || projectAccessDenied)) {
+    return (
+      <AppLayout>
+        <p role="alert">
+          {projectAccessDenied
+            ? 'この一覧を表示する権限がありません。'
+            : 'プロジェクトを読み込めませんでした。'}
+        </p>
       </AppLayout>
     );
   }
@@ -2222,6 +2276,13 @@ function ProjectPageContent() {
             </Button>
           </div>
         </div>
+
+        {projectsError && projects && !projectAccessDenied && (
+          <p role="alert" className="text-sm text-destructive">
+            最新の一覧を取得できませんでした。
+            前回の一覧を表示しています。
+          </p>
+        )}
 
         <div className="grid gap-6
           sm:grid-cols-2 lg:grid-cols-3
