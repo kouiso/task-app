@@ -227,9 +227,9 @@ jobs:
             none)   echo "PDFの出力に影響する変更が無いため、組版と検査は行わん" ;;
           esac
 
-      # Node → npm ci → apt ロック上限 → poppler → Chromium の準備は
-      # pdf-book-full と同じ composite action を使う（#617: 実行条件のずれ防止）。
-      # poppler は PDF を実際に組む時（scope != none）だけ要るので input で切る
+          # Node → npm ci → apt ロック上限 → poppler → Chromium の準備は
+          # pdf-book-full と同じ composite action を使う（#617: 実行条件のずれ防止）。
+          # poppler は PDF を実際に組む時（scope != none）だけ要るので input で切る
       - name: 組版環境を用意
         if: steps.select.outputs.scope != 'none' || steps.select.outputs.browser_qa == '1'
         uses: ./.github/actions/pdf-book-env
