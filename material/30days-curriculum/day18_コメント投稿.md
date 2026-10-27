@@ -91,7 +91,7 @@ Day 13 でタスク詳細を開いたとき一度取ってきたデータはブ�
 
 **合計時間**: 約42分です。
 
-この時間はコードを読んで理解する目安です。写経して打ち込む時間、詰まって調べる時間は別に見てください。
+表と Step 見出しの分数は説明とコードを読んで中身をつかむまでの目安です。コードを打ち込む Step では打ち込む時間と詰まって調べる時間がこの分数に加わります。
 
 開発サーバーは前の Day から動かしたまま使います。止めてあるときは `npm run dev` で起動してから `http://localhost:3000` を開きます。
 
@@ -494,7 +494,7 @@ import { Badge }
 - 配布ファイルの 4 行目に `Badge` のインポートがある
 - どちらも書き足していない
 
-コメントセクションのヘッダー部分を確認しましょう。
+コメントセクションのヘッダー部分を書きます。
 
 **実装**:
 
@@ -735,7 +735,7 @@ import { Textarea }
 - `zodResolver` は `@hookform/resolvers/zod` から
 - `useForm` は `react-hook-form` から
 
-zod スキーマとフォーム初期化を確認しましょう。
+zod スキーマとフォーム初期化を書きます。
 
 **実装**:
 
@@ -840,8 +840,8 @@ const canEditComments = !!taskDetail &&
 
 タスクの取得前は `false` になります。表示と送信の両方でこの値を使い、閲覧者には投稿させないようにします。
 
-コメント一覧の下にテキストエリアと投稿ボタンが
-縦並びで配置されています。
+コメント一覧の下へテキストエリアと投稿ボタンを
+縦に並べて置きます。
 ボタンは右寄せです。
 
 ```typescript
@@ -913,9 +913,9 @@ const canEditComments = !!taskDetail &&
 ### Step 5: 投稿処理と mutation を書く（5分）
 
 **ゴール**: コメントをサーバーに保存する
-mutation の仕組みを理解します。
+mutation を書きます。
 
-まず `api.useUtils()` を確認します。
+まず `api.useUtils()` で `utils` を取り出します。
 キャッシュ操作用のユーティリティで、投稿成功後に
 コメント一覧を再取得するために使います。
 
@@ -1020,7 +1020,7 @@ const handleCommentSubmit =
 
 ### Step 6: キャッシュ更新の仕組みを理解する（3分）
 
-**ゴール**: Step 5 で確認した `invalidate` が
+**ゴール**: Step 5 で書いた `invalidate` が
 どう動くかを理解します。
 
 #### キャッシュ更新の仕組み
@@ -1033,7 +1033,7 @@ const handleCommentSubmit =
 
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx
-// onSuccess 内のキャッシュ更新（Step 5 で確認済み）
+// onSuccess 内のキャッシュ更新（Step 5 で書いたもの）
 utils.task.getById.invalidate(
   { id: taskId },
 );
