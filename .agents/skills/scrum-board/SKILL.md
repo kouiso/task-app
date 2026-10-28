@@ -7,18 +7,43 @@ description: この repo の作業は GitHub Project で管理する — 次に�
 
 この repo の作業は GitHub Project（`.github/scrum-board.yml` の `owner` / `project_number`）で管理する。
 
+次にやる物を決める・課題を起票する・Status を動かす・繰り越す — どれか1つでもするなら、まずこのファイルを最後まで読んでから手を付ける。
+
+## 盤の見方（コマンド）
+
+`<owner>` と `<番号>` は `.github/scrum-board.yml` から取る。指示で別の盤（試しの写し等）が指定されとる時はそっちを優先する。
+
+- カード一覧: `gh project item-list <番号> --owner <owner> --limit 0 --format json`（既定は30件打ち切り。ただしこの出力には Status しか出ない）
+- Iteration・Wait・Priority・End date の項目値は `item-list` では取れない。GraphQL で取る（org の盤は `organization`・個人の盤は `user` に変える）:
+
+```
+gh api graphql -f query='{organization(login:"<owner>"){projectV2(number:<番号>){items(first:100){nodes{content{__typename ... on Issue{number state}} it:fieldValueByName(name:"Iteration"){...on ProjectV2ItemFieldIterationValue{title}} st:fieldValueByName(name:"Status"){...on ProjectV2ItemFieldSingleSelectValue{name}} wt:fieldValueByName(name:"Wait"){...on ProjectV2ItemFieldSingleSelectValue{name}} pr:fieldValueByName(name:"Priority"){...on ProjectV2ItemFieldSingleSelectValue{name}} ed:fieldValueByName(name:"End date"){...on ProjectV2ItemFieldDateValue{date}}} pageInfo{hasNextPage endCursor}}}}}'
+```
+
+- 100件を超える盤は `pageInfo.endCursor` でページ送りして全件取る
+- 「今週」= 今日を含む Iteration
+
 ## 次にやる物
 
-- ビュー「Sprint Backlog (open)」で Wait が空の一番上。
-- 取った物が PBI なら: ビュー「Sprint Board」でその PBI の段にある open の SBI の一番上。
-- 実機が要る作業で手元に無ければ、その物は置いて次へ進む。
+1. 上の GraphQL で全件取り、今週の Iteration・Status が Backlog・Wait が空・issue が open の物を Priority → End date の順に並べて一番上を取る（進行中の物は誰かがやっとるので次には挙げん）。
+2. それが PBI なら、その PBI の open の SBI の一番上を取る。
+3. 該当が無ければ「今週やる物は無い」と答える。issue 一覧や open PR から勝手に選ばない。
+4. 実機が要るのに手元に無い作業がある。その物は置いて次へ進む。
 
-## PBI・SBI の作り方
+## PBI・SBI の作り方（順番どおり）
 
-- 題の頭: `[PBI]` か `[SBI]`。
-- 親子は GitHub の sub-issue（本文の番号では繋がらん）。
-- Project へ入れて項目を埋める: Iteration（今日を含む週）・Priority（P0/P1/P2）・Estimate（時間）・Size。
-- 分け方・親子・PR との繋げ方の詳しいルールは skill `psp`（§2.5・§5）に従う。
+1. `gh issue create` で PBI を作る。題の頭は `[PBI]`。
+2. `gh issue create` で SBI を作る。題の頭は `[SBI]`。
+3. SBI を PBI の sub-issue にする（本文の番号では繋がらん）:
+   `gh api graphql -f query='mutation{addSubIssue(input:{issueId:"<PBIのnode_id>" subIssueId:"<SBIのnode_id>"}){clientMutationId}}'`
+   （node_id は `gh api repos/<owner>/<repo>/issues/<番号>` の `node_id`）
+4. 3 件とも盤に入れる: `gh project item-add <番号> --owner <owner> --url <issue の URL>`
+5. 項目を埋める（全件）:
+   - `gh project field-list <番号> --owner <owner>` で Iteration・Priority・Estimate・Size の field-id と Iteration の選択肢 id を取る
+   - `gh project item-edit --project-id <project_id> --id <item_id> --field-id <field_id> --iteration-id <iteration_id>`（数値項目は `--number`、単選は `--single-select-option-id`）
+   - 値: Iteration=今日を含む週・Priority=P0/P1/P2・Estimate=時間・Size
+6. 全部できたか `gh project item-list <番号> --owner <owner> --limit 0 --format json` と issue の `subIssues` で確かめる。出来んかったこと（盤登録・項目・sub-issue どれでも）を「済み」と書かず、失敗した所をそのまま報告する。
+7. 分け方・親子・PR との繋げ方の詳しいルールは skill `psp`（§2.5・§5）に従う。
 
 ## Status の動かし方
 
@@ -35,8 +60,9 @@ description: この repo の作業は GitHub Project で管理する — 次に�
 
 - 今週の Iteration で終わらん物は次の Iteration へ（Carryover を 1 足す）。
 - 今週が全部終わったら次の Iteration の上から今週へ入れる。
-- 手で動かす時（`kouiso/.github` の `scripts/scrum_keeper/` 内）:
-  `python3 scripts/scrum_keeper/scrum_keeper.py --board <owner>/<番号> --job carryover`（`--job okawari` も同じ形）。
+- **手で動かす時は必ず keeper を使う**（`kouiso/.github` の `scripts/scrum_keeper/`。無ければ `git clone --depth 1 https://github.com/kouiso/.github`）:
+  `python3 scripts/scrum_keeper/scrum_keeper.py --board <owner>/<番号> --job carryover`（`--job okawari` も同じ形。`--dry-run` で先に確認）
+- やむを得ず手で動かす場合も、動かした物の Carryover 項目を 1 足す。
 
 ## ビューの決まり
 
