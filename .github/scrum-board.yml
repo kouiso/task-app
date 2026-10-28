@@ -1,0 +1,33 @@
+owner: ritmo-inc
+project_number: 8
+worker_default: code
+capacity: shared
+statuses: [Backlog, In progress, In review, Done]
+fields:
+  status: Status
+  priority: Priority
+  size: Size
+  estimate: Estimate
+  iteration: Iteration
+  start: Start date
+  end: End date
+  release: リリース
+  release_options: [未, ステージング, 本番]
+  wait: Wait
+  carryover: Carryover
+  devin: Devin
+  assignee: やる人
+views:
+  - Sprint Backlog
+  - Sprint Backlog (open)
+  - Sprint Board
+  - Next Sprint
+  - Last Sprint
+  - Backlog
+  - No Iteration
+  - Status board
+  - ロードマップ
+  - Bugs
+  - In review
+  - My items
+  - 局長の判断待ち
