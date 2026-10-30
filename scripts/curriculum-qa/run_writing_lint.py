@@ -65,6 +65,8 @@ wl = load_upstream()
 PER_1000_LIMITS: dict[str, float] = {
     "B-1 対比構文": 1.0,
     "B-2 三連反復": 0.5,
+    "B-11 するだけ": 0.3,
+    "B-9 つまり": 0.2,
 }
 # 精度表で誤検知・正当が大半だったため、DENSITY として数えないカウンタ。
 # 数えない理由は SKILL.md の精度表に1行ずつある。
@@ -84,6 +86,10 @@ IMAGE_RE = re.compile(r"^\s*!\[")
 TABLE_RE = re.compile(r"^\s*\|")
 HTML_COMMENT_RE = re.compile(r"<!--.*?-->")
 INLINE_CODE_RE = re.compile(r"`[^`]*`")
+HEADING_RE = re.compile(r"^\s*#{1,6}\s")
+BOLD_ONLY_RE = re.compile(r"^\s*\*\*[^*]+\*\*\s*$")
+# 上流の B-3 は「たった」を数えるが、「たった今」は切り詰めではない（精度表の誤検知）。
+FALSE_HITS: dict[str, re.Pattern[str]] = {"B-3 切り詰め": re.compile(r"たった今")}
 FILEPATH_RE = re.compile(r"filepath:")
 
 
@@ -93,16 +99,31 @@ class Hit:
     counter: str
     line: int
     text: str
+    occurrence: int = 0
 
     @property
     def key(self) -> str:
-        return disposition_key(self.file, self.counter, self.text)
+        return disposition_key(self.file, self.counter, self.text, self.occurrence)
 
 
-def disposition_key(file: str, counter: str, text: str) -> str:
+def disposition_key(file: str, counter: str, text: str, occurrence: int = 0) -> str:
+    # 行番号は編集でずれるのでキーに入れない。同じ文が何度も出るときは出現順で区別する。
+    # 区別しないと、3回のうち1回だけ処置を消しても残り2件の keep で通ってしまう。
     norm = re.sub(r"\s+", "", text)
     digest = hashlib.sha256(norm.encode("utf-8")).hexdigest()[:16]
-    return f"{file}::{counter}::{digest}"
+    suffix = f"#{occurrence}" if occurrence else ""
+    return f"{file}::{counter}::{digest}{suffix}"
+
+
+def number_occurrences(hits: list[Hit]) -> list[Hit]:
+    seen: dict[str, int] = {}
+    numbered: list[Hit] = []
+    for hit in hits:
+        base = disposition_key(hit.file, hit.counter, hit.text)
+        n = seen.get(base, 0)
+        seen[base] = n + 1
+        numbered.append(Hit(hit.file, hit.counter, hit.line, hit.text, n))
+    return numbered
 
 
 def preprocess(raw_lines: list[str]) -> tuple[list[str], set[int]]:
@@ -134,7 +155,8 @@ def preprocess(raw_lines: list[str]) -> tuple[list[str], set[int]]:
             in_colophon = True
         elif H2_RE.match(raw):
             in_colophon = False
-        if in_colophon or IMAGE_RE.match(raw) or TABLE_RE.match(raw):
+        if (in_colophon or IMAGE_RE.match(raw) or TABLE_RE.match(raw)
+                or HEADING_RE.match(raw) or BOLD_ONLY_RE.match(raw)):
             out.append("")
             continue
         text = HTML_COMMENT_RE.sub("", line)
@@ -197,13 +219,14 @@ def lint_file(path: Path) -> tuple[list[Hit], list[tuple[str, int, int, float, l
         else:
             limit = base_limit
         if len(hits) > limit:
-            over.append((counter, len(hits), limit, chars, hits))
+            over.append((counter, len(hits), limit, chars, number_occurrences(hits)))
 
     for counter, pat, base, _note, _mult in wl.COUNTERS:
         hits = [
             Hit(name, counter, i, c)
             for i, _w, c in wl.scan(clines, [pat])
             if not (counter == "B-1 対比構文" and i in after_filepath)
+            and not (counter in FALSE_HITS and FALSE_HITS[counter].search(clines[i - 1]))
         ]
         judge(counter, hits, base)
     for word in wl.PER_WORD_LIMIT1:
@@ -214,11 +237,20 @@ def lint_file(path: Path) -> tuple[list[Hit], list[tuple[str, int, int, float, l
     zero_hits = [Hit(name, "指紋・0回定型句", i, c) for i, _w, c in wl.scan(clines, wl.ZERO_PHRASES, regex=False)]
     judge("指紋・0回定型句", zero_hits, 0)
 
+    # 上流は空行・コード・表をまたいで文をつなぐため、別の段落の文末がそろっただけで
+    # 三連と数える（精度表の誤検知 51/127 がすべてこれ）。段落の中だけで数える。
+    para: dict[int, int] = {}
+    pid = 0
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            pid += 1
+        para[i] = pid
     prose = [(i, s) for i, s in sents if re.search(r"[ぁ-ん]$", s)]
     triple: list[Hit] = []
     for k in range(len(prose) - 2):
         ends = [s[-3:] for _, s in prose[k : k + 3]]
-        if ends[0] == ends[1] == ends[2] and prose[k][0] not in after_filepath:
+        same_para = para[prose[k][0]] == para[prose[k + 2][0]]
+        if ends[0] == ends[1] == ends[2] and same_para and prose[k][0] not in after_filepath:
             triple.append(Hit(name, "B-2 三連反復", prose[k][0], " | ".join(s for _, s in prose[k : k + 3])))
     judge("B-2 三連反復", triple, 0)
 
