@@ -55,7 +55,13 @@ def load_upstream(path: Path = LINT_PATH):
     if spec is None or spec.loader is None:
         raise SystemExit(f"writing-lint.py を読み込めません: {path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # vendor の中に __pycache__ を作ると、sha256 一覧との照合（vendor-files.sh）が落ちる。
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
