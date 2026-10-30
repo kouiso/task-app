@@ -30,8 +30,10 @@ attribution=".claude/skills/material-writing/references/ATTRIBUTION.md"
 expected=$(mktemp)
 actual=$(mktemp)
 trap 'rm -f "$expected" "$actual"' EXIT
-sed -n '/<!-- BEGIN hana652-sha256 -->/,/<!-- END hana652-sha256 -->/p' "$attribution" \
-  | grep -E '^[0-9a-f]{64}  ' | sort -k2 > "$expected"
+# 抜き出しは sed 1本で行う。grep にすると、一覧が空のとき grep の rc=1 で run.sh の pipefail と
+# set -e がここで止め、下の「一覧がありません」が CI に出ない。
+sed -nE '/<!-- BEGIN hana652-sha256 -->/,/<!-- END hana652-sha256 -->/{/^[0-9a-f]{64}  /p}' "$attribution" \
+  | sort -k2 > "$expected"
 if [ ! -s "$expected" ]; then
   echo "::error::$attribution に sha256 一覧がありません"
   exit 1

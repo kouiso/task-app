@@ -9,59 +9,14 @@ MW-CANARY-SKILL-2c19e4
 
 教材執筆・レビューの完全手順。このファイルは2層でできている。
 
-- **このリポジトリの値**（すぐ下の節）: 日数・パス・文長・ゲートの強さなど、リポジトリごとに違うもの。
-- **共通節**（`BEGIN common:material-writing v2` から `END` まで）: task-app・redmine-clone・sns-app で同じ文面。
-  正本は task-app で、`scripts/sync-skill-common.sh` が他の2リポジトリへ写す。共通節を直すときは
-  task-app 側を直してから sync を回す。他のリポジトリで直接直すと、sync の検査で失敗する。
+- **共通節**（すぐ下の `BEGIN common:material-writing v2` から `END` まで）: task-app・redmine-clone・sns-app で同じ文面にする。
+  正本は task-app で、`scripts/sync-skill-common.sh` が写す。今の既定の同期先は redmine-clone だけで、
+  sns-app は writing-lint のゲート化が承認されてから同期先に足す。共通節を直すときは task-app 側を直してから sync を回す。
+  他のリポジトリで直接直したずれは、`bash scripts/sync-skill-common.sh --check` を手で走らせたときに exit 1 で見つかる
+  （CI と hook からはまだ呼んでいない）。
+- **このリポジトリの値**（`END` の後ろの節）: 日数・パス・文長・ゲートの強さなど、リポジトリごとに違うもの。
 
-共通節の中で「リポジトリの値」と書いてある箇所は、下の表の値に読み替える。
-
-## このリポジトリの値（task-app）
-
-| 項目 | 値 |
-|---|---|
-| 日数 | 30日 |
-| 教材の置き場 | `material/30days-curriculum/dayNN_*.md`（付録は `appendix_*.md`） |
-| 正本のコード | `src/`・`prisma/`・`scripts/`（Next.js 15 / TypeScript / Prisma / tRPC / shadcn/ui） |
-| 1文の上限 | 120字（`.textlintrc.json` の `sentence-length`） |
-| コードブロックの上限 | 25行（明示例外は下の Gate 2 節） |
-| filepath 行の書式 | `// filepath: src/...`（JSX の中は `{/* filepath: ... */}`） |
-| writing-lint のモード | `gate`（`check_quality.sh` の corpus 検査で失敗させる） |
-| 処置記録 | `material/30days-curriculum/_meta/writing-lint-dispositions.json` |
-| 冷えた読み手の通し読み | Gate 3（初心者シミュレーション）と `audit/` |
-| Gate 3 の読み手像 | HTML と CSS は少し触ったことがある。JavaScript は変数・if 文・for 文が辛うじてわかる。Node.js・npm・GitHub を一度も使ったことがない。エラーメッセージを読む習慣がない |
-
-### このリポジトリのゲートのコマンド
-
-```bash
-npx textlint material/30days-curriculum/dayXX_xxx.md
-bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/dayXX_xxx.md
-python3 scripts/curriculum-qa/run_writing_lint.py material/30days-curriculum/
-```
-
-`check_quality.sh` は渡されたファイルの置き場を corpus とみなし、`run_writing_lint` も corpus 検査の1つとして走らせる。
-lint-staged が git commit 時に textlint と check_quality を実行する。
-
-### textlint ルールの採否（task-app で 2026-07-15 に実測）
-
-再検討する前にこの記録を読むこと。
-
-| ルール | 実測結果 | 判定 |
-|---|---|---|
-| `ja-no-orthographic-variants` | 14件中5件(36%)が誤検知。「もの」と「者」を読みで同一視する。従うと意味が壊れる | 入れない |
-| `textlint-rule-prh` + 辞書 | 教材に表記ゆれは無かった。prh は辞書の語しか捕まえず、漢字誤変換も拾えない | 入れない |
-| `ja-no-weak-phrase` | 9件出たが、全部が初心者への共感表現か、nullable の技術的に正しい条件表現だった | 入れない（`false` は意図した設定） |
-
-`ja-no-weak-phrase` が拾った文の例:
-
-```text
-day04:296  初回はちょっと身構えるかもしれません。
-day03:171  まだ何も表示されないかもしれません。この時点ではそれで問題ありません。
-day19:511  途中がないかもしれない値には `?.` を使います。
-```
-
-これを機械的に削ると、共感の無い断定調になる。断定調は AI が書く文体に近いので、AI 臭はかえって増える。
-誤字脱字に安全な機械的解決は無い（上の3つで確かめた）。人間か LLM のレビューで拾う。
+共通節の中で「リポジトリの値」と書いてある箇所は、`END` の後ろの表の値に読み替える。
 
 <!-- BEGIN common:material-writing v2 -->
 
@@ -405,6 +360,53 @@ hana652 を更新するときは、上流を `git archive <commit>` で取り出
 ATTRIBUTION.md のハッシュと sha256 一覧を書き直す。CI の `vendor-files` が一覧と突き合わせる。
 
 <!-- END common:material-writing v2 -->
+
+## このリポジトリの値（task-app）
+
+| 項目 | 値 |
+|---|---|
+| 日数 | 30日 |
+| 教材の置き場 | `material/30days-curriculum/dayNN_*.md`（付録は `appendix_*.md`） |
+| 正本のコード | `src/`・`prisma/`・`scripts/`（Next.js 15 / TypeScript / Prisma / tRPC / shadcn/ui） |
+| 1文の上限 | 120字（`.textlintrc.json` の `sentence-length`） |
+| コードブロックの上限 | 25行（明示例外は共通節の Gate 2 節） |
+| filepath 行の書式 | `// filepath: src/...`（JSX の中は `{/* filepath: ... */}`） |
+| writing-lint のモード | `gate`（`check_quality.sh` の corpus 検査で失敗させる） |
+| 処置記録 | `material/30days-curriculum/_meta/writing-lint-dispositions.json` |
+| 冷えた読み手の通し読み | Gate 3（初心者シミュレーション）と `audit/` |
+| Gate 3 の読み手像 | HTML と CSS は少し触ったことがある。JavaScript は変数・if 文・for 文が辛うじてわかる。Node.js・npm・GitHub を一度も使ったことがない。エラーメッセージを読む習慣がない |
+
+### このリポジトリのゲートのコマンド
+
+```bash
+npx textlint material/30days-curriculum/dayXX_xxx.md
+bash scripts/curriculum-qa/check_quality.sh material/30days-curriculum/dayXX_xxx.md
+python3 scripts/curriculum-qa/run_writing_lint.py material/30days-curriculum/
+```
+
+`check_quality.sh` は渡されたファイルの置き場を corpus とみなし、`run_writing_lint` も corpus 検査の1つとして走らせる。
+lint-staged が git commit 時に textlint と check_quality を実行する。
+
+### textlint ルールの採否（task-app で 2026-07-15 に実測）
+
+再検討する前にこの記録を読むこと。
+
+| ルール | 実測結果 | 判定 |
+|---|---|---|
+| `ja-no-orthographic-variants` | 14件中5件(36%)が誤検知。「もの」と「者」を読みで同一視する。従うと意味が壊れる | 入れない |
+| `textlint-rule-prh` + 辞書 | 教材に表記ゆれは無かった。prh は辞書の語しか捕まえず、漢字誤変換も拾えない | 入れない |
+| `ja-no-weak-phrase` | 9件出たが、全部が初心者への共感表現か、nullable の技術的に正しい条件表現だった | 入れない（`false` は意図した設定） |
+
+`ja-no-weak-phrase` が拾った文の例:
+
+```text
+day04:296  初回はちょっと身構えるかもしれません。
+day03:171  まだ何も表示されないかもしれません。この時点ではそれで問題ありません。
+day19:511  途中がないかもしれない値には `?.` を使います。
+```
+
+これを機械的に削ると、共感の無い断定調になる。断定調は AI が書く文体に近いので、AI 臭はかえって増える。
+誤字脱字に安全な機械的解決は無い（上の3つで確かめた）。人間か LLM のレビューで拾う。
 
 ## 合否の物差し（task-app）
 

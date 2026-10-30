@@ -8,7 +8,9 @@
 #
 # 写すもの:
 #   - SKILL.md の `<!-- BEGIN common:material-writing v2 -->` 〜 `<!-- END ... -->`（両端の行を含む）
-#   - hana652-tech-writing-pack/ と xamfonos-technical-writing-best-practices/（無改変の vendor）
+#   - hana652-tech-writing-pack/ と xamfonos-technical-writing-best-practices/（無改変の vendor）。
+#     正本で git が追跡しているファイルだけを写す。__pycache__ のような追跡外のファイルまで写すと、
+#     同期先の vendor-files.sh（sha256 一覧との照合）が落ちる。
 #   - references/ATTRIBUTION.md（vendor の sha256 一覧を含む）
 # 共通節の外（リポジトリの値・canary・リポジトリ固有の記録）には触れない。
 #
@@ -33,17 +35,32 @@ for arg in "$@"; do
 done
 [ ${#targets[@]} -eq 0 ] && targets=("${DEFAULT_TARGETS[@]}")
 
+# 印は BEGIN → END の順で1組だけ。END が先に来ると、書き込み側の awk が BEGIN から後ろを全部捨てる。
 extract_common() {
   awk -v b="$begin" -v e="$end" '
-    $0 == b { inside = 1; n_begin++ }
+    $0 == e && !inside { bad = 1 }
+    $0 == b { if (inside) bad = 1; inside = 1; n_begin++ }
     inside { print }
     $0 == e { inside = 0; n_end++ }
-    END { if (n_begin != 1 || n_end != 1) exit 3 }
+    END { if (bad || inside || n_begin != 1 || n_end != 1) exit 3 }
   ' "$1"
 }
 
+# 正本の vendor のうち git が追跡しているファイル（vendor ディレクトリからの相対パス）。
+tracked_vendor() {
+  git -C "$src_root" -c core.quotepath=off ls-files -- "$skill_rel/$1" | sed "s#^$skill_rel/$1/##" | LC_ALL=C sort
+}
+
+git -C "$src_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  || { echo "正本が git の作業ツリーではありません（追跡ファイルを決められない）: $src_root" >&2; exit 1; }
 src_skill="$src_root/$skill_rel/SKILL.md"
 src_common=$(extract_common "$src_skill") || { echo "正本の共通節の印が1組ではありません: $src_skill" >&2; exit 1; }
+for d in "${vendor_dirs[@]}"; do
+  if [ -z "$(tracked_vendor "$d")" ]; then
+    echo "正本の vendor に git が追跡しているファイルがありません: $src_root/$skill_rel/$d" >&2
+    exit 1
+  fi
+done
 
 failed=0
 for target in "${targets[@]}"; do
@@ -64,7 +81,20 @@ for target in "${targets[@]}"; do
       failed=1
     fi
     for d in "${vendor_dirs[@]}"; do
-      if ! diff -rq "$src_root/$skill_rel/$d" "$dst_dir/$d" >/dev/null 2>&1; then
+      src_list=$(tracked_vendor "$d")
+      dst_list=""
+      if [ -d "$dst_dir/$d" ]; then
+        dst_list=$(cd "$dst_dir/$d" && find . -type f | sed 's#^\./##' | LC_ALL=C sort)
+      fi
+      same=1
+      if [ "$src_list" != "$dst_list" ]; then
+        same=0
+      else
+        while IFS= read -r f; do
+          cmp -s "$src_root/$skill_rel/$d/$f" "$dst_dir/$d/$f" || { same=0; break; }
+        done <<< "$src_list"
+      fi
+      if [ "$same" -eq 0 ]; then
         echo "vendor が正本と違います: $dst_dir/$d" >&2
         failed=1
       fi
@@ -88,8 +118,12 @@ for target in "${targets[@]}"; do
   mv "$tmp" "$dst_skill"
   rm -f "$common_file"
   for d in "${vendor_dirs[@]}"; do
+    src_list=$(tracked_vendor "$d")
     rm -rf "${dst_dir:?}/$d"
-    cp -R "$src_root/$skill_rel/$d" "$dst_dir/$d"
+    while IFS= read -r f; do
+      mkdir -p "$(dirname -- "$dst_dir/$d/$f")"
+      cp "$src_root/$skill_rel/$d/$f" "$dst_dir/$d/$f"
+    done <<< "$src_list"
   done
   mkdir -p "$dst_dir/references"
   cp "$src_root/$skill_rel/references/ATTRIBUTION.md" "$dst_dir/references/ATTRIBUTION.md"
