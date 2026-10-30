@@ -224,6 +224,7 @@ CORPUS_CHECKS=(
   check_complete_code
   check_fence_roles
   check_complete_section_fences
+  run_writing_lint
 )
 # 検査そのものの退行テスト。Gate 4 は本体とセットでこれも走らせる。
 SELF_TESTS=(
@@ -263,6 +264,7 @@ SELF_TESTS=(
   test_check_complete_code
   test_check_fence_roles
   test_check_complete_section_fences
+  test_run_writing_lint
 )
 
 run_corpus_checks() {
