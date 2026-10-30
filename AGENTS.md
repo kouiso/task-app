@@ -8,6 +8,41 @@ Next.js 15 タスク管理アプリ。30日間ハンズオン型プログラミ�
 > ⚠️ `.gemini/styleguide.md` と `.github/copilot-instructions.md` はこのファイルから
 > `scripts/sync-ai-rules.sh` で自動生成される。直接編集禁止。
 
+## Critical Checklist (絶対遵守)
+
+**回答前に必ず以下の項目をセルフチェックし、1つでも違反があれば修正してから出力すること。**
+
+2. **[No Delegation]** 「確認してください」「実行してください」は禁止。MCP/コマンドで自分で確認・実行した結果のみを報告する。
+3. **[No Guessing]** 「おそらく動くはずです」は禁止。`tavily`, `grep`, `cat`, `git`, テストコマンドで事実を確認し根拠を示す。
+4. **[No Error Suppression]** `// @ts-ignore`, `as any`, 空の`catch`は禁止。型定義・入力検証・エラーハンドリングで根本解決する。
+5. **[No Partial Work]** 指定1ファイルだけ直して終了は禁止。`rg`/`find`で類似ファイルを全検索し、必要な範囲を明示する。
+6. **[No Lazy Git]** `--no-verify`、無条件`--force`、`git reset --hard`は禁止。フック/CIの失敗は原因を調べて修正する。
+7. **[No Instruction Ignore]** ユーザー・リポジトリ・システムの禁止事項を同時に満たす。
+8. **[Understand Purpose]** 表面的な作業ではなく、なぜその指示が出たのかを把握してから実装する。
+9. **[Instant Obey]** `good`/`bad`/`/update-rules`が来たら、対象プロンプトファイルを確認して更新案を即座に作る。
+
+## ユーザー報告とAI調査結果の矛盾時の対応
+
+ユーザーが「動いている」と言っているのにAIの調査結果が異なる場合、最初にAIの調査方法を疑う。
+
+- ユーザーの目の前の事実を優先し、AI側の環境・コマンド・接続先を再確認する。
+- DB接続先、環境変数、ブランチ、ワークツリー、ポート、認証状態を確認する。
+- `prisma migrate reset`、データ削除、設定初期化などの破壊的操作は明示許可なしに行わない。
+- 矛盾が残る場合は、確認した事実・未確認の仮説・次に行う最小検証を分けて報告する。
+
+## プロジェクト概要
+
+### プロジェクト名
+**Task-App** - モダンタスク管理アプリケーション教材
+
+### 目的
+redmine-clone（Flask/Python実装）の完全リプレイス版として、最新のNext.js 15とTypeScriptで再実装したタスク管理アプリケーション。単なるサンプルではなく、実際に使えるプロダクションレベルの品質を持つ教材プロジェクト。
+
+### 重要な位置付け
+- **redmine-cloneとの関係**: redmine-cloneはFlask/Python版の教材として存在
+- **task-appの役割**: 同じ機能をより充実した内容で、最新技術スタックで提供
+- **教材としての価値**: 2024-2025年の最新Web開発技術を学べる実践教材
+
 ## 技術スタック
 
 | カテゴリ | 技術 |
@@ -19,6 +54,36 @@ Next.js 15 タスク管理アプリ。30日間ハンズオン型プログラミ�
 | テスト | Vitest 3 (unit) + Playwright (E2E) |
 | Linter | Biome 2 + ESLint |
 | デプロイ | Vercel |
+
+### 技術スタック（変更禁止）
+
+#### フロントエンド
+- **Next.js 15.5.24** - App Router必須（Pages Router禁止）
+- **React 18.3.1** - UIライブラリ
+- **TypeScript 5.6.3** - 厳格モード完全対応
+- **shadcn/ui** - Radix UIベースのコンポーネントライブラリ
+- **Tailwind CSS v4** - ユーティリティファーストCSS
+- **Lucide React** - アイコンライブラリ
+
+#### バックエンド
+- **tRPC v11.6.0** - End-to-End型安全API
+- **Prisma 6.16.2** - TypeScript ORM
+- **PostgreSQL** - データベース
+- **NextAuth v4.24.11** - 認証システム
+- **bcryptjs** - パスワードハッシュ化
+
+#### 開発ツール
+- **Biome 2.3.15** - リンター・フォーマッター（基本はBiome、足りない場合のみESLint）
+- **Vitest 3.0.9** - テストフレームワーク
+- **Husky + lint-staged** - Git hooks
+- **Turbopack** - 高速バンドラー（Next.js内蔵）
+
+#### データ可視化・UI拡張
+- **Recharts 3.2.1** - グラフ・チャートライブラリ
+- **react-day-picker 9.13.0** - 日付ピッカー
+- **react-hook-form 7.71.1 + zod 3.25.76** - フォームバリデーション
+- **class-variance-authority (CVA)** - バリアントベースのスタイリング
+- **tailwind-merge + clsx** - クラス名管理
 
 ## コマンド
 
@@ -65,6 +130,32 @@ CodeRabbit・Gemini Code Assist はこのカタログを参照して PR を自�
 優先度タグ: `[MUST]` = ブロッカー / `[SUGGEST]` = 推奨 / `[Q]` = 確認 / `[NITS]` = 細かい指摘
 
 ## 教材（material/\*\*/\*.md）の文章品質規約
+
+MW-CANARY-CLAUDEMD-7f3a9c
+
+**`material/**` 配下のファイルを編集する前に、必ず `.claude/skills/material-writing/SKILL.md` を読み、その手順に従うこと。**
+
+これは任意ではない。外部レビューで**AI独特の言い回しと翻訳文感を指摘され、商品として通用しないと判断された実績がある**。
+以前はこの指示が CLAUDE.md にだけ抜けていたため、Claude は一度もスキルを適用していなかった。今はこのファイルに一本化し、
+CLAUDE.md は AGENTS.md を読み込む1行（`@AGENTS.md`）だけにしている。`--add-dir` で足したリポジトリでは AGENTS.md が
+直接は読まれない。shim の CLAUDE.md は読まれるが、`@AGENTS.md` の取り込みは展開されなかった（2026-10-30 の
+`claude -p` 実測。記録は redmine-clone の `material/_meta/agents-canary.md`）。だから task-app の作業も
+cwd=/home/user/task-app で起動したセッションで行う。cwd=リポジトリなら shim 経由で AGENTS.md が読まれる。
+
+**恒久ルール: 教材は実コードを編集しながら、その場で書く。** 1 Step は「作業ツリーの実コードを1か所変える → 動かして確かめる →
+その差分と理由を Step に書く」で1単位とする。教材に載せるコードは作業ツリーの実ファイルから写し、手で打ち直さない。
+後からまとめて書くことも、先に教材を書いてからコードを合わせることも禁止する。
+
+守るべき最小の3点（詳細は SKILL.md 本体）:
+
+守るべき最小の3点（詳細は SKILL.md 本体）:
+
+1. **書く前に6手順を通す** — 偏愛語を疑う → 実体があるか判定 → 具体へ書き直す。書いた後に削るのではなく、最初からその語彙で書かない。
+2. **手順書化を禁止** — 「これ書け→チェック」の羅列は教材ではない。コードブロックの後には必ず「なぜこう動くか」を書く。
+3. **判定基準** — 読者がこの節を読んだ後、次の似た手続きを自力で書ける見込みがあるか。無ければ手順を増やさず理由を足す。
+
+自動発火の仕組み（`.claude/hooks/material-writing-reminder.sh`）も入っているが、**あれは書き込みの「後」に届く安全網**であり、
+書く前に効くのはこのファイル（AGENTS.md）の常時ロードだけ。
 
 `material/**/*.md`（30日カリキュラム教材）を執筆・編集する AI（Claude / Codex / Devin 等）は、
 必ず `.claude/skills/material-writing/SKILL.md` の手順（偏愛語チェック→実体判定→ゲート）に従うこと。
