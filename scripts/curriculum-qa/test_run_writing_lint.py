@@ -122,6 +122,48 @@ for bad_allow in ([{"id": "author", "reason": ""}], [{"id": "nope", "reason": "x
     except SystemExit:
         pass
 
+# 15. コードブロックの中の人格名も FATAL（修了証の講師名のように、フェンス内も出荷物に出る）
+fenced = CLEAN + "\n```text\n講師: 内田 祐貴\n```\n"
+check(run(corpus({"day01_a.md": fenced})) == 1, "persona in code fence fails")
+check(run(corpus({"day01_a.md": CLEAN + "\n```text\nワイが書いた\n```\n"})) == 1, "first-person in code fence fails")
+
+# 16. 奥付で許すのは著者名だけ。奥付の人格名・一人称は FATAL
+check(run(corpus({"day01_a.md": CLEAN + "\n## 奥付\n\n監修: 内田祐貴\n"})) == 1, "persona in colophon fails")
+check(run(corpus({"day01_a.md": CLEAN + "\n## 奥付\n\nワイが書いた\n"})) == 1, "first-person in colophon fails")
+check(run(corpus({"day01_a.md": CLEAN + "\n## 奥付\n\n| 著者 | 磯貝光佑 |\n\n© 2026 磯貝光佑\n"})) == 0,
+      "author table in colophon passes")
+
+# 17. 人格設定の私的な例は FATAL。一般語の「ゲーム」は通す
+for private in ["著者の趣味は音ゲーです。", "阪神タイガースが好きです。", "馬術の例えで説明します。", "猫のネルが鳴きました。"]:
+    check(run(corpus({"day01_a.md": CLEAN + private + "\n"})) == 1, f"persona private fails: {private}")
+for ok in ["Git はゲームのセーブポイントです。", "パネルとチャネルとカーネルを並べます。"]:
+    check(run(corpus({"day01_a.md": CLEAN + ok + "\n"})) == 0, f"general word passes: {ok}")
+
+# 18. 「たった今」の除外はその箇所だけ。同じ行の「一択」や別の「たった」は数える
+def b3(body: str) -> list:
+    return [o for o in rwl.lint_file(corpus({"day05_a.md": body}) / "day05_a.md")[1] if o[0] == "B-3 切り詰め"]
+
+
+check(len(b3("# Day 05\n\n" + "\n\n".join(["たった今保存した、方法は一択です。"] * 4) + "\n")) == 1,
+      "ittaku on tatta-ima line counted")
+check(len(b3("# Day 05\n\n" + "\n\n".join(["たった今保存した。たった三行で書けます。"] * 4) + "\n")) == 1,
+      "other tatta on tatta-ima line counted")
+
+# 19. ~~~ の中に ``` が入れ子でも、中身は地の文として数えない
+nested = "# Day 06\n\n~~~md\n```bash\n返してくれます。返してくれます。返してくれます。\n```\n返してくれます。\n~~~\n"
+check(run(corpus({"day06_a.md": nested})) == 0, "nested fence content not counted")
+lines, _ = rwl.preprocess(nested.splitlines())
+check(not any(line.strip() for line in lines[2:]), "nested fence lines masked")
+
+# 20. filepath ブロックの除外は直後の段落だけ。見出しや次のコードブロックを越えない
+fp = "# D\n\n```ts\n// filepath: a.ts\nx\n```\n\n"
+_, after_heading = rwl.preprocess((fp + "## 見出し\n\nAではなくB。\n").splitlines())
+check(after_heading == set(), "filepath exclusion stops at heading")
+_, after_fence = rwl.preprocess((fp + "```bash\nnpm i\n```\n\nAではなくB。\n").splitlines())
+check(after_fence == set(), "filepath exclusion stops at next fence")
+_, direct = rwl.preprocess((fp + "AではなくB。\n").splitlines())
+check(direct == {8}, "paragraph right after filepath excluded")
+
 # 14. 上流本体は無改変で読み込めている（関数を借りる前提が崩れていない）
 for attr in ("COUNTERS", "PER_WORD_LIMIT1", "ZERO_PHRASES", "scan", "mask_code_fences", "sentences_with_lines"):
     check(hasattr(rwl.wl, attr), f"upstream has {attr}")

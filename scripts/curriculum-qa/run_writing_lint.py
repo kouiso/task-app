@@ -87,7 +87,14 @@ FORBIDDEN_NAMES: list[tuple[str, str, str]] = [
     ("persona", r"内田\s?祐貴|祐貴", "AI 人格名"),
     ("first-person", r"(?<![ァ-ヶー])ワイ(?![ァ-ヶー])", "一人称「ワイ」"),
     ("author", r"磯貝\s?光佑|磯貝", "著者名（奥付以外）"),
+    # 人格設定（rule-persona/SKILL.md・persona.instructions.md）にある私的な例。会話の例え話から
+    # 教材へ混ざる。「ゲーム」「阪神」単体は教材の例え話や地名で正当に出るので、設定にしか無い語に絞る。
+    ("persona-private",
+     r"音ゲー|阪神タイガース|阪神ファン|巨人ファン|馬術|守山市|クリ坊|(?<![ァ-ヶー])(?:ルバーノ|ネル)(?![ァ-ヶー])",
+     "人格設定の私的な例"),
 ]
+# 奥付で許すのは著者名だけ。人格名や一人称は奥付に書いてあっても出荷物に出る。
+COLOPHON_ALLOWED_NAMES: frozenset[str] = frozenset({"author"})
 
 COLOPHON_RE = re.compile(r"^##\s*奥付")
 H2_RE = re.compile(r"^##\s")
@@ -100,6 +107,32 @@ BOLD_ONLY_RE = re.compile(r"^\s*\*\*[^*]+\*\*\s*$")
 # 上流の B-3 は「たった」を数えるが、「たった今」は切り詰めではない（精度表の誤検知）。
 FALSE_HITS: dict[str, re.Pattern[str]] = {"B-3 切り詰め": re.compile(r"たった今")}
 FILEPATH_RE = re.compile(r"filepath:")
+FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+
+
+def fence_kinds(raw_lines: list[str]) -> list[str]:
+    """各行を "open"・"close"（フェンスの行）・"code"（中身）・"text" に分ける。
+
+    上流の mask_code_fences は ``` と ~~~ を区別せず、出るたびに開閉を反転する。そのため
+    ~~~md の中に ```bash を入れた例では、中の ``` で閉じたことになり、コードが地の文に残る。
+    CommonMark と同じく、開いた記号と同じ文字で、長さが開いた長さ以上の、記号だけの行で閉じる。
+    """
+    kinds: list[str] = []
+    opener: str | None = None
+    for raw in raw_lines:
+        m = FENCE_RE.match(raw)
+        if opener is None:
+            if m:
+                opener = m.group(1)
+                kinds.append("open")
+            else:
+                kinds.append("text")
+        elif m and m.group(1)[0] == opener[0] and len(m.group(1)) >= len(opener) and raw.strip() == m.group(1):
+            opener = None
+            kinds.append("close")
+        else:
+            kinds.append("code")
+    return kinds
 
 
 @dataclass(frozen=True)
@@ -140,22 +173,24 @@ def preprocess(raw_lines: list[str]) -> tuple[list[str], set[int]]:
 
     行番号は保つ（処置記録と人間の確認が同じ行を指すように）。
     """
-    masked = wl.mask_code_fences(raw_lines)
     out: list[str] = []
     after_filepath: set[int] = set()
     in_colophon = False
-    in_fence = False
     fence_has_filepath = False
     pending_after = False
-    for idx, (raw, line) in enumerate(zip(raw_lines, masked), 1):
-        if wl.CODE_FENCE_RE.match(raw):
-            if in_fence and fence_has_filepath:
-                pending_after = True
-            in_fence = not in_fence
+    for idx, (raw, kind) in enumerate(zip(raw_lines, fence_kinds(raw_lines)), 1):
+        if kind == "open":
+            # 次のコードブロックが始まったら、直前の filepath ブロックの「直後」ではなくなる。
+            pending_after = False
             fence_has_filepath = False
             out.append("")
             continue
-        if in_fence:
+        if kind == "close":
+            pending_after = fence_has_filepath
+            fence_has_filepath = False
+            out.append("")
+            continue
+        if kind == "code":
             if FILEPATH_RE.search(raw):
                 fence_has_filepath = True
             out.append("")
@@ -164,11 +199,14 @@ def preprocess(raw_lines: list[str]) -> tuple[list[str], set[int]]:
             in_colophon = True
         elif H2_RE.match(raw):
             in_colophon = False
+        if HEADING_RE.match(raw):
+            # 見出しの後は別の話題で、filepath ブロックの直後の段落ではない。
+            pending_after = False
         if (in_colophon or IMAGE_RE.match(raw) or TABLE_RE.match(raw)
                 or HEADING_RE.match(raw) or BOLD_ONLY_RE.match(raw)):
             out.append("")
             continue
-        text = HTML_COMMENT_RE.sub("", line)
+        text = HTML_COMMENT_RE.sub("", raw)
         text = INLINE_CODE_RE.sub("〈code〉", text)
         if pending_after:
             if text.strip():
@@ -213,12 +251,14 @@ def lint_file(
     for wrong, right in wl.IDIOM_MIX.items():
         for i, w, c in wl.scan(lines, [wrong], regex=False):
             fatal.append(Hit(name, f"慣用句混交「{w}」→{right}", i, c))
-    # 固有名詞は表・画像も含めて見る（奥付だけを除く）。表の中の人格名も出荷物に出るため。
+    # 固有名詞は表・画像・コードブロックも含めて見る。どれも出荷物に出るため（修了証のコード
+    # ブロックに講師名として人格名が入った旧素材がある）。奥付で外すのは著者名だけ。
     colophon = colophon_lines(raw)
-    name_lines = ["" if i in colophon else line for i, line in enumerate(wl.mask_code_fences(raw), 1)]
     for name_id, pattern, label in FORBIDDEN_NAMES:
         if name_id in allowed_names:
             continue
+        skip = colophon if name_id in COLOPHON_ALLOWED_NAMES else set()
+        name_lines = ["" if i in skip else line for i, line in enumerate(raw, 1)]
         for i, w, c in wl.scan(name_lines, [pattern]):
             fatal.append(Hit(name, f"禁止固有名詞「{w}」（{label}）", i, c))
 
@@ -235,11 +275,14 @@ def lint_file(
             over.append((counter, len(hits), limit, chars, number_occurrences(hits)))
 
     for counter, pat, base, _note, _mult in wl.COUNTERS:
+        # scan はヒットの位置を返さないので、同じ正規表現の finditer で位置を並べて対応させる。
+        # 誤検知の除外はヒットした箇所で判定する。行で判定すると、「たった今」と同じ行の「一択」まで消える。
+        starts = [m.start() for ln in clines for m in re.finditer(pat, ln)]
         hits = [
             Hit(name, counter, i, c)
-            for i, _w, c in wl.scan(clines, [pat])
+            for (i, _w, c), start in zip(wl.scan(clines, [pat]), starts, strict=True)
             if not (counter == "B-1 対比構文" and i in after_filepath)
-            and not (counter in FALSE_HITS and FALSE_HITS[counter].search(clines[i - 1]))
+            and not (counter in FALSE_HITS and FALSE_HITS[counter].match(clines[i - 1], start))
         ]
         judge(counter, hits, base)
     for word in wl.PER_WORD_LIMIT1:
