@@ -14,6 +14,9 @@
 | core-mission.instructions.md | `rule-core-mission` |
 | prohibitions.instructions.md | `rule-prohibitions` |
 | intentional-execution.instructions.md | `rule-intentional-execution` |
+| persona.md | `rule-persona`（人格・口調と Critical Checklist #1） |
+| project-purpose.md | なし（プロジェクトの事業上の動機） |
+| claude-instructions.md | なし（このファイル。Claude 向けの置き場の一覧） |
 
 ### 手順・条件付き（`.claude/skills/rule-*/`、該当作業時にClaude自身が判断して読む）
 
@@ -31,8 +34,9 @@
 | `rule-pre-mortem` | 新機能実装・リファクタリング（task-app固有の補足。一般手順はglobal skill `pre-mortem`） |
 | `rule-persona` | 人格の追加詳細を確認したい時（人格の核はglobal常時読み込み） |
 
-人格（`persona.instructions.md`）はglobalの`~/.claude/rules/persona.md`が同じ役割を果たすため、
-project側には常時読み込み分を置いていません。自明コメント禁止（`no-obvious-comments.md`）も
+人格の核はglobalの`~/.claude/rules/persona.md`がカバーしますが、task-app の口調の規約と Critical Checklist #1 は
+`.claude/rules/persona.md` に置いています。AGENTS.md は Copilot・Gemini にも配るため、Claude だけに効く口調を
+AGENTS.md から外してここへ移しました（事業上の動機を移した `project-purpose.md` も同じ理由）。自明コメント禁止（`no-obvious-comments.md`）も
 globalのskill `no-obvious-comments` が同内容を上位互換でカバーします。
 
 ### Copilot向けの条件付きinstructions（Claudeは該当作業時に`prompt/instructions/`を直接参照）

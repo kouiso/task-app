@@ -21,7 +21,7 @@ BECAUSE individual tasks succeed or fail in the context of the project's overall
 
 > "This project has failed to achieve its purpose. What went wrong?"
 
-Read the project's CLAUDE.md and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes?
+Read the project's AGENTS.md (CLAUDE.md is a one-line `@AGENTS.md` shim) and `.claude/rules/project-purpose.md`, and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes?
 
 Example for task-app: "The educational app failed to serve learners." → Curriculum quality was poor, UX confused users, features were built but didn't support the learning goal.
 
@@ -37,7 +37,7 @@ For the specific task at hand, identify concrete failure modes. This is asked be
 
 ### Step 0: Understand the Project's Purpose
 
-IF this is the first task in a session THEN read the project's CLAUDE.md and identify: (1) the project's ultimate goal, (2) known critical success factors, (3) past failures or near-misses documented.
+IF this is the first task in a session THEN read the project's AGENTS.md and `.claude/rules/project-purpose.md` and identify: (1) the project's ultimate goal, (2) known critical success factors, (3) past failures or near-misses documented.
 
 ### Step 1: Project-Purpose Alignment Check
 
@@ -106,7 +106,7 @@ BECAUSE unwritten analysis evaporates. Include a brief pre-mortem summary when t
 
 ```
 ## Pre-Mortem Analysis
-**Project purpose**: {one-line project goal from CLAUDE.md}
+**Project purpose**: {one-line project goal from AGENTS.md / .claude/rules/project-purpose.md}
 **Task alignment**: {how this task serves the project purpose}
 
 | Failure Mode | Likelihood | Project Impact | Preventive Action |

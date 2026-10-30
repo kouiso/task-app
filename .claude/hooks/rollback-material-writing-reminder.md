@@ -6,7 +6,7 @@
 
 `material/**/*.md` を Write/Edit した時に、`material-writing` の6手順を**モデルの文脈へ注入**する（PreToolUse）。
 
-**役割の限界**: 書き込みの「**後**」に届く安全網。PreToolUse の `additionalContext` は tool 結果の隣に配置される仕様のため、モデルは書いてから読む。「書く前」に効くのは `CLAUDE.md` の記述だけ。
+**役割の限界**: 書き込みの「**後**」に届く安全網。PreToolUse の `additionalContext` は tool 結果の隣に配置される仕様のため、モデルは書いてから読む。「書く前」に効くのは `AGENTS.md` の教材節（CLAUDE.md の `@AGENTS.md` 経由）だけ。
 
 ## 一番速いロールバック（30秒）
 
