@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -249,6 +250,13 @@ function prepareFull(f) {
     '.claude/skills/material-writing/xamfonos-technical-writing-best-practices/fixture',
   ])
     writeFileSync(join(f.root, path), 'fixture');
+  // vendor-files は hana652 を ATTRIBUTION.md の sha256 一覧と突き合わせる。偽の vendor に合う一覧を置く。
+  mkdirSync(join(f.root, '.claude/skills/material-writing/references'), { recursive: true });
+  const digest = createHash('sha256').update('fixture').digest('hex');
+  writeFileSync(
+    join(f.root, '.claude/skills/material-writing/references/ATTRIBUTION.md'),
+    `<!-- BEGIN hana652-sha256 -->\n\`\`\`text\n${digest}  fixture\n\`\`\`\n<!-- END hana652-sha256 -->\n`,
+  );
   for (const script of [
     'sync-ai-rules.sh',
     'build-zip.sh',

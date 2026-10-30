@@ -36,7 +36,7 @@ if [ ! -s "$expected" ]; then
   echo "::error::$attribution に sha256 一覧がありません"
   exit 1
 fi
-(cd "$pack" && find . -type f | sed 's#^\./##' | sort | xargs -d '\n' sha256sum) | sort -k2 > "$actual"
+(cd "$pack" && find . -type f -exec sha256sum {} +) | sed 's#  \./#  #' | sort -k2 > "$actual"
 if ! diff -u "$expected" "$actual"; then
   echo "::error::hana652-tech-writing-pack が ATTRIBUTION.md の一覧と一致しません"
   exit 1
