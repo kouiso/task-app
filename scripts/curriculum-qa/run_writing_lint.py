@@ -48,6 +48,9 @@ LINT_PATH = (
     / ".claude/skills/material-writing/hana652-tech-writing-pack/scripts/writing-lint.py"
 )
 DISPOSITIONS_NAME = "writing-lint-dispositions.json"
+# リポジトリごとの例外。sns-app の対話台本では著者が登場人物（話者ラベル「磯貝）」）として
+# 本文に出るので、著者名の禁止をそのリポジトリだけ外す必要がある。置き場は処置記録と同じ _meta/。
+CONFIG_NAME = "writing-lint-config.json"
 
 
 def load_upstream(path: Path = LINT_PATH):
@@ -80,10 +83,10 @@ DISABLED_COUNTERS: frozenset[str] = frozenset({"B-10 文体混在"})
 
 # 奥付の著者名以外で出てはいけない固有名詞。AI 人格名や一人称が出荷物に混ざった
 # 実績がある（redmine-clone の FAQ_BEGINNER.md:350 ほか）。
-FORBIDDEN_NAMES: list[tuple[str, str]] = [
-    (r"内田\s?祐貴|祐貴", "AI 人格名"),
-    (r"(?<![ァ-ヶー])ワイ(?![ァ-ヶー])", "一人称「ワイ」"),
-    (r"磯貝\s?光佑|磯貝", "著者名（奥付以外）"),
+FORBIDDEN_NAMES: list[tuple[str, str, str]] = [
+    ("persona", r"内田\s?祐貴|祐貴", "AI 人格名"),
+    ("first-person", r"(?<![ァ-ヶー])ワイ(?![ァ-ヶー])", "一人称「ワイ」"),
+    ("author", r"磯貝\s?光佑|磯貝", "著者名（奥付以外）"),
 ]
 
 COLOPHON_RE = re.compile(r"^##\s*奥付")
@@ -189,7 +192,9 @@ def colophon_lines(raw_lines: list[str]) -> set[int]:
     return lines
 
 
-def lint_file(path: Path) -> tuple[list[Hit], list[tuple[str, int, int, float, list[Hit]]]]:
+def lint_file(
+    path: Path, allowed_names: frozenset[str] = frozenset()
+) -> tuple[list[Hit], list[tuple[str, int, int, float, list[Hit]]]]:
     """(FATAL のヒット, DENSITY のカウンタ別結果) を返す。
 
     DENSITY の要素は (カウンタ名, 件数, 上限, 本文字数, ヒット) で、上限を超えたものだけ。
@@ -211,7 +216,9 @@ def lint_file(path: Path) -> tuple[list[Hit], list[tuple[str, int, int, float, l
     # 固有名詞は表・画像も含めて見る（奥付だけを除く）。表の中の人格名も出荷物に出るため。
     colophon = colophon_lines(raw)
     name_lines = ["" if i in colophon else line for i, line in enumerate(wl.mask_code_fences(raw), 1)]
-    for pattern, label in FORBIDDEN_NAMES:
+    for name_id, pattern, label in FORBIDDEN_NAMES:
+        if name_id in allowed_names:
+            continue
         for i, w, c in wl.scan(name_lines, [pattern]):
             fatal.append(Hit(name, f"禁止固有名詞「{w}」（{label}）", i, c))
 
@@ -271,14 +278,34 @@ def lint_file(path: Path) -> tuple[list[Hit], list[tuple[str, int, int, float, l
     return fatal, over
 
 
-def find_dispositions(path: Path) -> Path | None:
+def find_meta(path: Path, filename: str) -> Path | None:
     for parent in [path.parent, *path.parents]:
-        candidate = parent / "_meta" / DISPOSITIONS_NAME
+        candidate = parent / "_meta" / filename
         if candidate.is_file():
             return candidate
         if parent == REPO_ROOT:
             break
     return None
+
+
+def find_dispositions(path: Path) -> Path | None:
+    return find_meta(path, DISPOSITIONS_NAME)
+
+
+def load_allowed_names(path: Path | None) -> frozenset[str]:
+    """設定の allow_names（id と理由）を読む。理由の無い例外と、存在しない id は止める。"""
+    if path is None:
+        return frozenset()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    known = {name_id for name_id, _p, _l in FORBIDDEN_NAMES}
+    allowed: set[str] = set()
+    for entry in data.get("allow_names", []):
+        if entry.get("id") not in known:
+            raise SystemExit(f"{path}: allow_names の id は {sorted(known)} のどれか: {entry}")
+        if not entry.get("reason"):
+            raise SystemExit(f"{path}: allow_names の reason が空: {entry}")
+        allowed.add(entry["id"])
+    return frozenset(allowed)
 
 
 def load_dispositions(path: Path | None) -> dict[str, dict]:
@@ -325,12 +352,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     disp_path = args.dispositions or find_dispositions(targets[0])
     dispositions = load_dispositions(disp_path)
+    allowed_names = load_allowed_names(find_meta(targets[0], CONFIG_NAME))
     used: set[str] = set()
 
     fatal_total = 0
     pending: list[Hit] = []
     for path in targets:
-        fatal, over = lint_file(path)
+        fatal, over = lint_file(path, allowed_names)
         fatal_total += len(fatal)
         for hit in fatal:
             print(f"FATAL {path.name}:L{hit.line} {hit.counter} → {hit.text}")

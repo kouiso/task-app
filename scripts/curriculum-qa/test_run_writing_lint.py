@@ -102,7 +102,27 @@ now = "# Day 05\n\n" + "\n\n".join(["たった今保存しました。"] * 4) + 
 check(not [o for o in rwl.lint_file(corpus({"day05_a.md": now}) / "day05_a.md")[1] if o[0] == "B-3 切り詰め"],
       "tatta-ima ignored")
 
-# 13. 上流本体は無改変で読み込めている（関数を借りる前提が崩れていない）
+# 13. リポジトリの設定で著者名の禁止だけを外せる（sns-app の話者ラベル）。理由が無い例外は止める
+def with_config(root: Path, allow: list[dict]) -> Path:
+    (root / "_meta").mkdir(exist_ok=True)
+    (root / "_meta" / rwl.CONFIG_NAME).write_text(json.dumps({"allow_names": allow}, ensure_ascii=False), encoding="utf-8")
+    return root
+
+
+speaker = CLEAN + "磯貝）では、画面を開いてみましょう。\n"
+check(run(corpus({"day01_a.md": speaker})) == 1, "speaker label fails without config")
+check(run(with_config(corpus({"day01_a.md": speaker}), [{"id": "author", "reason": "対話台本の話者"}])) == 0,
+      "speaker label passes with author allowed")
+check(run(with_config(corpus({"day01_a.md": CLEAN + "内田祐貴です。\n"}), [{"id": "author", "reason": "対話台本の話者"}])) == 1,
+      "persona still fails when only author allowed")
+for bad_allow in ([{"id": "author", "reason": ""}], [{"id": "nope", "reason": "x"}]):
+    try:
+        run(with_config(corpus({"day01_a.md": CLEAN}), bad_allow))
+        check(False, f"invalid config rejected: {bad_allow}")
+    except SystemExit:
+        pass
+
+# 14. 上流本体は無改変で読み込めている（関数を借りる前提が崩れていない）
 for attr in ("COUNTERS", "PER_WORD_LIMIT1", "ZERO_PHRASES", "scan", "mask_code_fences", "sentences_with_lines"):
     check(hasattr(rwl.wl, attr), f"upstream has {attr}")
 
