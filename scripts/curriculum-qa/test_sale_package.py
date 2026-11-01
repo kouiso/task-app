@@ -255,15 +255,22 @@ def _shell_lines(text: str) -> list[str]:
     """コメント行とヒアドキュメントの本文を除いたシェル行。"""
     lines: list[str] = []
     delimiter = ""
+    strip_tabs = False
     for line in active_lines(text):
         if delimiter:
-            if line.strip() == delimiter:
+            # シェルは終端の行を完全一致でしか認めない。字下げした終端を終わりと見なすと、
+            # その後ろの本文行が実行行として残ってしまう。`<<-` だけは先頭のタブを許す。
+            if (line.lstrip("\t") if strip_tabs else line) == delimiter:
                 delimiter = ""
             continue
         lines.append(line)
-        match = re.search(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", _strip_unquoted_comment(line))
+        match = re.search(
+            r"(?<!<)<<(-?)(?!<)\s*(['\"]?)\\?([A-Za-z_][A-Za-z0-9_-]*)\2",
+            _strip_unquoted_comment(line),
+        )
         if match:
-            delimiter = match.group(2)
+            strip_tabs = match.group(1) == "-"
+            delimiter = match.group(3)
     return lines
 
 
@@ -468,6 +475,42 @@ def check_workflow_wiring() -> tuple[int, int]:
                 'cat <<\'EOF\'\n"$salepkg_status" -ne 0\nEOF',
             ),
             1,
+        ),
+        (
+            "字下げした終端の後ろのヒアドキュメント本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF\n  EOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF',
+            ),
+            1,
+        ),
+        (
+            "バックスラッシュ付きの開始のヒアドキュメント本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<\\EOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF',
+            ),
+            1,
+        ),
+        (
+            "タブで字下げした <<- の終端の後ろの集計条件は合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<-EOF\n\tx\n\tEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+            ),
+            0,
+        ),
+        (
+            "here-string の後ろの集計条件は合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<< hi\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+            ),
+            0,
         ),
         (
             "集計条件をコメント化したら落ちる",
