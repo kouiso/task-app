@@ -145,9 +145,36 @@ test('ZIP checks reject missing artifact and prohibited files', () => {
     f.close();
   }
 });
-test('vendored integrity fails for missing directories', () => {
+test('vendored integrity accepts the manifest and rejects missing or changed files', () => {
   const f = fixture();
   try {
+    assert.notEqual(f.run('vendor-files').status, 0);
+
+    const pack = join(
+      f.root,
+      '.claude/skills/material-writing/hana652-tech-writing-pack',
+    );
+    const secondPack = join(
+      f.root,
+      '.claude/skills/material-writing/xamfonos-technical-writing-best-practices',
+    );
+    const attribution = join(
+      f.root,
+      '.claude/skills/material-writing/references/ATTRIBUTION.md',
+    );
+    mkdirSync(pack, { recursive: true });
+    mkdirSync(secondPack, { recursive: true });
+    mkdirSync(join(f.root, '.claude/skills/material-writing/references'), { recursive: true });
+    writeFileSync(join(pack, 'fixture'), 'original');
+    writeFileSync(join(secondPack, 'fixture'), 'fixture');
+    const digest = createHash('sha256').update('original').digest('hex');
+    writeFileSync(
+      attribution,
+      `<!-- BEGIN hana652-sha256 -->\n\`\`\`text\n${digest}  fixture\n\`\`\`\n<!-- END hana652-sha256 -->\n`,
+    );
+
+    assert.equal(f.run('vendor-files').status, 0);
+    writeFileSync(join(pack, 'fixture'), 'changed');
     assert.notEqual(f.run('vendor-files').status, 0);
   } finally {
     f.close();
@@ -287,6 +314,7 @@ test('full traverses every gate family with one PDF self-test path and isolated 
     prepareFull(f);
     const r = f.run('full');
     assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /OK: 1 ファイルが一致/);
     const log = f.log();
     for (const cmd of [
       'npm audit --omit=dev --audit-level=high',
