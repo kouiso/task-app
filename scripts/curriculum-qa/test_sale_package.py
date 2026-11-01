@@ -257,6 +257,92 @@ _GATE4_PHASE = ["python3", "scripts/curriculum-qa/test_sale_package.py"]
 _GATE4_STATUS = ["salepkg_status=$?"]
 
 
+def _has_status_condition(phase: str) -> bool:
+    """引用・エスケープ・置換内の語を、外側の if の条件として数えない。
+
+    対象は現在の角括弧テストと単純・複合 if。シェル全般の構文検査ではない。
+    語を引用前後で分割すると表示文字列から if が現れるため、原文の語を保つ。
+    """
+    commands: list[list[str]] = [[]]
+    word: list[str] = []
+    # 置換の内部では、外側の引用状態と単語境界を引き継がない。
+    contexts = [["", "", True]]
+    i = 0
+    while i < len(phase):
+        ch = phase[i]
+        quote, closing, boundary = contexts[-1]
+        if quote == "'":
+            word.append(ch)
+            if ch == "'":
+                contexts[-1][0] = ""
+            i += 1
+            continue
+        if ch == "\\":
+            if i + 1 == len(phase):
+                return False
+            if phase[i + 1] != "\n":
+                word.extend(phase[i:i + 2])
+                contexts[-1][2] = False
+            i += 2
+            continue
+        if not quote and ch == "#" and boundary:
+            end = phase.find("\n", i)
+            i = len(phase) if end == -1 else end
+            continue
+        if closing and ch == closing and not quote:
+            word.append(ch)
+            contexts.pop()
+            i += 1
+            continue
+        if phase.startswith("$(", i) or ch == "`" or (not quote and ch == "("):
+            width = 2 if phase.startswith("$(", i) else 1
+            word.extend(phase[i:i + width])
+            contexts[-1][2] = False
+            contexts.append(["", "`" if ch == "`" else ")", True])
+            i += width
+            continue
+        if ch in "'\"" and (not quote or ch == quote):
+            contexts[-1][0] = "" if quote else ch
+            contexts[-1][2] = False
+            word.append(ch)
+        elif quote or len(contexts) > 1:
+            word.append(ch)
+            if not quote:
+                contexts[-1][2] = ch.isspace() or ch in ";&|()"
+        elif ch.isspace() or ch in ";&|":
+            if word:
+                commands[-1].append("".join(word))
+                word = []
+            if ch == "\n" or ch in ";&|":
+                commands.append([])
+            contexts[-1][2] = True
+        else:
+            word.append(ch)
+            contexts[-1][2] = False
+        i += 1
+    if len(contexts) != 1 or contexts[0][0]:
+        return False
+    if word:
+        commands[-1].append("".join(word))
+    condition = ["[", '"$salepkg_status"', "-ne", "0", "]"]
+    in_if = False
+    found = False
+    for command in commands:
+        if not command:
+            continue
+        if command[0] == "if":
+            in_if = True
+            found = False
+            command = command[1:]
+        elif command[0] == "then":
+            if in_if and found:
+                return True
+            in_if = False
+        if in_if and command == condition:
+            found = True
+    return False
+
+
 def wiring_problems(workflow: str, phase: str) -> list[str]:
     """workflow と phase スクリプトの配線の不備を返す。空なら配線は生きている。"""
     problems: list[str] = []
@@ -267,7 +353,7 @@ def wiring_problems(workflow: str, phase: str) -> list[str]:
         problems.append(
             "material-corpus.sh の Gate 4 が test_sale_package.py を呼び、終了コードを salepkg_status に受けていない"
         )
-    if not any('"$salepkg_status" -ne 0' in _strip_unquoted_comment(line) for line in phase_lines):
+    if not _has_status_condition(phase):
         problems.append("test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
     return problems
 
@@ -371,6 +457,62 @@ def check_workflow_wiring() -> tuple[int, int]:
             1,
         ),
     ]
+    status_test = '[ "$salepkg_status" -ne 0 ]'
+    for name, condition, expected in (
+        ("集計の条件式を echo の引数に置いたら落ちる", f"echo '{status_test}'", 1),
+        ("集計の条件式を printf の引数に置いたら落ちる", f"printf '%s' '{status_test}'", 1),
+        ("集計の条件式が引用文字列だけなら落ちる", f"'{status_test}'", 1),
+        ("if 全体が引用文字列なら落ちる", f"'if {status_test}; then exit 1; fi'", 1),
+        ("if 内でも echo の引数なら落ちる", f"if echo '{status_test}'; then exit 1; fi", 1),
+        (
+            "複合 if の本物の条件式は合格",
+            f'if [ "$terms_status" -ne 0 ] || {status_test}; then exit 1; fi',
+            0,
+        ),
+        (
+            "複合 if 内の引用文字列なら落ちる",
+            f'if [ "$terms_status" -ne 0 ] || echo \'{status_test}\'; then exit 1; fi',
+            1,
+        ),
+        ("if の後の echo の引数なら落ちる", f"if true; then echo '{status_test}'; fi", 1),
+        ("集計の条件式がコメントだけなら落ちる", f"true # if {status_test}; then exit 1; fi", 1),
+        ("本物の if の行末コメントは合格", f"if {status_test}; then exit 1; fi # comment", 0),
+        ("コメント内の片側引用符は無視する", f"# don't count this quote\nif {status_test}; then exit 1; fi", 0),
+        ("行継続した本物の OR は合格", f'if [ "$terms_status" -ne 0 ] || \\\n  {status_test}; then exit 1; fi', 0),
+        (
+            "複合 OR の先頭にある本物の条件式は合格",
+            f'if {status_test} || [ "$terms_status" -ne 0 ]; then exit 1; fi',
+            0,
+        ),
+        ("複合 OR の printf 引数なら落ちる", f"if true || printf '%s' '{status_test}'; then exit 1; fi", 1),
+        ("if の条件式全体が引用文字列なら落ちる", f"if '{status_test}'; then exit 1; fi", 1),
+        ("ドル括弧の表示内容なら落ちる", f"if echo $(echo '{status_test}'); then exit 1; fi", 1),
+        ("ドル括弧内の if なら落ちる", f"echo $(if {status_test}; then echo 1; fi)", 1),
+        ("バッククォート内の if なら落ちる", f"echo `if {status_test}; then echo 1; fi`", 1),
+        ("エスケープしたバッククォートの後の本物の if は合格", "echo " + chr(92) + "`\n" + f"if {status_test}; then exit 1; fi", 0),
+        ("エスケープした開き括弧の後の本物の if は合格", "echo " + chr(92) + "(\n" + f"if {status_test}; then exit 1; fi", 0),
+        ("引用文字列が複数行でも落ちる", f"echo 'message\nif {status_test}; then exit 1; fi'", 1),
+        ("複数行の本物の if は合格", f"if\n  {status_test}\nthen\n  exit 1\nfi", 0),
+        ("複数行の本物の OR は合格", f"if [ \"$terms_status\" -ne 0 ] ||\n  {status_test}; then exit 1; fi", 0),
+        ("コマンド置換内の複数行 if なら落ちる", f"echo $(\nif {status_test}; then echo 1; fi\n)", 1),
+        ("if 内のコマンド置換だけにある判定なら落ちる", f"if $(echo x ||\n{status_test}\n); then exit 1; fi", 1),
+        ('敵対試験 double_escaped_quote_fake', 'echo "prefix \\"\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nend"\n', 1),
+        ('敵対試験 printf_double_escaped_quote_fake', 'printf "%s" "prefix \\"\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nend"\n', 1),
+        ('敵対試験 hash_inside_word_quoted_fake', 'echo prefix#\'\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nend\'\n', 1),
+        ('敵対試験 quoted_concat_real_if', 'echo pre\'fix\'\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 hash_literal_then_real_if', 'echo prefix#suffix\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 quoted_then_hash_unclosed', 'echo \'#\'\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 single_if', 'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 compound_or', 'if [ "$terms_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 real_escaped_backtick', 'echo \\`\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+        ('敵対試験 real_escaped_paren', 'echo \\(\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n', 0),
+    ):
+        synthetic.append((
+            name,
+            live_workflow,
+            live_phase.splitlines()[0] + "\n" + condition + "\n",
+            expected,
+        ))
     for name, workflow, phase, expected in synthetic:
         got = len(wiring_problems(workflow, phase))
         if got != expected:
