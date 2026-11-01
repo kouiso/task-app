@@ -251,6 +251,42 @@ def _argv(line: str) -> list[list[str]]:
     return [_tokenize(command) for command in _split_commands(text)]
 
 
+def _shell_lines(text: str) -> list[str]:
+    """コメント行とヒアドキュメントの本文を除いたシェル行。"""
+    lines: list[str] = []
+    delimiter = ""
+    for line in active_lines(text):
+        if delimiter:
+            if line.strip() == delimiter:
+                delimiter = ""
+            continue
+        lines.append(line)
+        match = re.search(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", _strip_unquoted_comment(line))
+        if match:
+            delimiter = match.group(2)
+    return lines
+
+
+def _is_gate4_status_condition(line: str) -> bool:
+    """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
+    commands = _argv(line)
+    if not commands or not commands[0] or commands[0][0] != "if":
+        return False
+    for index, argv in enumerate(commands):
+        condition = argv[1:] if index == 0 else argv
+        if condition[:1] == ["["] and condition[-1:] == ["]"]:
+            condition = condition[1:-1]
+        elif condition[:1] == ["[["] and condition[-1:] == ["]]"]:
+            condition = condition[1:-1]
+        elif condition[:1] == ["test"]:
+            condition = condition[1:]
+        else:
+            continue
+        if ["$salepkg_status", "-ne", "0"] == condition:
+            return True
+    return False
+
+
 # 本物の Gate 4 の起動。語の並びがこれと一致するときだけ配線が生きている。
 _GATE4_WORKFLOW = ["bash", ".github/ci/run.sh", "material-corpus"]
 _GATE4_PHASE = ["python3", "scripts/curriculum-qa/test_sale_package.py"]
@@ -262,12 +298,12 @@ def wiring_problems(workflow: str, phase: str) -> list[str]:
     problems: list[str] = []
     if not any(_GATE4_WORKFLOW in _argv(line) for line in active_lines(workflow)):
         problems.append("material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
-    phase_lines = active_lines(phase)
+    phase_lines = _shell_lines(phase)
     if not any(_GATE4_PHASE in _argv(line) and _GATE4_STATUS in _argv(line) for line in phase_lines):
         problems.append(
             "material-corpus.sh の Gate 4 が test_sale_package.py を呼び、終了コードを salepkg_status に受けていない"
         )
-    if not any('"$salepkg_status" -ne 0' in _strip_unquoted_comment(line) for line in phase_lines):
+    if not any(_is_gate4_status_condition(line) for line in phase_lines):
         problems.append("test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
     return problems
 
@@ -296,7 +332,25 @@ def check_workflow_wiring() -> tuple[int, int]:
         'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
     )
     synthetic = [
+        (
+            "実ファイルの配線は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8"),
+            0,
+        ),
         ("生きた配線は合格", live_workflow, live_phase, 0),
+        (
+            "二重角括弧の集計条件は合格",
+            live_workflow,
+            live_phase.replace('[ "$salepkg_status" -ne 0 ]', '[[ "$salepkg_status" -ne 0 ]]'),
+            0,
+        ),
+        (
+            "test コマンドの集計条件は合格",
+            live_workflow,
+            live_phase.replace('[ "$salepkg_status" -ne 0 ]', 'test "$salepkg_status" -ne 0'),
+            0,
+        ),
         ("workflow の呼び出しをコメント化したら落ちる", "# " + live_workflow, live_phase, 1),
         (
             "phase の呼び出しをコメント化したら落ちる",
@@ -367,6 +421,60 @@ def check_workflow_wiring() -> tuple[int, int]:
                 "python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?",
                 "printf '%s' 'python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?'",
                 1,
+            ),
+            1,
+        ),
+        (
+            "集計条件を echo の引数に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を printf の引数に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'printf \'%s\' \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を単一引用符の文字列に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                ': \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を二重引用符の文字列に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                ': "\\"\\$salepkg_status\\" -ne 0"',
+            ),
+            1,
+        ),
+        (
+            "集計条件をヒアドキュメントの本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<\'EOF\'\n"$salepkg_status" -ne 0\nEOF',
+            ),
+            1,
+        ),
+        (
+            "集計条件をコメント化したら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                '# if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
             ),
             1,
         ),
