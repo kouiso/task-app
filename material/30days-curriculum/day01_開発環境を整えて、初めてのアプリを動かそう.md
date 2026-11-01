@@ -116,7 +116,7 @@ PostgreSQL（データベース）は Docker の上で動かします。Docker �
 
 > macOS と Windows では Docker Desktop を起動したままにします。Ubuntu では Docker Engine が起動していることを `sudo systemctl status docker` で確認します。
 
-### PostgreSQL はどういう状態ならOKか
+### PostgreSQL はどういう状態なら OK か
 
 PostgreSQL は Docker の上で自動的に立ち上がります。パソコンへ個別にインストールする必要はありません。
 
@@ -138,7 +138,7 @@ flowchart TB
 `Node.js` と `npm` のバージョンはここで見ておきましょう。
 バージョンが教材の指定と違う場合は先にそろえます。
 
-**ターミナル（どこでもOK）**
+**ターミナル（どこでも OK）**
 
 ```bash
 node -v
@@ -156,7 +156,7 @@ npm -v
 
 PostgreSQL は Docker 上で起動します。次のコマンドで Docker が動いているかを確認しておきましょう。`docker ok` と表示されれば準備完了です。
 
-**ターミナル（どこでもOK）**
+**ターミナル（どこでも OK）**
 
 ```bash
 docker info >/dev/null 2>&1 && echo "docker ok"
@@ -205,7 +205,7 @@ Step 2 の10分には npm のダウンロードと PostgreSQL の起動を待つ
 
 例としてホームディレクトリの `workspace` フォルダに配布 ZIP を展開します。
 
-**ターミナル（どこでもOK）**
+**ターミナル（どこでも OK）**
 
 ```bash
 mkdir -p ~/workspace
@@ -473,13 +473,13 @@ npm run dev
 >
 > 開発サーバーを実行しているあいだは次の入力待ち（プロンプト）が戻りません。このターミナルは閉じずに使います。停止するときは `control + C` を押します。別のコマンドを実行する場合は新しいターミナルを開きます。
 
-#### ブラウザで開くURL
+#### ブラウザで開く URL
 
 - `http://localhost:3000`
 
 `Local:` に別の番号が出ていたらその URL を開きます。
 
-#### 何が見えたらOKか
+#### 何が見えたら OK か
 
 Next.js のロゴと
 `Get started by editing src/app/page.tsx.`

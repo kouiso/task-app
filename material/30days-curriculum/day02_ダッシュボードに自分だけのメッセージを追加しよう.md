@@ -25,7 +25,7 @@ Day 01 で用意した `/dashboard` の続きから始めます。配色には�
 
 ![Day 02 完成時のダッシュボード](./screenshots/day02/dashboard-message.png)
 
-上の画像はDay 02 の `/dashboard` です。上部にあいさつと名前を表示します。下段に情報カードが3枚、右側に補助カードが3枚並びます。
+上の画像は Day 02 の `/dashboard` です。上部にあいさつと名前を表示します。下段に情報カードが3枚、右側に補助カードが3枚並びます。
 
 ![Day 02 作業前のダッシュボード](./screenshots/day01/dashboard-hello.png)
 
@@ -1317,7 +1317,7 @@ Client Component を使います。
 
 ## 追加課題：配列から4枚目のカードを増やす
 
-JSXを書き足さずにカードを1枚増やしましょう。配列の要素数と画面の枚数が対応することを確かめます。
+JSX を書き足さずにカードを1枚増やしましょう。配列の要素数と画面の枚数が対応することを確かめます。
 
 
 （1）`src/app/dashboard/page.tsx` の `focusCards` を探します。既存の要素が持つ `label`・`value`・`description` を読みます。

@@ -8,9 +8,9 @@ Day 13 ではタスク一覧画面を作成し、`api.task.getAll` によるデ�
 
 ## 今日のゴール
 
-TaskDialogコンポーネントで、新しいタスクを作成
+TaskDialog コンポーネントで、新しいタスクを作成
 できるようにします。Day 10 で学んだダイアログ
-パターンとreact-hook-form + zodをタスク版に
+パターンと react-hook-form + zod をタスク版に
 応用します。
 
 この日はまずサーバー側のタスク作成 API と search ルーターを自分で書きます。そのあと画面をつなぎます。
@@ -19,7 +19,7 @@ TaskDialogコンポーネントで、新しいタスクを作成
 
 画像の日付欄には `yyyy/mm/dd` と出ていますが日本語版のブラウザでは `年/月/日` と表示されます。並び順は同じで、書かれている文字だけが違います。
 
-> **今日のゴールライン**: TaskDialogにフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できればOK。
+> **今日のゴールライン**: TaskDialog にフォーム管理とバリデーションを組み込み、新しいタスクが一覧へ反映される流れを体験できれば OK。
 
 ## 始める前の前提
 
@@ -76,24 +76,24 @@ graph TD
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| TaskDialog | タスク・ダイアログ | タスクCRUD用のモーダル | レシピカードの記入用紙 |
-| Controller | コントローラー | Select をreact-hook-formで制御する | ドロップダウンの管理係 |
+| TaskDialog | タスク・ダイアログ | タスク CRUD 用のモーダル | レシピカードの記入用紙 |
+| Controller | コントローラー | Select を react-hook-form で制御する | ドロップダウンの管理係 |
 | TASK_STATUS_LABELS | ― | ステータスの表示名を定義した定数 | 選択肢の翻訳表 |
-| nativeEnum | ネイティブ・イーナム | zodで既存の定数オブジェクトを検証する | 記入用紙の「選択肢チェック」 |
+| nativeEnum | ネイティブ・イーナム | zod で既存の定数オブジェクトを検証する | 記入用紙の「選択肢チェック」 |
 
 ## 実装ステップ一覧
 
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 0 | タスク作成 API（create）と search ルーターを自分で書く | 25分 |
-| Step 1 | zodスキーマと型を定義する | 5分 |
-| Step 2 | TaskDialogの骨格を作る | 5分 |
-| Step 3 | useFormでフォームを設定する | 5分 |
+| Step 1 | zod スキーマと型を定義する | 5分 |
+| Step 2 | TaskDialog の骨格を作る | 5分 |
+| Step 3 | useForm でフォームを設定する | 5分 |
 | Step 4 | タイトル・説明の入力欄を作る | 5分 |
-| Step 5 | ステータス・優先度のSelectを作る | 7分 |
-| Step 6 | プロジェクト・担当者のSelectを作る | 5分 |
+| Step 5 | ステータス・優先度の Select を作る | 7分 |
+| Step 6 | プロジェクト・担当者の Select を作る | 5分 |
 | Step 7 | 期限・見積時間・ボタンを作る | 5分 |
-| Step 8 | ページにDialogを組み込む | 7分 |
+| Step 8 | ページに Dialog を組み込む | 7分 |
 | Step 9 | 動作確認 | 3分 |
 
 **合計時間**: 約72分です。
@@ -126,7 +126,7 @@ import {
 ```
 `TASK_STATUS` と `TASK_PRIORITY` は入力スキーマの既定値に使う定数です。`assertMemberPermission` と `getUserProjectIds` は Day 13 で足したものなので重ねて import を書かず同じ行を保ちます。
 
-続いて`export const taskRouter` の前に入力スキーマを追加します。
+続いて `export const taskRouter` の前に入力スキーマを追加します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（taskRouter の前に追加）
@@ -179,7 +179,7 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
   return (maxPosition?.position ?? -1) + 1;
 };
 ```
-Day 12のメンバー操作に続いて `$queryRaw` でSQLを直接書きます。行ロックを取る `FOR UPDATE` に当たるメソッドをPrismaが持っていないためです。ここでも同じプロジェクトの行をロックして採番が重なることを防ぎます。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
+Day 12 のメンバー操作に続いて `$queryRaw` で SQL を直接書きます。行ロックを取る `FOR UPDATE` に当たるメソッドを Prisma が持っていないためです。ここでも同じプロジェクトの行をロックして採番が重なることを防ぎます。`"projects"` は `schema.prisma` の `@@map("projects")` が決めた実際のテーブル名で、モデル名の `Project` とは別物です。
 
 `FOR UPDATE` は同じ project 行を使う別処理をこのトランザクション（複数の DB 操作を、全部成功または全部取り消しのひとまとまりにする仕組み）の終了まで待たせる DB のロックです。ロックを取ってから最大値を読むため同時作成でも2つの処理が同じ「最大値 + 1」を選びません。`${projectId}` は `Prisma.sql` のパラメータとして渡され、文字列連結で SQL を作らない安全な書き方です。
 
@@ -265,7 +265,7 @@ async function assertTaskAssigneeBelongsToProject(
       }
 
 ```
-0-3からトランザクションを保っています。その中で担当者の所属を確認します。Day 12の退会処理も同じプロジェクトの行をロックします。所属を確認してから保存するまで退会処理を待たせるため確認後に退会した人へ割り当てる競合を防げます。採番と保存も同じ `tx` を使います。途中で失敗すると変更は取り消されます。
+0-3からトランザクションを保っています。その中で担当者の所属を確認します。Day 12 の退会処理も同じプロジェクトの行をロックします。所属を確認してから保存するまで退会処理を待たせるため確認後に退会した人へ割り当てる競合を防げます。採番と保存も同じ `tx` を使います。途中で失敗すると変更は取り消されます。
 
 #### 0-5. 保存するデータを組み立てる
 
@@ -286,7 +286,7 @@ async function assertTaskAssigneeBelongsToProject(
         },
       };
 ```
-`getNextTaskPosition(tx, input.projectId)` はproject 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため最初の番号は 0 です。`project.connect` と `createdBy.connect` はすでにある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
+`getNextTaskPosition(tx, input.projectId)` は project 行をロックしてから「今の最大番号 + 1」を返します。タスクが1件も無いときはヘルパー内で -1 に1を足すため最初の番号は 0 です。`project.connect` と `createdBy.connect` はすでにある行（プロジェクトとログイン中のユーザー）に関連づける書き方です。
 
 `completedAt` は最初から `DONE` で作るときだけ現在時刻を入れます。完了日時を使うレポートでも、このタスクを数えられるようにするためです。
 
@@ -399,7 +399,7 @@ export const searchRouter = createTRPCRouter({
 
 続けて選択中のプロジェクトに絞る手続きを書きます。最初に呼び出した人自身がそのプロジェクトのメンバーかを確認します。
 
-ここから先の「（続き）」のブロックは`search.ts` の**末尾へ続けて**貼ります。いま末尾にあるのは `getProjectMembers` を閉じる `  }),` の行です。`createTRPCRouter({` を閉じる `});` はまだ書いていないのでこの先の最後のブロックで1度だけ書きます。
+ここから先の「（続き）」のブロックは `search.ts` の**末尾へ続けて**貼ります。いま末尾にあるのは `getProjectMembers` を閉じる `  }),` の行です。`createTRPCRouter({` を閉じる `});` はまだ書いていないのでこの先の最後のブロックで1度だけ書きます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -424,7 +424,7 @@ export const searchRouter = createTRPCRouter({
       }
 ```
 
-呼び出した人の所属を先に確かめているのは`projectId` がクライアントから送られてくる値だからです。他人のプロジェクトの id に書き換えて呼べば入っていないプロジェクトのメンバー名とメールアドレスが手に入ってしまいます。`findUnique` が `null` を返した時点で `FORBIDDEN` を投げ、後ろの取得処理までたどり着かせません。Day 09 の `getAll` で、他人の `userId` を指定できる相手を管理者だけに絞ったのと同じ守り方です。
+呼び出した人の所属を先に確かめているのは `projectId` がクライアントから送られてくる値だからです。他人のプロジェクトの id に書き換えて呼べば入っていないプロジェクトのメンバー名とメールアドレスが手に入ってしまいます。`findUnique` が `null` を返した時点で `FORBIDDEN` を投げ、後ろの取得処理までたどり着かせません。Day 09 の `getAll` で、他人の `userId` を指定できる相手を管理者だけに絞ったのと同じ守り方です。
 
 確認を通ったらそのプロジェクトのメンバーだけを取得してルーターを閉じます。
 
@@ -451,7 +451,7 @@ export const searchRouter = createTRPCRouter({
 
 `getProjectMembers` は一覧のフィルター用、`getMembersByProject` は作成ダイアログ用です。後者は `projectId` を入力として受け取り、所属確認を通ったプロジェクトの候補だけを返します。どちらも `USER_SELECT` を使うためパスワードなど画面に不要な項目は返しません。
 
-作った `searchRouter` を `root.ts` に登録すると`api.search.getProjectMembers` と `api.search.getMembersByProject` という呼び名が生まれます。Day 13 で `task` を登録したのと同じ形です。
+作った `searchRouter` を `root.ts` に登録すると `api.search.getProjectMembers` と `api.search.getMembersByProject` という呼び名が生まれます。Day 13 で `task` を登録したのと同じ形です。
 
 ```typescript
 // filepath: src/server/api/root.ts（import と appRouter に追加）
@@ -461,7 +461,7 @@ import { searchRouter } from './routers/search';
 search: searchRouter,
 ```
 
-import 行を足しただけでは `api.search` が生まれません。`appRouter` の中へ `search: searchRouter` と書いた瞬間に、画面側からの呼び名が決まります。左に書いたキーがそのまま呼び名になります。ここを `searchRouter: searchRouter` にした場合以降のコードは `api.searchRouter.getProjectMembers` と書かなければ動きません。登録を忘れるとサーバー側はエラーを出さないまま `api.search` だけが存在しない状態になります。原因がこの1行だと気づきにくいのでrouter のファイルを作ったら登録まで続けて済ませてください。
+import 行を足しただけでは `api.search` が生まれません。`appRouter` の中へ `search: searchRouter` と書いた瞬間に、画面側からの呼び名が決まります。左に書いたキーがそのまま呼び名になります。ここを `searchRouter: searchRouter` にした場合以降のコードは `api.searchRouter.getProjectMembers` と書かなければ動きません。登録を忘れるとサーバー側はエラーを出さないまま `api.search` だけが存在しない状態になります。原因がこの1行だと気づきにくいので router のファイルを作ったら登録まで続けて済ませてください。
 
 **確認ポイント**:
 - `src/server/api/routers/search.ts` に2つの手続きを書き、`}),` と `});` まで閉じた
@@ -471,9 +471,9 @@ import 行を足しただけでは `api.search` が生まれません。`appRout
 
 ---
 
-### Step 1: zodスキーマと型を定義する（5分）
+### Step 1: zod スキーマと型を定義する（5分）
 
-**ゴール**: zodスキーマでバリデーションルールを定義し、フォームデータの型を作ります。
+**ゴール**: zod スキーマでバリデーションルールを定義し、フォームデータの型を作ります。
 
 **実装**:
 
@@ -528,9 +528,9 @@ import {
 import { api } from '@/trpc/react';
 ```
 
-ここで足す取り込みはフォームの部品と選択肢の元になる定数です。`Select` 一式は shadcn/ui のドロップダウン、`Textarea` は複数行を書ける入力欄です。`TASK_STATUS_LABELS` と `TASK_PRIORITY_LABELS` は`'TODO'` のような内部の値と「未対応」という表示名を対応づけた定数で、Day 13 のタスク一覧でも同じものを使いました。選択肢をここに書き写さず定数から取り出すので一覧とダイアログで表示名がずれません。`api` は担当者の候補をサーバーから取るために使います。
+ここで足す取り込みはフォームの部品と選択肢の元になる定数です。`Select` 一式は shadcn/ui のドロップダウン、`Textarea` は複数行を書ける入力欄です。`TASK_STATUS_LABELS` と `TASK_PRIORITY_LABELS` は `'TODO'` のような内部の値と「未対応」という表示名を対応づけた定数で、Day 13 のタスク一覧でも同じものを使いました。選択肢をここに書き写さず定数から取り出すので一覧とダイアログで表示名がずれません。`api` は担当者の候補をサーバーから取るために使います。
 
-zodスキーマを定義します。
+zod スキーマを定義します。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -558,7 +558,7 @@ type TaskFormValues =
 
 このスキーマは2つの仕事を兼ねます。1つは入力の検証で、タイトルが空なら送信を止めます。もう1つは型づくりで、最後の `z.infer` がスキーマから `TaskFormValues` を組み立てます。型を別に手書きしないのであとで項目を1つ足しても検証の内容と型が食い違いません。`z.nativeEnum(TASK_STATUS)` を選ぶ理由も同じです。`'TODO'` のような文字列をここへ並べ直すと定数ファイルとの二重管理が始まります。
 
-#### zodスキーマの各フィールド
+#### zod スキーマの各フィールド
 
 | フィールド | バリデーション | 意味 |
 |-----------|-------------|------|
@@ -568,7 +568,7 @@ type TaskFormValues =
 | `projectId` | `z.string().min(1, ...)` | プロジェクト選択必須 |
 | `estimatedHours` | `z.number().min(0).optional()` | 0以上の数値（任意） |
 
-> `z.nativeEnum(TASK_STATUS)` は`TASK_STATUS` オブジェクトの値（`'TODO'` や `'IN_PROGRESS'`）だけを許可するバリデーションです。不正な値が入力されると自動でエラーになります。
+> `z.nativeEnum(TASK_STATUS)` は `TASK_STATUS` オブジェクトの値（`'TODO'` や `'IN_PROGRESS'`）だけを許可するバリデーションです。不正な値が入力されると自動でエラーになります。
 
 **確認ポイント**:
 - `taskFormSchema` を定義した
@@ -576,9 +576,9 @@ type TaskFormValues =
 
 ---
 
-### Step 2: TaskDialogの骨格を作る（5分）
+### Step 2: TaskDialog の骨格を作る（5分）
 
-**ゴール**: コンポーネントのProps型とフォーム
+**ゴール**: コンポーネントの Props 型とフォーム
 データの型を定義します。
 
 **実装**:
@@ -600,7 +600,7 @@ export interface TaskFormData {
 }
 ```
 
-この `TaskFormData` はダイアログが外へ渡す荷物の形です。`export` を付けてあるのはStep 8 で `src/app/task/page.tsx` が同じ型を取り込んで受け取るためです。`?` の付いた項目は省略できます。必須は `title`・`status`・`priority`・`projectId` の4つです。Step 0 の `taskCreateSchema` が必須にしているのは `title` と `projectId` だけで、`status` と `priority` は `.default(...)` があるため省略できます。画面側であえて4つとも必須にしているのは選択欄を未選択のまま送らせないためです。画面のほうを緩くすると送信して初めて弾かれる手戻りが起きます。
+この `TaskFormData` はダイアログが外へ渡す荷物の形です。`export` を付けてあるのは Step 8 で `src/app/task/page.tsx` が同じ型を取り込んで受け取るためです。`?` の付いた項目は省略できます。必須は `title`・`status`・`priority`・`projectId` の4つです。Step 0 の `taskCreateSchema` が必須にしているのは `title` と `projectId` だけで、`status` と `priority` は `.default(...)` があるため省略できます。画面側であえて4つとも必須にしているのは選択欄を未選択のまま送らせないためです。画面のほうを緩くすると送信して初めて弾かれる手戻りが起きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -617,10 +617,10 @@ interface TaskDialogProps {
 }
 ```
 
-> `TaskFormValues`（zod推論型）はコンポーネント
+> `TaskFormValues`（zod 推論型）はコンポーネント
 > 内部で使い、`TaskFormData` というインターフェース（オブジェクトがどんな項目を持つかを定めた型）は
 > 外部に公開します。2つの型を使い分けることで、
-> 内部のバリデーションと外部のAPIを分離できます。
+> 内部のバリデーションと外部の API を分離できます。
 
 **確認ポイント**:
 - `TaskFormData` をエクスポートした
@@ -645,7 +645,7 @@ interface TaskDialogProps {
 
 ---
 
-### Step 3: useFormでフォームを設定する（5分）
+### Step 3: useForm でフォームを設定する（5分）
 
 **ゴール**: `useForm` と `zodResolver` で
 フォームの状態管理とバリデーションを設定します。
@@ -679,7 +679,7 @@ function buildTaskFormValues(
       initialData?.assigneeId ?? '',
 ```
 
-この関数を `useForm` の外へ切り出したのは初期値を作る場所を1か所に決めるためです。`initialData?.title ?? ''` のように既定値を全項目へ置いたので`initialData` が無い新規作成でも入力欄は空文字から始まります。ここを `undefined` のまま渡すとReact はその入力欄を「値を管理していない」と見なし、あとで文字を打った瞬間に警告を出します。`projects[0]?.id || ''` はプロジェクトが1件でもあれば先頭を選んだ状態で開くための既定値です。関数はまだ途中なので続きを次のブロックで書きます。
+この関数を `useForm` の外へ切り出したのは初期値を作る場所を1か所に決めるためです。`initialData?.title ?? ''` のように既定値を全項目へ置いたので `initialData` が無い新規作成でも入力欄は空文字から始まります。ここを `undefined` のまま渡すと React はその入力欄を「値を管理していない」と見なし、あとで文字を打った瞬間に警告を出します。`projects[0]?.id || ''` はプロジェクトが1件でもあれば先頭を選んだ状態で開くための既定値です。関数はまだ途中なので続きを次のブロックで書きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx（同じファイルの続き）
@@ -744,7 +744,7 @@ export function TaskDialog({
   }, [initialData, open, reset]);
 ```
 
-2つ目の `useEffect` が `if (!open) { return; }` で始まるのは閉じている間に `reset` を走らせても無駄だからです。開いた瞬間だけ初期値を作り直すので前回入力した内容が次に開いたとき残りません。要点は`reset` に渡すのが `projects` ではなく `projectsRef.current` である点です。依存配列へ `projects` を入れると候補一覧が裏で取り直されるたびに `reset` が走り、入力途中のタイトルが消えます。1つ目の `useEffect` はその参照を最新に保つ係です。
+2つ目の `useEffect` が `if (!open) { return; }` で始まるのは閉じている間に `reset` を走らせても無駄だからです。開いた瞬間だけ初期値を作り直すので前回入力した内容が次に開いたとき残りません。要点は `reset` に渡すのが `projects` ではなく `projectsRef.current` である点です。依存配列へ `projects` を入れると候補一覧が裏で取り直されるたびに `reset` が走り、入力途中のタイトルが消えます。1つ目の `useEffect` はその参照を最新に保つ係です。
 
 フォームを表示した後でプロジェクト一覧が届くケースへ備え、空の `projectId` だけを初期化します。
 
@@ -783,21 +783,21 @@ export function TaskDialog({
 - `useEffect` で `initialData` の変更時に `reset` している
 - プロジェクト一覧が遅れて届いた場合も、入力済みの他フィールドを維持したまま空の `projectId` だけを初期化している
 
-> `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため`useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
+> `defaultValues` は初回表示の値です。編集対象が変わったときは自動では更新されないため `useEffect(reset(...))` で明示的に同期します。これで Day 15 の編集モードでも正しく初期化されます。
 >
 > `projectsRef` は最新の候補一覧を保持しますが一覧の再取得だけでは `reset` を実行しません。ダイアログを開いたあとに候補一覧が更新されても入力途中のタイトルや説明が初期値へ戻らないためです。
 >
 > 一方作成ダイアログを開いた時点で候補がまだ0件だった場合は候補の到着後に空の `projectId` だけを `setValue` で補完します。フォーム全体を `reset` しないため先に入力したタイトルや説明は維持されます。
 >
-> **この関数はまだ続きます。** Step 4 でハンドラーとJSXを追加します。
+> **この関数はまだ続きます。** Step 4 でハンドラーと JSX を追加します。
 
-#### useFormから取得するもの
+#### useForm から取得するもの
 
 | 名前 | 役割 |
 |------|------|
-| `register` | Input/Textareaをフォームに登録 |
+| `register` | Input/Textarea をフォームに登録 |
 | `handleSubmit` | バリデーション後に送信 |
-| `control` | Controllerに渡してSelectを制御 |
+| `control` | Controller に渡して Select を制御 |
 | `reset` | フォームの値をリセット |
 | `watch` | いま選ばれている値を読む（Step 3 で使用） |
 | `setValue` | 特定の項目だけ書き換える（Step 3 で使用） |
@@ -867,7 +867,7 @@ const handleFormSubmit =
   };
 ```
 
-最後の1つだけ条件が2段になっているのは`expectedUpdatedAt` を送ってよい場面が編集に限られるからです。`data.id` が入っているのは編集で開いたときなので新規作成ではこのキーが付きません。`onSubmit(submitData)` で親へ渡したらこの部品の仕事は終わりです。実際に保存を頼むのは Step 8 で書く `src/app/task/page.tsx` の側で、ダイアログは保存用の通信を持ちません。担当者候補の取得はダイアログ内の `useQuery` で行います。
+最後の1つだけ条件が2段になっているのは `expectedUpdatedAt` を送ってよい場面が編集に限られるからです。`data.id` が入っているのは編集で開いたときなので新規作成ではこのキーが付きません。`onSubmit(submitData)` で親へ渡したらこの部品の仕事は終わりです。実際に保存を頼むのは Step 8 で書く `src/app/task/page.tsx` の側で、ダイアログは保存用の通信を持ちません。担当者候補の取得はダイアログ内の `useQuery` で行います。
 
 #### 条件付きスプレッド構文の解説
 
@@ -885,7 +885,7 @@ const handleFormSubmit =
 
 > `expectedUpdatedAt` は今日の新規作成では使いません。編集機能（Day 15）で「他の人が先に更新していないか」をサーバーが見分けるために送る値です。今は型と送信処理だけ用意しておきます。
 
-JSXのダイアログ構造とタイトル入力欄を書きます。`handleFormSubmit` の後ろに続けて書きます。
+JSX のダイアログ構造とタイトル入力欄を書きます。`handleFormSubmit` の後ろに続けて書きます。
 
 ```typescript
 // filepath: src/component/task/task-dialog.tsx
@@ -935,7 +935,7 @@ return (
           </div>
 ```
 
-`{...register('title')}` の1行で、この入力欄がフォームの管理下に入ります。`value` や `onChange` を自分で書かなくてもreact-hook-form が値を持ち、送信時に `handleFormSubmit` へ渡してくれます。下の `errors.title && (...)` は検証に引っかかったときだけ赤い文字を出す分岐です。普段の `errors.title` は `undefined` なので何も表示されません。ここに出る文言はStep 1 のスキーマへ書いた「タイトルは必須です」がそのまま届いたものです。
+`{...register('title')}` の1行で、この入力欄がフォームの管理下に入ります。`value` や `onChange` を自分で書かなくても react-hook-form が値を持ち、送信時に `handleFormSubmit` へ渡してくれます。下の `errors.title && (...)` は検証に引っかかったときだけ赤い文字を出す分岐です。普段の `errors.title` は `undefined` なので何も表示されません。ここに出る文言は Step 1 のスキーマへ書いた「タイトルは必須です」がそのまま届いたものです。
 
 説明欄を追加します。
 
@@ -969,10 +969,10 @@ return (
 
 ---
 
-### Step 5: ステータス・優先度のSelectを作る（7分）
+### Step 5: ステータス・優先度の Select を作る（7分）
 
 **ゴール**: `Controller` で Select コンポーネント
-をreact-hook-formに接続します。
+を react-hook-form に接続します。
 
 **実装**:
 
@@ -999,7 +999,7 @@ return (
           </SelectTrigger>
 ```
 
-ここで `register` ではなく `Controller` を使うのはshadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と、値が変わったときの `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので、`ref` そのものは受け取れても `value` を持たず、`change` も出ません。代わりに `Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。`name="status"` はフォームのどの項目とつなぐかの指定です。
+ここで `register` ではなく `Controller` を使うのは shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と、値が変わったときの `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので、`ref` そのものは受け取れても `value` を持たず、`change` も出ません。代わりに `Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。`name="status"` はフォームのどの項目とつなぐかの指定です。
 
 続けてステータスの選択肢を `TASK_STATUS_LABELS` から生成します。
 
@@ -1023,7 +1023,7 @@ return (
 
 選択肢を手で並べず `Object.entries(TASK_STATUS_LABELS)` から作るところがこの部分の要点です。`value` には内部の値、画面には日本語のラベルが入ります。ステータスを1つ増やしたくなったら定数ファイルを直すだけで、このダイアログにも Day 13 の一覧にも同じ表示名が届きます。`key={value}` は並んだ項目を React が見分けるための印です。
 
-優先度Selectも同じパターンで作ります。
+優先度 Select も同じパターンで作ります。
 
 ```typescript
 {/* filepath: src/component/task/task-dialog.tsx */}
@@ -1047,7 +1047,7 @@ return (
           </SelectTrigger>
 ```
 
-優先度の作りはステータスと同じで、変わるのは `name` と参照する定数だけです。同じ形をもう一度書いてもらうのは`Controller` の3点セット（`name`・`control`・`render`）が身に付けばSelect が何個増えても同じ手順で足せると確かめるためです。`aria-label` を付けてあるのは画面読み上げを使う人へどちらの選択欄かを伝えるためで、見た目には出ません。
+優先度の作りはステータスと同じで、変わるのは `name` と参照する定数だけです。同じ形をもう一度書いてもらうのは `Controller` の3点セット（`name`・`control`・`render`）が身に付けば Select が何個増えても同じ手順で足せると確かめるためです。`aria-label` を付けてあるのは画面読み上げを使う人へどちらの選択欄かを伝えるためで、見た目には出ません。
 
 ```typescript
           {/* filepath: src/component/task/task-dialog.tsx */}
@@ -1067,8 +1067,8 @@ return (
   </div>
 ```
 
-> `Controller` は`register` が使えない
-> コンポーネント（Select）をreact-hook-formに
+> `Controller` は `register` が使えない
+> コンポーネント（Select）を react-hook-form に
 > 接続します。`field.value` で現在の値を取得し、
 > `field.onChange` で値を更新します。
 > `Object.entries(TASK_STATUS_LABELS)` で定数から
@@ -1109,7 +1109,7 @@ return (
 
 ---
 
-### Step 6: プロジェクト・担当者のSelectを作る（5分）
+### Step 6: プロジェクト・担当者の Select を作る（5分）
 
 **ゴール**: 外から渡されたデータで選択肢を
 表示します。
@@ -1198,7 +1198,7 @@ return (
           </SelectTrigger>
 ```
 
-担当者の欄だけは値の出入りで変換を1回挟みます。画面では未割当を `'unassigned'` という文字列で持ち、`onValueChange` の中で空文字へ戻してからフォームへ渡します。理由はこの節の最後に補足したとおりで、`Select` は空文字を選択済みとして扱えません。フォーム側の値は空文字のまま保つため`handleFormSubmit` の条件付きスプレッドが `assigneeId` のキーごと落とします。担当者を決めずに作ったタスクは未割当のままサーバーへ届きます。
+担当者の欄だけは値の出入りで変換を1回挟みます。画面では未割当を `'unassigned'` という文字列で持ち、`onValueChange` の中で空文字へ戻してからフォームへ渡します。理由はこの節の最後に補足したとおりで、`Select` は空文字を選択済みとして扱えません。フォーム側の値は空文字のまま保つため `handleFormSubmit` の条件付きスプレッドが `assigneeId` のキーごと落とします。担当者を決めずに作ったタスクは未割当のままサーバーへ届きます。
 
 担当者の選択肢です。
 
@@ -1222,7 +1222,7 @@ return (
   </div>
 ```
 
-> 「未割当」を選んだ時は空文字にしたいのですがshadcn/ui の `Select` は空文字 `''` を有効な値として扱えません（値が空だと選択状態にならず、`placeholder` が表示されてしまいます）。そのため `'unassigned'` を特別な値として使い、送信時に空文字に変換するテクニックが必要です。
+> 「未割当」を選んだ時は空文字にしたいのですが shadcn/ui の `Select` は空文字 `''` を有効な値として扱えません（値が空だと選択状態にならず、`placeholder` が表示されてしまいます）。そのため `'unassigned'` を特別な値として使い、送信時に空文字に変換するテクニックが必要です。
 
 **確認ポイント**:
 - プロジェクト一覧の Select を書いた
@@ -1309,7 +1309,7 @@ return (
 | ボタン | type | 動作 |
 |--------|------|------|
 | キャンセル | `button` | `handleClose` でリセットして閉じる |
-| 作成 / 更新 | `submit` | zodバリデーション → `handleFormSubmit` |
+| 作成 / 更新 | `submit` | zod バリデーション → `handleFormSubmit` |
 
 **Step 8 の組み込み後の操作確認**:
 - キャンセルでフォームがリセットされる
@@ -1317,7 +1317,7 @@ return (
 
 ---
 
-### Step 8: ページにDialogを組み込む（7分）
+### Step 8: ページに Dialog を組み込む（7分）
 
 **ゴール**: タスク一覧ページにダイアログを
 組み込み、作成処理を実装します。
@@ -1361,16 +1361,16 @@ const handleCreate = () => {
 };
 ```
 
-続けて既存の `useQuery` 群の末尾に、キャッシュ操作用の `utils` を用意します。セッションは Day 13 で取得済みなので追加しません。ダイアログの担当者候補はTaskDialog 内で選択中のプロジェクトに絞って取得済みです。
+続けて既存の `useQuery` 群の末尾に、キャッシュ操作用の `utils` を用意します。セッションは Day 13 で取得済みなので追加しません。ダイアログの担当者候補は TaskDialog 内で選択中のプロジェクトに絞って取得済みです。
 
-#### ここでは追加しないAPI
+#### ここでは追加しない API
 
 | API | 戻り値 | 追加しない理由 |
 |-----|-------|------|
 | `api.search.getProjectMembers` | ユーザー一覧 | 一覧の担当者フィルターで使う。フィルターは Day 20 で作る |
 | `api.auth.getSession` | ログイン中のセッション | Day 13 で取得済み |
 
-どちらもすでに実装済みですが`page.tsx` で呼ぶのは今日ではありません。
+どちらもすでに実装済みですが `page.tsx` で呼ぶのは今日ではありません。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1382,7 +1382,7 @@ const utils = api.useUtils();
 ページ全体が英語のエラーで止まります。`utils` は取得したデータの控えを操作するための入口で、
 このあとの `createMutation` で使います。
 
-`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないのでDay 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうはいまログインしている本人が誰かを知るために使います。Step 8 の送信ハンドラーはここで受け取った `session?.user?.id` があるかどうかだけを見ます。値はDay 13 で一度取ったものをそのまま読むので送信のたびにサーバーへ問い合わせ直すわけではありません。作成者のIDはサーバーがセッションから決めるので画面側が送る値ではありません。
+`getProjectMembers` は引数を取らず、自分が所属するプロジェクトのメンバーをまとめて返します。同じ人が複数のプロジェクトにいても1回しか出てこないので Day 20 で作る一覧の担当者フィルターにはこれで足ります。作成ダイアログの担当者候補に同じものを使わないのは他プロジェクトの人まで選べてしまうからです。選べても保存はできません。サーバーの `create` は担当者がそのプロジェクトに所属しているかを確かめ、外れていればエラーを返します。`getSession` のほうはいまログインしている本人が誰かを知るために使います。Step 8 の送信ハンドラーはここで受け取った `session?.user?.id` があるかどうかだけを見ます。値は Day 13 で一度取ったものをそのまま読むので送信のたびにサーバーへ問い合わせ直すわけではありません。作成者の ID はサーバーがセッションから決めるので画面側が送る値ではありません。
 
 **確認ポイント**:
 - `const utils = api.useUtils();` が追加できた
@@ -1462,7 +1462,7 @@ const handleSubmit =
   };
 ```
 
-`dueDate` をそのまま送らないのはサーバーの入力スキーマが ISO 8601 形式の日時文字列を求めるからです。`<input type="date">` が返すのは `2026-04-17` のような日付だけの文字列なのでそのまま送ると検査で弾かれます。`dateOnlyToUtcStartIso()` はこれを UTC の 0 時に固定した文字列へ直し、時差で前日や翌日にずれる事故も一緒に防ぎます。`assigneeId` に `|| undefined` を付けているのは担当者を選ばなかったときの値が空文字だからです。空文字はIDの形をしていないためそのまま送ると「担当者なし」ではなく入力エラーとして扱われます。先頭の `session?.user?.id` の確認はログインが切れた状態で送信して失敗するのを手前で止めるための門番です。
+`dueDate` をそのまま送らないのはサーバーの入力スキーマが ISO 8601 形式の日時文字列を求めるからです。`<input type="date">` が返すのは `2026-04-17` のような日付だけの文字列なのでそのまま送ると検査で弾かれます。`dateOnlyToUtcStartIso()` はこれを UTC の 0 時に固定した文字列へ直し、時差で前日や翌日にずれる事故も一緒に防ぎます。`assigneeId` に `|| undefined` を付けているのは担当者を選ばなかったときの値が空文字だからです。空文字は ID の形をしていないためそのまま送ると「担当者なし」ではなく入力エラーとして扱われます。先頭の `session?.user?.id` の確認はログインが切れた状態で送信して失敗するのを手前で止めるための門番です。
 
 **確認ポイント**:
 - `notifyMutationError`・`createMutation`・`handleSubmit` を書けた
@@ -1472,7 +1472,7 @@ const handleSubmit =
 
 ダイアログを開くボタンと、ダイアログそのものを画面へ貼るのはこの下です。押して試せるのは両方を貼り終えてからになります。
 
-#### createMutationに渡すパラメータ
+#### createMutation に渡すパラメータ
 
 | パラメータ | フロントから送信 | 説明 |
 |-----------|---------------|------|
@@ -1481,7 +1481,7 @@ const handleSubmit =
 | `status` | 常に送信 | ステータス（フォームで選択） |
 | `priority` | 常に送信 | 優先度（フォームで選択） |
 | `dueDate` | 任意 | ISO 8601文字列 |
-| `assigneeId` | 任意 | 担当者ID |
+| `assigneeId` | 任意 | 担当者 ID |
 
 > サーバー側のスキーマでは `status` と `priority` にデフォルト値（TODO / MEDIUM）が設定されていますがフロントエンドからは常にフォームの選択値を送信します。
 
@@ -1510,13 +1510,13 @@ const handleSubmit =
 />
 ```
 
-> `createdById`（作成者ID）はサーバー側で
+> `createdById`（作成者 ID）はサーバー側で
 > セッションから自動的に取得されます。
 > フロントエンドから渡す必要はありません。
 
 **確認ポイント**:
 - 「新規タスク」ボタンが `<h1>` の直後、`TaskDialog` が `TaskDetailDialog` の直後にある
-- TaskDialogに `initialData` と `projects` が渡されている
+- TaskDialog に `initialData` と `projects` が渡されている
 - `createdById` をフロントから渡していない
 - 「新規タスク」ボタンでダイアログが開く
 - フォーム送信でタスクが作成される
@@ -1755,7 +1755,7 @@ const priorityOptions = Object.entries(
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。`task.ts` と `page.tsx` は Day 13 で書いた部分も含めた、今日の終了時点の姿です。
+今日は5つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めば Step 0 から Step 8 で書いたものがどう1つのファイルになったかを確かめられます。`task.ts` と `page.tsx` は Day 13 で書いた部分も含めた、今日の終了時点の姿です。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -1786,7 +1786,7 @@ import {
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 ```
-`_helpers/permission` からの取り込みが1つの `import` 文にまとまっているのは同じファイルから2つの名前を借りているからです。Day 13 の `getUserProjectIds` と別に `assertMemberPermission` の行を足すと同じファイルを指す `import` が2本並びます。それでも動きますが`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本にまとめ直します。並び順が手元と違っていても手で直す必要はありません。
+`_helpers/permission` からの取り込みが1つの `import` 文にまとまっているのは同じファイルから2つの名前を借りているからです。Day 13 の `getUserProjectIds` と別に `assertMemberPermission` の行を足すと同じファイルを指す `import` が2本並びます。それでも動きますが `npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本にまとめ直します。並び順が手元と違っていても手で直す必要はありません。
 
 **入力スキーマ**:
 
@@ -1897,7 +1897,7 @@ export const taskRouter = createTRPCRouter({
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 ```
-`input` を丸ごと省略できる形にしてあるのでこの後に読む `page.tsx` は `{}` を渡すだけで一覧を取れます。`limit` と `offset` に `??` の既定値が二重に書いてあるのは`input` そのものが `undefined` のときにスキーマの `.default(...)` が働かないからです。スキーマの既定値は「オブジェクトは来たが項目が無い」場合にだけ効きます。
+`input` を丸ごと省略できる形にしてあるのでこの後に読む `page.tsx` は `{}` を渡すだけで一覧を取れます。`limit` と `offset` に `??` の既定値が二重に書いてあるのは `input` そのものが `undefined` のときにスキーマの `.default(...)` が働かないからです。スキーマの既定値は「オブジェクトは来たが項目が無い」場合にだけ効きます。
 
 **getAll の絞り込み**:
 
@@ -1949,7 +1949,7 @@ export const taskRouter = createTRPCRouter({
           },
         },
 ```
-`createdBy` と `assignee` に `USER_SELECT` を挟んであるのは`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで運ばれるためです。返してよい項目の一覧を1か所に置いておけばユーザーを返す手続きが増えてもうっかり全項目を返す事故が起きません。
+`createdBy` と `assignee` に `USER_SELECT` を挟んであるのは `true` と書くとハッシュ化済みパスワードを含む全項目が画面まで運ばれるためです。返してよい項目の一覧を1か所に置いておけばユーザーを返す手続きが増えてもうっかり全項目を返す事故が起きません。
 
 **getAll の並び順**:
 
@@ -1962,7 +1962,7 @@ export const taskRouter = createTRPCRouter({
       });
     }),
 ```
-`orderBy` の第1条件が `position` の昇順なのでStep 0 で採番した番号がそのまま画面の並びになります。作ったタスクが一覧のいちばん下に出るのはこのためです。`take` で上限を置くのはタスクが数千件へ育った状態で全件を送り、画面が固まるのを防ぐためです。
+`orderBy` の第1条件が `position` の昇順なので Step 0 で採番した番号がそのまま画面の並びになります。作ったタスクが一覧のいちばん下に出るのはこのためです。`take` で上限を置くのはタスクが数千件へ育った状態で全件を送り、画面が固まるのを防ぐためです。
 
 **getById の取得**:
 
@@ -1989,7 +1989,7 @@ export const taskRouter = createTRPCRouter({
             select: USER_SELECT,
           },
 ```
-`project` の中で `members` を `ctx.session.userId` に絞って取っているのが`getAll` との違いです。この1件を見るだけで「自分がこのタスクのプロジェクトに入っているか」が分かるので判定のために DB へもう一度問い合わせる必要がありません。絞り込みを外すと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
+`project` の中で `members` を `ctx.session.userId` に絞って取っているのが `getAll` との違いです。この1件を見るだけで「自分がこのタスクのプロジェクトに入っているか」が分かるので判定のために DB へもう一度問い合わせる必要がありません。絞り込みを外すと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
 
 **getById の権限確認**:
 
@@ -2019,7 +2019,7 @@ export const taskRouter = createTRPCRouter({
       return task;
     }),
 ```
-`findUnique` は見つからないときに例外ではなく `null` を返すため「無い」と「見てはいけない」を自分で分けます。先に `NOT_FOUND` を返してから権限を見る順番にしてあるのは`task` が `null` のままでは `task.project.members` を読めないからです。
+`findUnique` は見つからないときに例外ではなく `null` を返すため「無い」と「見てはいけない」を自分で分けます。先に `NOT_FOUND` を返してから権限を見る順番にしてあるのは `task` が `null` のままでは `task.project.members` を読めないからです。
 
 **create の権限確認**:
 
@@ -2370,7 +2370,7 @@ interface TaskDialogProps {
 }
 ```
 
-`TaskFormData` にだけ `export` が付いているのは`page.tsx` が同じ型で受け取るためです。`TaskDialogProps` は外から使わないので付けません。`projects` を props で受け取る形にしてあるのでこのダイアログはプロジェクト一覧を自分で取りに行きません。取得の担当をページ側へ寄せると同じ一覧を2か所で取る無駄が消えます。
+`TaskFormData` にだけ `export` が付いているのは `page.tsx` が同じ型で受け取るためです。`TaskDialogProps` は外から使わないので付けません。`projects` を props で受け取る形にしてあるのでこのダイアログはプロジェクト一覧を自分で取りに行きません。取得の担当をページ側へ寄せると同じ一覧を2か所で取る無駄が消えます。
 
 **初期値を作るヘルパー**:
 
@@ -2394,7 +2394,7 @@ function buildTaskFormValues(
       ?? TASK_PRIORITY.MEDIUM,
 ```
 
-引数を2つ受け取るのは初期値の出どころが2か所あるからです。ほとんどの項目は `initialData` から来ますが`projectId` の既定だけは `projects` の先頭を使います。戻り値を `TaskFormValues` 型にすると、必須の `title`・`status`・`priority`・`projectId` を書き忘れた場合はエラーになります。任意項目の書き忘れは型では検出されないので、初期値の一覧と照合します。
+引数を2つ受け取るのは初期値の出どころが2か所あるからです。ほとんどの項目は `initialData` から来ますが `projectId` の既定だけは `projects` の先頭を使います。戻り値を `TaskFormValues` 型にすると、必須の `title`・`status`・`priority`・`projectId` を書き忘れた場合はエラーになります。任意項目の書き忘れは型では検出されないので、初期値の一覧と照合します。
 
 **初期値の残り**:
 
@@ -2563,7 +2563,7 @@ export function TaskDialog({
     };
 ```
 
-最後の1つだけ条件が2段になっているのは`expectedUpdatedAt` を送ってよい場面が編集に限られるからです。`onSubmit(submitData)` で親へ渡したらこの部品の仕事は終わりです。実際に保存を頼むのは `page.tsx` の側で、ダイアログは保存用の通信を持ちません。担当者候補の取得はダイアログ内の `useQuery` で行います。
+最後の1つだけ条件が2段になっているのは `expectedUpdatedAt` を送ってよい場面が編集に限られるからです。`onSubmit(submitData)` で親へ渡したらこの部品の仕事は終わりです。実際に保存を頼むのは `page.tsx` の側で、ダイアログは保存用の通信を持ちません。担当者候補の取得はダイアログ内の `useQuery` で行います。
 
 **ダイアログの見出し**:
 
@@ -2666,7 +2666,7 @@ export function TaskDialog({
                       </SelectTrigger>
 ```
 
-`register` ではなく `Controller` を使うのはshadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので`value` を持たず `change` も出ません。`Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。
+`register` ではなく `Controller` を使うのは shadcn/ui の `Select` が普通の `<input>` ではないからです。`register` は入力欄の実体を `ref` で受け取り、その `value` と `change` イベントから中身を読みます。`Select` の引き金は `<button>` なので `value` を持たず `change` も出ません。`Controller` が `field.value` と `field.onChange` を用意し、`Select` の `onValueChange` へ橋渡しします。
 
 **ステータスの選択肢**:
 
@@ -2738,7 +2738,7 @@ export function TaskDialog({
               </div>
 ```
 
-参照する定数が `TASK_PRIORITY_LABELS` に変わっただけで、組み立て方はステータスと変わりません。表示名を画面へ書き写していないので`LOW` を「低」から「低め」へ直したくなったときも、直す場所は定数ファイルの1行です。
+参照する定数が `TASK_PRIORITY_LABELS` に変わっただけで、組み立て方はステータスと変わりません。表示名を画面へ書き写していないので `LOW` を「低」から「低め」へ直したくなったときも、直す場所は定数ファイルの1行です。
 
 **プロジェクトの選択欄**:
 
@@ -2825,7 +2825,7 @@ export function TaskDialog({
                       </SelectTrigger>
 ```
 
-担当者の欄だけ、値の出入りで変換を1回挟みます。shadcn/ui の `Select` は空文字を選択済みの値として扱えないため画面では未割当を `'unassigned'` という文字列で持ち、`onValueChange` の中で空文字へ戻します。フォーム側が空文字のままなら`handleFormSubmit` の条件付きスプレッドが `assigneeId` のキーごと落とします。
+担当者の欄だけ、値の出入りで変換を1回挟みます。shadcn/ui の `Select` は空文字を選択済みの値として扱えないため画面では未割当を `'unassigned'` という文字列で持ち、`onValueChange` の中で空文字へ戻します。フォーム側が空文字のままなら `handleFormSubmit` の条件付きスプレッドが `assigneeId` のキーごと落とします。
 
 **担当者の選択肢**:
 
@@ -2878,7 +2878,7 @@ export function TaskDialog({
           </div>
 ```
 
-`setValueAs` を付けているのは`type="number"` でも HTML の入力値が文字列で返るからです。スキーマは `z.number()` を求めるので変換しないと「文字列が来た」という検証エラーで送信が止まります。空文字を `undefined` へ直しているのは未入力を0として保存しないためです。
+`setValueAs` を付けているのは `type="number"` でも HTML の入力値が文字列で返るからです。スキーマは `z.number()` を求めるので変換しないと「文字列が来た」という検証エラーで送信が止まります。空文字を `undefined` へ直しているのは未入力を0として保存しないためです。
 
 **送信ボタン**:
 
@@ -2938,7 +2938,7 @@ import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
 
-今日足したのは `Plus`・`Button`・`TaskDialog`・`TaskFormData` の4つで、残りは前回までに書いた行です。`react` からの取り込みが1つにまとまっているのは`useState` と `useEffect` を別の行で書いても Biome が1行へ寄せるためです。手元の並びがこの形と違っていても`npm run fix` を実行すればそろいます。
+今日足したのは `Plus`・`Button`・`TaskDialog`・`TaskFormData` の4つで、残りは前回までに書いた行です。`react` からの取り込みが1つにまとまっているのは `useState` と `useEffect` を別の行で書いても Biome が1行へ寄せるためです。手元の並びがこの形と違っていても `npm run fix` を実行すればそろいます。
 
 **選択欄と定数のインポート**:
 
@@ -3018,7 +3018,7 @@ function TaskPageContent() {
   const utils = api.useUtils();
 ```
 
-`'all'` のときに `undefined` を渡すのはその条件を使わないという合図です。サーバーの `getAll` は `if (input?.status)` で受けているので`undefined` なら絞り込みません。`data:` の後ろで名前を付け替えているのは3つとも `data` のままでは名前がぶつかるからです。`utils` は取得済みのデータを操作する入口で、この後の `createMutation` で使います。
+`'all'` のときに `undefined` を渡すのはその条件を使わないという合図です。サーバーの `getAll` は `if (input?.status)` で受けているので `undefined` なら絞り込みません。`data:` の後ろで名前を付け替えているのは3つとも `data` のままでは名前がぶつかるからです。`utils` は取得済みのデータを操作する入口で、この後の `createMutation` で使います。
 
 **権限の判定**:
 
@@ -3272,7 +3272,7 @@ function TaskPageContent() {
               </SelectTrigger>
 ```
 
-`onValueChange` が受け取る値はshadcn/ui の都合でただの `string` です。`isTaskStatus(value)` を通してから代入するのは確かめずに `as TaskStatus` と書けば想定外の文字列がそのままサーバーへ飛ぶからです。型を合わせるのではなく、値そのものを確かめる書き方です。
+`onValueChange` が受け取る値は shadcn/ui の都合でただの `string` です。`isTaskStatus(value)` を通してから代入するのは確かめずに `as TaskStatus` と書けば想定外の文字列がそのままサーバーへ飛ぶからです。型を合わせるのではなく、値そのものを確かめる書き方です。
 
 **ステータスの選択肢**:
 
@@ -3326,7 +3326,7 @@ function TaskPageContent() {
             ))
 ```
 
-`canEdit` と `canDelete` を渡さないと`TaskCard` 側の既定値 `true` が使われ、閲覧者にも編集ボタンを見せてしまいます。押せばサーバーの権限確認で拒まれるのでデータが壊れることはありません。見えるのに押せないボタンだけが残り、読者は理由の分からない失敗を受け取ります。
+`canEdit` と `canDelete` を渡さないと `TaskCard` 側の既定値 `true` が使われ、閲覧者にも編集ボタンを見せてしまいます。押せばサーバーの権限確認で拒まれるのでデータが壊れることはありません。見えるのに押せないボタンだけが残り、読者は理由の分からない失敗を受け取ります。
 
 **空のときの表示**:
 
@@ -3397,9 +3397,9 @@ export default function TaskPage() {
 
 ## 今日のまとめ
 
-- [ ] zodスキーマでフォームのバリデーションを定義できた
+- [ ] zod スキーマでフォームのバリデーションを定義できた
 - [ ] `register` で入力欄をフォームに登録できた
-- [ ] `Controller` でSelectをreact-hook-formに接続できた
+- [ ] `Controller` で Select を react-hook-form に接続できた
 - [ ] `TASK_STATUS_LABELS` から選択肢を自動生成できた
 - [ ] `useMutation` でタスクを保存できた
 - [ ] `invalidate()` でキャッシュを自動更新できた
@@ -3408,9 +3408,9 @@ export default function TaskPage() {
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ダイアログが開かない | `open` propが渡されてない | `open={dialogOpen}` を確認 |
-| 作成後に一覧が更新されない | invalidate忘れ | `onSuccess` に追加 |
-| Selectの値が更新されない | `Controller` 未使用 | `register` ではなく `Controller` を使う |
+| ダイアログが開かない | `open` prop が渡されてない | `open={dialogOpen}` を確認 |
+| 作成後に一覧が更新されない | invalidate 忘れ | `onSuccess` に追加 |
+| Select の値が更新されない | `Controller` 未使用 | `register` ではなく `Controller` を使う |
 | 担当者一覧が空 | プロジェクト未選択または所属なし | `getMembersByProject` の入力と所属を確認 |
 | バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(taskFormSchema)` を確認 |
 
@@ -3418,13 +3418,13 @@ export default function TaskPage() {
 
 | 用語 | 意味 |
 |------|------|
-| TaskDialog | タスクCRUD用のダイアログ |
-| Controller | Selectをreact-hook-formで制御するコンポーネント |
-| nativeEnum | zodで既存の定数オブジェクトを検証するメソッド |
+| TaskDialog | タスク CRUD 用のダイアログ |
+| Controller | Select を react-hook-form で制御するコンポーネント |
+| nativeEnum | zod で既存の定数オブジェクトを検証するメソッド |
 | TASK_STATUS_LABELS | ステータス値と日本語表示名の対応表 |
 | setValueAs | register のオプションで入力値を型変換する関数 |
-| getProjectMembers | プロジェクトメンバー一覧を取得するAPI |
-| getMembersByProject | 選択したプロジェクトのメンバーだけを取得するAPI |
+| getProjectMembers | プロジェクトメンバー一覧を取得する API |
+| getMembersByProject | 選択したプロジェクトのメンバーだけを取得する API |
 
 ## 理解チェック
 

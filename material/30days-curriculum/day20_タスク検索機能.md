@@ -8,7 +8,7 @@ Day 19 ではコメントの編集・削除機能を実装し、自分が書い�
 
 ## 今日のゴール
 
-キーワードや複数のフィルター条件でタスクを検索できるページを作ります。検索条件はURLパラメータに保存し、共有可能にします。
+キーワードや複数のフィルター条件でタスクを検索できるページを作ります。検索条件は URL パラメータに保存し、共有可能にします。
 
 この日はまずサーバー側の search ルーターの残り3手続きを自分で書きます。そのあと画面をつなぎます。
 
@@ -17,7 +17,7 @@ Day 19 ではコメントの編集・削除機能を実装し、自分が書い�
 条件を入れる前は画面の下側に案内文が出るだけです。
 結果のカードが並ぶのは条件を入れて検索したあとです。
 
-> **今日のゴールライン**: 検索フォームの条件をURLに反映し、絞り込んだタスクとプロジェクト結果を共有できる形で表示できれば完了です。
+> **今日のゴールライン**: 検索フォームの条件を URL に反映し、絞り込んだタスクとプロジェクト結果を共有できる形で表示できれば完了です。
 
 ## なぜこれを作るのか
 
@@ -49,14 +49,14 @@ flowchart TD
     style K fill:#e8f5e9
     style L fill:#fff3e0
 ```
-フォームの入力値を `watch` で監視し、条件が変わるたびに検索します。検索ボタンは現在の条件を URL に保存するためのものです。共有 URL を開いたときや「戻る」を押したときはURL からフォームを復元します。同じ URL でも検索結果は開いた人の権限に応じて変わります。サーバーが参加中のプロジェクトを調べ、見てよいタスクとプロジェクトだけを返すためです。
+フォームの入力値を `watch` で監視し、条件が変わるたびに検索します。検索ボタンは現在の条件を URL に保存するためのものです。共有 URL を開いたときや「戻る」を押したときは URL からフォームを復元します。同じ URL でも検索結果は開いた人の権限に応じて変わります。サーバーが参加中のプロジェクトを調べ、見てよいタスクとプロジェクトだけを返すためです。
 
 ### やること / やらないこと
 
 | やること | やらないこと |
 |---------|-------------|
 | 入力変更に応じた複数条件の検索 | 入力待ち時間による通信の間引き |
-| URLパラメータ保存 | 検索結果の並び替え |
+| URL パラメータ保存 | 検索結果の並び替え |
 | TaskCard で結果表示 | ページネーション |
 | プロジェクト結果表示 | 検索履歴 |
 
@@ -74,9 +74,9 @@ flowchart TD
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| search.search | — | 検索API | 図書館の蔵書検索 |
-| URLSearchParams | ユーアールエルサーチパラムズ | URLの検索条件を操作するブラウザ標準API | 検索条件の付箋 |
-| shouldSearch | シュッドサーチ | 1つでも条件があるか判定するフラグ | APIを呼び出すかの判定 |
+| search.search | — | 検索 API | 図書館の蔵書検索 |
+| URLSearchParams | ユーアールエルサーチパラムズ | URL の検索条件を操作するブラウザ標準 API | 検索条件の付箋 |
+| shouldSearch | シュッドサーチ | 1つでも条件があるか判定するフラグ | API を呼び出すかの判定 |
 | useForm（復習） | ユーズフォーム | フォーム状態管理（Day 14 参照） | 検索条件の管理係 |
 | watch | ウォッチ | フォームの値をリアクティブに監視 | 入力が変わるたびに条件を更新 |
 
@@ -85,13 +85,13 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 0 | search の残り3手続きと読み込み画面を作る | 22分 |
-| Step 1 | 検索画面から使うAPIを確認する | 3分 |
+| Step 1 | 検索画面から使う API を確認する | 3分 |
 | Step 2 | ページの土台を作る | 5分 |
-| Step 3 | zodスキーマとuseFormを設定する | 5分 |
+| Step 3 | zod スキーマと useForm を設定する | 5分 |
 | Step 4 | キーワード入力とプロジェクトフィルター | 5分 |
 | Step 5 | ステータス・優先度・担当者・期限フィルター | 7分 |
-| Step 6 | handleSearchとhandleClearを定義する | 5分 |
-| Step 7 | URL同期と検索API呼び出し | 5分 |
+| Step 6 | handleSearch と handleClear を定義する | 5分 |
+| Step 7 | URL 同期と検索 API 呼び出し | 5分 |
 | Step 8 | タスク検索結果を表示する | 10分 |
 | Step 9 | プロジェクト結果と削除機能を追加する | 7分 |
 | Step 10 | 動作確認 | 3分 |
@@ -128,9 +128,9 @@ import type { Prisma } from '@prisma/client';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { getUserProjectIds } from './_helpers/permission';
 ```
-3つとも、今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて`Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値をそのまま持っているので画面から届いた文字列が正しい値かどうかを入口で確かめられます。`getUserProjectIds` はそのユーザーが参加しているプロジェクトの id だけを返す関数です。これを取り込んでおかないとあとで検索範囲を自分のプロジェクトへ絞れません。
+3つとも、今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて `Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値をそのまま持っているので画面から届いた文字列が正しい値かどうかを入口で確かめられます。`getUserProjectIds` はそのユーザーが参加しているプロジェクトの id だけを返す関数です。これを取り込んでおかないとあとで検索範囲を自分のプロジェクトへ絞れません。
 
-続けてDay 14 の `import` 群の下に検索件数の上限を置きます。
+続けて Day 14 の `import` 群の下に検索件数の上限を置きます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（import の下に追加）
@@ -145,7 +145,7 @@ const QUICK_SEARCH_PROJECT_LIMIT = 10;
 
 #### 0-2. 検索入力スキーマを追加する
 
-次に`search` と `quickSearch` が受け取る入力を zod で定義します。Day 14 の `searchRouter` 宣言の前に、次の 2 つを追加してください。
+次に `search` と `quickSearch` が受け取る入力を zod で定義します。Day 14 の `searchRouter` 宣言の前に、次の 2 つを追加してください。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（searchRouter の前に追加）
@@ -167,7 +167,7 @@ const searchInputSchema = z.object({
 ```
 `status` と `priority` が `z.union([z.literal('all'), ...])` になっているのは「特定の値で絞り込む」だけでなく「絞り込みなし」も受け取りたいからです。検索フォーム側では「すべて」を `'all'` で送るのでサーバー側もその値を受け取れる形にしておきます。
 
-`projectId` と `assignedTo` に `.cuid()` が付いています。id の形をした文字列しか通さないためです。選択肢から外れた値が混ざってもDB へ問い合わせる前に弾けます。`.default('all')` があるので画面が `status` を送らなかったときもサーバー側では「絞り込みなし」として扱われます。7つのうち必須はひとつもありません。キーワードだけ、ステータスだけ、という検索も成り立たせたいからです。
+`projectId` と `assignedTo` に `.cuid()` が付いています。id の形をした文字列しか通さないためです。選択肢から外れた値が混ざっても DB へ問い合わせる前に弾けます。`.default('all')` があるので画面が `status` を送らなかったときもサーバー側では「絞り込みなし」として扱われます。7つのうち必須はひとつもありません。キーワードだけ、ステータスだけ、という検索も成り立たせたいからです。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -193,7 +193,7 @@ type FilterConfig = {
 ```
 `FilterConfig` は「どの列に」「どの値を」「必要ならどう変換して」入れるかを表す設計図です。後で `projectId`・`status`・`priority`・`assigneeId` を同じパターンで処理できるようにこの形を先に決めています。
 
-`transform` にだけ `?` が付いているのはほとんどの列が値をそのまま入れるだけで済むからです。今日の `baseFilters` では変換の関数は使いません。日付は別の `buildDateRangeFilter` で扱います。`transform` は今後、値の変換が必要な列を追加する場合に使う項目です。`key` の型を `keyof Prisma.TaskWhereInput` にしてあるので`Task` に存在しない列名を書いた時点で型エラーになります。
+`transform` にだけ `?` が付いているのはほとんどの列が値をそのまま入れるだけで済むからです。今日の `baseFilters` では変換の関数は使いません。日付は別の `buildDateRangeFilter` で扱います。`transform` は今後、値の変換が必要な列を追加する場合に使う項目です。`key` の型を `keyof Prisma.TaskWhereInput` にしてあるので `Task` に存在しない列名を書いた時点で型エラーになります。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -209,7 +209,7 @@ const buildDynamicWhere = (filters: FilterConfig[]): Partial<Prisma.TaskWhereInp
 ```
 ここで大事なのは `f.value !== 'all'` の判定です。検索フォームでは「すべて」を `'all'` で送りますがそのまま `where` に入れると `status = 'all'` のような存在しない条件になってしまいます。だから `'all'` は「条件を足さない」という意味で捨てます。
 
-`Object.assign` で1件ずつ足していくので指定されなかった列は `result` に現れません。Prisma は `where` に書かれていない列を条件として扱わないため未指定はそのまま「絞り込まない」になります。この判定を外すとステータスで「すべて」を選んだとたん検索が失敗します。`status` は `TODO` や `DONE` だけを取る列なので`'all'` を条件として渡された Prisma は検索せずにエラーを投げます。0件が返るのではなく、画面にエラーが出ます。
+`Object.assign` で1件ずつ足していくので指定されなかった列は `result` に現れません。Prisma は `where` に書かれていない列を条件として扱わないため未指定はそのまま「絞り込まない」になります。この判定を外すとステータスで「すべて」を選んだとたん検索が失敗します。`status` は `TODO` や `DONE` だけを取る列なので `'all'` を条件として渡された Prisma は検索せずにエラーを投げます。0件が返るのではなく、画面にエラーが出ます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -421,7 +421,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
       }),
     ]);
 ```
-上限を `QUICK_SEARCH_TASK_LIMIT`（20件）と `QUICK_SEARCH_PROJECT_LIMIT`（10件）まで下げているのは`quickSearch` が入力しながら候補を出す用途だからです。待たせないことを優先し、絞り込みもキーワード1つに限っています。
+上限を `QUICK_SEARCH_TASK_LIMIT`（20件）と `QUICK_SEARCH_PROJECT_LIMIT`（10件）まで下げているのは `quickSearch` が入力しながら候補を出す用途だからです。待たせないことを優先し、絞り込みもキーワード1つに限っています。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（続き）
@@ -495,7 +495,7 @@ Day 14 で書いた `getProjectMembers` と `getMembersByProject` のコード�
 
 #### 0-9. 検索ページの読み込み表示を作る
 
-`src/app/search/loading.tsx` を新規作成します。ページと同じフォルダに `loading.tsx` を置くとNext.js はそのページの読み込み中に自動でこれを表示します。
+`src/app/search/loading.tsx` を新規作成します。ページと同じフォルダに `loading.tsx` を置くと Next.js はそのページの読み込み中に自動でこれを表示します。
 
 ```tsx
 // filepath: src/app/search/loading.tsx
@@ -506,9 +506,9 @@ export default function Loading() {
   return <PageSkeleton />;
 }
 ```
-これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示はStep 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら同じ内容のファイルをそのフォルダへ置いてください。
+これが出るのはページへ移動したときだけです。検索結果そのものの読み込み表示は Step 8 で `isLoading` を見て切り替えます。役割が分かれている点に注意してください。中身は配布済みの `PageSkeleton` をそのまま返すだけです。この部品を使うのは今日がはじめてです。完成版は同じ4行を dashboard・my-task・project・report・task の各フォルダにも置いています。今日は検索ページの1枚だけ作ります。ほかの画面にも同じ表示を出したくなったら同じ内容のファイルをそのフォルダへ置いてください。
 
-### Step 1: 検索画面から使うAPIを確認する（3分）
+### Step 1: 検索画面から使う API を確認する（3分）
 
 **ゴール**: 今書いた `search` ルーターのうち、検索画面がどの手続きを呼ぶのかを整理します。
 
@@ -594,7 +594,7 @@ import {
   Search,
 } from 'lucide-react';
 ```
-足すのは `Search` の1行だけです。`lucide-react` からアイコンをまとめて取り込んでいるので既存のアイコンを消さずに並びへ追加します。アルファベット順に入れてあるのはimport の並べ替えを Biome に任せているからで、順番を崩すと保存のたびに差分が出ます。
+足すのは `Search` の1行だけです。`lucide-react` からアイコンをまとめて取り込んでいるので既存のアイコンを消さずに並びへ追加します。アルファベット順に入れてあるのは import の並べ替えを Biome に任せているからで、順番を崩すと保存のたびに差分が出ます。
 
 `menuItems` の閉じかっこ直前へ
 検索項目を追加します。
@@ -607,7 +607,7 @@ import {
   path: '/search',
 },
 ```
-`path: '/search'` がこのあと作る `src/app/search/page.tsx` と対応します。Next.js はフォルダの位置がそのままURLになるのでリンク先を別に登録する作業は要りません。ページを作る前でも項目は追加できますがその状態で押すと404の画面になります。順番としては先にサイドバーへ入口を作り、次にページ本体を作ります。
+`path: '/search'` がこのあと作る `src/app/search/page.tsx` と対応します。Next.js はフォルダの位置がそのまま URL になるのでリンク先を別に登録する作業は要りません。ページを作る前でも項目は追加できますがその状態で押すと404の画面になります。順番としては先にサイドバーへ入口を作り、次にページ本体を作ります。
 
 **確認ポイント**:
 - 既存の4項目を残した
@@ -633,7 +633,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
-今日の主役は `useSearchParams` と `useRouter` です。前者はURLに付いた検索条件を読み、後者は条件をURLへ書き戻します。`useForm` と `zodResolver` は Day 14 のタスクフォームと同じ組み合わせで、`Suspense` は Day 09 のプロジェクト一覧で使ったものと同じ役割です。新しく覚えるのは実質2つだけで、残りは今まで書いてきた道具の組み替えになります。
+今日の主役は `useSearchParams` と `useRouter` です。前者は URL に付いた検索条件を読み、後者は条件を URL へ書き戻します。`useForm` と `zodResolver` は Day 14 のタスクフォームと同じ組み合わせで、`Suspense` は Day 09 のプロジェクト一覧で使ったものと同じ役割です。新しく覚えるのは実質2つだけで、残りは今まで書いてきた道具の組み替えになります。
 
 **確認ポイント**:
 - `useForm`, `zodResolver`, `z` がインポートされている
@@ -661,7 +661,7 @@ import { Label }
 ここで取り込む部品はすべて Day 09 から Day 19 までに使ってきたものです。`TaskCard` は Day 13 のタスク一覧で、`DeleteConfirmDialog` は Day 11 の削除確認で初めて呼び出した、用意済みの共通部品です。`TaskCard` は Day 16 で時間記録のボタンを足しただけです。どちらも一から書いたものではありません。検索画面でも表示用の部品を新しく作らず、すでにあるカードとダイアログを並べ替えて使います。見た目がタスク一覧とそろうので読者にとっても「検索したあとの操作は今まで通り」になります。
 
 **確認ポイント**:
-- レイアウト・UIコンポーネントが揃っている
+- レイアウト・UI コンポーネントが揃っている
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -735,13 +735,13 @@ function SearchPageContent() {
   );
 }
 ```
-中身はまだ見出しと説明文だけで、フォームと結果はコメントの位置へ順に足していきます。先に外枠を置いておくと次のステップから貼り付ける場所に迷いません。`utils` は `api.useUtils()` で取り出す道具で、タスクを削除したあとに検索結果を取り直させるために使います。今の時点では使い道が見えませんがStep 9 の削除処理でここへ戻ってきます。
+中身はまだ見出しと説明文だけで、フォームと結果はコメントの位置へ順に足していきます。先に外枠を置いておくと次のステップから貼り付ける場所に迷いません。`utils` は `api.useUtils()` で取り出す道具で、タスクを削除したあとに検索結果を取り直させるために使います。今の時点では使い道が見えませんが Step 9 の削除処理でここへ戻ってきます。
 
 **確認ポイント**:
 - `utils` は検索結果の再取得（削除後）に使う
 - コメントでフォームと結果の挿入位置を示している
 
-> `useSearchParams` はURL のクエリ文字列を読み取る Next.js のフックです。`useRouter` はプログラムからURL遷移するために使います。
+> `useSearchParams` は URL のクエリ文字列を読み取る Next.js のフックです。`useRouter` はプログラムから URL 遷移するために使います。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -755,7 +755,7 @@ export default function SearchPage() {
   );
 }
 ```
-ページを `SearchPageContent` と `SearchPage` の2つに分けたのは`Suspense` の外側に本体を置けないからです。外側の `SearchPage` が待ち受け役、内側が本体という分担で、Day 09 のプロジェクト一覧ページと同じ形になっています。`fallback` に渡した `PageLoadingSpinner` はURLが決まるまでの間だけ表示されます。
+ページを `SearchPageContent` と `SearchPage` の2つに分けたのは `Suspense` の外側に本体を置けないからです。外側の `SearchPage` が待ち受け役、内側が本体という分担で、Day 09 のプロジェクト一覧ページと同じ形になっています。`fallback` に渡した `PageLoadingSpinner` は URL が決まるまでの間だけ表示されます。
 
 **確認ポイント**:
 - `/search` にアクセスして画面が表示される
@@ -765,7 +765,7 @@ export default function SearchPage() {
 
 ---
 
-### Step 3: zodスキーマとuseFormを設定する（5分）
+### Step 3: zod スキーマと useForm を設定する（5分）
 
 **ゴール**: 7つのフィルター条件を zod スキーマと useForm で一括管理します。
 
@@ -812,7 +812,7 @@ type SearchFormValues =
 - `status` / `priority` が `'all'` + 実際の値の union になっている
 - サーバー側と型が合っている（`z.string()` ではなく `z.enum`）
 
-URLのプロジェクトID・担当者ID・日付はフォームへ入れる前に確かめます。`SearchPageContent` の外に次の関数を追加してください。
+URL のプロジェクト ID・担当者 ID・日付はフォームへ入れる前に確かめます。`SearchPageContent` の外に次の関数を追加してください。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -827,9 +827,9 @@ const normalizeDate = (value: string): string => {
     ? value : '';
 };
 ```
-IDはサーバーと同じ `cuid()` で検査し、不正なら絞り込みなしの `all` に戻します。日付は形式と実在する日付の両方を検査します。`2026-02-30` は Date が3月へ補正するため変換後の日付とも比較します。不正な値は空文字に戻します。こうしておけば`?dateFrom=bad` を開いても検索前の日付変換で画面がエラーになりません。
+ID はサーバーと同じ `cuid()` で検査し、不正なら絞り込みなしの `all` に戻します。日付は形式と実在する日付の両方を検査します。`2026-02-30` は Date が3月へ補正するため変換後の日付とも比較します。不正な値は空文字に戻します。こうしておけば `?dateFrom=bad` を開いても検索前の日付変換で画面がエラーになりません。
 
-`SearchPageContent` 内に `useForm` を追加します。URLパラメータから初期値を型安全に設定します。
+`SearchPageContent` 内に `useForm` を追加します。URL パラメータから初期値を型安全に設定します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -849,9 +849,9 @@ const form = useForm<SearchFormValues>({
     status: isTaskStatus(initialStatus)
       ? initialStatus : 'all',
 ```
-初期値をURLから読んでいるところが今日いちばん大事な設計です。`searchParams.get('keyword')` は`/search?keyword=修正` というURLで開かれたときに「修正」を返します。パラメータが無ければ `null` なので`?? ''` で空文字に置き換えます。条件を `useState` の初期値として書いてしまうと共有されたURLで開いても入力欄は空のままになり、URLと画面が食い違います。
+初期値を URL から読んでいるところが今日いちばん大事な設計です。`searchParams.get('keyword')` は `/search?keyword=修正` という URL で開かれたときに「修正」を返します。パラメータが無ければ `null` なので `?? ''` で空文字に置き換えます。条件を `useState` の初期値として書いてしまうと共有された URL で開いても入力欄は空のままになり、URL と画面が食い違います。
 
-`status` だけ `isTaskStatus` を通してから入れているのはURLが誰でも手で書き換えられるからです。`?status=ABC` のような値をそのままフォームへ入れるとSelect に無い値が選ばれた状態になり、表示が空欄のまま固まります。
+`status` だけ `isTaskStatus` を通してから入れているのは URL が誰でも手で書き換えられるからです。`?status=ABC` のような値をそのままフォームへ入れると Select に無い値が選ばれた状態になり、表示が空欄のまま固まります。
 
 **確認ポイント**:
 - `??` を使って初期値を設定している（`||` ではない）
@@ -871,7 +871,7 @@ const form = useForm<SearchFormValues>({
   },
 });
 ```
-未指定のときの値が項目ごとに違う点を見てください。`assignedTo` は `'all'`、日付は空文字です。Select は必ず何かが選ばれている状態なので「すべて」を表す `'all'` が必要で、日付欄は空欄のままを許すので空文字になります。ここで型がそろっていないと`useForm` に渡した時点で型エラーになります。7つの条件を1つの `useForm` にまとめているのであとで値をまとめて読むのもまとめて消すのも1行で済みます。
+未指定のときの値が項目ごとに違う点を見てください。`assignedTo` は `'all'`、日付は空文字です。Select は必ず何かが選ばれている状態なので「すべて」を表す `'all'` が必要で、日付欄は空欄のままを許すので空文字になります。ここで型がそろっていないと `useForm` に渡した時点で型エラーになります。7つの条件を1つの `useForm` にまとめているのであとで値をまとめて読むのもまとめて消すのも1行で済みます。
 
 **確認ポイント**:
 - `isTaskStatus` / `isTaskPriority` で型安全にバリデーションしている
@@ -894,7 +894,7 @@ const { data: users } =
 
 > Day 14 では `register` と `Controller` で各入力を管理しました。検索フォームでは `setValue` と `watch` の組み合わせで Select コンポーネントの値も管理できます。
 
-検索結果の TaskCard にも編集・削除ボタンの表示可否が必要です。Day 13 と同じロール判定を、ログインユーザーとメンバー所属プロジェクトから求めます。`projects`（Selectの選択肢用）とは別に、ロール情報つきのプロジェクト一覧を取得します。
+検索結果の TaskCard にも編集・削除ボタンの表示可否が必要です。Day 13 と同じロール判定を、ログインユーザーとメンバー所属プロジェクトから求めます。`projects`（Select の選択肢用）とは別に、ロール情報つきのプロジェクト一覧を取得します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -922,9 +922,9 @@ const myRoleByProject = useMemo(() => {
   return map;
 }, [memberProjects, session?.user?.id]);
 ```
-`useMemo`（計算した結果を覚えておいてもとにした値が変わるまで作り直さないReactの機能）で包んでいます。この対応表を作り直したいのは`memberProjects` かログインユーザーが変わったときだけだからです。検索結果には複数のプロジェクトのタスクが混ざるのでカードを1枚描くたびに配列を端から探し直すと件数の分だけ同じ処理が走ります。`Map` に一度まとめておけばあとは id で1回引くだけで済みます。
+`useMemo`（計算した結果を覚えておいてもとにした値が変わるまで作り直さない React の機能）で包んでいます。この対応表を作り直したいのは `memberProjects` かログインユーザーが変わったときだけだからです。検索結果には複数のプロジェクトのタスクが混ざるのでカードを1枚描くたびに配列を端から探し直すと件数の分だけ同じ処理が走ります。`Map` に一度まとめておけばあとは id で1回引くだけで済みます。
 
-> `projects`（`getUserProjects`）はSelectの選択肢専用で、メンバーのロール情報を含みません。ロール判定には `api.project.getAll` が返す `memberProjects`（`members` 配列つき）を使います。
+> `projects`（`getUserProjects`）は Select の選択肢専用で、メンバーのロール情報を含みません。ロール判定には `api.project.getAll` が返す `memberProjects`（`members` 配列つき）を使います。
 
 続けてそのロールから編集・削除の権限を判定する関数を追加します。
 
@@ -949,7 +949,7 @@ const canDeleteProject = useCallback(
 ```
 ロールが見つからないときに `false` を返しているのが安全側に倒した作りです。プロジェクト一覧がまだ届いていない一瞬の間も、`myRoleByProject` は空なので `false` になります。ここを `true` にしてしまうと権限のない人にも編集ボタンや削除ボタンが一瞬だけ見える時間ができます。判断がつかないうちは出さない、というのが権限まわりの基本です。
 
-> `canEditProject` / `canDeleteProject` の考え方はDay 13のタスク一覧ページと同じです。
+> `canEditProject` / `canDeleteProject` の考え方は Day 13 のタスク一覧ページと同じです。
 
 **確認ポイント**:
 - `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
@@ -959,7 +959,7 @@ const canDeleteProject = useCallback(
 
 ### Step 4: キーワード入力とプロジェクトフィルター（5分）
 
-**ゴール**: Card 内にキーワード入力とプロジェクトSelectを配置します。
+**ゴール**: Card 内にキーワード入力とプロジェクト Select を配置します。
 
 Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコードに置き換えます。
 
@@ -989,10 +989,10 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
         </div>
       </div>
 ```
-`{...form.register('keyword')}` はこの入力欄をフォームの `keyword` へ結び付ける書き方です。Day 14 と同じで、入力された値の保持も変更の受け取りも react-hook-form の側が引き受けます。`onKeyDown` を別に足したのはEnter を押したときにボタンと同じ `handleSearch` を呼びたいからです。この行が無いとキーワードを打ってEnterを押しても何も起きず、読者は「検索が壊れている」と感じます。
+`{...form.register('keyword')}` はこの入力欄をフォームの `keyword` へ結び付ける書き方です。Day 14 と同じで、入力された値の保持も変更の受け取りも react-hook-form の側が引き受けます。`onKeyDown` を別に足したのは Enter を押したときにボタンと同じ `handleSearch` を呼びたいからです。この行が無いとキーワードを打って Enter を押しても何も起きず、読者は「検索が壊れている」と感じます。
 
 ここで呼んでいる `handleSearch` はあとの Step 6 で定義します。
-定義するまでこの画面は表示できないのでEnter キーの動きを確かめるのは Step 6 のあとです。
+定義するまでこの画面は表示できないので Enter キーの動きを確かめるのは Step 6 のあとです。
 
 **確認ポイント**:
 - `register('keyword')` でフォームに登録している
@@ -1020,7 +1020,7 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
 ```
 `Label` の `htmlFor` と `SelectTrigger` の `id` に同じ文字を入れているのはラベルとプルダウンを結び付けるためです。こうするとラベルの文字を押しても開き、読み上げソフトも「何の絞り込みか」を伝えられます。
 
-Select は `<input>` と違って `register` では結び付けられません。値の表示は `value={formValues.projectId}`、変更の受け取りは `onValueChange` から `form.setValue` を呼ぶ、という2本立てにして自分の手でつなぎます。`formValues` は `form.watch()` の結果なので`setValue` で書き込むと表示側もすぐ追いつきます。この2つのどちらかを書き忘れると選んだ項目が画面に反映されない、あるいは選んでも検索条件に入らない、という食い違いが起きます。
+Select は `<input>` と違って `register` では結び付けられません。値の表示は `value={formValues.projectId}`、変更の受け取りは `onValueChange` から `form.setValue` を呼ぶ、という2本立てにして自分の手でつなぎます。`formValues` は `form.watch()` の結果なので `setValue` で書き込むと表示側もすぐ追いつきます。この2つのどちらかを書き忘れると選んだ項目が画面に反映されない、あるいは選んでも検索条件に入らない、という食い違いが起きます。
 
 **確認ポイント**:
 - `form.setValue` で Select の値をフォームに反映している
@@ -1080,7 +1080,7 @@ Select は `<input>` と違って `register` では結び付けられません�
     </Select>
   </div>
 ```
-`onValueChange` の中で `isTaskStatus(v) || v === 'all'` を確かめてから `setValue` しているのはフォームが受け取れる値だけを通すためです。選択肢を自分で並べているので普段なら外れた値は来ません。ただし `v` の型が `string` である以上、型の上では何でも渡せてしまいます。ここで一段はさむと`SearchFormValues` の型と実際に入る値がずれません。`Object.entries(TASK_STATUS_LABELS)` は`['TODO', '未対応']` のような値とラベルの組を一度に取り出す書き方です。選択肢を手で5行書かずに済むうえ、ステータスが増えたときも定数を直すだけで画面に出ます。
+`onValueChange` の中で `isTaskStatus(v) || v === 'all'` を確かめてから `setValue` しているのはフォームが受け取れる値だけを通すためです。選択肢を自分で並べているので普段なら外れた値は来ません。ただし `v` の型が `string` である以上、型の上では何でも渡せてしまいます。ここで一段はさむと `SearchFormValues` の型と実際に入る値がずれません。`Object.entries(TASK_STATUS_LABELS)` は `['TODO', '未対応']` のような値とラベルの組を一度に取り出す書き方です。選択肢を手で5行書かずに済むうえ、ステータスが増えたときも定数を直すだけで画面に出ます。
 
 **確認ポイント**:
 - `isTaskStatus(v)` で値をバリデーションしている
@@ -1182,7 +1182,7 @@ Select は `<input>` と違って `register` では結び付けられません�
   </div>
 </div>{/* grid終了 */}
 ```
-日付の2つは Select と違うので `register` で結び付けられます。`type="date"` にするとブラウザが用意しているカレンダーの入力欄になり、値は `2026-04-17` のような文字列で届きます。この形のまま送ると時刻が付いていないのでStep 7 で `dateOnlyToUtcStartIso` を通してから API へ渡します。開始日と終了日を分けているのはサーバー側の `buildDateRangeFilter` が `gte` と `lte` を別々に受け取る作りだからです。片方だけ入れた検索も成り立ちます。
+日付の2つは Select と違うので `register` で結び付けられます。`type="date"` にするとブラウザが用意しているカレンダーの入力欄になり、値は `2026-04-17` のような文字列で届きます。この形のまま送ると時刻が付いていないので Step 7 で `dateOnlyToUtcStartIso` を通してから API へ渡します。開始日と終了日を分けているのはサーバー側の `buildDateRangeFilter` が `gte` と `lte` を別々に受け取る作りだからです。片方だけ入れた検索も成り立ちます。
 
 **確認ポイント**:
 - 日付入力欄が `type="date"` で表示される
@@ -1206,7 +1206,7 @@ Select は `<input>` と違って `register` では結び付けられません�
   </CardContent>
 </Card>
 ```
-2つのボタンは `<form>` の送信ではなく `onClick` で動かします。この画面が値を送る先はサーバーではなくURLだからです。フォームの送信を使うとページ全体が読み直され、せっかく持っている入力の状態が消えます。`variant="outline"` のクリアボタンは押しても検索を走らせず、条件だけを初期状態へ戻します。ここまでで入力欄が7つそろい、フォーム全体が1枚の `Card` に収まりました。
+2つのボタンは `<form>` の送信ではなく `onClick` で動かします。この画面が値を送る先はサーバーではなく URL だからです。フォームの送信を使うとページ全体が読み直され、せっかく持っている入力の状態が消えます。`variant="outline"` のクリアボタンは押しても検索を走らせず、条件だけを初期状態へ戻します。ここまでで入力欄が7つそろい、フォーム全体が1枚の `Card` に収まりました。
 
 2つのボタンが呼んでいる `handleSearch` と `handleClear` は次の Step 6 で定義します。
 定義するまでこの画面は表示できないので見た目の確認は Step 6 のあとに行います。
@@ -1223,7 +1223,7 @@ Select は `<input>` と違って `register` では結び付けられません�
 
 ### Step 6: handleSearch と handleClear を定義する（5分）
 
-**ゴール**: 検索実行とクリアのハンドラーを定義します。フォームの値をURLパラメータに変換します。
+**ゴール**: 検索実行とクリアのハンドラーを定義します。フォームの値を URL パラメータに変換します。
 
 `SearchPageContent` 内、return 文より前に追加します。
 
@@ -1253,11 +1253,11 @@ const handleSearch = () => {
       value: values.dateTo },
   ];
 ```
-`paramList` を配列にしたのは7つの項目を同じ手順で処理したいからです。項目ごとに `if` を7個並べる書き方もできますが条件を1つ足すたびに書き足す場所が増えて漏れやすくなります。`exclude: 'all'` が付いている4つは「すべて」を選んだときにURLへ書かないという指定です。キーワードと日付に付いていないのはこの2つの未入力が空文字で、次のブロックの `p.value` の判定だけで落ちるからです。
+`paramList` を配列にしたのは7つの項目を同じ手順で処理したいからです。項目ごとに `if` を7個並べる書き方もできますが条件を1つ足すたびに書き足す場所が増えて漏れやすくなります。`exclude: 'all'` が付いている4つは「すべて」を選んだときに URL へ書かないという指定です。キーワードと日付に付いていないのはこの2つの未入力が空文字で、次のブロックの `p.value` の判定だけで落ちるからです。
 
 **確認ポイント**:
 - `form.getValues()` で全フィールドの値を一括取得している
-- `exclude: 'all'` で「すべて」選択時はURLに含めない
+- `exclude: 'all'` で「すべて」選択時は URL に含めない
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1275,12 +1275,12 @@ const handleSearch = () => {
 };
 ```
 **確認ポイント**:
-- `URLSearchParams` で条件をURL文字列に変換している
-- `router.push` でURLを更新している
+- `URLSearchParams` で条件を URL 文字列に変換している
+- `router.push` で URL を更新している
 
-未入力の条件をURLから外しています。共有したときのURLを読める長さに保つためです。7項目を全部書くと `?keyword=&projectId=all&status=all...` という並びになり、何で絞り込んだのかが見て分かりません。`router.push` を使うとブラウザの履歴に1件積まれるので条件を変えて検索したあとに「戻る」を押すと前の条件へ戻ります。
+未入力の条件を URL から外しています。共有したときの URL を読める長さに保つためです。7項目を全部書くと `?keyword=&projectId=all&status=all...` という並びになり、何で絞り込んだのかが見て分かりません。`router.push` を使うとブラウザの履歴に1件積まれるので条件を変えて検索したあとに「戻る」を押すと前の条件へ戻ります。
 
-> `URLSearchParams` はブラウザ標準のAPIです。`params.set('key', 'value')` でキーと値を追加し、`params.toString()` で `key=value&key2=value2` 形式の文字列を生成します。
+> `URLSearchParams` はブラウザ標準の API です。`params.set('key', 'value')` でキーと値を追加し、`params.toString()` で `key=value&key2=value2` 形式の文字列を生成します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1298,21 +1298,21 @@ const handleClear = () => {
   router.push('/search');
 };
 ```
-`form.reset` でフォームを空にするだけでは足りません。URLには前の条件が残ったままだからです。残っているとこのあと Step 7 で書くURL同期がすぐに値を書き戻し、クリアしたはずの条件が復活します。だから `router.push('/search')` でURLも同時に空へ戻します。フォームとURLのどちらか片方だけを直すと必ず食い違うのでこの2行は必ずセットで書きます。
+`form.reset` でフォームを空にするだけでは足りません。URL には前の条件が残ったままだからです。残っているとこのあと Step 7 で書く URL 同期がすぐに値を書き戻し、クリアしたはずの条件が復活します。だから `router.push('/search')` で URL も同時に空へ戻します。フォームと URL のどちらか片方だけを直すと必ず食い違うのでこの2行は必ずセットで書きます。
 
 **確認ポイント**:
 - `form.reset()` で7つのフィールドを一括クリアしている
-- `router.push('/search')` でURLもリセットしている
+- `router.push('/search')` で URL もリセットしている
 
 > `form.getValues()` で全フィールドの値を一括取得し、`form.reset()` で一括クリアできます。`useState` を7個並べるより管理しやすくなります。
 
 ---
 
-### Step 7: URL同期と検索API呼び出し（5分）
+### Step 7: URL 同期と検索 API 呼び出し（5分）
 
-**ゴール**: URLパラメータの変更をフォームに同期し、条件付きで検索APIを呼びます。
+**ゴール**: URL パラメータの変更をフォームに同期し、条件付きで検索 API を呼びます。
 
-ブラウザの「戻る」ボタンや共有リンクに対応するためURLパラメータが変わったときにフォームの値を同期します。
+ブラウザの「戻る」ボタンや共有リンクに対応するため URL パラメータが変わったときにフォームの値を同期します。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1336,11 +1336,11 @@ useEffect(() => {
     { key: 'dateTo', empty: '', transform: normalizeDate },
   ];
 ```
-ここが「条件をURLに置く」設計の見返りです。ブラウザの戻る、リンクの共有、再読み込みのどれで来てもフォームの値はURLから組み直されます。条件を `useState` だけで持っていると戻るを押してもURLが変わるだけで画面の入力欄はそのまま、という食い違いが起きます。URLを正、フォームを写しと決めておけばどちらを見て直せばよいのかで迷いません。
+ここが「条件を URL に置く」設計の見返りです。ブラウザの戻る、リンクの共有、再読み込みのどれで来てもフォームの値は URL から組み直されます。条件を `useState` だけで持っていると戻るを押しても URL が変わるだけで画面の入力欄はそのまま、という食い違いが起きます。URL を正、フォームを写しと決めておけばどちらを見て直せばよいのかで迷いません。
 
-`empty` はそのパラメータがURLに載っていなかったときに入れる値です。キーワードと日付は空文字、4つの Select は `'all'` が「絞り込みなし」を表します。
+`empty` はそのパラメータが URL に載っていなかったときに入れる値です。キーワードと日付は空文字、4つの Select は `'all'` が「絞り込みなし」を表します。
 
-`transform` は URL の値を検査してからフォームへ入れるための関数です。不正なID・ステータス・優先度は `'all'` に、不正な日付は空文字に戻します。
+`transform` は URL の値を検査してからフォームへ入れるための関数です。不正な ID・ステータス・優先度は `'all'` に、不正な日付は空文字に戻します。
 
 **確認ポイント**:
 - `status` / `priority` は型ガードで不正な値を防いでいる
@@ -1361,16 +1361,16 @@ useEffect(() => {
   }
 }, [searchParams, form]);
 ```
-7つの項目すべてを毎回書き込みます。URLに載っていない項目は `empty` に戻るので`?status=TODO` の画面から `status` の付いていないURLへ戻ればフォームの `status` も `'all'` に戻ります。URLに書いてあることが画面のすべてと言い切れる状態です。書き込む項目をURLに載っているものだけに絞ると消えた条件が画面に残り、表示と検索結果が食い違います。
+7つの項目すべてを毎回書き込みます。URL に載っていない項目は `empty` に戻るので `?status=TODO` の画面から `status` の付いていない URL へ戻ればフォームの `status` も `'all'` に戻ります。URL に書いてあることが画面のすべてと言い切れる状態です。書き込む項目を URL に載っているものだけに絞ると消えた条件が画面に残り、表示と検索結果が食い違います。
 
-依存配列に `searchParams` を入れてあるためこの処理はURLが変わるたびに走ります。`handleSearch` でURLを書き換えるとその変化を受けてここが動き、フォームの値がURLに追いつく、という一方向の流れになります。
+依存配列に `searchParams` を入れてあるためこの処理は URL が変わるたびに走ります。`handleSearch` で URL を書き換えるとその変化を受けてここが動き、フォームの値が URL に追いつく、という一方向の流れになります。
 
 ```mermaid
 flowchart LR
     F["フォームの入力欄"] -->|"handleSearch<br/>exclude の項目は<br/>書き出さない"| U["URL のクエリ"]
     U -->|"useEffect<br/>載っていない項目は<br/>empty に戻す"| F
 ```
-書き出しと読み戻しは同じ輪の上にあり、`exclude` と `empty` が対になっています。`status` を「すべて」にすると `exclude` でURLから消え、次に読み戻すときは載っていないので `empty` の `'all'` が入ります。片方だけ直すと消したはずの条件が画面に残ります。
+書き出しと読み戻しは同じ輪の上にあり、`exclude` と `empty` が対になっています。`status` を「すべて」にすると `exclude` で URL から消え、次に読み戻すときは載っていないので `empty` の `'all'` が入ります。片方だけ直すと消したはずの条件が画面に残ります。
 
 **確認ポイント**:
 - 依存配列に `searchParams` と `form` を指定している
@@ -1390,13 +1390,13 @@ const shouldSearch =
   || !!formValues.dateFrom
   || !!formValues.dateTo;
 ```
-`!!` は値が入っているかどうかを true と false に変える書き方です。キーワードは空文字なら false、4つの Select は `'all'` なら false になり、7つ全部が false のときだけ `shouldSearch` が false になります。この判定が無いと`/search` を開いた瞬間に条件なしの検索が走ります。参加しているプロジェクトのタスクを上限の100件まで読み込むのでまだ何も入力していない読者に大量の結果が並びます。条件がそろうまで待たせるための、たった1つの変数です。
+`!!` は値が入っているかどうかを true と false に変える書き方です。キーワードは空文字なら false、4つの Select は `'all'` なら false になり、7つ全部が false のときだけ `shouldSearch` が false になります。この判定が無いと `/search` を開いた瞬間に条件なしの検索が走ります。参加しているプロジェクトのタスクを上限の100件まで読み込むのでまだ何も入力していない読者に大量の結果が並びます。条件がそろうまで待たせるための、たった1つの変数です。
 
 **確認ポイント**:
 - すべてのフィルター条件を OR で評価している
 - 条件が1つもなければ API を呼ばない
 
-検索APIを呼び出します。`enabled: shouldSearch` で条件が空のときはリクエストを送りません。
+検索 API を呼び出します。`enabled: shouldSearch` で条件が空のときはリクエストを送りません。
 
 ```typescript
 // filepath: src/app/search/page.tsx
@@ -1477,7 +1477,7 @@ const handleSearchErrorAction = () => {
 401はログインし直す必要があり、403はその検索結果を見る権限がありません。どちらも以前取得したデータを残すと、現在は見てはいけない情報が画面へ出続けます。一時的な通信失敗では以前の結果を残し、警告と再試行ボタンを添えます。
 
 **確認ポイント**:
-- `enabled: shouldSearch` で条件なしのときはAPIを呼ばない
+- `enabled: shouldSearch` で条件なしのときは API を呼ばない
 - 日付を ISO 文字列に変換している
 
 > `enabled: shouldSearch` は Day 12 で学んだ `enabled` 制御と同じパターンです。条件が揃うまで API リクエストを送りません。
@@ -1512,13 +1512,13 @@ const handleProjectClick =
       `/project?projectId=${projectId}`);
   };
 ```
-3つとも `router.push` でURLを組み立てるだけで、遷移先の画面が何を表示するかまでは決めていません。タスク一覧のページが `taskId` を読んで詳細を開き、`edit=true` が付いていれば編集ダイアログを開きます。検索画面から渡すのはURLだけ、という分担にしておくと遷移先の作りが変わってもこちらは触らずに済みます。ここでもURLが画面どうしの受け渡し役になっています。
+3つとも `router.push` で URL を組み立てるだけで、遷移先の画面が何を表示するかまでは決めていません。タスク一覧のページが `taskId` を読んで詳細を開き、`edit=true` が付いていれば編集ダイアログを開きます。検索画面から渡すのは URL だけ、という分担にしておくと遷移先の作りが変わってもこちらは触らずに済みます。ここでも URL が画面どうしの受け渡し役になっています。
 
 **確認ポイント**:
 - 3つのハンドラーを `search/page.tsx` へ書いた
 - どれも `router.push` を呼ぶだけの中身になっている
 
-実際の動きを確かめるのはこのあとです。検索結果が画面に出てStep 9 で `handleTaskDelete` を書き終えてから押します。
+実際の動きを確かめるのはこのあとです。検索結果が画面に出て Step 9 で `handleTaskDelete` を書き終えてから押します。
 
 検索画面の編集ボタンは `edit=true` を付けるため
 タスク一覧ページ側でもこの値を受け取ります。
@@ -1544,7 +1544,7 @@ useEffect(() => {
   }
 }, [isEditLink, taskIdParam]);
 ```
-置き換えるのは Day 13 で書いた `taskIdParam` のまわりです。`edit=true` が付いているときだけ詳細を取りたいので`enabled` に `!!taskIdParam && isEditLink` を渡します。下の `useEffect` へ `!isEditLink` を足したのは編集リンクで来たときに詳細ダイアログまで開くとダイアログが2枚重なってしまうからです。編集で来たときは詳細を飛ばして編集画面へ、という振り分けをこの1行で決めています。
+置き換えるのは Day 13 で書いた `taskIdParam` のまわりです。`edit=true` が付いているときだけ詳細を取りたいので `enabled` に `!!taskIdParam && isEditLink` を渡します。下の `useEffect` へ `!isEditLink` を足したのは編集リンクで来たときに詳細ダイアログまで開くとダイアログが2枚重なってしまうからです。編集で来たときは詳細を飛ばして編集画面へ、という振り分けをこの1行で決めています。
 
 検索から編集用データを取得できたら
 Day 15 の `TaskDialog` を編集モードで開きます。
@@ -1608,7 +1608,7 @@ const closeTaskDialog = () => {
 };
 ```
 `createMutation` と `updateMutation` の成功時にある
-`setDialogOpen(false)` は`closeTaskDialog()` へ
+`setDialogOpen(false)` は `closeTaskDialog()` へ
 置き換えます。`TaskDialog` の
 `onClose={() => setDialogOpen(false)}` も、
 `onClose={closeTaskDialog}` へ置き換えてください。
@@ -1742,7 +1742,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 ```
 検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCardに権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
+TaskCard に権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1771,7 +1771,7 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
                 task.projectId)} />
           ))}
 ```
-> `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
+> `canEdit` / `canDelete` を渡さないと TaskCard 側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため `task.projectId` ごとに個別に権限を判定します。
 
 `timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないとこの画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
 
@@ -1945,9 +1945,9 @@ const handleTaskDelete =
 **確認ポイント**:
 - 削除成功時に検索結果を再取得する（`invalidate`）
 - 401は再ログインの案内、結果不明は検索結果の再取得になる
-- 削除成功時だけ確認画面を閉じて対象IDを `null` へ戻す
+- 削除成功時だけ確認画面を閉じて対象 ID を `null` へ戻す
 
-削除確認ダイアログのJSXです。検索結果の下に配置します。
+削除確認ダイアログの JSX です。検索結果の下に配置します。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
@@ -1967,11 +1967,11 @@ const handleTaskDelete =
   isPending={
     deleteMutation.isPending} />
 ```
-削除そのものは `handleTaskDelete` では走りません。あの関数がするのは確認ダイアログを開くところまでで、実際に消すのは `onConfirm` の中の `mutate` です。押し間違いで消える事故を防ぐためDay 11 の削除確認でも使った共通部品 `DeleteConfirmDialog` をここでも挟みます。`isPending` を渡しておくと通信中はボタンが押せない状態になり、二重に削除リクエストが飛びません。確認画面は `onSuccess` でだけ閉じます。応答が届かない場合は閉じたことを成功の合図にせず、検索結果を更新して対象の有無を確かめてください。
+削除そのものは `handleTaskDelete` では走りません。あの関数がするのは確認ダイアログを開くところまでで、実際に消すのは `onConfirm` の中の `mutate` です。押し間違いで消える事故を防ぐため Day 11 の削除確認でも使った共通部品 `DeleteConfirmDialog` をここでも挟みます。`isPending` を渡しておくと通信中はボタンが押せない状態になり、二重に削除リクエストが飛びません。確認画面は `onSuccess` でだけ閉じます。応答が届かない場合は閉じたことを成功の合図にせず、検索結果を更新して対象の有無を確かめてください。
 
 **確認ポイント**:
 - 削除ボタンで確認ダイアログが表示される
-- 確認後にAPIで削除が実行される
+- 確認後に API で削除が実行される
 
 ---
 
@@ -1997,13 +1997,13 @@ npm run dev
 | キーワードに「設計」と入力して検索 | 「データベース設計」のカードが表示される（Day 15 でこのタスクを消していれば0件。その場合は残っているタスクの名前で試す） |
 | プロジェクトで絞り込み | 対象プロジェクトのタスクだけ表示（初期データでは参加プロジェクトが1つなので件数は変わらない） |
 | ステータスで絞り込み | 選択したステータスだけ表示 |
-| 「クリア」ボタン | 条件リセット・URLが `/search` に戻る |
+| 「クリア」ボタン | 条件リセット・URL が `/search` に戻る |
 | カードをクリック | タスク詳細に遷移 |
-| URLに検索条件が含まれる | ブラウザの戻るで復元される |
+| URL に検索条件が含まれる | ブラウザの戻るで復元される |
 
 **確認ポイント**:
 - 複数の条件で絞り込める
-- URLをコピーして共有できる
+- URL をコピーして共有できる
 - カードクリックで詳細に遷移する
 
 下の画像は完成した検索ページです。条件を入れる前の状態が写っています。
@@ -2061,11 +2061,11 @@ const { data: results, isLoading } = api.search.search.useQuery(
 
 #### 覚えておきたいエッセンス
 
-検索のように「条件が変わるたびにデータ取得」するパターンは`useEffect` + `fetch` より `useQuery` + `enabled` のほうが安全で効率的です。
+検索のように「条件が変わるたびにデータ取得」するパターンは `useEffect` + `fetch` より `useQuery` + `enabled` のほうが安全で効率的です。
 
 ## 完成コード全体
 
-今日は5つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
+今日は5つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めば Step 0 から Step 9 で書いたものがどう1つのファイルになったかを確かめられます。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
@@ -2098,7 +2098,7 @@ const SEARCH_PROJECT_LIMIT = 20;
 const QUICK_SEARCH_TASK_LIMIT = 20;
 const QUICK_SEARCH_PROJECT_LIMIT = 10;
 ```
-Day 14 で書いた import に、今日の3行が混ざった状態です。並び順が入れ替わって見えるのは`npm run fix` を実行すると Biome がアルファベット順に整えるからです。手で並べ直す必要はありません。
+Day 14 で書いた import に、今日の3行が混ざった状態です。並び順が入れ替わって見えるのは `npm run fix` を実行すると Biome がアルファベット順に整えるからです。手で並べ直す必要はありません。
 
 件数の上限を4つとも定数にしてあるのはあとで数を変えたくなったときに触る場所を1か所にするためです。`take: 100` と直接書くと値の意味が読む人に伝わらず、増やすときに書き換え漏れが起きます。
 
@@ -2166,7 +2166,7 @@ const buildKeywordFilter = (keyword: string, fields: string[]) =>
     [field]: { contains: keyword, mode: 'insensitive' satisfies Prisma.QueryMode },
   }));
 ```
-`buildDynamicWhere` が `undefined` と `'all'` の2つを飛ばしているのはどちらも「この条件では絞らない」という意味だからです。`'all'` をそのまま条件へ入れると`status` が `'all'` という文字列のタスクを探すことになり、結果は必ず0件になります。
+`buildDynamicWhere` が `undefined` と `'all'` の2つを飛ばしているのはどちらも「この条件では絞らない」という意味だからです。`'all'` をそのまま条件へ入れると `status` が `'all'` という文字列のタスクを探すことになり、結果は必ず0件になります。
 
 `buildKeywordFilter` が配列を返します。呼ぶ側が `OR` へそのまま渡せる形にするためです。探す列だけを引数で変えられるのでタスクなら `title` と `description`、プロジェクトなら `name` と `description` を指定します。
 
@@ -2207,7 +2207,7 @@ export const searchRouter = createTRPCRouter({
 ```
 `protectedProcedure` を使っているのでログインしていない相手はここへ届きません。`ctx.session.userId` は画面から送られた値ではなくサーバーが Cookie から取り出した値なので他人になりすまして検索する道が塞がっています。
 
-`assignedTo` という画面側の名前が`assigneeId` というデータベース側の列名へ入れ替わっているのはこの行です。画面の言葉とテーブルの言葉が違うとき対応表をこの1か所に集めておくと後で列名が変わっても直す場所が増えません。
+`assignedTo` という画面側の名前が `assigneeId` というデータベース側の列名へ入れ替わっているのはこの行です。画面の言葉とテーブルの言葉が違うとき対応表をこの1か所に集めておくと後で列名が変わっても直す場所が増えません。
 
 **search — 検索条件の組み立て**:
 
@@ -2420,7 +2420,7 @@ flowchart LR
         },
       },
 ```
-Day 14 で書いた手続きが位置だけ下がってここに来ています。中身は1文字も変えていません。今日追加した3つが上に入ったので`search.ts` の並びは `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になります。
+Day 14 で書いた手続きが位置だけ下がってここに来ています。中身は1文字も変えていません。今日追加した3つが上に入ったので `search.ts` の並びは `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になります。
 
 **getProjectMembers — 取得と戻り値**:
 
@@ -2600,7 +2600,7 @@ import { api } from '@/trpc/react';
 ```
 `isTaskStatus` と `isTaskPriority` は文字列がステータスや優先度として正しい値かを判定する関数です。Select から返る値は `string` として届くのでこの判定を通さないと `form.setValue` へ渡すときに型が合いません。`as` で押し込む書き方を避けるための道具です。
 
-`dateOnlyToUtcStartIso` と `dateOnlyToUtcEndIso` は`2026-07-28` のような日付だけの文字列を、その日の始まりと終わりの時刻へ変換します。サーバー側の `dateFrom` と `dateTo` が `datetime` を求めているのでこの変換が必要です。
+`dateOnlyToUtcStartIso` と `dateOnlyToUtcEndIso` は `2026-07-28` のような日付だけの文字列を、その日の始まりと終わりの時刻へ変換します。サーバー側の `dateFrom` と `dateTo` が `datetime` を求めているのでこの変換が必要です。
 
 **ステータス・優先度の値とフォームのスキーマ**:
 
@@ -2650,7 +2650,7 @@ const normalizeDate = (value: string): string => {
     ? value : '';
 };
 ```
-IDはサーバーと同じ `cuid()` で検査し、不正なら絞り込みなしの `all` に戻します。日付は形式と実在する日付の両方を検査します。`2026-02-30` は Date が3月へ補正するため変換後の日付とも比較します。不正な値は空文字に戻します。こうしておけば`?dateFrom=bad` を開いても検索前の日付変換で画面がエラーになりません。
+ID はサーバーと同じ `cuid()` で検査し、不正なら絞り込みなしの `all` に戻します。日付は形式と実在する日付の両方を検査します。`2026-02-30` は Date が3月へ補正するため変換後の日付とも比較します。不正な値は空文字に戻します。こうしておけば `?dateFrom=bad` を開いても検索前の日付変換で画面がエラーになりません。
 
 **関数の入口と useForm の初期値**:
 
@@ -2679,7 +2679,7 @@ function SearchPageContent() {
 ```
 `defaultValues` を URL から組み立てているのがこの画面の性格を決めています。検索条件を含んだリンクを開いた人が同じ条件を復元できます。結果はその人の権限と保存済みデータによって変わります。ここを固定値にするとリンクを共有しても相手には空のフォームが出ます。
 
-`initialStatus` をいったん変数に取り出しているのは`isTaskStatus()` の判定と代入で同じ値を2回読まないためです。
+`initialStatus` をいったん変数に取り出しているのは `isTaskStatus()` の判定と代入で同じ値を2回読まないためです。
 
 **useForm の初期値の残り**:
 
@@ -2705,7 +2705,7 @@ function SearchPageContent() {
   const { data: users } =
     api.search.getProjectMembers.useQuery();
 ```
-`keyword` と日付の初期値が `''` で、`projectId` などが `'all'` になっている違いに注目してください。入力欄は空文字が「未入力」を表し、Select は `'all'` が「すべて」の選択肢を指します。ここを取り違えるとSelect が何も選ばれていない見た目になります。
+`keyword` と日付の初期値が `''` で、`projectId` などが `'all'` になっている違いに注目してください。入力欄は空文字が「未入力」を表し、Select は `'all'` が「すべて」の選択肢を指します。ここを取り違えると Select が何も選ばれていない見た目になります。
 
 `form.watch()` は入力が変わるたびに新しい値を返します。この後の検索条件がすべて `formValues` を見ているので入力を変えた瞬間に条件が更新されます。
 
@@ -2793,7 +2793,7 @@ function SearchPageContent() {
         value: values.dateTo },
     ];
 ```
-7つの条件を配列にしてあるのでURL へ載せる処理は次のブロックの数行で終わります。`if` を7本並べる書き方でも動きますが条件を1つ増やすたびに `if` も1本増え、書き漏らしても動いてしまいます。
+7つの条件を配列にしてあるので URL へ載せる処理は次のブロックの数行で終わります。`if` を7本並べる書き方でも動きますが条件を1つ増やすたびに `if` も1本増え、書き漏らしても動いてしまいます。
 
 `exclude: 'all'` が付いているのは `projectId` `status` `priority` `assignedTo` の4つで、どれも Select で選ぶ項目です。キーワードと日付の3つには付いていません。入力欄と日付は空文字が未入力を表すので除外する値を指定する必要がありません。
 
@@ -2814,7 +2814,7 @@ function SearchPageContent() {
       `/search?${params.toString()}`);
   };
 ```
-`p.value &&` で空文字を落とし、`p.value !== p.exclude` で `'all'` を落としています。この2つを通した条件だけが URL に載るので絞り込んでいない項目はアドレス欄に現れません。全部載せる形にすると`?keyword=&status=all&priority=all` のような読みにくいリンクになります。
+`p.value &&` で空文字を落とし、`p.value !== p.exclude` で `'all'` を落としています。この2つを通した条件だけが URL に載るので絞り込んでいない項目はアドレス欄に現れません。全部載せる形にすると `?keyword=&status=all&priority=all` のような読みにくいリンクになります。
 
 `router.push` を使っているのでブラウザの戻るボタンで前の検索条件へ戻れます。`replace` にすると履歴が残らず、戻ると検索ページの外へ出ます。
 
@@ -2836,7 +2836,7 @@ function SearchPageContent() {
     router.push('/search');
   };
 ```
-`form.reset()` に7項目すべてを渡しています。引数なしで呼ぶと `defaultValues` へ戻るためURL 付きで開いた画面ではクリアしたつもりの条件が復活します。ここで空の状態を明示的に書いておくとどの入り方をしても同じ結果になります。
+`form.reset()` に7項目すべてを渡しています。引数なしで呼ぶと `defaultValues` へ戻るため URL 付きで開いた画面ではクリアしたつもりの条件が復活します。ここで空の状態を明示的に書いておくとどの入り方をしても同じ結果になります。
 
 `router.push('/search')` で URL の条件も落としています。フォームだけ空にするとアドレス欄には古い条件が残り、再読み込みで戻ってきます。
 
@@ -2933,7 +2933,7 @@ const {
           ? formValues.assignedTo
           : undefined,
 ```
-空文字や `'all'` を `undefined` へ置き換えてから渡しています。サーバー側の `searchInputSchema` は `.optional()` なので、`undefined` は「この条件は使わない」として扱われます。空文字をそのまま送ると`keyword` に空文字が入った検索として組み立てられます。
+空文字や `'all'` を `undefined` へ置き換えてから渡しています。サーバー側の `searchInputSchema` は `.optional()` なので、`undefined` は「この条件は使わない」として扱われます。空文字をそのまま送ると `keyword` に空文字が入った検索として組み立てられます。
 
 `status` と `priority` だけ変換していないのはサーバー側がこの2つに限って `'all'` を受け付ける形になっているからです。
 
@@ -3073,7 +3073,7 @@ const {
 ```
 `open` と `taskId` を1つの状態にまとめてあるので「開いているのに対象が空」という組み合わせが起きません。2つの `useState` に分けると片方だけ更新した瞬間にその状態が生まれます。
 
-削除が成功したら検索結果を取り直して確認画面を閉じ、対象IDを `null` へ戻します。401と結果不明は `notifyDeleteError` で分けます。結果不明の場合は削除済みの可能性もあるため、検索結果を取り直して確認します。エラー時は確認画面を閉じません。
+削除が成功したら検索結果を取り直して確認画面を閉じ、対象 ID を `null` へ戻します。401と結果不明は `notifyDeleteError` で分けます。結果不明の場合は削除済みの可能性もあるため、検索結果を取り直して確認します。エラー時は確認画面を閉じません。
 
 **JSX — 画面の外枠と見出し**:
 
@@ -3125,7 +3125,7 @@ const {
 ```
 虫めがねアイコンを入力欄の中へ重ねるために、外側の `<div>` に `relative`、アイコンに `absolute` を付けています。入力欄の `pl-8` は左に余白を作る指定で、これが無いと打った文字がアイコンの下へ隠れます。
 
-`onKeyDown` で Enter を拾っているので入力してすぐ検索できます。`isComposing` が真の間は、日本語入力の変換を確定するEnterなので検索しません。この行が無いとキーワードを打った読者はマウスでボタンを探すことになります。
+`onKeyDown` で Enter を拾っているので入力してすぐ検索できます。`isComposing` が真の間は、日本語入力の変換を確定する Enter なので検索しません。この行が無いとキーワードを打った読者はマウスでボタンを探すことになります。
 
 **JSX — プロジェクトの選択・前半**:
 
@@ -3147,9 +3147,9 @@ const {
                         placeholder="すべて" />
                     </SelectTrigger>
 ```
-`grid-cols-1` から `lg:grid-cols-3` まで3段の指定があるので画面幅に応じて1列・2列・3列へ切り替わります。スマートフォンで3列にするとSelect の文字が読めない幅まで縮みます。
+`grid-cols-1` から `lg:grid-cols-3` まで3段の指定があるので画面幅に応じて1列・2列・3列へ切り替わります。スマートフォンで3列にすると Select の文字が読めない幅まで縮みます。
 
-`value` と `onValueChange` を組にしているのはshadcn/ui の Select が入力欄と違って `form.register()` を使えないからです。値の受け渡しを自分で書く必要があります。
+`value` と `onValueChange` を組にしているのは shadcn/ui の Select が入力欄と違って `form.register()` を使えないからです。値の受け渡しを自分で書く必要があります。
 
 **JSX — プロジェクトの選択・後半**:
 
@@ -3559,7 +3559,7 @@ const {
   );
 }
 ```
-`onConfirm` の中で `if (deleteTaskConfirm.taskId)` を確かめています。対象が決まっていない状態で削除を送らないためです。この判定が無いとid が `null` のまま通信が飛びます。
+`onConfirm` の中で `if (deleteTaskConfirm.taskId)` を確かめています。対象が決まっていない状態で削除を送らないためです。この判定が無いと id が `null` のまま通信が飛びます。
 
 `isPending` を渡しているので通信中はボタンが押せません。渡さないと反応が無いと感じた読者が何度も押し、同じ削除が複数回送られます。閉じタグは `</div>`、`</AppLayout>`、`);`、`}` の順で、開いた順の逆になっています。
 
@@ -3579,11 +3579,11 @@ export default function SearchPage() {
 ```
 `src/app/search/page.tsx` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
 
-`useSearchParams()` を使う部品は `<Suspense>` で包む必要があります。包まずにビルドするとNext.js が「この部品は事前に組み立てられない」というエラーを出して止まります。`fallback` は包まれた中身が用意できるまで表示する内容です。
+`useSearchParams()` を使う部品は `<Suspense>` で包む必要があります。包まずにビルドすると Next.js が「この部品は事前に組み立てられない」というエラーを出して止まります。`fallback` は包まれた中身が用意できるまで表示する内容です。
 
 `SearchPageContent` を別の関数へ分けているのはこの決まりを守るためです。1つの関数に全部書くと包む相手がいなくなります。
 
-> **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の違いは4つです。1つ目は完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目はキーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目はURL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。4つ目は `TaskCard` に `timeSpentMinutes` と `onTimeLogSuccess` を渡していない点で、検索画面では時間記録の欄を出さない形になっています。ルーター側は今日のコードと同じ並びで、違いはありません。この4か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
+> **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の違いは4つです。1つ目は完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目はキーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目は URL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。4つ目は `TaskCard` に `timeSpentMinutes` と `onTimeLogSuccess` を渡していない点で、検索画面では時間記録の欄を出さない形になっています。ルーター側は今日のコードと同じ並びで、違いはありません。この4か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/component/layout/app-layout.tsx`
 
@@ -4384,26 +4384,26 @@ Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTa
 
 - [ ] 検索フォームを作成できた
 - [ ] `api.search.search` で検索できた
-- [ ] URLパラメータと連動させた
-- [ ] 検索結果をTaskCardで表示できた
+- [ ] URL パラメータと連動させた
+- [ ] 検索結果を TaskCard で表示できた
 
 ## つまずきポイント
 
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 毎回APIが呼ばれる | enabled条件が不適切 | shouldSearchでガード |
-| URLが更新されない | router.push忘れ | handleSearchに追加 |
-| 結果が0件表示 | projectId初期値が間違い | `'all'`で初期化する |
-| Enter検索が効かない | onKeyDown未設定 | EnterでhandleSearch |
-| フィルターがリセットされない | handleClearに項目漏れ | 全stateを'all'/''に |
+| 毎回 API が呼ばれる | enabled 条件が不適切 | shouldSearch でガード |
+| URL が更新されない | router.push 忘れ | handleSearch に追加 |
+| 結果が0件表示 | projectId 初期値が間違い | `'all'` で初期化する |
+| Enter 検索が効かない | onKeyDown 未設定 | Enter で handleSearch |
+| フィルターがリセットされない | handleClear に項目漏れ | 全 state を'all'/''に |
 
 ## 今日学んだ用語
 
 | 用語 | 意味 |
 |------|------|
-| URLSearchParams | URLのクエリパラメータを操作するブラウザ標準API |
-| shouldSearch | 検索実行の判定フラグ（全条件をORで評価） |
-| enabled | useQueryの実行条件制御 |
+| URLSearchParams | URL のクエリパラメータを操作するブラウザ標準 API |
+| shouldSearch | 検索実行の判定フラグ（全条件を OR で評価） |
+| enabled | useQuery の実行条件制御 |
 | refetchOnWindowFocus | ウィンドウ復帰時の再取得設定 |
 | form.watch() | フォームの値をリアクティブに監視する関数 |
 | form.setValue() | フォームの値をプログラムから更新する関数 |
@@ -4419,7 +4419,7 @@ A. 検索条件が1つも入っていないあいだ、検索の問い合わせ�
 
 **Q2. URL からフォームへ書き戻すループを、URL に載っている項目だけに絞ると何が起きますか。**
 
-A. 消したはずの条件が画面に残ります。`?status=TODO` の画面から `status` の付いていない URL へ戻ったときフォームの `status` が `'TODO'` のままになるためです。7つ全部を毎回書き込み、載っていない項目を `empty` へ戻す形にするとURL に書いてあることが画面のすべてになります。
+A. 消したはずの条件が画面に残ります。`?status=TODO` の画面から `status` の付いていない URL へ戻ったときフォームの `status` が `'TODO'` のままになるためです。7つ全部を毎回書き込み、載っていない項目を `empty` へ戻す形にすると URL に書いてあることが画面のすべてになります。
 
 **Q3. `projectId` や `status` には `exclude: 'all'` を付け、キーワードと日付には付けていないのはなぜですか。**
 
@@ -4427,7 +4427,7 @@ A. 未入力を表す値が違うためです。Select は「すべて」を選�
 
 ## 追加課題：検索条件を別のタブで再現する
 
-理解チェック Q2 の URL 同期を応用します。検索したタブを閉じてもURL から同じ条件を再現できることを確かめましょう。
+理解チェック Q2 の URL 同期を応用します。検索したタブを閉じても URL から同じ条件を再現できることを確かめましょう。
 
 前提は今日の検索画面が使えることです。自分が見られるタスクを1件選び、タイトルの一部とステータスを控えてください。
 
@@ -4437,7 +4437,7 @@ A. 未入力を表す値が違うためです。Select は「すべて」を選�
 
 新しいタブで「クリア」を押し、URL が `/search` に戻ったことを確認します。ブラウザの戻るボタンで、先ほどの2条件が再び表示されるか確かめてください。
 
-条件が残る場合は`src/app/search/page.tsx` の URL 同期処理が未指定の項目も初期値へ戻しているか確認します。確認後は両方のタブで「クリア」を押してください。DB とコードは変更しません。
+条件が残る場合は `src/app/search/page.tsx` の URL 同期処理が未指定の項目も初期値へ戻しているか確認します。確認後は両方のタブで「クリア」を押してください。DB とコードは変更しません。
 
 ## 次回予告
 

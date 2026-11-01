@@ -12,7 +12,7 @@ Day 16 ではタスクのステータス変更機能と、作業時間を手動�
 
 ![マイタスクページ。ステータスタブとプロジェクトフィルターの下に「期限切れ (1)」の見出しとカード1枚が並ぶ](./screenshots/day17/my-task.png)
 
-> **今日のゴールライン**: ログイン中の自分だけのタスクを取得し、期限グループとタブで今やることを整理できればOK。
+> **今日のゴールライン**: ログイン中の自分だけのタスクを取得し、期限グループとタブで今やることを整理できれば OK。
 
 ## なぜこれを作るのか
 
@@ -42,23 +42,23 @@ flowchart TD
     style G fill:#e8f5e9
 ```
 
-この図で見てほしいのはステータスTabs（B）とプロジェクトフィルター（C）がどちらも同じ `api.task.getAll`（I）へ矢印を向けている点です。絞り込みの条件が増えても呼び出す API は1本のままです。取得したタスクを期限別に振り分けるのは画面側の仕事です。サーバーへ渡す条件は「誰のタスクか」「どの状態か」「どのプロジェクトか」の3つです。だからマイタスク専用の API を新しく作らずに済みます。
+この図で見てほしいのはステータス Tabs（B）とプロジェクトフィルター（C）がどちらも同じ `api.task.getAll`（I）へ矢印を向けている点です。絞り込みの条件が増えても呼び出す API は1本のままです。取得したタスクを期限別に振り分けるのは画面側の仕事です。サーバーへ渡す条件は「誰のタスクか」「どの状態か」「どのプロジェクトか」の3つです。だからマイタスク専用の API を新しく作らずに済みます。
 
 ### やること / やらないこと
 
 | やること | やらないこと |
 |---------|-------------|
-| `getCurrentUser` で自分のIDを取得 | useSessionは使わない |
-| `getAll({ assigneeId })` でフィルター | 専用のAPIエンドポイント |
+| `getCurrentUser` で自分の ID を取得 | useSession は使わない |
+| `getAll({ assigneeId })` でフィルター | 専用の API エンドポイント |
 | 期限別にグループ表示 | カレンダー表示 |
-| ステータスTabsで絞り込み | 検索機能（Day 20） |
-| 編集・削除をTaskDialogで | 新規作成 |
+| ステータス Tabs で絞り込み | 検索機能（Day 20） |
+| 編集・削除を TaskDialog で | 新規作成 |
 
 ### 新しく学ぶ概念
 
 | 概念 | 読み方 | 役割 | 例え |
 |------|--------|------|------|
-| Tabs | タブ | コンテンツの切り替えUI | ファイルのタブ仕切り |
+| Tabs | タブ | コンテンツの切り替え UI | ファイルのタブ仕切り |
 | グループ表示 | — | データを条件で分類 | 手紙を「緊急・普通・後回し」に分ける |
 | date-only helper | — | 日付だけの値を時刻と切り分けて扱う | 「4/17」という日付札だけを比べる |
 | `useMemo` | ユーズ・メモ | 計算結果をキャッシュして再利用 | メモ帳に書いておいて変わった時だけ書き直す |
@@ -68,11 +68,11 @@ flowchart TD
 | ステップ | 作業内容 | 所要時間 |
 |---------|---------|---------|
 | Step 1 | ページの最小構造を作る | 3分 |
-| Step 2 | 自分のIDを取得してローディング処理 | 5分 |
+| Step 2 | 自分の ID を取得してローディング処理 | 5分 |
 | Step 3 | 自分のタスクを取得する | 5分 |
-| Step 4 | ステータスTabsを作る | 5分 |
+| Step 4 | ステータス Tabs を作る | 5分 |
 | Step 5 | プロジェクトフィルターを追加 | 5分 |
-| Step 6 | TaskGroupSectionコンポーネントを作る | 7分 |
+| Step 6 | TaskGroupSection コンポーネントを作る | 7分 |
 | Step 7 | 期限別グループに分類する | 7分 |
 | Step 8 | グループごとにカード表示 | 5分 |
 | Step 9 | 編集ハンドラーを実装する | 5分 |
@@ -123,7 +123,7 @@ export default function MyTasksPage() {
 
 ---
 
-### Step 2 : 自分のIDを取得してローディング処理（5分）
+### Step 2 : 自分の ID を取得してローディング処理（5分）
 
 **ゴール**: ログイン中のユーザー情報を取得し、ローディング中はスピナーを表示します。
 
@@ -147,9 +147,9 @@ import {
 import { api } from '@/trpc/react';
 ```
 
-ここで取り込む道具はこれから3つの役目に分かれます。`PageLoadingSpinner` は Day 09 でも使った読み込み中のスピナーで、ユーザー情報が届くまで画面を受け持ちます。`useCallback` は Step 5 で権限判定の関数を作るときに使います。残る `hasPermission` と `isProjectMemberRole` はStep 5 で「このプロジェクトでの自分の役割」を調べるための道具です。まだ出番のない名前も並びますがインポートを何度も書き足すより先にそろえておくと差分を追いやすくなります。
+ここで取り込む道具はこれから3つの役目に分かれます。`PageLoadingSpinner` は Day 09 でも使った読み込み中のスピナーで、ユーザー情報が届くまで画面を受け持ちます。`useCallback` は Step 5 で権限判定の関数を作るときに使います。残る `hasPermission` と `isProjectMemberRole` は Step 5 で「このプロジェクトでの自分の役割」を調べるための道具です。まだ出番のない名前も並びますがインポートを何度も書き足すより先にそろえておくと差分を追いやすくなります。
 
-次に`MyTasksPage` の `return` の**前に**以下を追加します。
+次に `MyTasksPage` の `return` の**前に**以下を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -159,7 +159,7 @@ const { data: currentUser, isLoading: isCurrentUserLoading } =
   api.auth.getCurrentUser.useQuery();
 ```
 
-`api.auth.getCurrentUser` はいま誰がログインしているかをサーバーへ聞き直す手続きです。ブラウザが持っている情報をそのまま信じず、毎回サーバーに確かめます。ここで得た `currentUser.id` がこのあと「自分のタスクだけを取る」ための鍵になります。返り値に `currentUser` と `isCurrentUserLoading` という別名を付けているのはStep 3 でタスク側の読み込み状態も受け取るからです。同じ名前が2つ並ぶとどちらの読み込み状態なのか見分けられません。
+`api.auth.getCurrentUser` はいま誰がログインしているかをサーバーへ聞き直す手続きです。ブラウザが持っている情報をそのまま信じず、毎回サーバーに確かめます。ここで得た `currentUser.id` がこのあと「自分のタスクだけを取る」ための鍵になります。返り値に `currentUser` と `isCurrentUserLoading` という別名を付けているのは Step 3 でタスク側の読み込み状態も受け取るからです。同じ名前が2つ並ぶとどちらの読み込み状態なのか見分けられません。
 
 ローディング中はスピナーを表示します。`return` の**前に**以下を追加してください。
 
@@ -175,11 +175,11 @@ if (isCurrentUserLoading) {
 }
 ```
 
-この分岐が無いと`currentUser` がまだ届いていない一瞬のあいだに本文が描かれます。そのときタスクの取得は Step 3 の `enabled` で止まっているため画面には「タスクが0件」のときとまったく同じ見た目が出ます。読者にはどちらか区別できず、自分のタスクが消えたと誤解させます。スピナーを `AppLayout` の中に置くのはヘッダーやサイドバーを出したまま中身だけを差し替えるためです。外に置くと読み込みのたびに画面全体が消え、位置がずれたように見えます。
+この分岐が無いと `currentUser` がまだ届いていない一瞬のあいだに本文が描かれます。そのときタスクの取得は Step 3 の `enabled` で止まっているため画面には「タスクが0件」のときとまったく同じ見た目が出ます。読者にはどちらか区別できず、自分のタスクが消えたと誤解させます。スピナーを `AppLayout` の中に置くのはヘッダーやサイドバーを出したまま中身だけを差し替えるためです。外に置くと読み込みのたびに画面全体が消え、位置がずれたように見えます。
 
 **確認ポイント**:
 - ファイルを保存した
-- ブラウザのDevTools（F12 → Networkタブ）で `getCurrentUser` リクエストが飛んでいる
+- ブラウザの DevTools（F12 → Network タブ）で `getCurrentUser` リクエストが飛んでいる
 - ページアクセス時に一瞬スピナーが表示された後、「マイタスク」が表示される
 
 #### 認証情報の取得方法
@@ -190,7 +190,7 @@ if (isCurrentUserLoading) {
 | 現在のユーザー | `api.auth.getCurrentUser` | ユーザー詳細情報 |
 | プロジェクト内のメンバー取得 | `api.search.getMembersByProject` | `TaskDialog` の担当者選択用 |
 
-> `api.auth.getCurrentUser` はログイン中のユーザーのIDや名前を返します。このIDを使って「自分のタスク」を絞り込みます。
+> `api.auth.getCurrentUser` はログイン中のユーザーの ID や名前を返します。この ID を使って「自分のタスク」を絞り込みます。
 
 ---
 
@@ -212,7 +212,7 @@ const { data: tasks, isLoading } =
   );
 ```
 
-このページの主役は `assigneeId: currentUser?.id` という1行です。Day 13 のタスク一覧では全員分を取っていました。今回は担当者を自分に固定して取り直します。新しい API を作らずに済むのは`getAll` がすでに担当者での絞り込みを受け付けるからです。第2引数の `enabled: !!currentUser` は`currentUser` が届くまでこの通信を止めておく指定です。これを外すと `assigneeId` は `undefined` のまま送られ、他人のタスクまで混ざった一覧が一瞬表示されます。
+このページの主役は `assigneeId: currentUser?.id` という1行です。Day 13 のタスク一覧では全員分を取っていました。今回は担当者を自分に固定して取り直します。新しい API を作らずに済むのは `getAll` がすでに担当者での絞り込みを受け付けるからです。第2引数の `enabled: !!currentUser` は `currentUser` が届くまでこの通信を止めておく指定です。これを外すと `assigneeId` は `undefined` のまま送られ、他人のタスクまで混ざった一覧が一瞬表示されます。
 
 この書き方には弱点もあります。`currentUser` の取得そのものが失敗したときも `undefined` のままなのでタスクの通信は止まり続けます。画面には「タスクが0件」と同じ見た目が出ます。実務ではこちらの `error` も受け取って失敗したときだけ別の案内を出す形にします。
 
@@ -225,7 +225,7 @@ const { data: tasks, isLoading } =
 const utils = api.useUtils();
 ```
 
-> **Reactの hooks ルール**: `useQuery` や `useUtils` などの hooks はコンポーネントのトップレベルに配置し、`if` 文や `return` の後に置いてはいけません。hooks の呼び出し順序が変わるとエラーになるためearly return（`if (isLoading) return ...`）は必ず全 hooks 定義の後に書きます。
+> **React の hooks ルール**: `useQuery` や `useUtils` などの hooks はコンポーネントのトップレベルに配置し、`if` 文や `return` の後に置いてはいけません。hooks の呼び出し順序が変わるとエラーになるため early return（`if (isLoading) return ...`）は必ず全 hooks 定義の後に書きます。
 
 ローディングの条件も更新します。Step 2 で追加した `if (isCurrentUserLoading)` を以下に**置き換えて**ください。
 
@@ -242,25 +242,25 @@ if (isCurrentUserLoading || isLoading) {
 ```
 
 **確認ポイント**:
-- ブラウザのDevTools（F12 → Networkタブ）で `getAll` リクエストに `assigneeId` パラメータが含まれている
+- ブラウザの DevTools（F12 → Network タブ）で `getAll` リクエストに `assigneeId` パラメータが含まれている
 - 自分に割り当てられたタスクだけが返る
 - `npm run dev` でエラーが出ていない
 
-> `enabled: !!currentUser` は「currentUserが取得できてからAPIを呼ぶ」という設定です。Day 12 で学んだパターンです。currentUser未取得のまま呼ぶと全タスクが返ってしまいます。
+> `enabled: !!currentUser` は「currentUser が取得できてから API を呼ぶ」という設定です。Day 12 で学んだパターンです。currentUser 未取得のまま呼ぶと全タスクが返ってしまいます。
 
 #### getAll パラメータの活用
 
 | パラメータ | 値 | 効果 |
 |-----------|-----|------|
-| `assigneeId` | 自分のID | 自分のタスクだけ取得 |
-| `status` | `'TODO'` | TODOのみ取得 |
-| `projectId` | プロジェクトID | 特定プロジェクトだけ |
+| `assigneeId` | 自分の ID | 自分のタスクだけ取得 |
+| `status` | `'TODO'` | TODO のみ取得 |
+| `projectId` | プロジェクト ID | 特定プロジェクトだけ |
 
 ---
 
-### Step 4 : ステータスTabsを作る（5分）
+### Step 4 : ステータス Tabs を作る（5分）
 
-**ゴール**: ステータスで絞り込むタブUIを追加します。
+**ゴール**: ステータスで絞り込むタブ UI を追加します。
 
 **実装**:
 
@@ -278,7 +278,7 @@ import {
 } from '@/lib/constant/status';
 ```
 
-次に`MyTasksPage` の**外側**（`export default function MyTasksPage()` の前、ファイルのトップレベル）に定数を定義します。
+次に `MyTasksPage` の**外側**（`export default function MyTasksPage()` の前、ファイルのトップレベル）に定数を定義します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -310,7 +310,7 @@ const STATUS_TABS: {
 
 `STATUS_TABS` を手で4行書き並べず、`ACTIVE_STATUSES` から作っているところが肝心です。タブのラベルは `TASK_STATUS_LABELS` から引くので日本語の表記を変えたいときも、この画面には手を入れずに済みます。先頭の `{ label: 'すべて', value: 'all' }` だけ別に書いてあるのはこれがステータスではなく「絞り込みなし」を表す特別な値だからです。型を `TaskStatus | 'all'` と書いてあるのも、その特別扱いを型の上で示すためです。
 
-`MyTasksPage` 内の `currentUser` 取得の**前に**stateを追加します。
+`MyTasksPage` 内の `currentUser` 取得の**前に**state を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -337,9 +337,9 @@ const { data: tasks, isLoading } =
   );
 ```
 
-`status: activeTab === 'all' ? undefined : activeTab` は「すべて」タブのときだけ条件そのものを外す書き方です。ここで `'all'` をそのままサーバーへ送るとリクエストが失敗します。`task.getAll` の `status` は `TODO` や `DONE` といった決まった値しか受け取らないので`'all'` は入力チェックの段階で弾かれるからです。0件が返るのではなく、エラーになります。絞り込みを外したいときは値を空にするのではなく項目ごと `undefined` にする、と覚えてください。そして `useQuery` の引数に `activeTab` が入ったのでタブを押すたびにこの query は新しい条件で走り直します。取り直しの処理を自分で書く場所はありません。
+`status: activeTab === 'all' ? undefined : activeTab` は「すべて」タブのときだけ条件そのものを外す書き方です。ここで `'all'` をそのままサーバーへ送るとリクエストが失敗します。`task.getAll` の `status` は `TODO` や `DONE` といった決まった値しか受け取らないので `'all'` は入力チェックの段階で弾かれるからです。0件が返るのではなく、エラーになります。絞り込みを外したいときは値を空にするのではなく項目ごと `undefined` にする、と覚えてください。そして `useQuery` の引数に `activeTab` が入ったのでタブを押すたびにこの query は新しい条件で走り直します。取り直しの処理を自分で書く場所はありません。
 
-JSXの `<h1>` タグの**下に**タブUIを追加します。
+JSX の `<h1>` タグの**下に**タブ UI を追加します。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
@@ -366,7 +366,7 @@ JSXの `<h1>` タグの**下に**タブUIを追加します。
 </div>
 ```
 
-> `onValueChange` が渡してくる値は `string` なので`isTaskStatus(v)` 型ガードで `TaskStatus` 型かを判定してから `setActiveTab` に渡します。`as TaskStatus` のような型アサーションは使わず、実行時に値を検証します。
+> `onValueChange` が渡してくる値は `string` なので `isTaskStatus(v)` 型ガードで `TaskStatus` 型かを判定してから `setActiveTab` に渡します。`as TaskStatus` のような型アサーションは使わず、実行時に値を検証します。
 
 **確認ポイント**:
 - タブが横並びで表示される
@@ -422,7 +422,7 @@ const { data: projects } =
 
 `projects` はドロップダウンの選択肢と次に作るロールの対応表の両方で使います。サーバーから取るものを上にまとめておくと下の計算がどのデータを使っているかを追いやすくなります。
 
-TaskCardの編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。置き場所は `const utils = api.useUtils();` の**下**です。ローディング判定の `if` よりは上になります。中で `currentUser` と `projects` の両方を読むのでこの2つより下に置きます。
+TaskCard の編集・削除ボタンの表示可否はログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。プロジェクトごとのロールを引けるようにしておきます。置き場所は `const utils = api.useUtils();` の**下**です。ローディング判定の `if` よりは上になります。中で `currentUser` と `projects` の両方を読むのでこの2つより下に置きます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -445,7 +445,7 @@ const myRoleByProject = useMemo(() => {
 }, [projects, currentUser?.id]);
 ```
 
-ここで作っているのはプロジェクトIDを渡すと自分のロールが返ってくる対応表です。マイタスクは複数のプロジェクトのタスクが混ざりうる画面です。初期データでは1プロジェクト分しか並びませんがプロジェクトを増やすとこの対応表が効いてきます。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きます。先に `Map` へ入れておけばあとは1件ずつ引くだけで済みます。`useMemo` で包んであるのはこの対応表を再描画のたびに作り直させないためです。第2引数の `[projects, currentUser?.id]` に挙げた2つが変わったときだけ、中の処理がもう一度走ります。`isProjectMemberRole(me.role)` を通してから `Map` へ入れているのはデータベースから来た文字列を `as` で型に押し込まず、実行時に確かめてから使うためです。
+ここで作っているのはプロジェクト ID を渡すと自分のロールが返ってくる対応表です。マイタスクは複数のプロジェクトのタスクが混ざりうる画面です。初期データでは1プロジェクト分しか並びませんがプロジェクトを増やすとこの対応表が効いてきます。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きます。先に `Map` へ入れておけばあとは1件ずつ引くだけで済みます。`useMemo` で包んであるのはこの対応表を再描画のたびに作り直させないためです。第2引数の `[projects, currentUser?.id]` に挙げた2つが変わったときだけ、中の処理がもう一度走ります。`isProjectMemberRole(me.role)` を通してから `Map` へ入れているのはデータベースから来た文字列を `as` で型に押し込まず、実行時に確かめてから使うためです。
 
 続けてそのロールから編集・削除の権限を判定する関数を `myRoleByProject` の**下に**追加します。
 
@@ -469,7 +469,7 @@ const canDeleteProject = useCallback(
 );
 ```
 
-> Day 13 のタスク一覧ページと同じパターンです。`myRoleByProject` でプロジェクトIDからロールを引き、`canEditProject` / `canDeleteProject` でそのロールに編集・削除の権限があるかを判定します。閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になります。
+> Day 13 のタスク一覧ページと同じパターンです。`myRoleByProject` でプロジェクト ID からロールを引き、`canEditProject` / `canDeleteProject` でそのロールに編集・削除の権限があるかを判定します。閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になります。
 
 **確認ポイント**:
 - `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
@@ -493,7 +493,7 @@ const { data: tasks, isLoading } =
   );
 ```
 
-`projectId` の行が増えても形は `status` のときとまったく同じです。「`'all'` なら `undefined`」という同じ判断を、条件ごとに1行ずつ並べています。絞り込みが3つ4つに増えてもこの形のまま足していけます。`useQuery` の第1引数に並んだ値のどれか1つでも変わればtRPC はその組み合わせで取り直します。だからタブとドロップダウンを同時に使った絞り込みも、追加の処理なしで動きます。
+`projectId` の行が増えても形は `status` のときとまったく同じです。「`'all'` なら `undefined`」という同じ判断を、条件ごとに1行ずつ並べています。絞り込みが3つ4つに増えてもこの形のまま足していけます。`useQuery` の第1引数に並んだ値のどれか1つでも変われば tRPC はその組み合わせで取り直します。だからタブとドロップダウンを同時に使った絞り込みも、追加の処理なしで動きます。
 
 Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を追加します。
 
@@ -531,7 +531,7 @@ Step 4 で追加した `</Tabs>` の**下に**（`</div>` の前に）Select を
 
 ---
 
-### Step 6 : TaskGroupSectionコンポーネントを作る（7分）
+### Step 6 : TaskGroupSection コンポーネントを作る（7分）
 
 **ゴール**: タスクをグループごとに表示する共通コンポーネントを作ります。このコンポーネントは同じファイル内に定義します。
 
@@ -548,7 +548,7 @@ import type { TaskPriority }
 import { cn } from '@/lib/utils';
 ```
 
-`MyTasksPage` の**外側**（`STATUS_TABS` 定数の下、`export default function` の前）にProps型を定義します。
+`MyTasksPage` の**外側**（`STATUS_TABS` 定数の下、`export default function` の前）に Props 型を定義します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -587,7 +587,7 @@ interface TaskGroupSectionProps {
 }
 ```
 
-> `tasks` の型は `api.task.getAll` が返す配列の要素に合わせています。`TaskCard` コンポーネントが受け取るpropsと一致させることで、型エラーなくデータを渡せます。
+> `tasks` の型は `api.task.getAll` が返す配列の要素に合わせています。`TaskCard` コンポーネントが受け取る props と一致させることで、型エラーなくデータを渡せます。
 
 #### TaskGroupSectionProps の解説
 
@@ -599,8 +599,8 @@ interface TaskGroupSectionProps {
 | `onEdit` | `(id: string) => void` | 編集ボタン押下時のコールバック |
 | `onDelete` | `(id: string) => void` | 削除ボタン押下時のコールバック |
 | `onTimeLogSuccess` | `() => void` | 作業時間の記録に成功したときの合図 |
-| `canEditProject` | `(projectId: string) => boolean` | プロジェクトIDから編集可否を判定する関数 |
-| `canDeleteProject` | `(projectId: string) => boolean` | プロジェクトIDから削除可否を判定する関数 |
+| `canEditProject` | `(projectId: string) => boolean` | プロジェクト ID から編集可否を判定する関数 |
+| `canDeleteProject` | `(projectId: string) => boolean` | プロジェクト ID から削除可否を判定する関数 |
 
 先に作業時間を記録したあとに一覧を取り直すための関数を用意します。
 これは `MyTasksPage` の中で使うので**Step 5 で書いた `canDeleteProject` の下**へ追加してください。
@@ -619,7 +619,7 @@ const handleTimeLogSuccess =
 `TaskCard` は記録に成功したことを親へ伝えるだけなので取り直しは親側で行います。
 `utils` は Step 3 で書いた `const utils = api.useUtils();` をそのまま使います。
 
-Props型の**下に**コンポーネント本体を追加します。
+Props 型の**下に**コンポーネント本体を追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -685,20 +685,20 @@ const TaskGroupSection = ({
 
 > `cn()` は `clsx` + `tailwind-merge` のユーティリティです。条件付きでクラス名を結合できます。`titleClassName` に `"text-destructive"` を渡すとタイトルが赤色になります。
 
-> `timeSpentMinutes` を渡しているのはカードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。「時間記録」ボタンで記録すると`onTimeLogSuccess` が `MyTasksPage` の `handleTimeLogSuccess` を呼び、一覧を取り直すので数字はその場で変わります。
+> `timeSpentMinutes` を渡しているのはカードに出る「合計作業時間」を実際の記録に合わせるためです。渡さないと `TaskCard` の既定値 0 が使われ、時間を記録済みのタスクでも `0m` と表示されます。「時間記録」ボタンで記録すると `onTimeLogSuccess` が `MyTasksPage` の `handleTimeLogSuccess` を呼び、一覧を取り直すので数字はその場で変わります。
 
 **確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
-- まだ画面に変化はない（次のStepで使う）
+- まだ画面に変化はない（次の Step で使う）
 
 ---
 
 ### ここまでのインポート一覧（中間確認）
 
-ここまでのStep 1〜6 で追加したインポートをまとめます。ファイル先頭が以下の状態になっていることを確認してください。
+ここまでの Step 1〜6 で追加したインポートをまとめます。ファイル先頭が以下の状態になっていることを確認してください。
 
-| インポート元 | インポート内容 | 追加Step |
+| インポート元 | インポート内容 | 追加 Step |
 |-------------|---------------|---------|
 | `react` | `useCallback`, `useMemo`, `useState` | Step 2 |
 | `@/lib/constant/roles` | `hasPermission`, `isProjectMemberRole`, `ProjectMemberRole`（type） | Step 2 |
@@ -801,7 +801,7 @@ flowchart TB
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
 - `MyTasksPage` の中で、`groupedTasks` の `useMemo` を閉じた直後に `console.log(groupedTasks);` を一時的に追加する
-- ページを再読み込みし、DevTools（F12キー → Consoleタブ）で4つの配列を確認する
+- ページを再読み込みし、DevTools（F12キー → Console タブ）で4つの配列を確認する
 - 確認が終わったらその `console.log` は必ず削除する
 
 #### なぜ date-only helper を使うのか
@@ -812,7 +812,7 @@ flowchart TB
 | `new Date(t.dueDate) < new Date()` | タイムゾーン境界で前日・翌日にずれやすい | △ |
 | `dateOnlyFromValue()` / `localDateOnly()` | `YYYY-MM-DD` にそろえて安全に比較できる | ✅ |
 
-> 完成版のコードでは`dueDate` を
+> 完成版のコードでは `dueDate` を
 > `new Date()` にして比較するのではなく、
 > `dateOnlyFromValue()` と `localDateOnly()` で
 > `YYYY-MM-DD` に正規化して比較します。
@@ -836,7 +836,7 @@ flowchart TB
 
 **実装**:
 
-Step 9・10 でハンドラーを本実装しますが先にJSXを書くために仮の関数を用意します。
+Step 9・10 でハンドラーを本実装しますが先に JSX を書くために仮の関数を用意します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -850,7 +850,7 @@ const handleDelete = (_taskId: string) => {};
 
 > `const` は同一スコープで再宣言できません。Step 9・10 では上の2つの仮関数を**削除してから**本実装を書いてください。
 
-**確認ポイント**: `npm run dev` でTypeScript エラーが出ていないことを確認します。
+**確認ポイント**: `npm run dev` で TypeScript エラーが出ていないことを確認します。
 
 Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つのグループを順番に追加します。
 
@@ -881,7 +881,7 @@ Step 4 で追加したフィルターエリアの `</div>` の**下に**、4つ�
 />
 ```
 
-`titleClassName` に渡している色がこの2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのはStep 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。4つの配列は `[]` で初期化されるので実際には必ず配列です。末尾の `?? []` は値が無い場合にも空配列を渡す防御的な指定ですが、このコードでは無くても型検査を通ります。
+`titleClassName` に渡している色がこの2つの違いです。期限切れは `text-destructive` で赤、今日が期限は `text-orange-500` でオレンジにします。同じ `TaskGroupSection` を色違いで使い回せるのは Step 6 で見出しの色をコンポーネントの中に固定せず、外から受け取る形にしておいたからです。4つの配列は `[]` で初期化されるので実際には必ず配列です。末尾の `?? []` は値が無い場合にも空配列を渡す防御的な指定ですが、このコードでは無くても型検査を通ります。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
@@ -957,7 +957,7 @@ import { taskToFormData }
 
 編集ダイアログは Day 14 で作り Day 15 で編集に対応させた `TaskDialog` をそのまま使い、マイタスク専用の編集画面は作りません。同じ形のダイアログが画面の数だけ増えると入力欄を1つ足すたびに全部を直す作業が発生します。`taskToFormData` はサーバーから来たタスクを `TaskDialog` が受け取れる形へ変える関数です。期限は `Date` 型のままでは入力欄に入らないのでその詰め替えをこの関数へ任せます。
 
-`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
+`MyTasksPage` 内に state・mutation・ハンドラーを追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -969,7 +969,7 @@ const [editingTask, setEditingTask] =
   useState<TaskFormData | undefined>(undefined);
 ```
 
-状態を2つに分けているのは役割が違うからです。`dialogOpen` はダイアログが開いているかどうかだけを持ち、`editingTask` は「いまどのタスクを編集中か」を持ちます。1つにまとめて「中身があれば開く」としても動きはしますが閉じる途中で中身が消え、ダイアログが一瞬空になります。`editingTask` の初期値が `undefined` なのは`TaskDialog` が `initialData` の有無で新規と編集を見分けるためです。
+状態を2つに分けているのは役割が違うからです。`dialogOpen` はダイアログが開いているかどうかだけを持ち、`editingTask` は「いまどのタスクを編集中か」を持ちます。1つにまとめて「中身があれば開く」としても動きはしますが閉じる途中で中身が消え、ダイアログが一瞬空になります。`editingTask` の初期値が `undefined` なのは `TaskDialog` が `initialData` の有無で新規と編集を見分けるためです。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -998,12 +998,12 @@ const handleEdit = (taskId: string) => {
 };
 ```
 
-> `taskToFormData` はDay 15で学んだユーティリティ関数です。日付のフォーマット変換などを共通化しているため各ページで手動変換する必要がありません。
+> `taskToFormData` は Day 15 で学んだユーティリティ関数です。日付のフォーマット変換などを共通化しているため各ページで手動変換する必要がありません。
 
 **確認ポイント**:
 - ファイルを保存した
 - `npm run dev` でエラーが出ていない
-- まだダイアログは配置していないのでStep 11で動作確認する
+- まだダイアログは配置していないので Step 11 で動作確認する
 
 ---
 
@@ -1025,7 +1025,7 @@ import toast from 'react-hot-toast';
 
 削除の確認を `window.confirm()` で済ませないのには理由があります。ブラウザが出すあの小さな窓は見た目を変えられず、表示している間はページの他の操作も止まります。`DeleteConfirmDialog` は Day 01 の scaffold で配布済みの共通部品です。Day 11 のプロジェクト削除で初めて呼び出し、Day 15 のタスク削除でも同じものを使いました。中身を自分で書いたことは一度もありません。アプリの他の画面と同じ見た目で確認を出せます。通信中は確認ボタンを押せなくする仕組みも入っているため同じタスクを2回消しに行く事故を防げます。
 
-`MyTasksPage` 内にstate・mutation・ハンドラーを追加します。
+`MyTasksPage` 内に state・mutation・ハンドラーを追加します。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -1036,7 +1036,7 @@ const [deleteTargetId, setDeleteTargetId] =
   useState<string | null>(null);
 ```
 
-`deleteTargetId` は確認ダイアログで「はい」が押されるまで消す相手を覚えておく置き場です。削除ボタンを押した時点ではまだ消さず、IDを控えてダイアログを開くだけにします。この2段構えは Day 15 の削除と同じ形です。取り消せない操作では必ず「対象を覚える」と「実行する」を分けます。初期値を `null` にしておくとまだ相手が決まっていない状態と、決まった状態を区別できます。
+`deleteTargetId` は確認ダイアログで「はい」が押されるまで消す相手を覚えておく置き場です。削除ボタンを押した時点ではまだ消さず、ID を控えてダイアログを開くだけにします。この2段構えは Day 15 の削除と同じ形です。取り消せない操作では必ず「対象を覚える」と「実行する」を分けます。初期値を `null` にしておくとまだ相手が決まっていない状態と、決まった状態を区別できます。
 
 ```typescript
 // filepath: src/app/my-task/page.tsx
@@ -1068,7 +1068,7 @@ const handleDelete = (taskId: string) => {
 };
 ```
 
-> `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と同じパターンで、UIの統一性と `isPending` 中の二重クリック防止を実現します。
+> `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と同じパターンで、UI の統一性と `isPending` 中の二重クリック防止を実現します。
 
 **確認ポイント**:
 - ファイルを保存した
@@ -1078,7 +1078,7 @@ const handleDelete = (taskId: string) => {
 
 ### Step 11 : ダイアログを配置する（3分）
 
-**ゴール**: 編集ダイアログと削除確認ダイアログをJSXに配置します。
+**ゴール**: 編集ダイアログと削除確認ダイアログを JSX に配置します。
 
 **実装**:
 
@@ -1115,7 +1115,7 @@ const handleSubmit = (data: TaskFormData) => {
 
 `projectId` も一緒に送るのはダイアログでプロジェクトを選び直せるからです。ここに含めないと画面上では移動できたように見えても保存後の一覧では元のプロジェクトのままになります。
 
-JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
+JSX の `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskDialog` を配置します。
 
 ```typescript
 {/* filepath: src/app/my-task/page.tsx */}
@@ -1152,7 +1152,7 @@ JSXの `</div>`（メインコンテンツの閉じタグ）の**下に** `TaskD
 />
 ```
 
-> タスク一覧ページ（Day 15）とまったく同じパターンです。`TaskDialog` と `DeleteConfirmDialog` を再利用することで、どのページからでも同じUIで編集・削除できます。
+> タスク一覧ページ（Day 15）とまったく同じパターンです。`TaskDialog` と `DeleteConfirmDialog` を再利用することで、どのページからでも同じ UI で編集・削除できます。
 
 **確認ポイント**:
 - 編集ボタンをクリックするとダイアログが開く
@@ -1339,7 +1339,7 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-4つのステータスが `MY_TASK_STATUS_ORDER` の1か所へまとまりました。この配列がそのまま表示の並び順にもなります。Before で3回書いていた同じ知識が1回になったので`CANCELLED` を足したくなったらこの配列へ1行加えるだけで済みます。分岐と表示はその1行に付いてきます。Step 4 の `ACTIVE_STATUSES` からタブを作った書き方と、考え方は同じです。次のブロックで、この配列から表示セクションを組み立てます。
+4つのステータスが `MY_TASK_STATUS_ORDER` の1か所へまとまりました。この配列がそのまま表示の並び順にもなります。Before で3回書いていた同じ知識が1回になったので `CANCELLED` を足したくなったらこの配列へ1行加えるだけで済みます。分岐と表示はその1行に付いてきます。Step 4 の `ACTIVE_STATUSES` からタブを作った書き方と、考え方は同じです。次のブロックで、この配列から表示セクションを組み立てます。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -1599,7 +1599,7 @@ export default function MyTasksPage() {
     useState<string | null>(null);
 ```
 
-6つの状態を先頭にまとめてあります。hooks は呼び出す順番が毎回同じでなければならないので`if` や `return` より前に置く必要があるからです。`dialogOpen` と `editingTask` を分けているのは1つにまとめると閉じる途中で中身が消え、ダイアログが一瞬空になるためです。
+6つの状態を先頭にまとめてあります。hooks は呼び出す順番が毎回同じでなければならないので `if` や `return` より前に置く必要があるからです。`dialogOpen` と `editingTask` を分けているのは1つにまとめると閉じる途中で中身が消え、ダイアログが一瞬空になるためです。
 
 **サーバーからの取得**:
 
@@ -1625,7 +1625,7 @@ export default function MyTasksPage() {
   const utils = api.useUtils();
 ```
 
-`'all'` を選んだ場合に項目ごと `undefined` へ変えるのが絞り込みを外す書き方です。`'all'` をそのまま送ると`status` は決まった値しか受け取らないため入力チェックで弾かれ、0件ではなくエラーが返ります。`enabled: !!currentUser` は自分のIDが届く前に他人のタスクまで取ってしまうのを防ぎます。
+`'all'` を選んだ場合に項目ごと `undefined` へ変えるのが絞り込みを外す書き方です。`'all'` をそのまま送ると `status` は決まった値しか受け取らないため入力チェックで弾かれ、0件ではなくエラーが返ります。`enabled: !!currentUser` は自分の ID が届く前に他人のタスクまで取ってしまうのを防ぎます。
 
 **プロジェクトごとの自分のロール**:
 
@@ -1650,7 +1650,7 @@ export default function MyTasksPage() {
   }, [projects, currentUser?.id]);
 ```
 
-プロジェクトIDから自分のロールを引ける対応表を先に作っています。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きるためです。`useMemo` の依存に挙げた2つが変わったときだけ作り直され、それ以外の描き直しでは前の対応表を使い回します。
+プロジェクト ID から自分のロールを引ける対応表を先に作っています。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きるためです。`useMemo` の依存に挙げた2つが変わったときだけ作り直され、それ以外の描き直しでは前の対応表を使い回します。
 
 **編集と削除の可否**:
 
@@ -1716,7 +1716,7 @@ export default function MyTasksPage() {
     });
 ```
 
-3つとも成功したら `invalidate` を呼びます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。削除のあとに `setDeleteTargetId(null)` まで戻しているのは消した相手のIDを残したままだと次の削除で前の対象が使われる余地も残るためです。失敗時は `onError` が理由を表示するので、カードが残った理由も分かります。
+3つとも成功したら `invalidate` を呼びます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。削除のあとに `setDeleteTargetId(null)` まで戻しているのは消した相手の ID を残したままだと次の削除で前の対象が使われる余地も残るためです。失敗時は `onError` が理由を表示するので、カードが残った理由も分かります。
 
 **編集と削除のハンドラー**:
 
@@ -1738,7 +1738,7 @@ export default function MyTasksPage() {
   };
 ```
 
-削除は押した時点では消さず、IDを控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は`Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で使ったもの（scaffold が配布済みの `src/lib/task-form.ts`）を使い回しています。
+削除は押した時点では消さず、ID を控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は `Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で使ったもの（scaffold が配布済みの `src/lib/task-form.ts`）を使い回しています。
 
 **保存の中身**:
 
@@ -1769,7 +1769,7 @@ export default function MyTasksPage() {
   };
 ```
 
-`if (data.id)` で囲ってあるのはこの画面が編集だけを扱うためです。IDの無いデータは新規作成なのでここでは何もしません。`expectedUpdatedAt` を渡すと編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合サーバーが競合として知らせます。
+`if (data.id)` で囲ってあるのはこの画面が編集だけを扱うためです。ID の無いデータは新規作成なのでここでは何もしません。`expectedUpdatedAt` を渡すと編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合サーバーが競合として知らせます。
 
 **期限別の振り分け**:
 
@@ -1820,7 +1820,7 @@ export default function MyTasksPage() {
   }
 ```
 
-`return` を `useMemo` の中に置いたので4つの配列は `tasks` が変わったときだけ作り直されます。ローディングの分岐をここまで下げてあるのはhooks より前で処理を打ち切ると呼び出しの順番が変わり、React がエラーを出すからです。スピナーを `AppLayout` の中に置くとサイドバーを残したまま中身だけが差し替わります。
+`return` を `useMemo` の中に置いたので4つの配列は `tasks` が変わったときだけ作り直されます。ローディングの分岐をここまで下げてあるのは hooks より前で処理を打ち切ると呼び出しの順番が変わり、React がエラーを出すからです。スピナーを `AppLayout` の中に置くとサイドバーを残したまま中身だけが差し替わります。
 
 **画面の外枠と見出し**:
 
@@ -1863,7 +1863,7 @@ export default function MyTasksPage() {
           </Tabs>
 ```
 
-`onValueChange` が渡してくるのは `string` なので`isTaskStatus(v)` を通してから `setActiveTab` に渡します。`as TaskStatus` で押し込むと想定外の文字列がそのまま state に入り、次の取得でサーバーから弾かれます。`sm:flex-row` があるので幅の狭い画面ではタブとドロップダウンが縦に並びます。
+`onValueChange` が渡してくるのは `string` なので `isTaskStatus(v)` を通してから `setActiveTab` に渡します。`as TaskStatus` で押し込むと想定外の文字列がそのまま state に入り、次の取得でサーバーから弾かれます。`sm:flex-row` があるので幅の狭い画面ではタブとドロップダウンが縦に並びます。
 
 **プロジェクトの絞り込み**:
 
@@ -1893,7 +1893,7 @@ export default function MyTasksPage() {
         </div>
 ```
 
-`value="all"` の項目を自分で先頭へ置いています。絞り込みを外す選択肢は取得したプロジェクトの一覧には含まれないためです。`onValueChange={setFilterProject}` と直に渡せるのは`filterProject` が文字列で、`'all'` とプロジェクトIDが同じ型に収まるからです。
+`value="all"` の項目を自分で先頭へ置いています。絞り込みを外す選択肢は取得したプロジェクトの一覧には含まれないためです。`onValueChange={setFilterProject}` と直に渡せるのは `filterProject` が文字列で、`'all'` とプロジェクト ID が同じ型に収まるからです。
 
 **期限が近い2グループ**:
 
@@ -2430,7 +2430,7 @@ export default function MyTasksPage() {
 
 Day 17 おつかれさまでした。これで自分専用のタスクダッシュボードが完成しました。プロジェクトマネージャーが使うような機能を自分で作れるようになりました。
 
-- [ ] `getCurrentUser` で自分のIDを取得できた
+- [ ] `getCurrentUser` で自分の ID を取得できた
 - [ ] `getAll({ assigneeId })` で自分のタスク取得
 - [ ] `PageLoadingSpinner` でローディング表示を実装した
 - [ ] Tabs でステータスフィルターを実装できた
@@ -2452,12 +2452,12 @@ Day 17 おつかれさまでした。これで自分専用のタスクダッシ�
 | 用語 | 意味 |
 |------|------|
 | `getCurrentUser` | ログイン中のユーザー情報を取得 |
-| `Tabs` | コンテンツを切り替えるUIコンポーネント |
+| `Tabs` | コンテンツを切り替える UI コンポーネント |
 | `dateOnlyFromValue` | `Date` や ISO 文字列から `YYYY-MM-DD` を取り出す helper |
 | `localDateOnly` | ブラウザのローカル日付を `YYYY-MM-DD` で作る helper |
 | `useMemo` | 計算結果をキャッシュして再利用するフック |
 | `TaskGroupSection` | タスクをグループごとに表示する共通コンポーネント |
-| `cn()` | 条件付きでCSSクラス名を結合するユーティリティ |
+| `cn()` | 条件付きで CSS クラス名を結合するユーティリティ |
 
 ## 理解チェック
 
