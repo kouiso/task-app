@@ -107,6 +107,7 @@ CodeRabbit・Gemini Code Assist はこの節を参照して `material/**/*.md` �
 | さまざまな場面で | （削除するか具体例を書く） |
 | 言うまでもありません / あらゆる観点から | （削除するか具体項目を列挙） |
 | 並列以外の読点（「〜は、」「〜が、」「〜ので、」「〜すると、」の息継ぎ） | 読点は入れ替えても意味が変わらない並列の要素の間（「A、B、C」「Aも、Bも」）にだけ打つ。読点が無いと読みにくい文は2文に分けるか語順を変える。読点を足して済ませない |
+| 和文と英字・行内コードがくっつく（「のでStep 0」「とき`x`」「Day 15の」） | 間に半角空白を1つ入れる。`Day 15` や `Step 3` の番号の後ろも空ける。ほかの数字と「、」「。」の前後は詰める。読点で区切らない。画面・初期データ・図の文字を引くときは元の表記のまま書く |
 
 ### [MUST] 英語直訳調の禁止
 
@@ -172,3 +173,10 @@ CIの `scripts/check-naming-convention.sh` が全トラックファイルを機�
 - 日本語ファイル名（`material/**` の教材コンテンツ等、コンテンツの言語選択によるもの）
 
 新規ファイル・フォルダを追加するときは、上記例外に該当しない限りケバブケースを使うこと。
+
+## GitHub Project での作業管理
+
+- この repo の作業は GitHub Project（`.github/scrum-board.yml` の番号）で管理する
+- 次にやる物を決める・課題を起票する・Status を動かす・繰り越す時は必ず先に `.agents/skills/scrum-board/SKILL.md`（`.claude/skills/scrum-board/`）を読んでから手を付ける
+- 読めない・見つからない場合の要点: 次にやる物=盤の「今週の Iteration」で Wait 空の先頭（無ければ「無し」と答える・issue一覧や open PR から選ばない）・課題は題の頭に `[PBI]`/`[SBI]` を付け sub-issue と盤登録と項目（Iteration・Priority・Estimate・Size）までやる・繰り越しは `kouiso/.github` の `scripts/scrum_keeper/scrum_keeper.py --job carryover|okawari` を使う
+- Status は Backlog / In progress / In review / Done の 4 つ。Todo は作らん
