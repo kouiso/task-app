@@ -64,7 +64,13 @@ done
 
 failed=0
 for target in "${targets[@]}"; do
-  target=$(cd -- "$target" && pwd)
+  # set -e の下で cd が失敗すると、理由を出さずに残りの同期先ごと止まる。ここで拾って次へ進む。
+  if ! resolved=$(cd -- "$target" 2>/dev/null && pwd); then
+    echo "同期先のディレクトリがありません: $target" >&2
+    failed=1
+    continue
+  fi
+  target=$resolved
   dst_dir="$target/$skill_rel"
   dst_skill="$dst_dir/SKILL.md"
   if [ ! -f "$dst_skill" ]; then
@@ -75,10 +81,12 @@ for target in "${targets[@]}"; do
   dst_common=$(extract_common "$dst_skill") || { echo "共通節の印が1組ではありません: $dst_skill" >&2; failed=1; continue; }
 
   if [ "$check" -eq 1 ]; then
+    # failed は全同期先の通算。OK の表示はこの同期先だけの結果で決める。
+    target_failed=0
     if [ "$src_common" != "$dst_common" ]; then
       echo "共通節が正本と違います: $dst_skill" >&2
       diff <(printf '%s\n' "$src_common") <(printf '%s\n' "$dst_common") | head -20 >&2 || true
-      failed=1
+      target_failed=1
     fi
     for d in "${vendor_dirs[@]}"; do
       src_list=$(tracked_vendor "$d")
@@ -96,14 +104,18 @@ for target in "${targets[@]}"; do
       fi
       if [ "$same" -eq 0 ]; then
         echo "vendor が正本と違います: $dst_dir/$d" >&2
-        failed=1
+        target_failed=1
       fi
     done
     if ! cmp -s "$src_root/$skill_rel/references/ATTRIBUTION.md" "$dst_dir/references/ATTRIBUTION.md"; then
       echo "ATTRIBUTION.md が正本と違います: $dst_dir/references/ATTRIBUTION.md" >&2
+      target_failed=1
+    fi
+    if [ "$target_failed" -eq 0 ]; then
+      echo "OK: $target"
+    else
       failed=1
     fi
-    [ "$failed" -eq 0 ] && echo "OK: $target"
     continue
   fi
 
