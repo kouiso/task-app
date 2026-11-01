@@ -150,18 +150,12 @@ test('vendored integrity accepts the manifest and rejects missing or changed fil
   try {
     assert.notEqual(f.run('vendor-files').status, 0);
 
-    const pack = join(
-      f.root,
-      '.claude/skills/material-writing/hana652-tech-writing-pack',
-    );
+    const pack = join(f.root, '.claude/skills/material-writing/hana652-tech-writing-pack');
     const secondPack = join(
       f.root,
       '.claude/skills/material-writing/xamfonos-technical-writing-best-practices',
     );
-    const attribution = join(
-      f.root,
-      '.claude/skills/material-writing/references/ATTRIBUTION.md',
-    );
+    const attribution = join(f.root, '.claude/skills/material-writing/references/ATTRIBUTION.md');
     mkdirSync(pack, { recursive: true });
     mkdirSync(secondPack, { recursive: true });
     mkdirSync(join(f.root, '.claude/skills/material-writing/references'), { recursive: true });
