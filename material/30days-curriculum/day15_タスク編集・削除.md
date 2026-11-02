@@ -102,12 +102,10 @@ flowchart TD
 | Step 5 | create用の送信ハンドラー | 5分 |
 | Step 6 | 削除用のstateとmutationを定義する | 5分 |
 | Step 7 | 削除ハンドラーとダイアログを配置する | 5分 |
-| Step 8 | 新規作成ハンドラーを実装する | 3分 |
-| Step 9 | TaskCardにハンドラーを接続する | 5分 |
-| Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
-| Step 11 | 動作確認 | 3分 |
+| Step 8 | 作成・編集モードをブラウザで確認する | 5分 |
+| Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約79分です。
+**合計時間**: 約73分です。
 
 表と Step 見出しの分数は説明とコードを読んで中身をつかむまでの目安です。コードを打ち込む Step では打ち込む時間と詰まって調べる時間がこの分数に加わります。
 
@@ -910,123 +908,29 @@ const handleDelete = (taskId: string) => {
 
 ---
 
-### Step 8: 新規作成ハンドラーを実装する（3分）
+### Step 8: 作成・編集モードをブラウザで確認する（5分）
 
-**ゴール**: 「新規タスク」ボタンのハンドラーを
-実装します。
+**ゴール**: Day 13・14 で書いたカードとダイアログが今日の編集処理を呼ぶことをブラウザで確認します。
 
-**実装**:
+この Step でコードは足しません。`handleCreate`、`TaskCard` の props、`TaskDialog` の `initialData` はすでに書いてあります。
 
-Day 14 で書いた `handleCreate` を**置き換え**ます。増やさず、中身だけ差し替えます。
+まず一覧の「新規タスク」を押します。見出しが「タスク作成」、ボタンが「作成」で入力欄が空になっていることを確認して閉じます。`handleCreate` が `editingTask` を `undefined` にしてから開くので作成用の初期値になります。
 
-```typescript
-// filepath: src/app/task/page.tsx
-// editingTaskをundefinedにして作成モードで開く
-const handleCreate = () => {
-  setEditingTask(undefined);
-  setDialogOpen(true);
-};
-```
+次に自分が編集できるカードの編集ボタンを押します。見出しが「タスク編集」、ボタンが「更新」で既存の値が入っていれば編集モードです。ここでは保存せずに閉じてください。`onEdit` が `task.id` を `handleEdit` へ渡し、取得したタスクが `initialData` に届くことで Step 1 の `buildTaskFormValues` が初期値を作ります。
 
-> `handleCreate` は `editingTask` を
-> `undefined` にしてから開きます。
-> これで「作成モード」になります。
-> `handleEdit` は既存データをセットしてから
-> 開くので「編集モード」になります。
+カードの `canEdit` / `canDelete` は Day 13 の `canEditProject` / `canDeleteProject` を使っています。閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になり編集・削除ボタンを隠します。渡し忘れると既定値の `true` が使われるため権限のないボタンまで表示されます。
+
+`timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に追加してから渡します。今日足すと受け取る側が無いため型エラーになります。
 
 **確認ポイント**:
-- 「新規タスク」を押すと見出しが「タスク作成」、ボタンが「作成」の空のダイアログが開く
-- 作成モードと編集モードの切り替えを理解した
+- 「新規タスク」で空の作成モードが開く
+- カードの編集ボタンで既存値の入った編集モードが開く
+- `src/app/task/page.tsx` の `TaskCard` に `onEdit`・`onDelete` と2つの権限フラグが残っている
 
 ---
 
-### Step 9: TaskCardにハンドラーを接続する（5分）
 
-**ゴール**: Day 13 で配置した TaskCard に
-ハンドラーを接続します。
-
-**実装**:
-
-```typescript
-<TaskCard
-  // filepath: src/app/task/page.tsx
-  // TaskCardにハンドラーを接続
-  key={task.id}
-  id={task.id}
-  title={task.title}
-  description={task.description}
-  status={task.status}
-  priority={task.priority}
-  dueDate={task.dueDate}
-  assignee={task.assignee}
-  onEdit={handleEdit}
-  onDelete={handleDelete}
-  onClick={handleTaskClick}
-  canEdit={canEditProject(task.projectId)}
-  canDelete={canDeleteProject(task.projectId)}
-/>
-```
-
-> `onEdit` と `onDelete` に関数を渡すとカード内の
-> 編集ボタン・削除ボタンが押されたときにその関数が
-> `task.id` を受け取って呼ばれます。ボタンの見た目は
-> `TaskCard`、実際の処理は親ページ、と役割が分かれます。
->
-> `canEdit` / `canDelete` は Day 13 で定義した
-> `canEditProject` / `canDeleteProject` をそのまま使います。
-> 閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になり、
-> 編集・削除ボタンが表示されません。渡し忘れるとデフォルトの
-> `true` が使われ、ボタンを押しても403エラーになるので注意してください。
->
-> 作業時間まわりの props はいまの `TaskCard` にはまだ
-> ありません。`timeSpentMinutes`（合計作業時間）と
-> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つは
-> Day 16 で `TaskCard` 側へ追加してから渡します。今日の時点で
-> 渡すと受け取る側が無いため型エラーになります。
-
-**確認ポイント**:
-- `onEdit` に `handleEdit` を渡している
-- `onDelete` に `handleDelete` を渡している
-
----
-
-### Step 10: TaskDialogにeditingTaskを渡す（3分）
-
-**ゴール**: ダイアログに `editingTask` を渡して
-編集モードを有効にします。
-
-**実装**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* ダイアログにeditingTaskを渡す */}
-<TaskDialog
-  open={dialogOpen}
-  onClose={() => setDialogOpen(false)}
-  onSubmit={handleSubmit}
-  initialData={editingTask}
-  projects={projects ?? []}
-/>
-```
-
-> `initialData` に `editingTask` を渡すとStep 1 の
-> `buildTaskFormValues` がその値をフォームの初期値に
-> 使うので編集モードになります。`editingTask` が
-> `undefined` のときは空の初期値になり、作成モードに
-> なります。
-
-**確認ポイント**:
-- 「新規タスク」で作成モードが開く
-- カードの編集ボタンで編集モードが開く
-- カードの削除ボタンで確認→削除される
-
-下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
-
-![赤枠の「API仕様書作成」の優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
-
----
-
-### Step 11: 動作確認（3分）
+### Step 9: 動作確認（3分）
 
 **ゴール**: 編集・削除の全機能を確認します。
 
@@ -1054,7 +958,14 @@ npm run dev
 
 編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残り画面上部にエラーも出ない場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。通知が出た場合は理由を確かめてください。「応答を確認できませんでした」の場合は削除済みの可能性もあります。通信を戻して一覧を更新し、対象が残るか確認します。
 
+
+下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
+
+![赤枠の「API仕様書作成」の優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
+
+
 ---
+
 
 ### Pro パターンで書こう（編集後の一覧更新を楽観的に反映する）
 
@@ -1285,12 +1196,12 @@ const handleSubmit = (data: TaskFormData) => {
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
+今日は2つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 7 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/task.ts` | タスクの取得・作成・更新・削除の手続き | Step 0 |
-| `src/app/task/page.tsx` | 一覧ページへの編集・削除の組み込み | Step 2 から Step 10 |
+| `src/app/task/page.tsx` | 一覧ページへの編集・削除の組み込み | Step 2 から Step 7 |
 
 ### `src/server/api/routers/task.ts`
 
