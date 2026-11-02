@@ -1706,6 +1706,15 @@ def unescape_table_cell_pipes(markup: str) -> str:
         def handle_charref(self, name: str) -> None:
             self.parts.append(f"&#{name};")
 
+        def handle_decl(self, decl: str) -> None:
+            self.parts.append(f"<!{decl}>")
+
+        def handle_comment(self, data: str) -> None:
+            self.parts.append(f"<!--{data}-->")
+
+        def handle_pi(self, data: str) -> None:
+            self.parts.append(f"<?{data}>")
+
     restorer = Restorer()
     restorer.feed(markup)
     restorer.close()

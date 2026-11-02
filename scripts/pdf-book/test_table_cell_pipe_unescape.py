@@ -61,6 +61,17 @@ class TableCellPipeUnescapeTest(unittest.TestCase):
             unescape_table_cell_pipes(source),
             '<td><code data-original="\\|">x | y</code></td>')
 
+    def test_doctype_and_comment_are_kept(self):
+        # 完全な HTML 文書が来ても doctype/comment を落とさない。
+        source = ('<!doctype html><!-- keep --><html><body>'
+                  '<table><tr><td><code>a \\| b</code></td></tr></table>'
+                  '</body></html>')
+        self.assertEqual(
+            unescape_table_cell_pipes(source),
+            '<!doctype html><!-- keep --><html><body>'
+            '<table><tr><td><code>a | b</code></td></tr></table>'
+            '</body></html>')
+
 
 if __name__ == "__main__":
     unittest.main()
