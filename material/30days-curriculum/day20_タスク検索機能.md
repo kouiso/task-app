@@ -4388,14 +4388,13 @@ Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTa
 - [ ] 検索結果をTaskCardで表示できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 毎回APIが呼ばれる | enabled条件が不適切 | shouldSearchでガード |
-| URLが更新されない | router.push忘れ | handleSearchに追加 |
-| 結果が0件表示 | projectId初期値が間違い | `'all'`で初期化する |
-| Enter検索が効かない | onKeyDown未設定 | EnterでhandleSearch |
-| フィルターがリセットされない | handleClearに項目漏れ | 全stateを'all'/''に |
+| 文字を打つたびに API が走る | `enabled` の条件が不適切 | Network タブで `search.search` が連続で呼ばれるのを見る。`src/app/search/page.tsx` の `useQuery` の `enabled` を `shouldSearch` でガードする |
+| 検索しても URL が変わらない | `router.push` を呼んでいない | 画面で検索後のアドレスバーを見る。`src/app/search/page.tsx` の `handleSearch` に `router.push` を足す |
+| 結果が0件のまま | `projectId` の初期値が間違っている | エディタで `src/app/search/page.tsx` の `projectId` の `useState` を見る。`'all'` で初期化する |
+| Enter を押しても検索が走らない | `onKeyDown` を設定していない | エディタで検索欄の `<Input>` を見る。Enter で `handleSearch` を呼ぶ `onKeyDown` を足す |
+| クリアしても条件が残る | `handleClear` で戻す項目が漏れている | 画面でクリア後の各欄を見る。`handleClear` で全 state を `'all'` か `''` に戻す |
 
 ## 今日学んだ用語
 

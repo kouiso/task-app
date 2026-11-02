@@ -2359,12 +2359,14 @@ export function AppLayout({
 - [ ] レスポンシブグリッドを適用できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| NaN が表示される | `overview` が未取得のまま参照している | `?? 0` でフォールバック |
-| 時間が分で表示 | 60で割り忘れ | `/ 60` で時間に変換 |
-| カードが縦並び | グリッドクラス不足 | sm/lg ブレークポイント |
+| `NaN` が表示される | `overview` が未取得のまま値を参照している | 画面のカードに `NaN` が出るのを確認する。`src/app/report/page.tsx` の各数値を `?? 0` でフォールバックする |
+| 時間が分のまま表示される | 60 で割っていない | 画面の合計時間の単位を見る。`src/app/report/page.tsx` の表示で `/ 60` して時間に変換する |
+| カードが縦1列のまま | グリッドのブレークポイントが足りない | 画面の横幅を変えて並びを見る。`src/app/report/page.tsx` のグリッドに `sm:` `lg:` のクラスを足す |
+| `Property 'report' does not exist on type` | `src/server/api/root.ts` に `reportRouter` を登録していない | `npx tsc --noEmit` の出力で `api.report` の型エラーを見る。`src/server/api/root.ts` の `appRouter` に `report: reportRouter` を足す |
+| エラーは出ないがカードの数字が全部0 | 参加中のプロジェクトを全部アーカイブしている | 画面で全カードが0のままなのを確認する。プロジェクトを1つアーカイブ解除して読み込み直す |
+| `JSX element 'div' has no corresponding closing tag.` | グリッドの `</div>` を閉じ忘れている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。エラー行の少し上の `src/app/report/page.tsx` のグリッドに `</div>` を足す |
 
 ## 今日学んだ用語
 

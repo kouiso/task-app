@@ -3084,13 +3084,12 @@ Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `o
 - [ ] TaskCard に時間記録ボタンとダイアログを組み込めた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 手動記録が反映されない | invalidate忘れ | onSuccessで親の再取得を呼ぶ |
-| 数値が文字列扱いになる | valueAsNumber未指定 | registerにvalueAsNumberを付ける |
-| 両方0でも送信できる | refine未設定 | zodのrefineで合計>0を検証 |
-| 記録中も追加ボタンを押せる | `isPending` が未反映 | `disabled={addTimeMutation.isPending}` で連打を防ぐ |
+| 手動で記録しても合計時間が増えない | `addTimeMutation` の `onSuccess` で再取得を呼んでいない | 画面で記録後に合計が変わらないのを確認する。`src/component/task/time-log-dialog.tsx` の `onSuccess` で `utils.task.getById.invalidate()` を呼ぶ |
+| `Expected number, received string` | `register` に `valueAsNumber: true` が付いていない | 画面で時間欄の下に出るこの文を見る。`src/component/task/time-log-dialog.tsx` の `register` に `{ valueAsNumber: true }` を足す |
+| 時間と分が両方0でも送信できてしまう | `refine` で合計を検証していない | 画面で両方0のまま送信できるのを確認する。`timeLogSchema` の `refine` で合計が 0 より大きいことを検証する |
+| 記録中に追加ボタンを連打できてしまう | `isPending` を `disabled` に反映していない | 画面で送信中にもボタンが押せるのを確認する。`disabled={addTimeMutation.isPending}` を足す |
 
 ## 今日学んだ用語
 

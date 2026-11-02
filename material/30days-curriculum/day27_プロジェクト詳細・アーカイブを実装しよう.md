@@ -2563,14 +2563,13 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が完成版�
 ---
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| 詳細が開かない | `router.push('/project?projectId=...')` していない | カードクリック時の URL 更新を確認する |
-| API が毎回エラーになる | `selectedProject` が空なのに `getById` を呼んでいる | `enabled: !!selectedProject` を付ける |
-| 一覧に戻れない | `onBack` が `router.push('/project')` になっていない | 戻る処理を URL ベースにそろえる |
-| アーカイブ後に画面が古いまま | `invalidate()` を呼んでいない | `utils.project.getAll.invalidate()` を `onSuccess` に入れる |
-| 詳細 UI が教材画像と違う | 旧モーダル版の資料を見ている | 現在は `ProjectDetailView` のインライン表示が正解 |
+| 詳細が開かない | カードクリックで `router.push('/project?projectId=...')` していない | 画面でカードを押しても URL が変わらないのを確認する。クリック時の URL 更新を `src/app/project/page.tsx` に足す |
+| `Invalid cuid` | `selectedProject` が空なのに `getById` を呼んでいる | Network タブで `project.getById` の応答が `BAD_REQUEST` なのを見る。`src/app/project/page.tsx` の `useQuery` に `enabled: !!selectedProject` を付ける |
+| 一覧に戻れない | `onBack` が URL ベースになっていない | 画面で戻るボタンを押しても URL が変わらないのを確認する。`onBack` を `router.push('/project')` にそろえる |
+| アーカイブ後に画面が古いまま | `invalidate()` を呼んでいない | 画面でアーカイブ後にプロジェクトが残るのを確認する。`onSuccess` に `utils.project.getAll.invalidate()` を足す |
+| 詳細 UI が教材画像と違う | 旧モーダル版の資料を見ている | 画面でモーダルではなくインライン表示なのを確認する。現在は `ProjectDetailView` のインライン表示が正解 |
 
 ---
 

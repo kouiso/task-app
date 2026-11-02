@@ -4274,17 +4274,15 @@ export default function ProfileEditPage() {
 - [ ] updateProfile で名前・メール・アバターを更新した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| プロフィールが空 | currentUser が null | ローディングチェック追加 |
-| 日付がInvalid Date | Date変換の引数不正 | new Date() で変換 |
-| toast が表示されない | react-hot-toast 未設定 | Toaster コンポーネント確認 |
-| 変更後に戻らない | router.push 忘れ | onSuccess 内に追加 |
-| 編集が反映されない | useEffectの依存配列 | [currentUser, form] を指定 |
-| メール重複エラー | すでに使われているメール | 別のアドレスを入力 |
-| アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
-| アバターを空で更新するとサーバーエラー | サーバーはURL・null・未指定を許すが空文字は許さない | `normalizeAvatarValue` で空文字を `null` に正規化してから送る |
+| プロフィールが空 | `currentUser` が null のまま描画している | 画面で名前やメールが空なのを確認する。`src/app/profile/edit/page.tsx` に `isLoading` の分岐を足す |
+| toast が表示されない | `<Toaster />` を配置していない | 画面で保存しても通知が出ないのを確認する。`src/app/providers.tsx` に `<Toaster />` があるか見る |
+| 保存後に元の画面に戻らない | `onSuccess` に `router.push` が無い | 画面で保存後に同じ画面に残るのを確認する。`src/app/profile/edit/page.tsx` の `onSuccess` に `router.push('/profile')` を足す |
+| 変更しても初期値が古いまま | `useEffect` の依存配列が足りない | エディタで `src/app/profile/edit/page.tsx` の `useEffect` を見る。`[currentUser, form]` を指定する |
+| `このメールアドレスは既に使用されています` | すでに使われているメールアドレス | 画面のエラーを見て別のアドレスを入力する |
+| アバターの画像が割れて表示される | URL が不正 | 画面で画像が割れているのを確認する。`https://` で始まる URL を入力する |
+| `Invalid url` | サーバーは URL・null・未指定を許すが空文字は許さない | Network タブで `user.update` の応答を見る。`normalizeAvatarValue` で空文字を `null` に正規化してから送る |
 
 ## 今日学んだ用語
 

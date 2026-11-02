@@ -4882,15 +4882,14 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 ---
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| ページが404になる | `[id]`フォルダ名のブラケットが全角になっている | 半角の`[id]`でフォルダを作り直す |
-| `await params` の `id` が `undefined` になる | App Routerの動的ルートでファイル配置が間違っている | `src/app/user/[id]/page.tsx`のパス構造を確認する |
-| フォームの初期値が空になる | Step 8 の `useEffect` で `form.reset` を呼んでいない | `useEffect(() => { if (user) form.reset({ ... }); }, [user, form])` が書けているか確認する |
-| 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | `USER_ROLE.ADMIN` を使って比較しているか確認する |
-| 更新後に古いデータが表示される | tRPC のキャッシュが残っている | `onSuccess` で user/auth を invalidate してから詳細へ戻る |
-| `FORBIDDEN`エラーが表示される | 本人更新で `role`・`isActive` を送信している | `canManageAccount` が true のときだけ送信する |
+| ページが404になる | `[id]` フォルダ名のブラケットが全角になっている | 画面で404が出るのを確認する。半角の `[id]` でフォルダを作り直す |
+| `await params` の `id` が `undefined` になる | App Router の動的ルートでファイル配置が間違っている | エディタで `src/app/user/[id]/page.tsx` のパス構造を確認する |
+| フォームの初期値が空になる | `useEffect` で `form.reset` を呼んでいない | 画面で編集ページを開いて欄が空なのを確認する。`src/app/user/[id]/edit/user-edit-client.tsx` に `useEffect(() => { if (user) form.reset({ ... }); }, [user, form])` を足す |
+| 権限チェックが効かない | `currentUser?.role` の比較で定数を使っていない | エディタで `src/app/user/[id]/edit/user-edit-client.tsx` の比較を見る。`USER_ROLE.ADMIN` を使って比較する |
+| 更新後に古いデータが表示される | tRPC のキャッシュが残っている | 画面で保存後に詳細が古いままなのを確認する。`onSuccess` で user/auth を `invalidate` してから詳細へ戻る |
+| `この操作を行う権限がありません` | 本人更新で `role`・`isActive` を送信している | 画面のエラーを確認する。`src/app/user/[id]/edit/user-edit-client.tsx` で `canManageAccount` が true のときだけ送信する |
 
 ---
 

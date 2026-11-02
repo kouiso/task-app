@@ -2559,25 +2559,21 @@ export default function TaskPage() {
 ---
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| チェックボックスをクリックしても反応しない | `onCheckedChange`ハンドラーで`Set`を正しく更新していない（`Checkbox`は`onChange`ではなく`onCheckedChange`を受け取る） | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
-| `indeterminate`状態が表示されない | `checked`propに`true`/`false`しか渡していない | shadcn/uiの`Checkbox`は`checked`に文字列`'indeterminate'`を渡すと部分選択状態になる |
-| 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
-| `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
-| 全選択の表示が選択件数と合わない | 比較対象に一覧全体の `tasks` を使っている | `selectedTaskList.length` と操作可能な `selectableTasks.length` を比較する |
+| チェックボックスをクリックしても印が付かない | `onCheckedChange` で `Set` を直接 mutate している | 画面でチェックしても印が付かないのを確認する。`src/app/task/page.tsx` の `onCheckedChange` で `new Set(prev)` を作ってから `add`/`delete` する |
+| 一部選択でも `indeterminate` が表示されない | `checked` に `true`/`false` しか渡していない | 画面で一部選択時に印が出ないのを確認する。`checked` に文字列 `'indeterminate'` を渡す |
+| 一括操作後にチェックが残る | 操作成功後に `selectedTasks` をクリアしていない | 画面で一括操作後にチェックが残るのを確認する。`onSuccess` 内で `setSelectedTasks(new Set())` を呼ぶ |
+| 全選択の表示が選択件数と合わない | 比較対象に一覧全体の `tasks` を使っている | 画面で全選択時の件数表示を見る。`selectedTaskList.length` と操作可能な `selectableTasks.length` を比較する形に直す |
 
 ### 詰まりやすいポイントまとめ
-
 | 症状 | 原因 | 解決策 |
 |------|------|--------|
-| `selectedIds` という変数名でエラーになる | 実際のコードは `selectedTasks` を使う | 変数名を `selectedTasks` / `setSelectedTasks` に統一する |
-| 型エラー: `string` is not assignable to `TaskStatus` | `isTaskStatus` 型ガードがない | `if (isTaskStatus(value))` で囲んでから呼ぶ |
-| 削除が確認なしで即実行される | `setBulkDeleteDialogOpen(true)` を呼んでいない | `handleBulkDelete` でダイアログを開く流れに修正 |
-| 操作後に画面が更新されない | `invalidate()` を呼んでいない | `onSuccess` の中で `utils.task.getAll.invalidate()` を追加 |
-| チェックが入ったまま残る | `setSelectedTasks(new Set())` を呼んでいない | `onSuccess` で空の Set にリセットする |
-| 操作できないタスクまで全選択される | `handleSelectAll` が `tasks` からIDを集めている | `selectableTasks.map` で操作可能なタスクのIDを集める |
+| `Cannot find name 'selectedIds'.` | 実際のコードは `selectedTasks` という変数名 | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` の変数名を `selectedTasks` / `setSelectedTasks` に統一する |
+| `Argument of type 'string' is not assignable to parameter of type 'TaskStatus'.` | `isTaskStatus` 型ガードが無い | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` で `if (isTaskStatus(value))` で囲んでから呼ぶ |
+| 削除が確認なしで即実行される | `setBulkDeleteDialogOpen(true)` を呼んでいない | 画面で一括削除が確認なしに走るのを確認する。`handleBulkDelete` で `setBulkDeleteDialogOpen(true)` を呼んでダイアログを開く |
+| 操作後に画面が更新されない | `invalidate()` を呼んでいない | 画面で操作後に一覧が古いままなのを確認する。`onSuccess` の中で `utils.task.getAll.invalidate()` を追加する |
+| 操作できないタスクまで全選択される | `handleSelectAll` が `tasks` から ID を集めている | 画面で全選択に操作不可のタスクが混ざるのを確認する。`selectableTasks.map` で操作可能なタスクの ID を集める |
 
 ---
 
