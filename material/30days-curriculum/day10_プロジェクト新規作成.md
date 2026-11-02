@@ -427,8 +427,6 @@ export function ProjectDialog({
 | `reset(...)` | ダイアログを開き直して `initialData` が変わったときフォームの値を同期 |
 | `buildProjectFormValues(...)` | 作成・編集どちらでも同じ形のフォーム初期値を作る関数 |
 
-> `defaultValues` はフォーム作成時の初期値です。ただし同じダイアログを別プロジェクトで開き直すと `initialData` が変わるため`useEffect` の中で `reset(...)` を呼んで再同期します。`useState` で入力値を1つずつ持つのではなく、react-hook-form にまとめて管理させるのがポイントです。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
-
 ---
 
 ### Step 4: 名前・説明の入力欄を作る（7分）
@@ -471,9 +469,11 @@ const handleFormSubmit =
 
 送信する側で `...(data.description && { ... })` と書いています。空欄の項目をそもそも送らないためです。Step 0 のサーバー側は送られてこなかった項目には何もしません。空文字を送るとそちらは「長さ0の説明がある」という値として保存されます。
 
+`&&` は値がある場合だけ項目を加える条件付きスプレッドです。`??` のように null や undefined を別の値で埋める用途とは異なります。
+
 **確認ポイント**:
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
-- `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はこの場面で null/undefined を埋める働きとは違い、「真なら含める」という意味で使う。`??` とは用途が異なる
+- 送信データを読み、`description`・`startDate`・`endDate` の3項目に `&&` があることを確認した
 
 続いてJSX を返します。`handleFormSubmit` の後ろに続けて書きます。Dialog の中にフォームを配置します。
 
