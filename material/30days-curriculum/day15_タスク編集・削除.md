@@ -1059,7 +1059,7 @@ npm run dev
 ### Pro パターンで書こう（編集後の一覧更新を楽観的に反映する）
 
 編集後の一覧更新は動きますが保存が終わるまで画面は古い内容のままです。そこで保存の完了を待たずに結果を先に画面へ反映し、もし保存が失敗したら元の状態へ戻す楽観的更新を使うと待ち時間を感じさせなくできます。
-なぜこの書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ保存の完了を待たずに画面へ反映するのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
@@ -1125,6 +1125,7 @@ Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動か
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 import type { TaskFormData } from '@/component/task/task-dialog';

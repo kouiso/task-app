@@ -2070,9 +2070,9 @@ npm run dev
 ### Pro パターンで書こう（プロフィール表示のデータアクセスは Optional chaining でそろえる）
 
 `?.` と `??` でアクセスの形をそろえるとnull チェックの繰り返しが減り、表示ロジックが読みやすくなります。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ `?.` と `??` でそろえるのかを **Before/After** で見比べてみましょう。
 
-`inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。ユーザーが取得できた場合の登録日と更新日は必ず `Date` です。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
+`inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
 
 #### Before（改善前のコード）
 
@@ -2083,30 +2083,13 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { AppRouter } from '@/server/api/root';
 
-type CurrentUser =
-  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
-  | undefined;
+type CurrentUser = inferRouterOutputs<AppRouter>['auth']['getCurrentUser'] | undefined;
 
 export function buildProfileViewModel(currentUser: CurrentUser) {
   let avatarUrl = '';
   if (currentUser) {
     if (currentUser.avatar) {
       avatarUrl = currentUser.avatar;
-    }
-  }
-
-  let displayName = '未設定';
-  if (currentUser) {
-    if (currentUser.name) {
-      displayName = currentUser.name;
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-ここまでで `avatarUrl` と `displayName` の2つを作るのに`if` が4つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。表示する項目が増えるたびに同じ形が積み上がる点に注目してください。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     }
   }
 
@@ -2118,29 +2101,14 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       }
     }
   }
-
-  let createdAtLabel = '-';
-  if (currentUser) {
-    createdAtLabel = format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
-      locale: ja,
-    });
-  }
-
-  let updatedAtLabel = '-';
-  if (currentUser) {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`initial` では入れ子が3段になりました。名前の1文字目を取り出すために、`currentUser`、`name`、`name[0]` の順で確かめています。登録日と更新日もユーザー全体の取得を確かめます。取得したユーザーの日時には値があるので日時自体の空判定は不要です。
+`avatarUrl` と `initial` の2つを作るのに `if` が5つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。`displayName`・`createdAtLabel`・`updatedAtLabel` も同じ形があと3つ続きます。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
-      locale: ja,
-    });
-  }
-
   return {
     avatarUrl,
     displayName,
@@ -2160,17 +2128,10 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 #### After（プロが書くコード）
 
+型と import は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-import type { inferRouterOutputs } from '@trpc/server';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import type { AppRouter } from '@/server/api/root';
-
-type CurrentUser =
-  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
-  | undefined;
-
 function formatProfileDate(value: NonNullable<CurrentUser>['createdAt']) {
   return format(new Date(value), 'yyyy年MM月dd日', { locale: ja });
 }
@@ -2181,19 +2142,13 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
     displayName: currentUser?.name ?? '未設定',
     email: currentUser?.email ?? '',
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-同じ内容が1項目1行になりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     createdAtLabel: currentUser ? formatProfileDate(currentUser.createdAt) : '-',
     updatedAtLabel: currentUser ? formatProfileDate(currentUser.updatedAt) : '-',
   };
 }
 ```
+
+同じ内容が1項目1行になりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
 
 **このコードの強み**:
 

@@ -1523,6 +1523,7 @@ Day 11 終了時点の `src/app/project/page.tsx` は編集・削除・アーカ
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -1641,6 +1642,7 @@ console.log(
 ### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type ProjectFromApi = {
   id: string;
   name: string;

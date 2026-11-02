@@ -874,11 +874,12 @@ npm run dev
 ### Pro パターンで書こう（作成後はリロードせず一覧キャッシュを更新する）
 
 一覧クエリを無効化して再取得するとフィルターやスクロール位置を維持したまま、現在のフィルターに合うデータを最新の状態に保てます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ一覧クエリを無効化して取り直すのかを **Before/After** で見比べてみましょう。
 
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 'use client';
 
 import { api } from '@/trpc/react';
@@ -935,6 +936,7 @@ export function useCreateProjectSubmit(onClose: () => void) {
 ### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 'use client';
 
 import { api } from '@/trpc/react';

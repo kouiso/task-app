@@ -1200,11 +1200,12 @@ npm run dev
 ### Pro パターンで書こう（自分のタスクをステータス別にまとめる）
 
 並び順の定義を1か所に集約すると順序を変更するときに修正箇所が1点に絞られます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ並び順の定義を1か所に集約するのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -1311,6 +1312,7 @@ function buildStatusSections(tasks: MyTask[]) {
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,

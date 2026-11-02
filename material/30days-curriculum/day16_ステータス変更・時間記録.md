@@ -980,18 +980,16 @@ npm run dev
 ### Pro パターンで書こう（ステータス遷移を配列で管理する）
 
 遷移ルールを1か所にまとめるとステータスの追加や文言の変更をする際の対応漏れを防げます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ遷移ルールを配列にまとめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 **読み比べ用**: この節のコードは写経しません。完成したコードと比べて読みます。
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { Button } from '@/component/ui/button';
-import {
-  TASK_STATUS,
-  type TaskStatus,
-} from '@/lib/constant/status';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 type StatusActionButtonProps = {
@@ -1085,11 +1083,9 @@ export function StatusActionButton({
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { Button } from '@/component/ui/button';
-import {
-  TASK_STATUS,
-  type TaskStatus,
-} from '@/lib/constant/status';
+import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
 type StatusActionButtonProps = {
