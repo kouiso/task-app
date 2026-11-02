@@ -1616,15 +1616,22 @@ def prepare_work_dir() -> None:
 
 
 def unescape_table_cell_pipes(markup: str) -> str:
-    """表のセル内に残る `\\|` をパイプ文字へ戻す。
+    """表のセル内コード片に残る `\\|` をパイプ文字へ戻す。
 
     GFM ではセル内の `\\|` はセル区切りから逃がすためのエスケープで、
-    コード片の中でも同じ扱いになる。vfm はコード片内のエスケープを戻さず
-    バックスラッシュごと出力するので、セル内だけ `|` に復元する。
-    セルの外の `\\|` は実際のバックスラッシュなので触らない。
+    コード片の中でも同じ扱いになる。vfm は本文側のエスケープは戻すが
+    コード片内のエスケープは戻さずバックスラッシュごと出力するので、
+    セル内の <code> だけ `|` に復元する。本文側の `\\|` は vfm が既に
+    正しく復元済みで、残った `\\|` は本物のバックスラッシュなので触らない。
+    セルの外の `\\|` も本物のバックスラッシュなので触らない。
     """
-    def cell(match: re.Match) -> str:
+    def code(match: re.Match) -> str:
         return match.group(0).replace("\\|", "|")
+
+    def cell(match: re.Match) -> str:
+        return re.sub(r"<code\b[^>]*>.*?</code>", code,
+                      match.group(0), flags=re.S)
+
     return re.sub(r"<t[dh]\b[^>]*>.*?</t[dh]>", cell, markup, flags=re.S)
 
 
