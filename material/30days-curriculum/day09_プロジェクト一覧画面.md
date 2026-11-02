@@ -652,63 +652,25 @@ map の中で、各プロジェクトの値を `ProjectCard` に渡してカー�
 
 **実装**:
 
-Step 6 で書いたグリッドの `<div>` の中身を、三項演算子（条件によって2つのうち片方を選ぶ書き方）を使う形に書き直します。**Step 6 で書いた `{projects?.map((project) => {` から `})}` までは先にすべて削除してください。** 残したまま足すと同じカードの記述が二重になります。
+Step 6 の `ProjectCard` と件数を数える処理は残します。変えるのは map の開始と終了の2か所です。2か所とも変えてから保存してください。
 
-削除したあと、`<div className="grid ...">` と `</div>` の間に、次の3つのブロックを上から順に貼ります。
+まず `{projects?.map((project) => {` の1行を次の2行に置き換えます。三項演算子（条件によって2つのうち片方を選ぶ書き方）の開始を map の手前に足します。
 
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
-{/* グリッドdiv内を修正（mapの前に条件分岐追加） */}
 {projects && projects.length > 0 ? (
   projects.map((project) => {
-    // キャンセル済みは進捗の母数に含めない
-    let taskCount = 0;
-    let doneCount = 0;
-    for (const t of project.tasks ?? []) {
-      if (t.status === TASK_STATUS.CANCELLED)
-        continue;
-      taskCount++;
-      if (t.status === TASK_STATUS.DONE)
-        doneCount++;
-    }
-    return (
-      <ProjectCard
-        key={project.id}
-        id={project.id}
-        name={project.name}
 ```
 
 `projects && projects.length > 0` と2つ並べているのは確かめたいことが2つあるからです。Step 2 で見たとおり、読み込みが終わるまで `projects` は `undefined` です。手前の `projects &&` が無いとまだ中身のない `undefined` から `length` を読みに行きます。その結果、画面は真っ白になります。後ろの `length > 0` は届いたけれど0件だった場合を切り分けます。
 
 なお Step 3 で読み込み中と最初の取得失敗は手前で `return` しています。ここへ来た時点では `projects` は取得済みなので、0件の表示を通信失敗と混同しません。
 
-`ProjectCard` の props の途中で切れています。続きを次のブロックで書きます。
+次に `ProjectCard` を返した直後の `})}` の1行を次のブロックに置き換えます。map を閉じる `})` の後ろへ0件の表示を足します。外側のグリッドの `</div>` は残してください。
 
 ```typescript
 // filepath: src/app/project/page.tsx
-// ProjectCard の続き（props後半）
-        description={project.description}
-        color={project.color}
-        memberCount={
-          project.members?.length ?? 0}
-        taskStats={{
-          total: taskCount,
-          done: doneCount,
-        }}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onClick={handleProjectClick}
-        isArchived={project.isArchived}
-      />
-    );
   })
-```
-
-props の並びは Step 6 とまったく同じです。書き換えたのは前後の囲みだけです。末尾の `})` が map を閉じます。ただし `? (` で開いた三項演算子はまだ閉じていません。ここで手を止めて保存すると括弧の対応が合わずエラーになります。次のブロックの `) : (` から書き始めて0件のときの表示までを続けて入れてください。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 三項演算子の else 側（空状態メッセージ）
 ) : (
   <div className="col-span-full flex
     flex-col items-center justify-center
@@ -720,8 +682,11 @@ props の並びは Step 6 とまったく同じです。書き換えたのは前
 )}
 ```
 
+件数がある場合は既存の map がカードを返します。0件の場合は `: (` の後ろのメッセージを返します。`ProjectCard` の props を写し直す必要はありません。
+
 **確認ポイント**:
-- ファイルを保存した
+- map の中の件数計算と `ProjectCard` を残した
+- 開始と終了の2か所を変えて保存した
 - プロジェクトが0件のときメッセージが表示される
 
 0件の画面を出すにはアカウントを入れ替えます。いま使っている `admin@example.com` は初期データの「Webサイトリニューアル」のメンバーなので必ず1件返るためです。サイドバーからログアウトし、Day 07 の表にある `empty@example.com` / `password123` でログインし直すとどのプロジェクトにも参加していない状態の画面が出ます。確かめたら `admin@example.com` に戻してください。以降の Step は管理者のまま進めます。
@@ -731,6 +696,7 @@ props の並びは Step 6 とまったく同じです。書き換えたのは前
 > `col-span-full` はグリッドの全列にまたがって表示するクラスです。これがないとメッセージが1列分の幅にしか表示されません。
 
 ---
+
 
 ### Step 8 : ヘッダー部品のimportと状態を準備する（5分）
 
@@ -789,19 +755,14 @@ const handleCreate = () => {
 
 ### Step 9 : ページ全体を組み立てる（5分）
 
-**ゴール**: ヘッダー、グリッド、空状態を組み合わせて `return` を完成させます。
+**ゴール**: ヘッダーと再取得エラーの案内を足して `return` を完成させます。
 
 **実装**:
 
-`ProjectPageContent` の `return` 全体を以下に置き換えます。
-ここでは Step 6・7 で作ったグリッドと空状態の構造をそのまま使い、ヘッダーと同じ `return` の中へ配置し直します。
+Step 1 の `return` にある `<h1>` から `</h1>` までを次の2ブロックに置き換えます。`<AppLayout>` とその内側の `<div className="flex flex-col gap-6">` は残します。Step 6・7 のグリッドと空状態も残してください。
 
 ```typescript
-// filepath: src/app/project/page.tsx
-// returnの開始〜ヘッダー部分
-return (
-  <AppLayout>
-    <div className="flex flex-col gap-6">
+{/* filepath: src/app/project/page.tsx */}
       <div className="flex items-center
         justify-between">
         <h1 className="text-3xl font-bold
@@ -824,12 +785,9 @@ return (
           </div>
 ```
 
-Step 1 で作った骨組みに、ヘッダーの中身を足していきます。見出しの横に操作エリアを `flex` で横並びにし、そこへアーカイブ表示スイッチを置きます。`checked` と `onCheckedChange` でスイッチを `showArchived` とつなぐと切り替えが一覧の絞り込みに伝わります。
+見出しの横に操作エリアを置きます。`checked` と `onCheckedChange` でスイッチを `showArchived` とつなぐと切り替えが一覧の絞り込みに伝わります。
 
-**確認ポイント**:
-- ヘッダーのタイトルとスイッチが表示されている
-
-続けてボタンとヘッダーの閉じタグを追加します。
+続けてボタンとヘッダーの閉じタグを追加します。2ブロックを入れ終えてから保存します。
 
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
@@ -843,12 +801,9 @@ Step 1 で作った骨組みに、ヘッダーの中身を足していきます�
       </div>
 ```
 
-右側に新規作成ボタンを置き、開いていたヘッダーの `<div>` を閉じます。ボタンとスイッチを同じ行にまとめると操作が画面の右上にそろいます。
+ボタンとスイッチを同じ行にまとめると操作が画面の右上にそろいます。外側の `AppLayout` とグリッドの閉じタグは元のままです。
 
-**確認ポイント**:
-- 「新規プロジェクト」ボタンが右上に表示されている
-
-再取得に失敗しても前回の一覧が残っている場合は、カードを消さずに注意を出します。ヘッダーの閉じタグとグリッドの間に追加します。
+再取得に失敗しても前回の一覧が残っている場合はカードを消さずに注意を出します。今足したヘッダーの閉じタグと既存のグリッドの間へ次のブロックを追加します。
 
 ```typescript
 {/* filepath: src/app/project/page.tsx */}
@@ -860,112 +815,20 @@ Step 1 で作った骨組みに、ヘッダーの中身を足していきます�
 )}
 ```
 
-`projects` が残り、認証・認可の失敗ではない場合だけこの案内を出します。表示する権限が無くなった一覧を、過去のキャッシュから見せないためです。
-
-続けてグリッド部分を追加します。
-
-```typescript
-{/* filepath: src/app/project/page.tsx */}
-{/* グリッド開始〜map処理 */}
-      <div className="grid gap-6
-        sm:grid-cols-2 lg:grid-cols-3
-        xl:grid-cols-4">
-        {projects && projects.length > 0
-          ? (projects.map((project) => {
-            // キャンセル済みは進捗の母数に含めない
-            let taskCount = 0;
-            let doneCount = 0;
-            for (const t of project.tasks ?? []) {
-              if (t.status === TASK_STATUS.CANCELLED)
-                continue;
-              taskCount++;
-              if (t.status === TASK_STATUS.DONE)
-                doneCount++;
-            }
-```
-
-ヘッダーの下に、カードを並べるグリッドを置きます。`projects` が空でないときだけ `.map()` に進むよう、三項演算子で分けています。中身は Step 6・7 で書いたものを、完成形の位置に組み直しています。
+`projects` が残り、認証・認可の失敗ではない場合だけこの案内を出します。表示する権限が無くなった一覧を過去のキャッシュから見せないためです。Step 6・7 の map と空状態は変えていません。
 
 **確認ポイント**:
-- グリッドコンテナとmap処理が追加されている
+- ヘッダーの右上に「新規プロジェクト」ボタンとアーカイブ表示スイッチがある
+- スイッチを押すとアーカイブ済みの一覧に切り替わる
+- 一覧に同じプロジェクトのカードが二重に出ていない
+- ファイルを保存し、`npm run dev` に構文エラーが出ていない
 
-map 内で `ProjectCard` を返します。
+`/project` を開くと見出しの右側に操作が並びます。一覧と見比べてヘッダーとカードが両方残っていることを確認します。
 
-```typescript
-// filepath: src/app/project/page.tsx
-// map内のreturn（カード表示）
-            return (
-              <ProjectCard
-                key={project.id}
-                id={project.id}
-                name={project.name}
-                description={
-                  project.description}
-                color={project.color}
-                memberCount={
-                  project.members?.length
-                    ?? 0}
-                taskStats={{
-                  total: taskCount,
-                  done: doneCount }}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onClick={
-                  handleProjectClick}
-                isArchived={
-                  project.isArchived}
-              />);
-          })
-```
-
-map の中身は Step 6 と同じで、1件ずつ `ProjectCard` に変換します。ここで書き直すのはヘッダーやグリッドと同じ `return` の中に、正しい入れ子で収めるためです。
-
-**確認ポイント**:
-- ProjectCardのpropsが正しく渡されている
-
-続けて空状態の表示を追加します。
-
-```typescript
-// filepath: src/app/project/page.tsx
-// 空状態の分岐（上の続き）
-        ) : (
-          <div className="col-span-full
-            flex flex-col items-center
-            justify-center py-12
-            text-center
-            text-muted-foreground">
-```
-
-三項演算子の else 側はプロジェクトが0件のときに表示する入れ物です。`col-span-full` でグリッドの全幅を使い、メッセージを中央に寄せます。
-
-**確認ポイント**:
-- 三項演算子の else 側が追加されている
-
-最後に空状態のメッセージと全体の閉じタグです。
-
-```typescript
-{/* filepath: src/app/project/page.tsx */}
-{/* 空メッセージ〜全体の閉じタグ */}
-            <p>プロジェクトが見つかりません。</p>
-            <p>最初のプロジェクトを作成しましょう！</p>
-          </div>
-        )}
-      </div>
-    </div>
-  </AppLayout>
-);
-```
-
-最後に空状態のメッセージを入れ、開いていた `<div>` と `AppLayout` を順に閉じます。これで `return` が完成し、ヘッダー・一覧・空状態が1つの画面にそろいます。
-
-**確認ポイント**:
-- `npm run dev` でエラーが出ていない
-- 「新規プロジェクト」ボタンが右上に表示されている
-- アーカイブ表示スイッチを押すと一覧が空になる（後述）
-
-![右上に「新規プロジェクト」ボタンとアーカイブ表示スイッチが並んだ一覧画面](./screenshots/day09/project-list-header.png)
+![プロジェクト一覧の見出しと右上の操作ボタン](./screenshots/day09/project-list-header.png)
 
 ---
+
 
 ### Step 10 : 動作確認（3分）
 
