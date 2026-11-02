@@ -632,8 +632,10 @@ const [error, setError] =
 
 ```mermaid
 flowchart LR
-    Z["zod<br/>入力欄の形を見る"] --> ZE["errors.email"] --> ZV["その欄の下に赤字で出す"]
-    SV["サーバー<br/>本人かどうかを見る"] --> SE["error state"] --> SVV["フォームの先頭に<br/>赤い帯を出す"]
+    Z["zod<br/>入力欄の形を見る"] --> ZE["errors.email"]
+    ZE --> ZV["その欄の下に赤字で出す"]
+    SV["サーバー<br/>本人かどうかを見る"] --> SE["error state"]
+    SE --> SVV["フォームの先頭に<br/>赤い帯を出す"]
 ```
 
 赤い文字は2種類あり、出どころと置き場が別々です。上の線はブラウザの中だけで完結し、通信は起きません。下の線はサーバーの返事が届いてから出ます。「メールアドレスの形が正しくありません」と「メールアドレスまたはパスワードが違います」が別の場所に出るのはこの2本が交わらないためです。
@@ -654,14 +656,16 @@ const loginMutation =
         .replace(callbackUrl);
     },
     onError: (error) => {
-      // エラーメッセージがなければデフォルト文言を使用
+      // エラーメッセージが空ならデフォルト文言を使用
       setError(
         error.message
-        ?? 'ログイン中にエラーが発生しました'
+        || 'ログイン中にエラーが発生しました'
       );
     },
   });
 ```
+
+`error.message` は `Error` の項目なので必ず文字列です。`??` は左が null か undefined のときだけ右を使うので文字列の `message` には右の文言が出ません。空文字のときも既定の文言を出したいのでここでは `||` を使います。
 
 `useMutation` は呼び出しの手順を先に登録しておく書き方です。この行を書いた時点ではまだ通信は起きません。実際に走るのはこのあと `onSubmit` の中で `loginMutation.mutate(data)` を呼んだときです。「準備」と「実行」を分けておくと成功したときと失敗したときの処理をここに一度書くだけで、送信のたびに使い回せます。
 
@@ -874,11 +878,12 @@ export default function LoginPage() {
 ### Pro パターンで書こう（ログインフォームは `as` で信じ切らず zod で受け止める）
 
 入力境界で zod の検査を挟むと不正な値を実行時にはじけます。`safeParse` で受け取った値を実行時に検証し、検証を通った値だけを `z.infer` で型付けされたデータとして扱えます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ `as` で済ませず zod で受け止めるのかを **Before/After** で見比べてみましょう。
 
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type LoginFormValues = {
   email: string;
   password: string;
@@ -951,6 +956,7 @@ console.log(readLoginForm(demoFormData));
 ### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -1144,7 +1150,7 @@ function LoginForm() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ログイン中にエラーが発生しました'
+          || 'ログイン中にエラーが発生しました'
         );
       },
     });
@@ -1401,7 +1407,7 @@ function LoginForm() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ログイン中にエラーが発生しました'
+          || 'ログイン中にエラーが発生しました'
         );
       },
     });

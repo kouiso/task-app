@@ -888,12 +888,15 @@ const handleRemoveMember = (userId: string) => {
 
 ### Pro パターンで書こう（アーカイブ状態の絞り込みは配列メソッドで選ぶ）
 
+今日の `page.tsx` は `showArchived` の Switch 1つで絞り込みます。この節は絞り込みを「進行中・アーカイブ済み・すべて」の3つに増やすときの発展パターンです。
+
 絞り込み条件を配列メソッドで並べると条件が増えても追記だけで対応でき、見渡しが保てます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ条件と処理を配列にまとめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type ProjectListItem = {
   id: string;
   name: string;
@@ -908,6 +911,7 @@ type ArchiveFilter = 'active' | 'archived' | 'all';
 `ArchiveFilter` は3つの文字列だけを許す型なので`'finished'` のような綴り違いを渡すと TypeScript が先に止めてくれます。ここまでは Before と After で共通です。次のブロックからこの3つを処理へ結びつける書き方が分かれます。
 
 ```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
   filter: ArchiveFilter,
@@ -937,6 +941,7 @@ export function filterProjectsByArchiveStatus(
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type ProjectListItem = {
   id: string;
   name: string;
@@ -951,6 +956,7 @@ type ArchiveFilter = 'active' | 'archived' | 'all';
 型の定義は Before とまったく同じです。書き換えるのはこの3つの値と処理をどこで結びつけるか、その1点だけです。型を触らずに組み立て方だけを差し替えられる、という確認も兼ねています。
 
 ```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 const ARCHIVE_FILTERS: Array<{
   key: ArchiveFilter;
   apply: (projects: ProjectListItem[]) => ProjectListItem[];
@@ -975,6 +981,7 @@ const ARCHIVE_FILTERS: Array<{
 ここで効いているのは配列の要素が `key` と `apply` の組になっている点です。`'active'` という選択肢の名前と「アーカイブ済みを除く」という処理が同じ1つの要素の中で隣り合います。Before では選択肢の名前と処理が `if` を挟んで数行離れていました。並べて置くと画面の絞り込みメニューの選択肢をこの配列から作る、といった使い回しもできます。
 
 ```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 export function filterProjectsByArchiveStatus(
   projects: ProjectListItem[],
   filter: ArchiveFilter,
@@ -2563,14 +2570,13 @@ Step 4 で `projectDetail.tasks?.length ?? 0` としていた部分が完成版�
 ---
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| 詳細が開かない | `router.push('/project?projectId=...')` していない | カードクリック時の URL 更新を確認する |
-| API が毎回エラーになる | `selectedProject` が空なのに `getById` を呼んでいる | `enabled: !!selectedProject` を付ける |
-| 一覧に戻れない | `onBack` が `router.push('/project')` になっていない | 戻る処理を URL ベースにそろえる |
-| アーカイブ後に画面が古いまま | `invalidate()` を呼んでいない | `utils.project.getAll.invalidate()` を `onSuccess` に入れる |
-| 詳細 UI が教材画像と違う | 旧モーダル版の資料を見ている | 現在は `ProjectDetailView` のインライン表示が正解 |
+| 詳細が開かない | カードクリックで `router.push('/project?projectId=...')` していない | 画面でカードを押しても URL が変わらないのを確認する。クリック時の URL 更新を `src/app/project/page.tsx` に足す |
+| `Invalid cuid` | `selectedProject` が空なのに `getById` を呼んでいる | Network タブで `project.getById` の応答が `BAD_REQUEST` なのを見る。`src/app/project/page.tsx` の `useQuery` に `enabled: !!selectedProject` を付ける |
+| 一覧に戻れない | `onBack` が URL ベースになっていない | 画面で戻るボタンを押しても URL が変わらないのを確認する。`onBack` を `router.push('/project')` にそろえる |
+| アーカイブ後に画面が古いまま | `invalidate()` を呼んでいない | 画面でアーカイブ後にプロジェクトが残るのを確認する。`onSuccess` に `utils.project.getAll.invalidate()` を足す |
+| 詳細 UI が教材画像と違う | 旧モーダル版の資料を見ている | 画面でモーダルではなくインライン表示なのを確認する。現在は `ProjectDetailView` のインライン表示が正解 |
 
 ---
 

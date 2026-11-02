@@ -2070,9 +2070,9 @@ npm run dev
 ### Pro パターンで書こう（プロフィール表示のデータアクセスは Optional chaining でそろえる）
 
 `?.` と `??` でアクセスの形をそろえるとnull チェックの繰り返しが減り、表示ロジックが読みやすくなります。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ `?.` と `??` でそろえるのかを **Before/After** で見比べてみましょう。
 
-`inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。ユーザーが取得できた場合の登録日と更新日は必ず `Date` です。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
+`inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
 
 #### Before（改善前のコード）
 
@@ -2083,30 +2083,13 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { AppRouter } from '@/server/api/root';
 
-type CurrentUser =
-  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
-  | undefined;
+type CurrentUser = inferRouterOutputs<AppRouter>['auth']['getCurrentUser'] | undefined;
 
 export function buildProfileViewModel(currentUser: CurrentUser) {
   let avatarUrl = '';
   if (currentUser) {
     if (currentUser.avatar) {
       avatarUrl = currentUser.avatar;
-    }
-  }
-
-  let displayName = '未設定';
-  if (currentUser) {
-    if (currentUser.name) {
-      displayName = currentUser.name;
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-ここまでで `avatarUrl` と `displayName` の2つを作るのに`if` が4つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。表示する項目が増えるたびに同じ形が積み上がる点に注目してください。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
     }
   }
 
@@ -2118,37 +2101,15 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
       }
     }
   }
-
-  let createdAtLabel = '-';
-  if (currentUser) {
-    createdAtLabel = format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
-      locale: ja,
-    });
-  }
-
-  let updatedAtLabel = '-';
-  if (currentUser) {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`initial` では入れ子が3段になりました。名前の1文字目を取り出すために、`currentUser`、`name`、`name[0]` の順で確かめています。登録日と更新日もユーザー全体の取得を確かめます。取得したユーザーの日時には値があるので日時自体の空判定は不要です。
+アイコン表示の `avatarUrl` と頭文字の `initial` を作るのに `if` が5つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    updatedAtLabel = format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
-      locale: ja,
-    });
-  }
-
-  return {
-    avatarUrl,
-    displayName,
-    email: currentUser ? currentUser.email : '',
-    initial,
-    createdAtLabel,
-    updatedAtLabel,
-  };
+  return { avatarUrl, initial };
 }
 ```
 
@@ -2160,46 +2121,25 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 #### After（プロが書くコード）
 
+型と import は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-import type { inferRouterOutputs } from '@trpc/server';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-import type { AppRouter } from '@/server/api/root';
-
-type CurrentUser =
-  | inferRouterOutputs<AppRouter>['auth']['getCurrentUser']
-  | undefined;
-
-function formatProfileDate(value: NonNullable<CurrentUser>['createdAt']) {
-  return format(new Date(value), 'yyyy年MM月dd日', { locale: ja });
-}
-
 export function buildProfileViewModel(currentUser: CurrentUser) {
   return {
     avatarUrl: currentUser?.avatar ?? '',
-    displayName: currentUser?.name ?? '未設定',
-    email: currentUser?.email ?? '',
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-同じ内容が1項目1行になりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    createdAtLabel: currentUser ? formatProfileDate(currentUser.createdAt) : '-',
-    updatedAtLabel: currentUser ? formatProfileDate(currentUser.updatedAt) : '-',
   };
 }
 ```
+
+同じ2項目が1行ずつになりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
 
 **このコードの強み**:
 
 - `?.` で「存在するときだけ進む」ことを1行で表せる
 - `??` で null / undefined のときの表示を近くに置けるので代替値が読みやすい
-- 日付整形を helper に寄せることで、登録日と更新日のルールを1か所でそろえられる
+- 表示項目が増えるときは1行足すだけで済み、`let` と `if` を重ねなくてよい
 
 #### 覚えておきたいエッセンス
 
@@ -4274,17 +4214,15 @@ export default function ProfileEditPage() {
 - [ ] updateProfile で名前・メール・アバターを更新した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| プロフィールが空 | currentUser が null | ローディングチェック追加 |
-| 日付がInvalid Date | Date変換の引数不正 | new Date() で変換 |
-| toast が表示されない | react-hot-toast 未設定 | Toaster コンポーネント確認 |
-| 変更後に戻らない | router.push 忘れ | onSuccess 内に追加 |
-| 編集が反映されない | useEffectの依存配列 | [currentUser, form] を指定 |
-| メール重複エラー | すでに使われているメール | 別のアドレスを入力 |
-| アバターが表示されない | URLが不正 | https:// で始まるURLを入力 |
-| アバターを空で更新するとサーバーエラー | サーバーはURL・null・未指定を許すが空文字は許さない | `normalizeAvatarValue` で空文字を `null` に正規化してから送る |
+| プロフィールが空 | `currentUser` が null のまま描画している | 画面で名前やメールが空なのを確認する。`src/app/profile/edit/page.tsx` に `isLoading` の分岐を足す |
+| toast が表示されない | `<Toaster />` を配置していない | 画面で保存しても通知が出ないのを確認する。`src/app/providers.tsx` に `<Toaster />` があるか見る |
+| 保存後に元の画面に戻らない | `onSuccess` に `router.push` が無い | 画面で保存後に同じ画面に残るのを確認する。`src/app/profile/edit/page.tsx` の `onSuccess` に `router.push('/profile')` を足す |
+| 変更しても初期値が古いまま | `useEffect` の依存配列が足りない | エディタで `src/app/profile/edit/page.tsx` の `useEffect` を見る。`[currentUser, form]` を指定する |
+| `このメールアドレスは既に使用されています` | すでに使われているメールアドレス | 画面のエラーを見て別のアドレスを入力する |
+| アバターの画像が割れて表示される | URL が不正 | 画面で画像が割れているのを確認する。`https://` で始まる URL を入力する |
+| `Invalid url` | サーバーは URL・null・未指定を許すが空文字は許さない | Network タブで `user.update` の応答を見る。`normalizeAvatarValue` で空文字を `null` に正規化してから送る |
 
 ## 今日学んだ用語
 

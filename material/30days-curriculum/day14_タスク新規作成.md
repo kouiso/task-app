@@ -1564,11 +1564,12 @@ npm run dev
 ### Pro パターンで書こう（タスクのステータス・優先度型を1か所に集約する）
 
 型・zod・ラベル・初期値の定義を1か所に集約すると値を追加・変更するときの対応漏れを防げます。
-なぜスキーマで定数ファイルの値を使うのか、**Before/After** で見比べてみましょう。
+なぜスキーマで定数ファイルの値を使うのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 
 type TaskStatus =
@@ -1665,6 +1666,7 @@ const defaultTaskValues = {
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 import {
   TASK_PRIORITY,
@@ -3405,14 +3407,13 @@ export default function TaskPage() {
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ダイアログが開かない | `open` propが渡されてない | `open={dialogOpen}` を確認 |
-| 作成後に一覧が更新されない | invalidate忘れ | `onSuccess` に追加 |
-| Selectの値が更新されない | `Controller` 未使用 | `register` ではなく `Controller` を使う |
-| 担当者一覧が空 | プロジェクト未選択または所属なし | `getMembersByProject` の入力と所属を確認 |
-| バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(taskFormSchema)` を確認 |
+| `Property 'open' is missing in type '{ ... }' but required in type 'TaskDialogProps'.` | `<TaskDialog>` に `open` を渡していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` の `<TaskDialog>` に `open={dialogOpen}` を足す |
+| 作成しても一覧に新しいタスクが出ない | `createMutation` の `onSuccess` でキャッシュを無効化していない | 画面で作成直後の一覧を見る。`src/app/task/page.tsx` の `api.task.create.useMutation` の `onSuccess` に `utils.task.getAll.invalidate()` を足す |
+| ステータスや担当者を選んでも値が変わらない | Select を `register` で繋いでいる | エディタで `src/component/task/task-dialog.tsx` の Select を見る。`register` ではなく `Controller` に差し替える |
+| 担当者の選択肢が空 | プロジェクトを選ぶ前か、そのプロジェクトのメンバーがいない | 画面で先にプロジェクトを選ぶ。それでも空なら `src/component/task/task-dialog.tsx` の `api.search.getMembersByProject.useQuery` に渡す `projectId` を確認する |
+| 必須項目を空にしても送信できてしまう | `useForm` に `resolver` を設定していない | エディタで `src/component/task/task-dialog.tsx` の `useForm` を見る。`resolver: zodResolver(taskFormSchema)` を足す |
 
 ## 今日学んだ用語
 

@@ -95,7 +95,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -167,11 +167,9 @@ export default function UsersPage() {
                       <ActiveStatusBadge isActive={user.isActive} />
                     </TableCell>
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

@@ -714,6 +714,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 ### Before（改善前のコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // app-layout.tsx 全体が 'use client'
 // → ナビゲーションリンク（静的）まで Client Component になる
 ```
@@ -723,6 +724,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 ### After（プロが書くコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // app-layout.tsx から 'use client' を外す
 // （Server Component に）
 // ログアウトボタンだけ別ファイルに分離して 'use client'

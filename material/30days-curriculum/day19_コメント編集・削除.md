@@ -2296,14 +2296,13 @@ useEffect(() => {
 - [ ] 確認ダイアログを表示できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 他人のコメントも編集できる | userId 比較の漏れ | `session?.user?.id` を確認 |
-| 編集後に更新されない | invalidate 忘れ | task.getById.invalidate |
-| キャンセル後に文字が残る | state クリア漏れ | handleCancelEdit で空に |
-| 空白で保存できる | `trim()` チェック漏れ | `if (!content.trim())` |
-| 削除確認が出ない | DeleteConfirmDialog 未配置 | JSX に追加する |
+| 他人のコメントにも編集ボタンが出る | `userId` の比較が漏れている | 画面で他人のコメントに編集ボタンが出るのを確認する。`src/component/task/task-detail-dialog.tsx` で `session?.user?.id` と `comment.userId` の比較を足す |
+| 編集しても表示が古いまま | `onSuccess` で `invalidate` を呼んでいない | 画面で保存後に本文が変わらないのを確認する。`src/component/task/task-detail-dialog.tsx` の `onSuccess` に `utils.task.getById.invalidate()` を足す |
+| キャンセルしても入力中の文字が残る | 編集 state のクリア漏れ | エディタで `src/component/task/task-detail-dialog.tsx` の `handleCancelEdit` を見る。編集中の本文を空に戻す処理を足す |
+| 空白だけで保存できてしまう | `trim()` のチェックが無い | エディタで `src/component/task/task-detail-dialog.tsx` の `handleSaveEdit` を見る。`if (!content.trim())` で空を弾く |
+| 削除ボタンで確認なしに消えてしまう | `DeleteConfirmDialog` を配置していない | 画面で確認なしに消えるのを確認する。`src/component/task/task-detail-dialog.tsx` の JSX に `DeleteConfirmDialog` を足す |
 
 ## 今日学んだ用語
 

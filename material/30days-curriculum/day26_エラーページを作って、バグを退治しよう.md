@@ -1725,10 +1725,30 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
-            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
-            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
+            {
+              label: '未対応タスク',
+              value: todoTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.TODO],
+              icon: Circle,
+            },
+            {
+              label: '完了タスク',
+              value: completedTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.DONE],
+              icon: CheckCircle2,
+            },
+            {
+              label: '進行中タスク',
+              value: inProgressTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS],
+              icon: Timer,
+            },
+            {
+              label: 'レビュー中タスク',
+              value: inReviewTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW],
+              icon: Eye,
+            },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -1900,7 +1920,7 @@ export default function DashboardPage() {
 }
 ```
 
-取得済みデータの有無とステータスを別々に判定するため、初回500、再取得500、401、403で決めた表示を保てます。再試行ボタンはそのページで使う取得処理を呼び直します。
+取得済みデータの有無とステータスを別々に判定するため、初回500、再取得500、401、403で決めた表示を保てます。再試行ボタンはそのページで使う取得処理を呼び直します。統計カードの色は状態の小さな丸と同じ `TASK_STATUS_COLORS` から引いています。同じ状態を2種類の色で表さないようにするためです。
 
 ### `src/component/task/task-dialog.tsx`（保存中の入力を保持する）
 
@@ -3183,13 +3203,12 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 - [ ] `npm run lint` で `src` 以下と設定ファイルをチェックした
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| `Cannot read properties of null` | Optional Chainingなし | `?.`を追加する |
-| Networkタブでリクエストが止まらない | useEffect依存配列にオブジェクト | プリミティブ値に分解する |
-| Biome lintのエラーが消えない | 自動修正できないルール | 手動でコードを修正する |
-| `npm run dev` のターミナルに `error.tsx must be a Client Component` と出てログイン画面も開けない | `error.tsx` の先頭に `'use client'` が無い | ファイルの先頭（import より前）に `'use client';` を書く |
+| `TypeError: Cannot read properties of null (reading 'name')` | Optional Chaining なしで null のプロパティを読んでいる | Console タブのエラーの右にあるファイル名と行番号を開く。その行で `?.` を付けて null を許容する |
+| 同じリクエストが無限に流れ続ける | `useEffect` の依存配列にオブジェクトを入れている | Network タブで同じリクエストが連発されるのを見る。依存配列をプリミティブ値に分解する |
+| `lint/suspicious/noConsole` | `console.` が残っていて自動修正で消えないルールに引っかかっている | `npm run lint` の出力でファイル名と行番号を見る。該当の `console.` の行を手で消す |
+| `npm run dev` のターミナルに `error.tsx must be a Client Component` と出てログイン画面も開けない | `error.tsx` の先頭に `'use client'` が無い | `npm run dev` のターミナルにこの文が出る。`error.tsx` の先頭（import より前）に `'use client';` を書く |
 
 ## 今日学んだ用語
 

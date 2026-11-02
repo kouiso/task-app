@@ -522,7 +522,7 @@ const registerMutation =
     },
     onError: (error) => {
       setError(
-        error.message ?? 'ユーザー登録中にエラーが発生しました'
+        error.message || 'ユーザー登録中にエラーが発生しました'
       );
     },
   });
@@ -757,11 +757,12 @@ Step 4 から Step 6 で書いた検証はここで初めて動かせます。�
 ### Pro パターンで書こう（登録APIの結果は判別共用体で受け取る）
 
 成功と失敗の種類を判別共用体（成功・失敗を示す共通のキーで分岐できる型）で表すと分岐の読み間違いをコンパイルエラーとして検出できます。
-なぜ判別共用体で表すのかを、**Before/After** で見比べてみましょう。
+なぜ判別共用体で表すのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type RegisterInput = {
   name: string;
   email: string;
@@ -826,6 +827,7 @@ console.log(buildRegisterMessage(result));
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type RegisterInput = {
   name: string;
   email: string;
@@ -1021,7 +1023,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });
@@ -1251,7 +1253,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });

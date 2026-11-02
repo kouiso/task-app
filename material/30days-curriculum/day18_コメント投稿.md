@@ -1930,13 +1930,15 @@ const canEditComments = !!taskDetail &&
 - [ ] 空コメントのバリデーションを確認できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| コメントが表示されない | comments が include されてない | getById の include 確認 |
-| 投稿後に更新されない | invalidate 忘れ | onSuccess に追加 |
-| 投稿できない | taskId が未設定 | タスクを開いてから投稿 |
-| 空白で投稿される | trim() チェック漏れ | disabled 条件を追加 |
+| コメントが表示されない | `task.getById` の `include` に `comments` が無い | Network タブで `task.getById` の応答に `comments` 配列があるか見る。無ければ `src/server/api/routers/task.ts` の `getById` の `include` を確認する |
+| 投稿しても一覧に出ない | `createMutation` の `onSuccess` で `invalidate` を呼んでいない | 画面で投稿直後にコメントが増えないのを確認する。`src/component/task/task-detail-dialog.tsx` の `onSuccess` に `utils.task.getById.invalidate()` を足す |
+| 投稿ボタンを押しても送れない | `taskId` が未設定 | エディタで `src/component/task/task-detail-dialog.tsx` の `create` に渡す `taskId` が空でないか確認する |
+| 空白だけで投稿できてしまう | `trim()` のチェックが無い | エディタで `src/component/task/task-detail-dialog.tsx` の送信ボタンの `disabled` を見る。`!content.trim()` を条件に足す |
+| `この操作を実行する権限がありません` | 閲覧者ロールのメンバーがコメントを送っている | 画面のトーストにこの文が出る。`src/server/api/routers/comment.ts` の `assertMemberPermission` が閲覧者を弾くので、投稿者のロールをメンバー以上にする |
+| `NOT_FOUND` | 存在しない ID に対してコメント API を呼んでいる | Network タブで応答の `code` が `NOT_FOUND` か見る。開いているタスクの ID を `taskId` に渡せているか確認する |
+| `Property 'comment' does not exist on type` | `src/server/api/root.ts` に `commentRouter` を登録していない | `npx tsc --noEmit` の出力で `api.comment` の型エラーを見る。`src/server/api/root.ts` の `appRouter` に `comment: commentRouter` を足す |
 
 ## 今日学んだ用語
 

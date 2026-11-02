@@ -1561,6 +1561,7 @@ Step 5 の middleware は「公開パス → tRPC → Cookie なし → JWT 無�
 ### Before（改善前のコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 export function AuthGuard({
   authStatus,
   children,
@@ -1586,6 +1587,7 @@ export function AuthGuard({
 ### After（プロが書くコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 export function AuthGuard({
   authStatus,
   children,

@@ -253,7 +253,7 @@ function SearchPageContent() {
         void utils.search.search.invalidate();
         return;
       }
-      toast.error(error.message ?? 'タスクの削除に失敗しました');
+      toast.error(error.message || 'タスクの削除に失敗しました');
     },
   });
 
@@ -519,7 +519,7 @@ function SearchPageContent() {
                       className="cursor-pointer hover:shadow-md transition-all"
                       onClick={() => handleProjectClick(project.id)}
                     >
-                      <CardContent className="pt-6">
+                      <CardContent className="pt-6 sm:pt-6">
                         <h4 className="font-semibold truncate mb-2">{project.name}</h4>
                         <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px] mb-4">
                           {project.description || '説明なし'}

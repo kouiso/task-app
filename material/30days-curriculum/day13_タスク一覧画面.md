@@ -2363,14 +2363,13 @@ export default function TaskPage() {
 - [ ] URLパラメータからタスク詳細を自動オープンできた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| タスクが表示されない | フィルター条件が厳しすぎる | 「すべて」を選択してデータがあるか確認 |
-| カードが表示されない | TaskCard の import ミス | `@/component/task/task-card` を確認 |
-| フィルターが効かない | `useQuery` のパラメータが渡っていない | 三項演算子の構文を確認 |
+| タスクが1件も表示されない | フィルター条件が厳しすぎる | 画面でステータスとプロジェクトの選択を「すべて」に戻す。それでも出ないときは `src/app/task/page.tsx` の `api.task.getAll.useQuery` に渡す条件を見直す |
+| `Module not found: Can't resolve '@/components/task/task-card'` | `TaskCard` の import パスが間違っている（`component` を `components` と複数形にするなど） | `npm run dev` のターミナルで `Can't resolve` の次のパスを見る。`src/app/task/page.tsx` の import を `@/component/task/task-card` に直す |
+| 絞り込んでも一覧が変わらない | `useQuery` に絞り込み条件が渡っていない | Network タブで `task.getAll` の応答を開き、送った条件が `input` に入っているか見る。入っていなければ `src/app/task/page.tsx` の `useQuery` の引数を Step 4 の形に直す |
 | 詳細が取得できない | `TaskDetailDialog` に渡す `taskId` が空 | 自分の `page.tsx` の `taskId={selectedTask}` と、その上の `setSelectedTask` を確認 |
-| ステータスフィルターで型エラー | `as` キャストを使っている | `isTaskStatus()` 型ガードを使う |
+| `Argument of type 'string' is not assignable to parameter of type 'SetStateAction<TaskStatus \| "all">'.` | ステータス選択の `onValueChange` で型ガード無しに `setFilterStatus(value)` と書いている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` のその行を `if (value === 'all' \|\| isTaskStatus(value)) setFilterStatus(value);` の形に直す |
 
 ## 今日学んだ用語
 

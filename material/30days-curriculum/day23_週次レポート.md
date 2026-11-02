@@ -49,7 +49,7 @@ flowchart TD
     A --> C["/report/weekly への<br/>リンク"]
     C --> D[週次レポートページ]
     D --> E[サマリーカード 3枚]
-    D --> F[週別完了タスク折れ線グラフ]
+    D --> F["週別完了タスク<br/>折れ線グラフ"]
     D --> G[優先度別棒グラフ]
     D --> H[完了タスクの<br/>優先度別<br/>積み上げ棒グラフ]
 
@@ -1075,8 +1075,7 @@ npm run dev
 
 ### Pro パターンで書こう（週次レポートのデータ取得は Prisma の select でまとめる）
 
-`select` をネストするとタスクとプロジェクトを1回のPrisma呼び出しで取得でき、N+1問題（一覧を1回取得したあと、要素ごとに追加のクエリを発行してしまう問題）を回避できます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+`select` の話題の前に、取り方そのものを見直します。週ごとに `prisma.task.findMany` を呼ぶと週の数だけ問い合わせが増えます。期間全体を1回で取って、週への仕分けはこのあとの `filter` に任せると問い合わせは1回で済みます。Step 0-4 の `getWeeklyReport` と同じ考え方です。なぜ期間全体を1回で取るのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
@@ -1090,151 +1089,74 @@ type WeeklyReportTask = {
   completedAt: Date | null;
   status: string;
   priority: string;
-  project: {
-    id: string;
-    name: string;
-  } | null;
 };
 ```
 
-取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。この関数は、対象ユーザーが現在も参加しているプロジェクトの完了タスクを取得します。
+取る列は Step 0-4 と同じ `id`・`completedAt`・`status`・`priority` の4つです。プロジェクトの列は取りません。取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-export async function fetchWeeklyReportTasks(
-  targetUserId: string,
-  startDate: Date,
-  endDate: Date,
-): Promise<WeeklyReportTask[]> {
-  const tasks = await prisma.task.findMany({
+// 週ごとに1回ずつ問い合わせる。4週なら4回になる
+const weeks = [week1, week2, week3, week4];
+for (const week of weeks) {
+  const tasks: WeeklyReportTask[] = await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
       status: TASK_STATUS.DONE,
-      project: { members: { some: { userId: targetUserId } } },
-      completedAt: { gte: startDate, lt: endDate },
+      completedAt: { gte: week.start, lt: week.end },
     },
-```
-
-> `gte`/`lt`（以上／未満のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。終了側を `lt`（未満）にするのは`endDate` ちょうどの瞬間を次の週に含めるためです。週の境界を「開始以上・終了未満」でそろえると同じタスクが2つの週に二重で数えられません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    select: {
-      id: true,
-      completedAt: true,
-      status: true,
-      priority: true,
-      projectId: true,
-    },
+    select: { id: true, completedAt: true, status: true, priority: true },
   });
-
-  return await Promise.all(
-    tasks.map(async (task) => {
-      const project = await prisma.project.findUnique({
-        where: { id: task.projectId },
-        select: {
-          id: true,
-          name: true,
-        },
-      });
-
-      return {
-        id: task.id,
-        completedAt: task.completedAt,
-        status: task.status,
-        priority: task.priority,
-```
-
-分かれ道は `select` に `projectId` しか入れていない点です。プロジェクト名が手元に無いのでそのあとの `tasks.map` で1件ずつ `prisma.project.findUnique` を呼び直すしかなくなります。タスクが 30 件あれば最初の1回に加えて問い合わせが 30 回増えます。`Promise.all` で同時に走らせても回数そのものは減りません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-        project,
-      };
-    }),
-  );
+  week.tasks = tasks;
 }
 ```
 
 **このコードの問題点**:
 
-- タスクが 30 件あれば最初の取得 1 回に加えてプロジェクト取得が 30 回走る
-- `Promise.all` を使っていてもDB への問い合わせ回数が増える構造は変わらない
-- 週次レポートに担当者やプロジェクト情報を増やすたび、同じ N+1 が別の relation でも起きやすい
+- 週の数だけ問い合わせが増える。4週なら4回、1年分なら52回になる
+- 週ごとの問い合わせが終わるまで、レポート全体を組み立てられない
 
 #### After（プロが書くコード）
 
+型と import は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-import { TASK_STATUS } from '@/lib/constant/status';
-import { prisma } from '@/lib/prisma';
+// 期間全体を1回で取る
+const tasks: WeeklyReportTask[] = await prisma.task.findMany({
+  where: {
+    assigneeId: targetUserId,
+    status: TASK_STATUS.DONE,
+    completedAt: { gte: rangeStart, lt: rangeEnd },
+  },
+  select: {
+    id: true,
+    completedAt: true,
+    status: true,
+    priority: true,
+  },
+});
 
-type WeeklyReportTask = {
-  id: string;
-  completedAt: Date | null;
-  status: string;
-  priority: string;
-  project: {
-    id: string;
-    name: string;
-  } | null;
-};
-```
-
-取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。この関数は、対象ユーザーが現在も参加しているプロジェクトの完了タスクを取得します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-export async function fetchWeeklyReportTasks(
-  targetUserId: string,
-  startDate: Date,
-  endDate: Date,
-): Promise<WeeklyReportTask[]> {
-  return await prisma.task.findMany({
-    where: {
-      assigneeId: targetUserId,
-      status: TASK_STATUS.DONE,
-      project: { members: { some: { userId: targetUserId } } },
-      completedAt: { gte: startDate, lt: endDate },
-    },
-```
-
-先頭が `return await prisma.task.findMany({` になっているのが Before との違いです。Before はいったん `const tasks` で受け取り、そのあと加工していました。ただしN+1 を消しているのは `return` の位置ではありません。`const` で受けてから返す形でも、その間に問い合わせを足せば N+1 は起きます。効いているのは次のコードブロックの `select` に `project` を入れ子で書いて関連するプロジェクト名も取得する点です。内部で発行されるSQLが1本になるとは限りません。`where` の中身は Before と変えていません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    select: {
-      id: true,
-      completedAt: true,
-      status: true,
-      priority: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
-}
+// 週への仕分けはこのあとの filter に任せる
+const weeklyTasks = weeks.map((week) =>
+  tasks.filter(
+    (task) =>
+      task.completedAt !== null &&
+      task.completedAt >= week.start &&
+      task.completedAt < week.end,
+  ),
+);
 ```
 
 **このコードの強み**:
 
-- タスクとプロジェクト情報を Prisma にまとめて取得させるので問い合わせ回数が読みやすい
-- `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
-- 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
+- 問い合わせは週の数に関わらず1回。対象の週を増やしても遅くならない
+- 週への仕分けはメモリ上の `filter` なので、期間の切り方を変えても問い合わせ側はそのまま使える
 
 #### 覚えておきたいエッセンス
 
-一覧やレポートで relation を使うなら1 件ずつ取得する前に
-Prisma の `select` / `include` でまとめて取れないかを考えます。
+集計対象が「期間を区切った一覧」なら、区切りごとに問い合わせるのではなく
+期間全体を1回で取ってメモリ上で仕分ける形を考えます。
 
 ## 完成コード全体
 
@@ -3137,13 +3059,12 @@ export default function ReportPage() {
 - [ ] 棒グラフで完了タスクの優先度別分布を表示した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
+| テーブルが空 | 対象プロジェクトがないか、`getOverview` の取得に失敗している | Network タブで `report.getOverview` の応答を見る。`error` ならサーバーのログを、200 で `projectStats` が空なら所属プロジェクトとアーカイブ状態を確認する |
 | 進捗率が NaN | 集計コードの写し間違いで `totalTasks > 0` の確認が抜けた | 完成コードの `totalTasks > 0 ? ... : 0` と照合 |
 | 週次データが空 | 初期データの完了タスクは2025年の日付で、しかも担当者が別のユーザー | 自分が担当のタスクを1件「完了」にしてから読み込み直す |
-| 型エラーが出る | weeks が string | Number.parseInt で変換 |
+| `Type 'string' is not assignable to type 'number'.` | `weeks` に文字列を渡している | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/report/page.tsx` の `weeks` に渡す値を `Number.parseInt` で数値に直す |
 | グラフが表示されない | recharts 未インストール | Day 01 の `scripts/scaffold-from-scratch.sh` が入れています。`npm list recharts` で `(empty)` と出たら `npm install recharts` で入れる（Day 22 Step 1 と同じ手順） |
 
 ## 今日学んだ用語

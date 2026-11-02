@@ -532,7 +532,7 @@ export default function UsersPage() {
         <div className="container mx-auto
           max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed
                   ? 'ログインの有効期限が切れました'
@@ -810,21 +810,19 @@ export default function UsersPage() {
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
 ```
 
 > `format` は `date-fns` の関数です。
 > `yyyy/MM/dd` で年・月・日を数字で表示します。
-> `createdAt` が無いときは `-` を表示します。
+> `createdAt` は必須項目で必ず値が入っているため、分岐を付けずそのまま整形します。
 > ユーザー取得前の待機は Step 3 で判定しています。
 
 **確認ポイント**:
-- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡し、値が無いときは `-` にしている
+- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡して登録日を表示している
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
@@ -1053,16 +1051,31 @@ npm run dev
 
 ---
 
-### Pro パターンで書こう（ユーザー一覧カードの Props は Pick で切り出す）
+### Pro パターンで書こう（表の1行の props は元の型から Pick する）
 
-ユーザー一覧カードはユーザー情報の一部だけを使います。
-`User` 型を丸ごと渡すより使う列だけを `Pick` すると
-カードの責務が読みやすくなります。
+これは発展パターンです。今日の `page.tsx` は行を切り出していません。行が長くなったときの発展パターンです。
+
+表の1行を部品に切り出すとき、行が使うのはユーザー情報の一部だけです。
+`User` を丸ごと渡すより、使う列だけを `Pick` すると「この行が何を使うか」が型で分かります。
+
+```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import type { inferRouterOutputs } from '@trpc/server';
+import type { AppRouter } from '@/server/api/root';
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type UserRow = RouterOutputs['user']['getAll'][number];
+
+// 表の1行に使う列だけを受け取る
+type UserRowProps = Pick<UserRow, 'id' | 'name' | 'avatar' | 'email'>;
+```
 
 | 書き方 | 特徴 |
 |--------|------|
-| `User` を丸ごと渡す | 使わない情報も混ざる |
-| `Pick<User, ...>` | 必要な列だけ分かる |
+| `UserRow` を丸ごと渡す | 使わない情報も混ざる |
+| `Pick<UserRow, ...>` | 必要な列だけ分かる |
+
+`RouterOutputs['user']['getAll'][number]` は「`getAll` が返すユーザー1人分」の型です。手続き側が返す列を増やしても `UserRow` は自動で追いつきます。
 
 **覚えておきたいこと**: 表示部品には必要な情報だけ渡します。
 
@@ -1425,7 +1438,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1526,11 +1539,9 @@ export default function UsersPage() {
                     {/* filepath: src/app/user/page.tsx */}
                     {/* 登録日と詳細ボタン */}
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -1692,7 +1703,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1764,11 +1775,9 @@ export default function UsersPage() {
                       <ActiveStatusBadge isActive={user.isActive} />
                     </TableCell>
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -2095,14 +2104,15 @@ export function AppLayout({
 - [ ] 空状態UIを実装した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 一般ユーザーで表示される | 権限チェック漏れ | `if (!isAdmin)` の早期リターンをテーブルより前に置く |
-| アバターが空白 | avatar が null | AvatarFallback で頭文字表示 |
+| 一般ユーザーでも一覧が見えてしまう | 権限チェックがテーブルの前に無い | 画面を一般ユーザーで開いて見えるのを確認する。`src/app/user/page.tsx` で `if (!isAdmin)` の早期リターンをテーブルより前に置く |
+| アバターが空白の丸だけ | `avatar` が null | 画面で画像が出ないのを確認する。`AvatarFallback` で頭文字を出す |
 | 登録日の表示が想定と違う | 書式または日時の受け取り方が違う可能性 | `createdAt` が Date であることと `yyyy/MM/dd` の書式を確認する |
-| ボタンが押せない | onClick 未設定 | router.push を追加 |
-| テーブルが空で不安 | 空状態UI未実装 | length === 0 のメッセージを追加 |
+| ボタンを押しても遷移しない | `onClick` を設定していない | エディタで `src/app/user/page.tsx` のボタンを見る。`onClick` に `router.push` を足す |
+| テーブルが空のまま | 空状態の表示を書いていない | 画面で空のとき何も出ないのを確認する。`length === 0` のメッセージを足す |
+| `Cannot find name 'Users'. Did you mean 'user'?` | `lucide-react` から `Users` を import していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/user/page.tsx` の import 行に `Users` を足す |
+| `JSX element 'div' has no corresponding closing tag.` | 閉じタグを書き忘れてエラー行が原因の場所とズレる | `npx tsc --noEmit` の出力の行番号より少し上を見る。`src/app/user/page.tsx` で `</div>` や `</Card>` の閉じ忘れを直す |
 
 ## 今日学んだ用語
 

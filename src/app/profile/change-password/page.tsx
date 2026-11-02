@@ -44,7 +44,7 @@ export default function ChangePasswordPage() {
       router.push('/profile');
     },
     onError: (error) => {
-      toast.error(error.message ?? 'パスワードの変更に失敗しました');
+      toast.error(error.message || 'パスワードの変更に失敗しました');
     },
   });
 

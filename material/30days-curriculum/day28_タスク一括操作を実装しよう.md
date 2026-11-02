@@ -1353,23 +1353,42 @@ npm run lint
 
 ---
 
-### Pro パターンで書こう（一括操作のハンドラーは Map で選ぶ）
+### Pro パターンで書こう（一括操作のハンドラーは `Record` の表から選ぶ）
 
 一括操作は完了・削除・ステータス変更のように種類が増えやすいです。
 今日は Step 6 から Step 8 で、この3つをそれぞれ別のハンドラーとして書きました。
 種類が3つのうちはこの形がいちばん追いやすいです。
 
 増えてくると事情が変わります。呼び出し口を1つにまとめたくなり、操作名で分ける
-`switch` が縦に伸びていきます。そこまで来たら操作名と処理を1つの表にまとめて
+`switch` が縦に伸びていきます。そこまで来たら操作名と処理を `Record` の表にまとめて
 その表から引く形に変えます。操作を足すときの変更が1行で済むようになります。
+
+```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import { TASK_STATUS } from '@/lib/constant/status';
+
+// 3つのハンドラーは Step 6〜8 で page.tsx に書いた関数
+type BulkAction = 'complete' | 'delete' | 'startProgress';
+
+const bulkHandlers: Record<BulkAction, () => void> = {
+  complete: handleBulkComplete,
+  delete: handleBulkDelete,
+  // ステータス変更は行き先ごとに1行。ここでは「進行中」だけを載せる
+  startProgress: () => handleBulkUpdateStatus(TASK_STATUS.IN_PROGRESS),
+};
+
+const runBulkAction = (action: BulkAction) => bulkHandlers[action]();
+```
+
+推奨は `Record` のオブジェクトです。キーを1つ書き忘れると TypeScript が止めてくれます。`Map` では書き忘れを型で止められません。`bulkHandlers` からは「進行中」へのステータス変更の1行だけを載せています。Step 8 の `handleBulkUpdateStatus(status)` は行き先を引数で受けるので、行き先の数だけ行が増えます。
 
 | 書き方 | 向いている場面 |
 |--------|----------------|
 | ハンドラーを別々に書く | 操作が3つ程度。今日の実装がこれです |
 | `switch` で分ける | 呼び出し口を1つにまとめたいとき |
-| handler map | 操作が増えてきた実務コード |
+| `Record` のオブジェクト | 操作が増えてきた実務コード |
 
-**覚えておきたいこと**: 分岐が増えたら処理表を検討します。
+**覚えておきたいこと**: 分岐が増えたら `Record` の処理表を検討します。
 
 ## 完成コード全体
 
@@ -2559,25 +2578,21 @@ export default function TaskPage() {
 ---
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| チェックボックスをクリックしても反応しない | `onCheckedChange`ハンドラーで`Set`を正しく更新していない（`Checkbox`は`onChange`ではなく`onCheckedChange`を受け取る） | `new Set(prev)`でコピーを作ってから`add`/`delete`する（直接mutateしない） |
-| `indeterminate`状態が表示されない | `checked`propに`true`/`false`しか渡していない | shadcn/uiの`Checkbox`は`checked`に文字列`'indeterminate'`を渡すと部分選択状態になる |
-| 一括操作後にチェックが残る | 操作成功後に`selectedTasks`をクリアしていない | `onSuccess`内で`setSelectedTasks(new Set())`を呼ぶ |
-| `updateMany`で型エラーが出る | `status`に文字列をそのまま渡している | `isTaskStatus`型ガードで検証してから渡す |
-| 全選択の表示が選択件数と合わない | 比較対象に一覧全体の `tasks` を使っている | `selectedTaskList.length` と操作可能な `selectableTasks.length` を比較する |
+| チェックボックスをクリックしても印が付かない | `onCheckedChange` で `Set` を直接 mutate している | 画面でチェックしても印が付かないのを確認する。`src/app/task/page.tsx` の `onCheckedChange` で `new Set(prev)` を作ってから `add`/`delete` する |
+| 一部選択でも `indeterminate` が表示されない | `checked` に `true`/`false` しか渡していない | 画面で一部選択時に印が出ないのを確認する。`checked` に文字列 `'indeterminate'` を渡す |
+| 一括操作後にチェックが残る | 操作成功後に `selectedTasks` をクリアしていない | 画面で一括操作後にチェックが残るのを確認する。`onSuccess` 内で `setSelectedTasks(new Set())` を呼ぶ |
+| 全選択の表示が選択件数と合わない | 比較対象に一覧全体の `tasks` を使っている | 画面で全選択時の件数表示を見る。`selectedTaskList.length` と操作可能な `selectableTasks.length` を比較する形に直す |
 
 ### 詰まりやすいポイントまとめ
-
 | 症状 | 原因 | 解決策 |
 |------|------|--------|
-| `selectedIds` という変数名でエラーになる | 実際のコードは `selectedTasks` を使う | 変数名を `selectedTasks` / `setSelectedTasks` に統一する |
-| 型エラー: `string` is not assignable to `TaskStatus` | `isTaskStatus` 型ガードがない | `if (isTaskStatus(value))` で囲んでから呼ぶ |
-| 削除が確認なしで即実行される | `setBulkDeleteDialogOpen(true)` を呼んでいない | `handleBulkDelete` でダイアログを開く流れに修正 |
-| 操作後に画面が更新されない | `invalidate()` を呼んでいない | `onSuccess` の中で `utils.task.getAll.invalidate()` を追加 |
-| チェックが入ったまま残る | `setSelectedTasks(new Set())` を呼んでいない | `onSuccess` で空の Set にリセットする |
-| 操作できないタスクまで全選択される | `handleSelectAll` が `tasks` からIDを集めている | `selectableTasks.map` で操作可能なタスクのIDを集める |
+| `Cannot find name 'selectedIds'.` | 実際のコードは `selectedTasks` という変数名 | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` の変数名を `selectedTasks` / `setSelectedTasks` に統一する |
+| `Argument of type 'string' is not assignable to parameter of type 'TaskStatus'.` | `isTaskStatus` 型ガードが無い | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` で `if (isTaskStatus(value))` で囲んでから呼ぶ |
+| 削除が確認なしで即実行される | `setBulkDeleteDialogOpen(true)` を呼んでいない | 画面で一括削除が確認なしに走るのを確認する。`handleBulkDelete` で `setBulkDeleteDialogOpen(true)` を呼んでダイアログを開く |
+| 操作後に画面が更新されない | `invalidate()` を呼んでいない | 画面で操作後に一覧が古いままなのを確認する。`onSuccess` の中で `utils.task.getAll.invalidate()` を追加する |
+| 操作できないタスクまで全選択される | `handleSelectAll` が `tasks` から ID を集めている | 画面で全選択に操作不可のタスクが混ざるのを確認する。`selectableTasks.map` で操作可能なタスクの ID を集める |
 
 ---
 
