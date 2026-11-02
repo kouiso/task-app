@@ -811,23 +811,12 @@ export default function GraduationPage() {
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { ShareGraduationButton } from './share-graduation-button';
-const CURRICULUM_SUMMARY = [
-  { label: '認証', value: 'JWT ログイン' },
-  { label: 'タスク', value: 'CRUD + 一括操作' },
-  { label: '公開', value: 'Vercel デプロイ' },
-];
+
 export default function GraduationPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-8">
       <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
-      <div className="grid gap-4 md:grid-cols-2">
-        {CURRICULUM_SUMMARY.map((item) => (
-          <section key={item.label} className="rounded-lg border p-4">
-            <p className="text-sm text-muted-foreground">{item.label}</p>
-            <p className="text-lg font-semibold">{item.value}</p>
-          </section>
-        ))}
-      </div>
+      {/* ...Before と同じ（CURRICULUM_SUMMARY のカード一覧）... */}
       <ShareGraduationButton text="Task-App 30日間カリキュラムを完走しました" />
     </main>
   );
@@ -836,7 +825,7 @@ export default function GraduationPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。カードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
+ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。`CURRICULUM_SUMMARY` の定義とカードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -860,17 +849,13 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
       {copied ? 'コピー済み' : '卒業メッセージをコピー'}
     </button>
+  );
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 `'use client'` はこの小さなボタンのファイルだけに付きました。コピー済みかどうかを覚える `useState` も、ここに閉じ込められています。親のページは静的なまま配信されるのでブラウザが受け取る JavaScript はこのボタン1個分で済みます。表示だけの部分にまで JavaScript を送らなくなるぶん、公開したページは最初の表示が速くなります。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  );
-}
-```
 
 **このコードの強み**:
 

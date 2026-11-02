@@ -1088,12 +1088,6 @@ import { Button } from '@/component/ui/button';
 import { TASK_STATUS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 
-type StatusActionButtonProps = {
-  taskId: string;
-  status: TaskStatus;
-  onUpdated?: () => void;
-};
-
 type StatusTransition = {
   from: TaskStatus;
   to: TaskStatus;
@@ -1109,7 +1103,7 @@ const STATUS_TRANSITIONS: StatusTransition[] = [
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-配列の1要素に `from` / `to` / `label` の3つがそろっています。「TODO のときは IN_PROGRESS へ進み、ボタンには作業開始と出す」という1つのルールが1つの塊として置かれます。Before では2つの関数に分かれていた情報がここでは隣り合っています。
+`StatusActionButtonProps` の型は Before と同じです。配列の1要素に `from` / `to` / `label` の3つがそろっています。「TODO のときは IN_PROGRESS へ進み、ボタンには作業開始と出す」という1つのルールが1つの塊として置かれます。Before では2つの関数に分かれていた情報がここでは隣り合っています。
 
 型を `StatusTransition` として先に決めてあるので `label` を書き忘れた要素があれば TypeScript が止めてくれます。遷移を足すときの書き漏らしは動かす前に見つかります。
 
@@ -1145,16 +1139,23 @@ Before では `DONE` と `CANCELLED` のために `return status` と `return '�
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 export function StatusActionButton({
+  // 引数の型は Before と同じです
   taskId,
   status,
   onUpdated,
 }: StatusActionButtonProps) {
+  // `updateMutation` の宣言は Before と同じです
   const updateMutation =
     api.task.update.useMutation({
       onSuccess: onUpdated,
     });
   const transition = findTransition(status);
+```
 
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。次のブロックでは、見つけた `transition` を `disabled` と `onClick` の両方へつなぐ JSX を読みます。
+
+```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return (
     <Button
       disabled={
@@ -1168,21 +1169,17 @@ export function StatusActionButton({
         });
       }}
     >
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-`transition` が `undefined` のときはボタンを押せなくして `onClick` の先頭でも `return` します。同じ1つの値を、見た目と処理の両方が見ている形です。押せるのに何も起きない、という食い違いはここでは生まれません。
-
-`updateMutation.isPending` を `disabled` に混ぜているのは送信中の二度押しを止めるためです。Step 2 の時間記録ダイアログで `isPending` を使ったのと同じ考え方がここでも効いています。
-
-```typescript
-      {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-      {transition?.label ?? '変更なし'}
+      {/* ...Before と同じ（ラベル表示）... */}
     </Button>
   );
 }
 ```
+
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+`transition` が `undefined` のときはボタンを押せなくして `onClick` の先頭でも `return` します。同じ1つの値を、見た目と処理の両方が見ている形です。押せるのに何も起きない、という食い違いはここでは生まれません。ボタンに出るラベル表示は Before と同じです。
+
+`updateMutation.isPending` を `disabled` に混ぜているのは送信中の二度押しを止めるためです。Step 2 の時間記録ダイアログで `isPending` を使ったのと同じ考え方がここでも効いています。
 
 **このコードの強み**:
 

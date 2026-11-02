@@ -974,58 +974,9 @@ npm run dev
 
 #### Before（改善前のコード）
 
-```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-const utils = api.useUtils();
+Before は Step 3 で書いた `updateMutation` と Step 4 で書いた `handleSubmit` の形とほぼ同じです。
 
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      if (selectedTask) {
-        utils.task.getById.invalidate({
-          id: selectedTask,
-        });
-      }
-      setDialogOpen(false);
-    },
-    onError: (error) => notifyMutationError(
-      error, 'タスクの更新に失敗しました',
-    ),
-  });
-```
-
-mutation の完了後に実行する内容はここまでです。次のブロックでは、その mutation へフォームの値を送る側を確認します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-const handleSubmit = (data: TaskFormData) => {
-  if (!data.id) return;
-
-  updateMutation.mutate({
-    id: data.id,
-    projectId: data.projectId,
-    expectedUpdatedAt: data.expectedUpdatedAt,
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動かす順番は「保存する → サーバーの返事を待つ → `invalidate()` で一覧を取り直す」で、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いはこの待ち時間の扱い方1点だけです。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    title: data.title,
-    description: data.description || null,
-    status: data.status,
-    priority: data.priority,
-    dueDate: data.dueDate
-      ? dateOnlyToUtcStartIso(data.dueDate)
-      : null,
-    estimatedHours: data.estimatedHours ?? null,
-    assigneeId: data.assigneeId || null,
-  });
-};
-```
+`onSuccess` で `invalidate()` を呼んでからダイアログを閉じるので、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いはこの待ち時間の扱い方1点だけです。
 
 **このコードの問題点**:
 
@@ -1152,37 +1103,7 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
   });
 ```
 
-キャッシュをサーバーの結果へそろえ直す出口はここまでです。次のブロックでは、フォームの値と更新時刻を mutation へ送る呼び出し側を確認します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-const handleSubmit = (data: TaskFormData) => {
-  if (!data.id) return;
-
-  updateMutation.mutate({
-    id: data.id,
-    projectId: data.projectId,
-    expectedUpdatedAt: data.expectedUpdatedAt,
-    title: data.title,
-    description: data.description || null,
-    status: data.status,
-    priority: data.priority,
-    dueDate: data.dueDate
-      ? dateOnlyToUtcStartIso(data.dueDate)
-      : null,
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-`onSettled` の中で `invalidate()` を呼ぶのは手元で組み立てた表示をサーバーの中身へそろえ直すためです。`updatedAt` のようにサーバー側で決まる値は手元では作れないので最後に必ず本物を取り直します。`handleSubmit` の中身は Step 4 とほとんど同じです。足した処理はすべて `useMutation` の中に収まっているため呼び出し側は書き換えずに済みます。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    estimatedHours: data.estimatedHours ?? null,
-    assigneeId: data.assigneeId || null,
-  });
-};
-```
+キャッシュをサーバーの結果へそろえ直す出口はここまでです。`onSettled` の中で `invalidate()` を呼ぶのは手元で組み立てた表示をサーバーの中身へそろえ直すためで、`updatedAt` のようにサーバー側で決まる値は手元では作れないので最後に必ず本物を取り直します。呼び出し側の `handleSubmit` は Before と同じです。足した処理はすべて `useMutation` の中に収まっているため書き換えずに済みます。
 
 **このコードの強み**:
 

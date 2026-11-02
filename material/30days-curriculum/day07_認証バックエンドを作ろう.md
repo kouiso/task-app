@@ -1586,15 +1586,10 @@ export function AuthGuard({
 
 ### After（プロが書くコード）
 
+関数の宣言と引数の型は Before と同じです。変わるのは中身の並べ方だけです。
+
 ```tsx
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-export function AuthGuard({
-  authStatus,
-  children,
-}: {
-  authStatus: 'loading' | 'guest' | 'authenticated';
-  children: React.ReactNode;
-}) {
   if (authStatus === 'loading') {
     return <main>セッション確認中</main>;
   }

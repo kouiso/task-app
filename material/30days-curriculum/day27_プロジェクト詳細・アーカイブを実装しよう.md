@@ -940,23 +940,10 @@ export function filterProjectsByArchiveStatus(
 
 #### After（プロが書くコード）
 
-```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-type ProjectListItem = {
-  id: string;
-  name: string;
-  isArchived: boolean;
-};
-
-type ArchiveFilter = 'active' | 'archived' | 'all';
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
 型の定義は Before とまったく同じです。書き換えるのはこの3つの値と処理をどこで結びつけるか、その1点だけです。型を触らずに組み立て方だけを差し替えられる、という確認も兼ねています。
 
 ```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 const ARCHIVE_FILTERS: Array<{
   key: ArchiveFilter;
   apply: (projects: ProjectListItem[]) => ProjectListItem[];

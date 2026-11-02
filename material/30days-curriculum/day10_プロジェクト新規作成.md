@@ -935,20 +935,10 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
 ### After（プロが書くコード）
 
+`'use client'`、import、`ProjectFormData` の型は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-'use client';
-
-import { api } from '@/trpc/react';
-
-type ProjectFormData = {
-  name: string;
-  description?: string;
-  color: string;
-  startDate?: string;
-  endDate?: string;
-};
-
 export function useCreateProjectSubmit(onClose: () => void) {
   const utils = api.useUtils();
 
@@ -961,28 +951,17 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
   const submitProject = (data: ProjectFormData) => {
     createMutation.mutate({
+      // ...Before と同じ...
+    });
+  };
+
+  // ...Before と同じ（`submitProject` と `isPending` の返却）...
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここまでが After の前半です。Before との違いは `void utils.project.getAll.invalidate()` の1行に集まっています。`invalidate` は「この一覧の控えはもう古い」と印を付ける操作で、印の付いたクエリを今表示しているページだけが取り直します。ページそのものは生き残るのでスイッチとスクロール位置はそのまま残ります。頭の `void` は取り直しの完了を待たずに次の `onClose()` へ進むという意思表示です。ダイアログは先に閉じてよく、取り直した結果は届き次第あとから反映されます。アーカイブ表示が ON なら作成直後のプロジェクトは条件に合わないため並びません。後半は Before と同じ送信部分なので見比べる箇所はここまでです。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-      name: data.name,
-      description: data.description,
-      color: data.color,
-      startDate: data.startDate,
-      endDate: data.endDate,
-    });
-  };
-
-  return {
-    submitProject,
-    isPending: createMutation.isPending,
-  };
-}
-```
+Before との違いは `void utils.project.getAll.invalidate()` の1行に集まっています。`invalidate` は「この一覧の控えはもう古い」と印を付ける操作で、印の付いたクエリを今表示しているページだけが取り直します。ページそのものは生き残るのでスイッチとスクロール位置はそのまま残ります。頭の `void` は取り直しの完了を待たずに次の `onClose()` へ進むという意思表示です。ダイアログは先に閉じてよく、取り直した結果は届き次第あとから反映されます。アーカイブ表示が ON なら作成直後のプロジェクトは条件に合わないため並びません。`submitProject` がサーバーへ送る中身は Before と同じです。
 
 **このコードの強み**:
 
