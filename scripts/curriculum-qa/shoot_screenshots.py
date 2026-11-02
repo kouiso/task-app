@@ -365,7 +365,7 @@ READER_TASK: dict[str, Any] = {
     "assigneeEmail": None,
 }
 
-# Day 15 Step 11 の動作確認で優先度を1件上げる（`day15_...md:997-999`）。
+# Day 15 Step 9 の動作確認で優先度を1件上げる。
 # 消すのは Day 14 で自分が作ったものにする（`day15_...md` は対象を指定していないが、
 # `day11_...md:1101` が初期データを消すなと同じ理由で断っているのに揃える）。
 DAY15_TASKS = replace_one(SEED_TASKS, "api", priority="HIGH")

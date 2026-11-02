@@ -863,40 +863,7 @@ if (isLoading) {
 完成版のコードではプロジェクト別集計も
 `overview.projectStats` に入って返ってきます。
 
-まずこれから書く行の中身を1つの塊で見ておきます。**このブロックはまだ書きません。**
-実際に書く場所はこのあと作る `<TableBody>` の中です。
-
-```typescript
-{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
-{/* projectStats は server 側で集計済み */}
-{overview?.projectStats.map((stat) => (
-  <TableRow key={stat.id}>
-    <TableCell className="font-medium">
-      {stat.name}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.totalTasks}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.completedTasks}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.progress.toFixed(1)}%
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.totalTimeHours.toFixed(1)}h
-    </TableCell>
-  </TableRow>
-))}
-```
-
-この `map` が回すのはStep 0-5 で `Map` から組み立てた `projectStats` です。画面側では `filter` や `reduce` を呼びません。プロジェクトごとの完了数をここで数え直すとカードの数字と表の数字が別々の計算から出ることになります。除外の条件を片方だけ直したとき合計と内訳の合わない表ができあがります。`stat.progress` と `stat.totalTimeHours` に `toFixed(1)` を付けているのは`71.42857142857143` のような値をそのまま出さないためです。
-
-**確認ポイント**:
-- `overview.projectStats` をそのまま描画している
-- クライアント側で `filter` / `reduce` を再実行していない
-
-次にStep 7 のカードグリッドの `</div>` の
+Step 7 のカードグリッドの `</div>` の
 直後にテーブルの JSX を追加します。
 
 ```typescript
@@ -962,9 +929,12 @@ if (isLoading) {
 
 `TableBody` の中で `projectStats` を1件ずつ行に変えます。`key` に `stat.id` を渡しているのはReact が再描画のときにどの行がどのプロジェクトかを見分けるためです。ここを配列の番号にするとReact は「0番目の行はこれからも0番目の行だ」と判断して同じ要素を使い回し、中の文字だけを差し替えます。`projectStats` は作成日の新しい順に並んでいるのでプロジェクトを1つ作ると先頭に割り込み、後ろの番号が1つずつずれます。するとさっきまで別のプロジェクトを映していた行に、隣のプロジェクトの数字が流し込まれます。行に入力欄やチェックボックスを足したときはそこへ入れた値まで別のプロジェクトの行へ移ります。ID を渡しておけば番号がずれても React は同じプロジェクトの行を追いかけられます。先頭の `overview?.projectStats` にある `?.` は`overview` がまだ届いていない一瞬を素通りさせる書き方です。
 
+この `map` が回すのはStep 0-5 で `Map` から組み立てた `projectStats` です。画面側では `filter` や `reduce` を呼びません。プロジェクトごとの完了数をここで数え直すとカードの数字と表の数字が別々の計算から出ることになります。除外の条件を片方だけ直したとき合計と内訳の合わない表ができあがります。
+
 **確認ポイント**:
 - `map` でプロジェクトごとに行を生成
 - `key` にプロジェクトIDを指定
+- クライアント側で `filter` / `reduce` を再実行していない
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -985,6 +955,8 @@ if (isLoading) {
 ```
 
 残り2列を足して開いていたタグを内側から順に閉じます。`TableRow`、`TableBody`、`Table`、`CardContent`、`Card` と、開いた順の逆にたどるのが JSX の決まりです。1つでも順番を入れ違えると保存した瞬間に閉じタグが合わないという構文エラーが出て画面がエラー表示に切り替わります。これで4枚のカードの下に内訳の表が並び、合計がどのプロジェクトから来ているかを追えるようになります。
+
+`stat.progress` と `stat.totalTimeHours` に `toFixed(1)` を付けているのは`71.42857142857143` のような値をそのまま出さないためです。
 
 **確認ポイント**:
 - プロジェクト統計テーブルが表示される
