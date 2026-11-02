@@ -77,6 +77,11 @@ UNMARKED_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
         [],
     ),
     (
+        "先頭が空行でもその次の非空行を見る",
+        "#### Before（改善前のコード）\n\n```tsx\n\nconst value = 1;\n```",
+        [(5, "const value = 1;")],
+    ),
+    (
         "写経の節のブロックは対象外",
         "### Step 1: 書く\n\n```tsx\ntype A = { x: number };\n```",
         [],

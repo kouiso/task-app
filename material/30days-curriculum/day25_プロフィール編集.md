@@ -2111,11 +2111,8 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return {
     avatarUrl,
-    displayName,
-    email: currentUser ? currentUser.email : '',
     initial,
-    createdAtLabel,
-    updatedAtLabel,
+    // displayName・createdAtLabel・updatedAtLabel も同じ形で作って返す
   };
 }
 ```

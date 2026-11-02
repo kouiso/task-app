@@ -106,9 +106,9 @@ def find_unmarked_sample(text: str) -> list[tuple[int, str]]:
             continue
         if state != "inside" or not pending_first:
             continue
-        pending_first = False
         if not line.strip():
             continue
+        pending_first = False
         fp = FILEPATH.match(line)
         value = filepath_value(fp) if fp else ""
         if not value.startswith("読み比べ用サンプル"):
