@@ -43,6 +43,8 @@ flowchart TD
     style I fill:#ffebee
 ```
 
+Day 10 で書いた作成用のスキーマです。`color` に `.regex(/^#[0-9A-F]{6}$/i)` を付けているのは色の指定を6桁の16進表記だけに限るためです。ここを素通しにすると画面から送られた任意の文字列がそのまま `style` に入ります。色は反映されず、意味を持たない値だけがデータベースに残ります。
+
 図の中で `page.tsx` から下へ伸びる矢印は props、下から戻る矢印はコールバック（親から子へ渡しておいて子の中で押されたときに呼び戻される関数）です。メンバー一覧やボタンを描くのは `ProjectDetailView` ですがダイアログを開いているかどうかの state と API 呼び出しは `page.tsx` が持ちます。`ProjectDetailView` は「追加ボタンが押されました」と親へ伝えるだけです。役割をこう分けておくと追加と削除のどちらでもメンバー一覧を取り直す処理が `page.tsx` の1か所にまとまります。矢印の終点は `api.project.addMember` と `api.project.removeMember` です。画面がボタンを隠しても追加や削除を最終的に許すかどうかを決めるのはサーバー側のこの2つになります。
 
 ### やること / やらないこと
@@ -290,6 +292,8 @@ const projectMemberSchema = z.object({
     });
   }),
 ```
+
+`include` でメンバーとユーザーを一緒に返しているのは画面が作成直後のカードをそのまま描けるようにするためです。返り値に含めておくと作成のあとで一覧を取り直すまでの間も表示が欠けません。
 
 `addMember` で一番大事なのは追加する前に「もうすでにメンバーではないか」を確認している点です。フロント側の `getAvailableUsers` は未参加ユーザーだけを候補に出します。しかし候補を取得したあと、実際に追加ボタンを押すまでにはタイムラグがあります。この間に別のタブや別のメンバーが先に同じユーザーを追加していると候補一覧が古いままボタンを押すことになります。フロントのUIだけを信用せず、サーバー側でも同じ確認をもう一度することで、同じユーザーが二重登録される事故を防いでいます。
 
@@ -673,6 +677,8 @@ const handleDetailClose = () => {
   router.push('/project');
 };
 ```
+
+Day 11 で書いた2つです。どちらも state を直接書き換えず `router.push` で URL を変えます。表示の切り替えを URL に一本化しておくと戻るボタンと画面の状態がずれません。
 
 URLだけで詳細の対象を切り替えるため、ブラウザの戻る操作でも画面とURLがずれません。取得処理は次のブロックで別に確認します。
 
@@ -1500,8 +1506,6 @@ import { assertMemberPermission } from './_helpers/permission';
 import { projectMemberRoleSchema, USER_SELECT } from './_helpers/select';
 ```
 
-取り込んでいる道具は3系統に分かれます。`Prisma` と `prisma` はデータベースを扱う側、`TRPCError` と `createTRPCRouter` は手続きを組み立てる側、`z` は入力を検査する側です。`TASK_STATUS` は `removeMember` が担当を外すタスクの状態を判定するために足した1行です。`Prisma` は型だけでなく `Prisma.sql` を値として呼ぶので `import type` ではなく通常の import にします。`assertMemberPermission` と `projectMemberRoleSchema` は今日足した2行で、Step 0 の 0-2 で `USER_SELECT` と1行にまとめました。同じファイルからの取り込みを1行に寄せておくと後から読む人がどちらの行が生きているかを毎回確かめずに済みます。
-
 **プロジェクト作成の入力スキーマ**:
 
 ```typescript
@@ -1518,8 +1522,6 @@ const projectCreateSchema = z.object({
   endDate: z.string().datetime().optional(),
 });
 ```
-
-Day 10 で書いた作成用のスキーマです。`color` に `.regex(/^#[0-9A-F]{6}$/i)` を付けているのは色の指定を6桁の16進表記だけに限るためです。ここを素通しにすると画面から送られた任意の文字列がそのまま `style` に入ります。色は反映されず、意味を持たない値だけがデータベースに残ります。
 
 **プロジェクト更新の入力スキーマ**:
 
@@ -1540,8 +1542,6 @@ const projectUpdateSchema = z.object({
 });
 ```
 
-更新側は `id` 以外がすべて `.optional()` です。名前だけを変えたいときに説明や色まで毎回送らせない形にしています。`description` と日付に `.nullable()` が付いているのは値を空に戻す操作と、項目を送らない操作を区別するためです。`null` は消す指示、未送信は触らない指示になります。
-
 **メンバー追加の入力スキーマ**:
 
 ```typescript
@@ -1553,8 +1553,6 @@ const projectMemberSchema = z.object({
   role: projectMemberRoleSchema.default(PROJECT_MEMBER_ROLE.MEMBER),
 });
 ```
-
-今日追加したスキーマです。`role` の `.default(PROJECT_MEMBER_ROLE.MEMBER)` によりロールを指定せずに呼ばれたときはタスクの作成・編集を担当する MEMBER として扱われます。省略時に強い権限が付く作りにすると指定を忘れただけで管理者が増えます。
 
 **アーカイブ切り替えの共通関数**:
 
@@ -1577,8 +1575,6 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
 };
 ```
 
-Day 11 で書いた関数です。`archive` と `unarchive` は `isArchived` に渡す値しか違わないので権限確認と更新をここへまとめてあります。片方だけ権限確認を書き忘れる事故が起きないのは2つの手続きが同じ関数を通るからです。
-
 **getAll の入力**:
 
 ```typescript
@@ -1596,8 +1592,6 @@ export const projectRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
 ```
-
-`createTRPCRouter({` から始まる大きなオブジェクトがこのファイルの本体です。以降の手続きはすべてこの中に並びます。`getAll` の入力は一番外側にも `.optional()` が付いているので条件を渡さずに呼び出せます。
 
 **getAll の検索条件**:
 
@@ -1626,8 +1620,6 @@ export const projectRouter = createTRPCRouter({
       }
 ```
 
-`userId` を指定して他人のプロジェクトを見ようとした場合だけ、管理者かどうかを確かめます。指定が無ければ自分がメンバーのものへ自動で絞ります。ここで `where.members` を組み立てておくとこの後の `findMany` は条件の中身を知らずに実行できます。
-
 **getAll の関連データ**:
 
 ```typescript
@@ -1649,8 +1641,6 @@ export const projectRouter = createTRPCRouter({
           },
 ```
 
-`isArchived` は `undefined` かどうかで判定しています。`false` は「進行中だけ」という意味を持つ値なので`if (input?.isArchived)` の形で判定すると進行中の指定が無視されます。`members` の中で `user` を取っているのは一覧カードにメンバーのアイコンを並べるためです。
-
 **getAll のタスクと並び順**:
 
 ```typescript
@@ -1667,8 +1657,6 @@ export const projectRouter = createTRPCRouter({
       });
     }),
 ```
-
-`tasks` は `select` で `id` と `status` だけに絞っています。一覧カードが必要なのは進捗の割合を出すための件数であってタスクの本文ではありません。ここで全項目を取るとプロジェクトが増えたときに運ぶデータだけが膨らみます。
 
 **getById の取得**:
 
@@ -1700,8 +1688,6 @@ export const projectRouter = createTRPCRouter({
       });
 ```
 
-詳細画面はメンバーとタスクを1つの画面に出すので`include` で両方を一度に取ります。別々の手続きに分けると通信は2回になります。そのぶん、片方だけ古い内容を表示する瞬間ができます。`members` の中の `user` に `role: true` を足しているのは詳細画面がユーザー全体の役割も表示するためです。
-
 **getById の存在確認と権限確認**:
 
 ```typescript
@@ -1723,8 +1709,6 @@ export const projectRouter = createTRPCRouter({
     }),
 ```
 
-`findUnique` は見つからないときに例外ではなく `null` を返すので自分で `NOT_FOUND` を投げます。権限は取得した `members` から自分の行だけを `filter` で抜き出して確かめます。他人のプロジェクトの `id` を直接指定されてもこの1か所で止まります。
-
 **getAvailableUsers の権限確認**:
 
 ```typescript
@@ -1745,8 +1729,6 @@ export const projectRouter = createTRPCRouter({
       assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-候補一覧には社内ユーザーの名前とメールアドレスが並ぶのでメンバーを管理できる人以外には返しません。自分がメンバーでなければ `userMember` は `null` になり、空配列を渡した時点で `assertMemberPermission` が処理を止めます。
-
 **getAvailableUsers の検索**:
 
 ```typescript
@@ -1766,8 +1748,6 @@ export const projectRouter = createTRPCRouter({
       });
     }),
 ```
-
-`projects: { none: { projectId } }` は「このプロジェクトに1件も紐づいていないユーザー」という条件です。Day 09 の `getAll` で使った `some` の逆で、未参加の人だけが残ります。`isActive: true` を足しているので退会済みのユーザーは候補に出ません。
 
 **create の入力の組み立て**:
 
@@ -1792,8 +1772,6 @@ export const projectRouter = createTRPCRouter({
     }
 ```
 
-Day 10 で書いた作成の手続きです。`members.create` で、作った本人を OWNER として同時に登録します。プロジェクトだけ先に作って後からメンバーを足す形にすると途中で失敗したときに誰も操作できないプロジェクトが残ります。
-
 **create の保存**:
 
 ```typescript
@@ -1813,8 +1791,6 @@ Day 10 で書いた作成の手続きです。`members.create` で、作った�
     });
   }),
 ```
-
-`include` でメンバーとユーザーを一緒に返しているのは画面が作成直後のカードをそのまま描けるようにするためです。返り値に含めておくと作成のあとで一覧を取り直すまでの間も表示が欠けません。
 
 **update の対象取得と権限確認**:
 
@@ -1843,8 +1819,6 @@ Day 10 で書いた作成の手続きです。`members.create` で、作った�
     assertMemberPermission(project.members, 'canManageMembers');
 ```
 
-Day 11 で書いた更新の手続きです。`members` を `where: { userId: ctx.session.userId }` で絞って取っているので返ってくる配列は自分の行だけになります。`assertMemberPermission` に渡すのはこの配列で、`canManageMembers` を持たないロールはここで止まります。
-
 **update の変更項目の組み立て**:
 
 ```typescript
@@ -1872,10 +1846,6 @@ Day 11 で書いた更新の手続きです。`members` を `where: { userId: ct
     }
 ```
 
-`isArchived` の変更には `canArchive` も確認します。名前や説明を変更できる ADMIN でも、アーカイブは許可されていないためです。
-
-すべての項目を `!== undefined` で確かめてから `updateData` へ移しています。渡された項目だけを書き換えたいので未送信の項目はそのまま残す形にしてあります。日付は文字列で届くため`new Date(...)` を通してから保存します。
-
 **update の保存**:
 
 ```typescript
@@ -1896,8 +1866,6 @@ Day 11 で書いた更新の手続きです。`members` を `where: { userId: ct
     });
   }),
 ```
-
-更新後もメンバーとユーザーを一緒に返します。画面側は返ってきた値をそのまま表示に使えるので更新のたびに別の取得を挟まずに済みます。
 
 **delete の対象取得**:
 
@@ -1924,8 +1892,6 @@ Day 11 で書いた更新の手続きです。`members` を `where: { userId: ct
       }
 ```
 
-Day 11 で書いた削除の手続きです。削除でも、まず対象が存在するかを確かめます。存在しない `id` に対して `delete` を呼ぶとPrisma の例外がそのまま外へ出ます。利用者の画面には日本語の説明を持たないエラーだけが並びます。
-
 **delete のオーナー限定チェックと削除**:
 
 ```typescript
@@ -1948,8 +1914,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
     }),
 ```
 
-プロジェクトの削除だけは `assertMemberPermission` を使わず、`role !== OWNER` を直接見ています。`canDelete` はタスク削除の権限として ADMIN にも付いているのでその権限を流用するとプロジェクトごと消せる人が増えてしまいます。
-
 **addMember の権限確認**:
 
 ```typescript
@@ -1968,8 +1932,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
     assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
 
-ここから今日書いた手続きです。`userId_projectId` は2つの列を組にした一意キーで、プロジェクトとユーザーの組で1行だけを狙って取れます。メンバーが何人いても取ってくる行は1つなので人数が増えても速度が変わりません。
-
 **addMember のオーナー付与の制限**:
 
 ```typescript
@@ -1987,8 +1949,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
       });
     }
 ```
-
-`canManageMembers` はメンバーを管理する権限であって新しいオーナーを作ってよい権限ではありません。この確認が無いとADMIN が自分の別アカウントを OWNER として追加できます。画面のロール選択に OWNER は出てきませんが`addMember` は API なので画面を通さずに直接呼べます。上の `if` があればその呼び出しが `FORBIDDEN` で止まります。
 
 **addMember の重複確認**:
 
@@ -2012,8 +1972,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
     }
 ```
 
-画面側の `getAvailableUsers` は未参加のユーザーだけを候補に出しますが候補を取ってからボタンを押すまでの間に別の人が先に追加していることがあります。`CONFLICT` を返すのは入力の書式ではなく今のデータの状態とぶつかっているためです。呼び出し側はコードを見て入力を直させるのか一覧を取り直させるのかを選べます。
-
 **addMember の追加**:
 
 ```typescript
@@ -2029,8 +1987,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
     });
   }),
 ```
-
-`data: input` と書けるのは入力スキーマの3項目が `ProjectMember` の列とそのまま対応しているからです。`include` でユーザーを一緒に返すので画面は追加された人の名前をすぐ表示できます。
 
 **removeMember の入力とロック**:
 
@@ -2054,8 +2010,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
         );
 ```
 
-`removeMember` は全体を `prisma.$transaction` で囲み、最初にプロジェクトの行を `FOR UPDATE` でロックします。OWNER が2人いるときに2つの削除が同時に届いても OWNER が0人にならないように、先の削除が終わるまで後の削除を待たせます。ロックを取るメソッドは Prisma にないので `$queryRaw` で SQL を書き、`${input.projectId}` は `Prisma.sql` がパラメータとして渡します。
-
 **removeMember の権限確認**:
 
 ```typescript
@@ -2072,10 +2026,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
 
         assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
-
-ロックを取ったあとで自分の権限を読みます。MEMBER と VIEWER はこの1行で止まり、以降のコードは1行も動きません。権限を先に確かめておくと外部の人に「そのメンバーは存在しません」といった中の事情を教えずに済みます。
-
-ロックはこのトランザクションが終わるまで保ちます。退会と降格が同じ行をロックするため同じプロジェクトの2つの操作は順に進みます。待っていた処理は先の変更が終わってから権限と人数を読み直します。まず `tx` で操作する本人を探して権限を確かめます。プロジェクトの行をロックしても入力IDの相手を閲覧する権限は増えません。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
@@ -2097,8 +2047,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
         }
 ```
 
-削除する相手が実際にこのプロジェクトのメンバーかを確かめます。この行がないと存在しない組み合わせに対する `delete` がデータベース側の例外になります。取得した `member` はこの後のオーナー判定にも使います。
-
 **removeMember のオーナー削除の制限**:
 
 ```typescript
@@ -2116,8 +2064,6 @@ Day 11 で書いた削除の手続きです。削除でも、まず対象が存�
           });
         }
 ```
-
-ADMIN は普通のメンバーを外せます。OWNER まで外せると邪魔なオーナーを排除して実質的にプロジェクトを奪えます。削除対象が OWNER のときだけ削除する側も OWNER かを確かめます。
 
 **removeMember の最後のオーナーの保護**:
 
@@ -2141,8 +2087,6 @@ ADMIN は普通のメンバーを外せます。OWNER まで外せると邪魔�
         }
 ```
 
-OWNER が0人になるとプロジェクトの削除とアーカイブを実行できません。名前の変更やメンバー追加は ADMIN にも許可されています。数えるのは対象が OWNER のときだけなので、MEMBER や VIEWER の削除ではこの問い合わせをしません。ロックを取ったあとの `tx` で数えます。別の削除が先に進んでいるときはその終わりを待ってから数えます。だから見える人数は必ず最新です。
-
 **removeMember の削除**:
 
 ```typescript
@@ -2157,8 +2101,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
           },
         });
 ```
-
-`delete` にも `userId_projectId` を渡すので消えるのはこのプロジェクトのこのユーザーを表す1行だけです。ユーザー本体は残るため、外された人も他のプロジェクトではこれまで通り作業できます。
 
 **removeMember の担当解除**:
 
@@ -2184,8 +2126,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
     }),
 ```
 
-メンバーから外れた人の担当タスクが残ると所属していない人が未完了タスクの担当者のままになります。Day 29 の画面は表示の側でも所属で絞ります。ここではデータの側でも担当を外し、二重に防ぎます。同じトランザクションの中で外します。`projectId` で絞るのは他のプロジェクトの担当を消さないためです。`notIn` で完了と中止を除くのは完了実績の担当者を残すためです。完了済みのタスクは `user.getById` が返さないので、担当を外しても漏れる情報は減りません。`delete` と `updateMany` を同じまとまりに入れたこの手続きの中では、メンバーだけ消えて担当が残る状態は起きません。返す中身が無いので `{ success: true }` を返し、画面側は受け取った時点で `getById` を取り直します。
-
 **updateMemberRole の入力とロック**:
 
 ```typescript
@@ -2210,8 +2150,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         );
 ```
 
-ロール変更も OWNER を減らす操作なので `removeMember` と同じ行のロックを取ります。削除と降格が同じロックを取り合えば、後の側は先の処理が終わってから権限と人数を読み、最後の OWNER が残ります。
-
 **updateMemberRole の権限確認**:
 
 ```typescript
@@ -2228,8 +2166,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 
         assertMemberPermission(userMember ? [userMember] : [], 'canManageMembers');
 ```
-
-権限の確認も、ロックを取ったあとで行います。権限を読んでから更新するまでの間に権限が変えられる隙間をなくすためです。
 
 **updateMemberRole の対象確認**:
 
@@ -2253,8 +2189,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
         }
 ```
 
-更新の対象が実在しなければ `NOT_FOUND` で止めます。存在しない行への `update` が Prisma の例外になるのを避け、画面に日本語の理由を返すためです。
-
 **updateMemberRole のオーナー権限の変更制限**:
 
 ```typescript
@@ -2271,8 +2205,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
           });
         }
 ```
-
-最後のOWNERを降格させる操作を止めます。人数確認だけをトランザクションへ入れても同時操作は防げません。ここでは確認から変更まで同じ行のロックを保つため待っていた処理が最新の人数を確かめます。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
@@ -2296,8 +2228,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
           }
         }
 ```
-
-`count` はロックを取ったあとの `$transaction` の中で数えています。同じ行にロックを取りに来る他の削除や降格はロックが外れるまで待たされます。そのため数えた人数と書き換え後の人数がずれません。
 
 **updateMemberRole の更新**:
 
@@ -2324,8 +2254,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
     }),
 ```
 
-更新の相手を `userId_projectId` の組で指定しているのは `ProjectMember` がこの2列の組で一意になる約束を持っているからです。`userId` だけで探すとその人が複数のプロジェクトに参加していたときにどの行を直すか決まりません。`prisma` ではなく `tx` を使うのは手前で数えた人数とこの書き換えを1つのまとまりに保つためです。
-
 **archive と unarchive**:
 
 ```typescript
@@ -2345,8 +2273,6 @@ OWNER が0人になるとプロジェクトの削除とアーカイブを実行�
 });
 ```
 
-Day 11 で書いた2つの手続きです。中身は共通関数へ渡す `true` と `false` の違いだけになっています。最後の `});` が `projectRouter` 全体を閉じる行で、今日追加した4つの手続きもすべてこの内側に並びます。
-
 ### `src/app/project/page.tsx`
 
 **クライアント宣言と外部ライブラリのインポート**:
@@ -2360,8 +2286,6 @@ import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 ```
-
-`'use client'` はこのファイルをブラウザ側で動く部品として扱う宣言です。App Router のページは既定でサーバー側だけで動くためこの1行が無いと `useState` を書いた時点でエラーになります。`useSearchParams` は URL の `?` 以降を読む道具で、Day 11 で入れた詳細画面の切り替えに使います。
 
 **自作コンポーネントのインポートの前半**:
 
@@ -2385,8 +2309,6 @@ import {
 import { Label } from '@/component/ui/label';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 ```
-
-`ProjectDetailView` は Day 11 Step 9 で、`Label` は Day 09 で足したものです。Step 4 で足したのが `Dialog` 系です。並びがアルファベット順になっているのは`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても手で直す必要はありません。
 
 **自作コンポーネントのインポートの後半**:
 
@@ -2412,8 +2334,6 @@ import { TASK_STATUS } from '@/lib/constant/status';
 import { dateOnlyFromValue, dateOnlyToUtcStartIso } from '@/lib/date';
 ```
 
-エラー判定の関数と再試行条件は、画面部品の import に続けます。認証・権限・存在しないIDを通信失敗と分けるためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
 import {
@@ -2430,8 +2350,6 @@ const shouldRetryProjectQuery = (
 ) => httpStatusOf(error) !== 404
   && shouldRetryQuery(failureCount, error);
 ```
-
-Step 2 で足したロール関連の5つがこの画面の権限判定の材料です。`@/lib/constant/roles` から取り込むのはサーバー側の `project.ts` が使っている定義と同じものを見るためです。`@prisma/client` から型を直接引くと判定の基準がデータベースの都合に引きずられます。
 
 **state の定義**:
 
@@ -2451,8 +2369,6 @@ function ProjectPageContent() {
   const [removeMemberTargetId, setRemoveMemberTargetId] = useState<string | null>(null);
 ```
 
-Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberRole` を足しました。Step 6 の `removeMemberDialogOpen` と `removeMemberTargetId` は削除の確認ダイアログを開くかどうかと、どのメンバーを消そうとしているかを覚える組です。2つに分けているのは閉じる動きの途中で対象を消すと表示が一瞬空になるからです。
-
 **URLパラメータの読み取り**:
 
 ```typescript
@@ -2465,11 +2381,7 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   const selectedProject = projectIdParam;
 ```
 
-プロジェクト詳細はダイアログではなく、`?projectId=xxx` の付いた同じページとして表示します。`selectedProject` は URL の値そのものなので、ブラウザの戻るボタンでも表示が追従します。開いている画面の状態を URL に載せておくとそのアドレスをそのまま人へ送れます。
-
 **データ取得と権限判定**
-
-一覧と詳細で必要な問い合わせが異なるため、取得状態も別々に受け取ります。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2486,8 +2398,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     { retry: shouldRetryProjectQuery },
   );
 ```
-
-ログイン情報の取得状態も表示判定に含めます。本人の確認が終わる前に詳細や操作ボタンを描かず、認証失敗時のデータ露出を防ぐためです。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2509,8 +2419,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   );
 ```
 
-一覧の取得状態をデータと分けて受け取ります。0件と通信待ちを区別し、失敗時には空の一覧ではなく再読み込みの入口を示すためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const {
@@ -2528,10 +2436,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     },
   );
 ```
-
-詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
-
-詳細を開いている間は一覧の取得を止めます。401・403・404は同じ問い合わせを繰り返しても解決しないため再試行しません。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2552,8 +2456,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     : false;
 ```
 
-権限の計算を `ProjectDetailView` の中ではなく `page.tsx` で行うのは、サーバーと同じ `hasPermission` を使って「見せてよいボタンか」を1か所で決めるためです。`isProjectMemberRole` は `members` に並ぶ値が4種のロールのどれかを確かめる型ガードで、予期しない値が混ざっていても `undefined` へ倒れます。コンポーネントは受け取った `boolean` に従って表示を切り替えるだけになり、権限ロジックが画面のあちこちに散らばりません。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const { data: availableUsers } =
@@ -2566,8 +2468,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
       },
     );
 ```
-
-候補一覧はメンバー管理権限がある場合だけ取得します。MEMBERやVIEWERが詳細を開いただけで403を発生させないためです。
 
 **作成と更新の mutation**:
 
@@ -2590,8 +2490,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   });
 ```
 
-`updateMutation` は Day 11 Step 3 と同じく `getById.invalidate()` を引数なしで呼びます。編集ダイアログは一覧画面にしか無いので保存した時点では詳細画面を開いていません。引数なしで呼ぶと前に開いたプロジェクトの詳細キャッシュすべてに古いという印が付きます。配布した `src/trpc/react.tsx` の設定では取得から30秒のあいだ印の無いキャッシュをそのまま使います。この1行が無いと詳細を見てから30秒以内に名前を変えて開き直したとき古い名前が出ます。一覧と詳細でデータの出どころが違うので書き換えたら両方に印を付ける必要があります。
-
 **削除の mutation**:
 
 ```typescript
@@ -2604,8 +2502,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
     },
   });
 ```
-
-プロジェクトを消したあとは `/project` へ戻します。詳細画面のままだと消えたプロジェクトを `getById` が探しに行って `NOT_FOUND` を返します。
 
 **メンバー追加の mutation**:
 
@@ -2628,8 +2524,6 @@ Step 2 で `memberDialogOpen` を、Step 3 で `newMemberUserId` と `newMemberR
   });
 ```
 
-Step 5 で書いたものです。`getAll` は一覧カードの人数を更新するために取り直します。メンバー一覧の出どころは `getById` なので追加が成功したらここを取り直します。あわせて `getAvailableUsers` にも印を付けます。候補一覧が古いままだといま追加した人がまた候補に並び、選んで送信するとサーバー側の重複チェックでエラーになります。フォームを初期値へ戻しているのは次に開いたとき前回選んだ人が残っていると押し間違いで同じ人を足そうとするからです。
-
 **メンバー削除の mutation**:
 
 ```typescript
@@ -2647,8 +2541,6 @@ Step 5 で書いたものです。`getAll` は一覧カードの人数を更新�
     },
   });
 ```
-
-Step 6 で書いたものです。取り直す相手は追加のときと同じ3つです。`getAll` は一覧カードの人数を更新します。`getById` はメンバー一覧を減らすため`getAvailableUsers` は外した人を候補一覧へ戻すためです。`getAvailableUsers` を更新しないと、外した人をもう一度追加するときに候補へ出てきません。
 
 **ロール変更とアーカイブの mutation**:
 
@@ -2680,8 +2572,6 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
   });
 ```
 
-`updateMemberRoleMutation` は Step 2 で足したもので`ProjectDetailView` の中のセレクトボックスから呼ばれます。アーカイブの2つは Day 11 で書いたもので成功したら一覧へ戻します。3つとも成功時の後始末を `onSuccess` に置いているので呼ぶ側は結果を待って書く必要がありません。
-
 **作成と編集のハンドラー**:
 
 ```typescript
@@ -2711,8 +2601,6 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
   };
 ```
 
-`handleCreate` は編集対象を空にしてからダイアログを開きます。前に編集した内容が残っていると新規作成のつもりで開いた画面に他のプロジェクトの名前が入ります。`handleEdit` は一覧から対象を探し、日付を画面用の形へ直してから渡します。
-
 **削除のハンドラー**:
 
 ```typescript
@@ -2723,8 +2611,6 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
     setDeleteDialogOpen(true);
   };
 ```
-
-削除は直接実行せず、対象を覚えてから確認ダイアログを開きます。押し間違いで消える操作を、必ずもう1回の確認の後ろへ置く形です。
 
 **フォーム送信のハンドラー**:
 
@@ -2756,8 +2642,6 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
   };
 ```
 
-`data.id` があれば更新、無ければ作成と分けています。1つのダイアログを両方で使い回しているのでどちらの操作かはフォームの中身から決めます。更新側で `description` へ `null` を渡しているのは空欄にしたとき値を消す指示として届けるためです。
-
 **詳細画面の開閉ハンドラー**:
 
 ```typescript
@@ -2771,8 +2655,6 @@ Step 6 で書いたものです。取り直す相手は追加のときと同じ3
     router.push('/project');
   };
 ```
-
-Day 11 で書いた2つです。どちらも state を直接書き換えず `router.push` で URL を変えます。表示の切り替えを URL に一本化しておくと戻るボタンと画面の状態がずれません。
 
 **メンバー追加と削除のハンドラー**:
 
@@ -2795,8 +2677,6 @@ Day 11 で書いた2つです。どちらも state を直接書き換えず `rou
   };
 ```
 
-`handleAddMember` は `selectedProject` と `newMemberUserId` の両方がそろってから送ります。ボタン側でも空のときは押せないようにしていますが送る直前でもう一度確かめる形です。`handleRemoveMember` は対象を覚えて確認ダイアログを開くだけで、実際の削除は確認の後ろにあります。
-
 **ロール変更とアーカイブのハンドラー**:
 
 ```typescript
@@ -2817,8 +2697,6 @@ Day 11 で書いた2つです。どちらも state を直接書き換えず `rou
     mutation.mutate({ id: projectId });
   };
 ```
-
-`handleUpdateMemberRole` は Step 2 で書いたもので`ProjectDetailView` から `userId` と新しいロールを受け取ります。`handleArchive` は現在の状態を見て呼ぶ手続きを切り替えます。どちらのボタンを押したかではなく今の状態から決めるので表示と実行内容がずれません。
 
 **表示に必要な取得状態**
 
@@ -2843,8 +2721,6 @@ Day 11 で書いた2つです。どちらも state を直接書き換えず `rou
     && httpStatusOf(projectDetailQueryError) === 404;
 ```
 
-URLに詳細IDがあるかで対象の問い合わせを選びます。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const hasFetchError = viewingDetail
@@ -2864,8 +2740,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       ? projectDetailFetching
       : projectsFetching);
 ```
-
-エラーの有無と利用できるデータの有無を別々に判定します。初回失敗ではエラー画面を出し、再取得失敗では既存データを残すためです。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2887,10 +2761,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     );
   }
 ```
-
-`viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
-
-エラー表示は見出し・説明・移動先が一体になった分岐です。途中で分けると三項演算子と閉じタグの対応を確認できないため、ここは完成したコピー単位で載せます。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -2945,8 +2815,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   }
 ```
 
-401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
-
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const staleDataWarning = hasFetchError ? (
@@ -2969,8 +2837,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     </div>
   ) : null;
 ```
-
-再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
 
 **詳細画面の分岐**:
 
@@ -2996,8 +2862,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
         </div>
 ```
 
-URL に `projectId` があるときは一覧を描かずに詳細だけを返します。ここで `return` すると以降の一覧のコードには進まないので2つの画面を同時に描いてしまう心配はありません。8つの props のうち後半2つが上で求めた権限の値です。
-
 **メンバー追加ダイアログの見出し**:
 
 ```typescript
@@ -3010,8 +2874,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
               <DialogDescription>このプロジェクトに新しいメンバーを追加します。</DialogDescription>
             </DialogHeader>
 ```
-
-`open` に `memberDialogOpen` を渡しているので`setMemberDialogOpen(true)` で開き、閉じる操作は `onOpenChange` が受け取って state を戻します。`DialogTitle` と `DialogDescription` の2つを読めば利用者は開いた瞬間に何をする画面かを判断できます。
 
 **メンバー追加ダイアログのユーザー選択**:
 
@@ -3035,8 +2897,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
                 </Select>
               </div>
 ```
-
-`value` と `onValueChange` の2つで state へ直接つないでいるので画面の表示は手元の値からずれません。`user.name || user.email` としているのは名前を登録していない人でも空欄にせず必ず何かを出すためです。候補の中身はサーバー側で未参加の人だけに絞ってあるので画面は返ってきた配列を並べるだけで済みます。
 
 **メンバー追加ダイアログのロール選択**:
 
@@ -3068,8 +2928,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
             </div>
 ```
 
-`Select` が渡してくる値はただの文字列なので`isProjectMemberRole` を通った値だけを state へ入れます。選択肢から OWNER を外しているのは画面から新しいオーナーを作らせないためです。ただし画面側のこの2つは入力を助ける仕掛けであって防御の本体はサーバー側の zod スキーマと権限確認です。
-
 **メンバー追加ダイアログのフッター**:
 
 ```typescript
@@ -3086,8 +2944,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
           </DialogContent>
         </Dialog>
 ```
-
-`disabled={!newMemberUserId}` によりユーザーを選ぶまで追加ボタンを押せません。誰を追加するか決まらないまま送るとサーバー側の検査で弾かれるだけの通信になります。押せる状態をあらかじめ絞っておくと利用者は失敗する操作へ触れずに済みます。
 
 **メンバー削除の確認ダイアログ**:
 
@@ -3112,8 +2968,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
     );
   }
 ```
-
-`handleRemoveMember` が覚えた対象を、ここで初めて `mutate` へ渡します。`isPending` を渡しているのは通信中にボタンを押し続けて同じ削除が二重に飛ぶのを防ぐためです。この分岐の中に置いているのは削除ボタンを持つ `ProjectDetailView` が詳細画面にしか現れないからです。
 
 **一覧画面の見出しと操作**:
 
@@ -3142,8 +2996,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
         </div>
 ```
 
-ここから先は URL に `projectId` が無いときの表示です。`Switch` は通常の一覧とアーカイブ済みだけの一覧の切り替えです。`whitespace-nowrap` を付けているのは画面幅が狭いときに見出しが途中で折り返さないようにするためです。
-
 **プロジェクトカードの集計**:
 
 ```typescript
@@ -3162,8 +3014,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
               }
 
 ```
-
-進捗の割合を出すために、タスクの総数と完了数を数えます。キャンセルしたタスクは `continue` で飛ばして分母に入れません。Day 09 で書いた形のままで今日は数え方に手を入れていません。
 
 **プロジェクトカードの一覧**:
 
@@ -3195,8 +3045,6 @@ URL に `projectId` があるときは一覧を描かずに詳細だけを返し
         </div>
 ```
 
-Day 11 で `onClick` に `handleProjectClick` をつなぎ、カードから詳細画面へ移れるようにしました。`key={project.id}` は React が並びを追跡するための目印です。0件のときにメッセージを出すのは読み込み中なのか本当に0件なのかを利用者が判断できるようにするためです。
-
 **プロジェクト作成・編集ダイアログ**:
 
 ```typescript
@@ -3210,8 +3058,6 @@ Day 11 で `onClick` に `handleProjectClick` をつなぎ、カードから詳�
         />
       </div>
 ```
-
-Day 10 と Day 11 で作ったダイアログです。作成と編集で同じ部品を使い、`initialData` の有無で中身を切り替えます。最後の `</div>` が見出しから一覧までを囲んでいた枠を閉じる行です。
 
 **プロジェクト削除の確認ダイアログ**:
 
@@ -3234,8 +3080,6 @@ Day 10 と Day 11 で作ったダイアログです。作成と編集で同じ�
 }
 ```
 
-こちらは Day 11 で作ったプロジェクト削除用です。メンバー削除とは別の対象・別の文言を使います。同じ部品に `title` と `onConfirm` を差し替えて渡す形なので確認ダイアログの見た目は画面をまたいでそろいます。
-
 **Suspense で包んだページ本体**:
 
 ```typescript
@@ -3250,24 +3094,12 @@ export default function ProjectPage() {
 }
 ```
 
-`useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が`/project` を開いたときに読まれるページ本体です。
-
 ### 最終確認: 型エラーがない状態で終わる
-
-今日はサーバー側の手続きと画面側の配線を両方足しました。
-最後にビルドを通して、型の不整合が残っていないことを確かめます。
-
-ビルドは開発サーバーと同じ `.next` フォルダに書き込みます。先に開発サーバーを `Ctrl+C` で止めてから実行してください。
 
 ```bash
 # filepath: ターミナル
 npm run build
 ```
-
-`Compiled successfully` の後にも型チェックが続きます。コマンドが最後まで終了し、エラーが出ていないことを確認してください。途中のコンパイル成功だけではビルド成功とは判断できません。
-まだエラーが残る場合は props の書き換え漏れを疑ってください。`ProjectDetailView` の props の数や名前が合わないとこの段階でまとめて表に出ます。
-
-ビルドが終わったら `npm run dev` で開発サーバーを起動し直します。
 
 **確認ポイント**:
 - `npm run build` が成功する

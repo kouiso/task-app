@@ -2460,6 +2460,8 @@ flowchart LR
 ```
 
 ### `src/app/search/loading.tsx`
+このファイルの全文は Step 0 に順に載っています。
+
 
 ### `src/app/search/page.tsx`
 

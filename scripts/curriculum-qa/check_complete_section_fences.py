@@ -393,11 +393,53 @@ def _check_authority(
     ]
 
 
+def empty_section_headings(text: str, source: str) -> list[Finding]:
+    """完成コード節で、次の見出しまで中身の無い `### ` 見出しを拾う。
+
+    見出しの直下にはコード・表・参照行のどれかが要る。全文が Step にある
+    ファイルは「このファイルの全文は Step N に順に載っています。」の1行を
+    残す。解説段落の削除が見出しだけを残した形になるのをここで止める。
+    """
+    spans = section_ranges(text)
+    if not spans:
+        return []
+    heading_lines = {
+        ln
+        for ln, line, state, _fence in fence_states(text)
+        if state == "outside" and line.startswith("#")
+    }
+    lines = text.split("\n")
+    findings: list[Finding] = []
+    for start, end in spans:
+        for ln in sorted(heading_lines):
+            if not (start < ln < end):
+                continue
+            line = lines[ln - 1]
+            if not line.startswith("### "):
+                continue
+            j = ln
+            while j < len(lines) and (j + 1) not in heading_lines:
+                if lines[j].strip():
+                    break
+                j += 1
+            if j >= len(lines) or (j + 1) in heading_lines:
+                findings.append(
+                    Finding(
+                        source,
+                        ln,
+                        line.strip(),
+                        "完成コード節のファイル見出しの直下が空"
+                        "（全文の参照行またはコード・表を置く）",
+                    )
+                )
+    return findings
+
+
 def check_file(path: Path) -> list[Finding]:
     """1つの日次ファイルを検査する。"""
     text = path.read_text(encoding="utf-8")
     day = day_number(path.name)
-    findings: list[Finding] = []
+    findings: list[Finding] = empty_section_headings(text, path.name)
     for target, fences in section_fences(text, path.name).items():
         findings.extend(check_target(day, target, fences, path.name))
     return findings

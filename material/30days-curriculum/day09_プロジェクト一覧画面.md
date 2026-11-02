@@ -984,8 +984,6 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_SELECT } from './_helpers/select';
 ```
 
-`import type` で始まる1行目だけ書き方が違うのは`Prisma` を値としてではなく型の注釈にしか使わないからです。この書き方にしておくと出来上がったコードから消えます。並び順は `npm run fix` で Biome（このプロジェクトのコード整形ツール）が決めるので自分が書いた順番と違っていても手で直す必要はありません。
-
 **手続きの骨組みと入力**:
 
 ```typescript
@@ -1005,8 +1003,6 @@ export const projectRouter = createTRPCRouter({
       const where: Prisma.ProjectWhereInput = {};
 ```
 
-`protectedProcedure` から書き始めているのでログインしていない人はこの先へ進めません。認証の確認をここに置いておけば手続きを増やすたびに同じ判定を書かずに済みます。`.optional()` が入れ子で2か所に付いているのは項目だけ省く呼び方と、条件そのものを渡さない呼び方の両方を許すためです。
-
 **他人の一覧を守る判定**:
 
 ```typescript
@@ -1021,8 +1017,6 @@ export const projectRouter = createTRPCRouter({
         }
       }
 ```
-
-この判定を検索条件の組み立てより前に置いてあるのが要点です。後ろへ動かすと弾かれるはずの呼び出しでも問い合わせが1回走ります。`throw` は処理をその場で打ち切る命令なのでここを通れなかった呼び出しは以降の行に届きません。
 
 **検索条件の組み立て**:
 
@@ -1043,8 +1037,6 @@ export const projectRouter = createTRPCRouter({
         where.isArchived = input.isArchived;
       }
 ```
-
-`where` を空の入れ物として用意しておき、決まった条件だけを足していく形にしています。条件の組み合わせが増えても`findMany` の呼び出しは1つのままで済みます。`isArchived` を `!== undefined` で見ているのは`false` を渡された場合と、渡されなかった場合を分けるためです。`if (input?.isArchived)` と書くと`false` は未指定と区別できません。
 
 **取得と返却**:
 
@@ -1073,8 +1065,6 @@ export const projectRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/project.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1147,8 +1137,6 @@ export const projectRouter = createTRPCRouter({
 });
 ```
 
-メンバーとタスクを一緒に取っておくと画面側は追加の通信なしで人数と進捗を出せます。いちばん内側で `select` を使い、返す項目を絞っているのはパスワードのような返してはいけない値を通さないためです。末尾の `}),` が `getAll` を、`});` が `projectRouter` 全体を閉じます。ここが1つでも足りないと開発サーバーは起動の時点で止まります。
-
 ### `src/server/api/root.ts`
 
 このファイルの全文は Step 0 の 0-6 に順に載っています。
@@ -1174,8 +1162,6 @@ import { TASK_STATUS } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 ```
 
-Step 1・Step 2・Step 4・Step 8 で少しずつ足した取り込みが最後にはこの10行に落ち着きます。`react` からの取り込みが1行にまとまっているのは同じ取り寄せ元を2行に分けても意味が変わらないからです。`'use client'` はファイルの1行目に置きます。取り込みの後ろへ動かすと`useState` の行でエラーになります。
-
 **状態とサーバーへの問い合わせ**:
 
 ```typescript
@@ -1193,8 +1179,6 @@ function ProjectPageContent() {
     isArchived: showArchived,
   });
 ```
-
-`showArchived` を `useQuery` の引数に渡してあるのでスイッチを切り替えるだけで一覧が取り直されます。取り直す関数を自分で呼ぶ書き方にすると呼び忘れた場所だけ古い一覧が残ります。`data: projects` と名前を付け替えているのはこの画面に問い合わせが増えたときにどの `data` なのかを見分けられるようにするためです。
 
 **ボタンの受け皿**:
 
@@ -1215,8 +1199,6 @@ function ProjectPageContent() {
   };
 ```
 
-3つの受け皿が何もしないのは行き先の画面をまだ作っていないからです。中身が空でも用意しておくとカードに渡す値の形が今日のうちに決まります。
-
 **認証・認可の判定と読み込み中の表示**:
 
 ```typescript
@@ -1234,8 +1216,6 @@ function ProjectPageContent() {
     );
   }
 ```
-
-`if (projectsLoading)` を `return` より前に置いたのでこの行より下では読み込み中の場合を考えずに済みます。
 
 **最初の取得失敗を表示する部分**:
 
@@ -1255,8 +1235,6 @@ function ProjectPageContent() {
   }
 ```
 
-最初の取得に失敗した場合は、0件のメッセージを出さず取得失敗を表示します。認証・認可の失敗なら、前回の `projects` が残っていてもカードを表示しません。それ以外の再取得失敗では、取得済みのカードを表示し続けます。
-
 **見出しの部分**:
 
 ```typescript
@@ -1270,8 +1248,6 @@ function ProjectPageContent() {
             プロジェクト
           </h1>
 ```
-
-`AppLayout` がいちばん外側にあるのでこのページにもサイドバーと認証の判定が付きます。ページ側で認証を確かめる行が1つも無いのはその仕事を囲みへ預けたからです。`justify-between` を付けた `<div>` が見出しと操作部品を左右の端へ振り分けます。
 
 **スイッチとボタン**:
 
@@ -1303,9 +1279,6 @@ function ProjectPageContent() {
         )}
 ```
 
-`Switch` の `id` と `Label` の `htmlFor` に、同じ `show-archived` を書いてあります。この2つが揃っていると文字のほうを押してもスイッチが切り替わります。片方だけ書き換えると見た目は変わらないまま、文字を押しても反応しない状態になります。`onCheckedChange` に `setShowArchived` を直接渡しているので切り替えた値がそのまま問い合わせの条件になります。
-その後ろの `projectsError` の分岐は、認証・認可以外の再取得が失敗したときだけ、取得済みの一覧と注意を一緒に表示します。
-
 **カードを並べる枠**:
 
 ```typescript
@@ -1325,8 +1298,6 @@ function ProjectPageContent() {
                   doneCount++;
               }
 ```
-
-`projects &&` を手前に置いてあるのは届く前の `projects` から `length` を読むと画面が真っ白になるからです。件数を数えるループを `map` の中に置いているのでプロジェクトごとに自分のタスクだけを数えます。完了の判定に `TASK_STATUS.DONE` を使うと打ち間違えたときに画面を開く前に気づけます。
 
 **1件ぶんのカード**:
 
@@ -1353,8 +1324,6 @@ function ProjectPageContent() {
             })
 ```
 
-渡している値のうち `name` から `isArchived` まではStep 0 の `getAll` が返してきたものです。`memberCount` と `taskStats` だけ、この場で数えた値を渡します。`key` に `project.id` を使うのは並びが変わったときにどのカードが動いたかを React へ伝えるためです。手元で `key` を消すと表示自体は出ますがブラウザの開発者ツールのコンソールに警告が残ります。この一覧はデータが届いてからブラウザ側で組み立てるので警告もブラウザ側に出ます。
-
 **0件のときの表示と閉じタグ**:
 
 ```typescript
@@ -1373,8 +1342,6 @@ function ProjectPageContent() {
 }
 ```
 
-`col-span-full` を付けているのはこの枠を格子の1列ぶんの幅で終わらせないためです。付け忘れるとメッセージが左端の細い列だけに押し込まれます。閉じタグは内側から順に、格子・縦並びの入れ物・`AppLayout` と続きます。手元で括弧が合わないときは`) : (` と `)}` の2行の位置を先に確かめてください。
-
 **画面として書き出す部分**:
 
 ```typescript
@@ -1389,8 +1356,6 @@ export default function ProjectPage() {
   );
 }
 ```
-
-完成版の `src/app/project/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1544,12 +1509,6 @@ export default function ProjectPage() {
   );
 }
 ```
-
-画面として読まれるのはこちらで、本体は `ProjectPageContent` に分けてあります。分けておくと準備が終わるまでの仮表示を `Suspense` の1か所で受け止められます。`export default` を付けた関数がページの入口になるのでこの行を本体の側へ移すと囲みが働かないまま本体だけが表示されます。
-
-完成コードを書き終えたらターミナルで `npm run type-check` を実行してください。
-型のエラーが出た場合は表示されたファイル名と行番号を確認して直します。
-画面の動作は本文の操作手順で別に確かめます。
 
 ## 今日のまとめ
 
