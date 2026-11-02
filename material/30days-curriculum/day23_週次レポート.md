@@ -699,7 +699,7 @@ export default function WeeklyReportPage() {
 - `return` の一番外側が `<AppLayout>` になっている
 - 関数を閉じる `}` まで書けている
 
-![読み込み中の週次レポート。画面の中央に丸いスピナーだけが出ている](./screenshots/day23/report-weekly-loading.png)
+![読み込み中の週次レポート。白い画面の上の方に丸いスピナーだけが出ている](./screenshots/day23/report-weekly-loading.png)
 
 週次ページを直接 URL 入力しなくても開けるよう、
 `src/app/report/page.tsx` のヘッダーへリンクを

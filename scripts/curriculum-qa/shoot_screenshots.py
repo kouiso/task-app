@@ -563,7 +563,8 @@ def validate_clip(raw: Any, where: str) -> Clip | None:
 def validate_viewport(raw: Any, where: str) -> dict[str, int] | None:
     """1枚だけ窓の大きさを変える指定を確かめる。
 
-    幅で列数が変わることを見せる回だけに使う。既定は宣言表の先頭の `viewport` で、
+    幅で列数が変わることを見せる回と、図の中の文字が紙で読める幅にそろえる回に使う。
+    既定は宣言表の先頭の `viewport` で、
     そこを動かすと全冊の画像がまとめて変わるので、1枚ぶんはここで受ける。
     """
     if raw is None:
