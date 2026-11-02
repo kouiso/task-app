@@ -204,10 +204,30 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
-            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
-            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
+            {
+              label: '未対応タスク',
+              value: todoTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.TODO],
+              icon: Circle,
+            },
+            {
+              label: '完了タスク',
+              value: completedTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.DONE],
+              icon: CheckCircle2,
+            },
+            {
+              label: '進行中タスク',
+              value: inProgressTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS],
+              icon: Timer,
+            },
+            {
+              label: 'レビュー中タスク',
+              value: inReviewTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW],
+              icon: Eye,
+            },
           ].map((stat) => {
             const Icon = stat.icon;
             return (

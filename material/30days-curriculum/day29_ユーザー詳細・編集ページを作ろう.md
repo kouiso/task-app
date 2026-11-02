@@ -46,7 +46,7 @@ flowchart TD
     F -->|見つかる| H["client componentに<br/>userIdを渡す"]
     H --> I["詳細データを取得して表示"]
     I --> J["編集ボタンから<br/>/user/abc123/editへ"]
-    J --> K["編集側でも認証・認可を確認"]
+    J --> K["編集側でも認証・認可を<br/>確認"]
 ```
 
 `page.tsx` は先に `user.getById` を呼び、ログイン状態と閲覧権限を確認します。この手続きは、本人と管理者のどちらにも当てはまらなければ対象の存在を調べる前に拒否します。他人のIDが存在するかどうかで応答を変えないためです。権限がある場合だけユーザーを取得します。見つからない場合とIDの形式が不正な場合は `notFound()` で404を表示します。取得できた場合はブラウザ側の部品へIDを渡します。ブラウザからの再取得にも同じ認可が適用されます。
@@ -434,7 +434,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-2xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -876,17 +876,15 @@ import { formatDateOnly } from '@/lib/date';
                         登録日
                       </p>
                       <p>
-                        {user.createdAt
-                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
 ```
 
-表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。`getById` が返した日時を整形し、値が無いときは `-` を出します。ユーザー全体の読み込み中や取得失敗は Step 3 で先に判定しています。
+表示の形を `'yyyy年MM月dd日'` に決めて時刻を落としています。登録日を見る人が知りたいのは「いつからいる人か」で、何時何分かは判断に使わないからです。`getById` が返した日時をそのまま整形します。`createdAt` と `updatedAt` はデータベース側で必須の列なので値の無い場面は起きず、分岐は付けません。ユーザー全体の読み込み中や取得失敗は Step 3 で先に判定しています。
 
 **確認ポイント**: 登録日がカレンダーアイコン付きで表示されることを確認してください。
 
@@ -902,11 +900,9 @@ import { formatDateOnly } from '@/lib/date';
                         最終更新日
                       </p>
                       <p>
-                        {user.updatedAt
-                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -1226,7 +1222,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -1480,7 +1476,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-xl font-bold mb-2">
                 アクセス権限がありません
               </h1>
@@ -1912,7 +1908,7 @@ import { Alert, AlertDescription, AlertTitle }
         router.refresh();
       },
       onError: (error) => {
-        toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
+        toast.error(error.message || 'ユーザー情報の更新に失敗しました');
       },
     });
 ```
@@ -2749,7 +2745,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-2xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -2811,7 +2807,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
                 <p className="text-muted-foreground">このユーザーを見る権限がありません</p>
               </CardContent>
@@ -3186,17 +3182,15 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">登録日</p>
                       <p>
-                        {user.createdAt
-                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
 ```
 
-表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。日時が無いときは `-` を出します。ユーザー全体の取得状態を先に判定したうえで `getById` が返した日時を整形します。
+表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。`createdAt` と `updatedAt` は必須の列なので `getById` が返した日時をそのまま整形します。ユーザー全体の取得状態は先に判定しています。
 
 **左カラムの最終更新日**:
 
@@ -3208,11 +3202,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
                       <p>
-                        {user.updatedAt
-                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -3592,11 +3584,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">登録日</p>
                       <p>
-                        {user.createdAt
-                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -3605,11 +3595,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
                       <p>
-                        {user.updatedAt
-                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -3750,7 +3738,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-xl font-bold mb-2">
                   アクセス権限がありません
                 </h1>
@@ -3812,7 +3800,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-md mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
                 <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
               </CardContent>
@@ -4002,7 +3990,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
     },
   });
 
@@ -4186,7 +4174,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>
@@ -4578,7 +4566,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
     },
   });
 
@@ -4690,7 +4678,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>

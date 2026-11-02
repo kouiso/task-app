@@ -532,7 +532,7 @@ export default function UsersPage() {
         <div className="container mx-auto
           max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed
                   ? 'ログインの有効期限が切れました'
@@ -810,21 +810,19 @@ export default function UsersPage() {
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
 ```
 
 > `format` は `date-fns` の関数です。
 > `yyyy/MM/dd` で年・月・日を数字で表示します。
-> `createdAt` が無いときは `-` を表示します。
+> `createdAt` は必須項目で必ず値が入っているため、分岐を付けずそのまま整形します。
 > ユーザー取得前の待機は Step 3 で判定しています。
 
 **確認ポイント**:
-- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡し、値が無いときは `-` にしている
+- `format` に `'yyyy/MM/dd'` と `{ locale: ja }` を渡して登録日を表示している
 
 ```typescript
                     {/* filepath: src/app/user/page.tsx */}
@@ -1440,7 +1438,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1541,11 +1539,9 @@ export default function UsersPage() {
                     {/* filepath: src/app/user/page.tsx */}
                     {/* 登録日と詳細ボタン */}
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -1707,7 +1703,7 @@ export default function UsersPage() {
       <AppLayout>
         <div className="container mx-auto max-w-6xl mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-2xl font-bold mb-2">
                 {authFailed ? 'ログインの有効期限が切れました' : 'アクセス権限がありません'}
               </h1>
@@ -1779,11 +1775,9 @@ export default function UsersPage() {
                       <ActiveStatusBadge isActive={user.isActive} />
                     </TableCell>
                     <TableCell>
-                      {user.createdAt
-                        ? format(new Date(user.createdAt), 'yyyy/MM/dd', {
-                            locale: ja,
-                          })
-                        : '-'}
+                      {format(new Date(user.createdAt), 'yyyy/MM/dd', {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

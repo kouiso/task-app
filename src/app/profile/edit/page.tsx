@@ -52,7 +52,7 @@ export default function ProfileEditPage() {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'プロフィールの更新に失敗しました');
+      toast.error(error.message || 'プロフィールの更新に失敗しました');
     },
   });
 

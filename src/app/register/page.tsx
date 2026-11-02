@@ -59,7 +59,7 @@ export default function RegisterPage() {
       } catch {
         // not JSON — fall through to plain message
       }
-      setError([err.message ?? 'ユーザー登録中にエラーが発生しました']);
+      setError([err.message || 'ユーザー登録中にエラーが発生しました']);
     },
   });
 

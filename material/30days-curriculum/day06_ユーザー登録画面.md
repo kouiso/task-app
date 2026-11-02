@@ -522,7 +522,7 @@ const registerMutation =
     },
     onError: (error) => {
       setError(
-        error.message ?? 'ユーザー登録中にエラーが発生しました'
+        error.message || 'ユーザー登録中にエラーが発生しました'
       );
     },
   });
@@ -1023,7 +1023,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });
@@ -1253,7 +1253,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });
