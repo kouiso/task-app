@@ -1177,6 +1177,8 @@ Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残し�
 />
 ```
 
+`title` に件数を差し込んでいるのは承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
+
 **なぜダイアログを挟むのか**
 
 | 操作の種類 | ダイアログの有無 | 理由 |
@@ -1416,8 +1418,6 @@ import {
 } from './_helpers/permission';
 ```
 
-`findTasksWithPermission` と `findTaskWithPermission` が両方並んでいる形が正解です。複数形は今日足したもので単数形は Day 15 で書いた1件用のヘルパーです。片方だけにするとどちらかの手続きが動かなくなります。`ProjectMemberRole` と `hasPermission` を取り込むのは次のブロックで編集できるロールを自分で並べずに権限マップから計算するためです。
-
 **件数の上限と権限ロールの定数**:
 
 ```typescript
@@ -1444,8 +1444,6 @@ const TASK_DELETE_ROLES =
   getRolesWithPermission('canDelete');
 ```
 
-3つの手続きが同じ `bulkTaskIdsSchema` を使うので件数の上限と重複の拒否は1か所で決まります。手続きごとに書き分けるとあとから上限を変えたときに直し漏れた手続きだけが無防備に残ります。ロールの配列を `hasPermission` から計算しているのも同じ考え方です。`['OWNER', 'ADMIN']` と手で並べると権限の決まりを変えたときに一括操作だけが古い判定のまま取り残されます。
-
 **書き込み条件を組み立てる関数**:
 
 ```typescript
@@ -1465,8 +1463,6 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-id の指定と権限の確認を1つの `where` にまとめてあるのが要点です。分けて書くと片方だけを使った手続きがいずれ紛れ込みます。id だけで絞る `where` を書いてしまうと他人のプロジェクトのタスク id を混ぜて送りつけられたときにそのまま書き換わります。この関数を通す形にしておけば3つの手続きが同じ守り方を共有します。
-
 **件数のずれを検出する関数**:
 
 ```typescript
@@ -1482,8 +1478,6 @@ const assertBulkWriteCount = (count: number, expected: number) => {
 };
 ```
 
-入口で権限を確かめてから DB へ書き込むまでの間に、ロールが変わることもあります。そのとき `updateMany` は書き込めた分だけを処理し、エラーを出しません。件数を突き合わせて例外にすると`$transaction` が中途半端な書き込みをまとめて取り消します。半分だけ完了したタスクが残る状態は読者からは原因の見えない不具合になります。
-
 **タスク行を id の順にロックする関数**:
 
 ```typescript
@@ -1498,11 +1492,6 @@ const lockTaskRows = async (
 };
 ```
 
-`updateMany` や `deleteMany` が行に触る順番は実行計画しだいで、呼び出しごとに変わります。2つの一括操作が同じタスクを逆の順番で取り合うと、互いに相手の解放を待って止まり、PostgreSQL が片方を取り消します。そこで書き込みの前に、対象のタスク行を `ORDER BY "id"` の順でまとめてロックします。全員が id の順に取れば待ち合いは輪になりません。
-
-ロックの種類を `FOR NO KEY UPDATE` にしているのには理由があります。Day 12・14・15 で使った `FOR UPDATE` は一番強いロックです。コメントを足す操作まで待たせます。コメントを足すとき PostgreSQL は紐づくタスクが消えていないことを確かめるために親にあたるタスク行へ一番弱い共有ロック（`KEY SHARE`）を掛けます。`FOR UPDATE` はこれと両立しないため一括操作の最中はコメントが入りません。`FOR NO KEY UPDATE` はキーを書き換えない更新と同じ強さです。`KEY SHARE` とは両立します。一括操作どうしの取り合いは今まで通り起きるので、順序を固定する役目は変わりません。
-
-**完了と中止をまとめた定数と判定**は Day 15 で `lockTaskProjects` の直後に追加した2行をそのまま使います。`bulkUpdateStatus` はこの判定で「未完了へ戻す操作か」を見分けます。
 
 **対象のプロジェクトをロックする関数と、外れた担当者を外す関数**:
 
@@ -1534,8 +1523,6 @@ const lockProjectsOfTasks = async (
     }
 ```
 
-ここまでで、まだロックしていないプロジェクトを見つけます。取り済みより小さい id が混ざっていれば `CONFLICT` で戻します。問題が無ければ見つけたプロジェクトを id の順に取ります。
-
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
     for (const projectId of pending.sort()) {
@@ -1546,8 +1533,6 @@ const lockProjectsOfTasks = async (
   }
 };
 ```
-
-この2つは `export const taskRouter` の行の上に置きます。ロックは先に取り、確かめる関数はロックの後で呼びます。候補は完了か中止で担当者のいるタスクだけです。未完了タスクの担当は Day 12 の `removeMember` がメンバーを外した時点で外しています。プロジェクトを id の順にロックする理由は、複数の一括操作が逆の順でロックを取り合って止まるのを防ぐためです。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1570,8 +1555,6 @@ const releaseNonMemberAssignees = async (
 
 ```
 
-ここまでが前半です。ロックを取り終えた後の `where` で、完了か中止で担当者のいるタスクだけを読みます。ロックの後で読むので、待っている間に確定した付け替えや退会の結果を反映した一覧になります。
-
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
   const projectIds = [
@@ -1592,8 +1575,6 @@ const releaseNonMemberAssignees = async (
   );
 ```
 
-`members` は、候補のプロジェクトに属し、かつ候補の担当者であるメンバー行です。ここから `projectId:userId` の文字列を作った `memberKeys` に、候補の組が無いかどうかを次の処理で調べます。
-
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
   const orphanIds = candidates
@@ -1607,8 +1588,6 @@ const releaseNonMemberAssignees = async (
   }
 };
 ```
-
-メンバー行は `findMany` の1回でまとめて取ります。`projectId` と `userId` の `in` は余分な組も返します。だから「プロジェクトと担当者の組」の文字列で照合します。
 
 **bulkComplete**:
 
@@ -1630,8 +1609,6 @@ const releaseNonMemberAssignees = async (
         await lockTaskRows(tx, input.ids);
 ```
 
-書き込み直前にも同じ権限条件を使います。ここから完了済みと未完了を分けることで、完了済みタスクが持っている日時を新しい値で上書きしません。
-
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 // 完成版: bulkComplete の2段更新
@@ -1651,8 +1628,6 @@ const releaseNonMemberAssignees = async (
       });
     }),
 ```
-
-権限の確認が入口と書き込み時の2回入っているのは書き忘れではありません。入口の `assertMemberPermission` は権限のないタスクが混ざっていたら1件も書き込まずに止めるための門です。書き込み時の `where` はその門を通ったあとにロールが変わった場合を拾います。2回の件数を合計し、入力件数と違えばトランザクション全体を取り消します。
 
 **bulkDelete**:
 
@@ -1678,8 +1653,6 @@ const releaseNonMemberAssignees = async (
     }),
 ```
 
-見比べるべき箇所は `'canDelete'` と `TASK_DELETE_ROLES` の2つです。ここを `'canEdit'` のままコピーすると編集はできても削除はできない MEMBER が他人のタスクを消せてしまいます。削除は元に戻せないので権限の取り違えが最も重い結果になる手続きです。写経したあとに、この2語だけを目で追い直してください。
-
 **bulkUpdateStatus の入力と権限の判定**:
 
 ```typescript
@@ -1699,8 +1672,6 @@ const releaseNonMemberAssignees = async (
       }
 ```
 
-入力に `status` が増えた点だけが `bulkComplete` との違いです。確かめる権限が `'canEdit'` なのはステータスの変更が削除ではなく編集にあたるからです。ここを `'canDelete'` にすると編集権限しか持たない人が自分の担当タスクの状態を動かせなくなります。画面側の Step 8 も同じ `canCompleteSelected` で判定しているので両側の基準がそろいます。
-
 **bulkUpdateStatus の更新内容と書き込み条件**:
 
 ```typescript
@@ -1716,8 +1687,6 @@ const releaseNonMemberAssignees = async (
         data.completedAt = null;
       }
 ```
-
-更新内容はここで決めます。完了へ変えるときだけ `completedAt` を現在時刻にし、それ以外では空にします。完了から戻すときに完了日時が残ったままだと、週次の集計に実際より多く数えられてしまうので、必ず空へ戻します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1738,10 +1707,6 @@ const releaseNonMemberAssignees = async (
             : { count: 0 };
 ```
 
-未完了へ戻すときは最初に担当者の所属を確かめます。完了・中止の担当は Day 12 の `removeMember` が実績として残します。そのため外れた人が担当のまま残っていることがあります。完了か中止へ変えるときは実績を残すため呼びません。
-
-変更先が `DONE` の場合だけ完了済みの行を先に更新します。`completedAt` を含めないため、すでに週次集計へ入っている完了日時は変わりません。
-
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
 // 完成版: bulkUpdateStatus の対象更新
@@ -1758,9 +1723,6 @@ const releaseNonMemberAssignees = async (
       });
     }),
 ```
-
-完了済みの日時は保ちます。再開したタスクの完了日時は消します。完了を取り消したタスクに完了日時を残さないためです。書き込み件数が選択件数と異なれば担当者の解除とステータス変更を取り消します。
-
 
 ### `src/app/task/page.tsx`
 
@@ -1780,8 +1742,6 @@ import {
 import { Label } from '@/component/ui/label';
 ```
 
-`lucide-react` の行は Day 14 の `Plus` に `CheckSquare` と `Trash2` を足した1行です。取り込みを2行に分けるとBiome が1行へまとめ直すか、重複した取り込みとしてエラーになります。`Trash2` は Day 19 で `task-detail-dialog.tsx` へ書いたものでこのファイルには入っていません。抜けたまま削除ボタンを置くとタスク一覧の画面ごと表示されなくなります。
-
 **選択状態の state**:
 
 ```typescript
@@ -1792,8 +1752,6 @@ const [selectedTasks, setSelectedTasks] =
 const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
   useState(false);
 ```
-
-チェックの有無を `Set` で持つのは同じ id を二重に覚える心配が無くなるからです。配列だと追加のたびに入っているかどうかを自分で調べる必要があります。ダイアログの開閉を別の state にしてあるのは削除だけが取り消せない操作だからです。選択の中身と「いま確認中かどうか」を分けておくと選択と実行の間にひと呼吸を置けます。
 
 **1件のチェックを切り替える関数**:
 
@@ -1808,8 +1766,6 @@ const handleTaskSelect = (taskId: string, checked: boolean) => {
   });
 };
 ```
-
-`new Set(prev)` で作り直しているのはReact が変更を見つける方法が「前の値と同じ入れ物かどうか」だからです。`prev.add(taskId)` と書くと中身は変わりますが入れ物は同じままなのでReact は変更が無かったと判断し、画面が描き直されません。チェックを押しても何も起きないという症状の正体はたいていこの1行です。
 
 **操作できるタスクと選択中タスクの絞り込み**:
 
@@ -1827,8 +1783,6 @@ const selectedTaskList = useMemo(
 );
 ```
 
-`selectedTasks` の中身をそのまま操作の対象にしない理由はフィルターを切り替えても `Set` の中の id は消えないからです。画面から消えたタスクを一括削除の巻き添えにすると読者は自分が何を消したのか追えません。`selectedTaskList` はいま一覧に並んでいるタスクとだけ突き合わせた結果です。以降のボタンや件数の表示はすべてこちらを見ます。
-
 **操作ごとの権限の判定**:
 
 ```typescript
@@ -1840,8 +1794,6 @@ const canDeleteSelected =
   selectedTaskList.length > 0 && selectedTaskList.every((t) => canDeleteProject(t.projectId));
 ```
 
-`every` を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので削除できないタスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出て押した先でサーバーに断られます。この2つが守るのはボタンを出すかどうかまでで、最後に守るのは Step 0 のサーバー側です。
-
 **全選択・全解除の関数**:
 
 ```typescript
@@ -1851,8 +1803,6 @@ const handleSelectAll = (checked: boolean) => {
   setSelectedTasks(checked ? new Set(selectableTasks.map((t) => t.id)) : new Set());
 };
 ```
-
-対象が `tasks` ではなく `selectableTasks` になっている点が要点です。全選択で閲覧しかできないタスクまで拾うとその直後に権限の判定が `false` へ倒れ、ボタンが1つも出なくなります。読者から見ると「全部選んだのに何もできない」という動きです。選べるものだけを選ぶ形にしておくとこの行き止まりが起きません。
 
 **全選択チェックボックスの3状態**:
 
@@ -1870,8 +1820,6 @@ const selectAllState =
     : false;
 ```
 
-`selectedSelectableCount` は `selectableTasks` のうち選択中の件数です。権限を失ったタスクも含む `selectedTaskList` の件数を使うと未選択のタスクがあっても全選択と表示されることがあります。分母も `selectableTasks` にそろえて `handleSelectAll` が選ぶ範囲と一致させます。分母だけ `tasks` にすると全選択を押しても数が足りず、チェックボックスが部分選択の表示から動きません。押した操作と見た目が食い違うので読者は自分の操作が効いたのかどうか判断できなくなります。
-
 **一括完了の mutation とハンドラー**:
 
 ```typescript
@@ -1886,8 +1834,6 @@ const bulkCompleteMutation = api.task.bulkComplete.useMutation({
 });
 ```
 
-成功したときだけ一覧を再取得して選択を解除します。失敗時は通知関数で理由を表示して選択を残します。どのタスクが対象だったかを画面で確認してからもう一度押せます。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 const handleBulkComplete = () => {
@@ -1896,8 +1842,6 @@ const handleBulkComplete = () => {
   }
 };
 ```
-
-`onSuccess` の2行はどちらが欠けても画面と DB がずれます。`invalidate` を忘れると完了したはずのタスクが未完了のまま並び、選択のリセットを忘れると終わった操作のチェックが残ります。`mutate` へ渡すのが `selectedTaskList` なのはいま画面に並んでいるタスクだけを送るためです。
 
 **一括削除の mutation とハンドラー**:
 
@@ -1914,8 +1858,6 @@ const bulkDeleteMutation = api.task.bulkDelete.useMutation({
 });
 ```
 
-一括削除にも通知関数を残します。失敗したタスクの選択を消すと削除の対象を確認し直せません。成功時だけ選択を解除して処理の結果を判断できるようにします。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 const handleBulkDelete = () => {
@@ -1924,8 +1866,6 @@ const handleBulkDelete = () => {
   }
 };
 ```
-
-`handleBulkDelete` が削除まで進まないところが完了処理との一番の違いです。この関数はダイアログを開くだけで、実際に消すのはダイアログで承諾を押したときです。押し間違いを取り消せない操作なのでボタンと削除の間に1つ画面を挟みます。
 
 **ステータス一括変更の mutation とハンドラー**:
 
@@ -1941,8 +1881,6 @@ const bulkUpdateStatusMutation = api.task.bulkUpdateStatus.useMutation({
 });
 ```
 
-ステータスの一括変更も成功時だけ一覧を再取得して選択を解除します。失敗時は通知関数で理由を表示して選択を残します。変えたかったタスクを確かめてからもう一度選び直さずに押せます。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 const handleBulkUpdateStatus = (status: TaskStatus) => {
@@ -1951,13 +1889,6 @@ const handleBulkUpdateStatus = (status: TaskStatus) => {
   }
 };
 ```
-
-3つのハンドラーはどれも `selectedTaskList` が空でないことだけを確かめます。権限の判定は `canCompleteSelected` と `canDeleteSelected` でボタンを出すかどうかに使い、最後に守るのは Step 0 のサーバー側です。ステータスの変更は編集にあたるので、Step 0 の `bulkUpdateStatus` も `'canEdit'` で確かめています。
-
-完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果が
-このファイルと一致しているかを確認します。
-
-フィルターはこの画面の state に保存します。ページを再読み込みすると初期値へ戻ります。Day 20 で作った検索からの詳細・編集リンクは引き続き使えます。アプリ本体にはフィルターも URL に保存する処理がありますがこの教材では追加しません。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript apply path=src/app/task/page.tsx
@@ -2562,10 +2493,6 @@ export default function TaskPage() {
   );
 }
 ```
-
-`title` に件数を差し込んでいるのは承諾する直前にもう一度数を見せるためです。ボタンを押してから画面が切り替わるまでの間に、選択を勘違いしていたことに気付ける場所がここしかありません。`isPending` を渡してあるので通信中は承諾のボタンが押せなくなり、連打で同じ削除が二重に飛ぶことも防げます。
-
-公開リポジトリの `src/app/task/page.tsx` は販売 ZIP には入っていません。そのファイルにはこの本で扱わない処理が1つあります。選んだプロジェクトとステータスを URL のクエリに書き込みます。そのリンクを開くと同じ絞り込みで表示されます。この処理には `src/lib/task-filter-query.ts` の関数を使います。この本の `page.tsx` にはこの処理がありません。公開リポジトリのファイルを読むと `useEffect` が2つ多く見えます。
 
 ## 今日のまとめ
 
