@@ -753,6 +753,8 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 
 ### `src/app/providers.tsx`
 
+このファイルの全文は Step 1 に順に載っています。
+
 ### `src/app/layout.tsx`
 
 **取り込みとフォントの読み込み**:

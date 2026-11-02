@@ -1304,8 +1304,6 @@ import {
 import { USER_SELECT } from './_helpers/select';
 ```
 
-取り込んでいる道具は役割ごとに分かれます。`Prisma` は検索条件の型注釈、`prisma` はデータベースへの問い合わせ、`z` は入力の検査です。`getUserProjectIds` と `assertMemberPermission` は他の router でも使う共有のヘルパーで、権限の判定をこのファイルの中へ書き写さないために取り込んでいます。判定の中身を各 router へ書き写すと直すときに全部を探して回ることになります。
-
 **getAll の入力**:
 
 ```typescript
@@ -1331,8 +1329,6 @@ export const taskRouter = createTRPCRouter({
       const offset = input?.offset ?? 0;
 ```
 
-`createTRPCRouter({` から始まるオブジェクトがこのファイルの本体です。入力の各項目に `.optional()` が付いているので絞り込みを渡さずに呼び出せます。`limit` と `offset` に既定値を持たせているのは条件を渡さずに呼ばれたときも取得件数に上限がかかるようにするためです。
-
 **getAll の権限による絞り込み**:
 
 ```typescript
@@ -1355,8 +1351,6 @@ export const taskRouter = createTRPCRouter({
       if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 ```
-
-ここが `getAll` で最も気をつける部分です。`where.projectId = { in: projectIds }` を先に置くので初期の検索範囲は自分のプロジェクトに絞られます。`input.projectId` を受け取ったときに `includes` で確かめているのは通信を書き換えて他人のプロジェクトの id を送られても中身を見せないためです。下の3行の絞り込みが権限を見ていないのはこの時点で範囲が閉じているからです。
 
 **getAll の関連データ**:
 
@@ -1384,8 +1378,6 @@ export const taskRouter = createTRPCRouter({
         },
 ```
 
-`include` は関連するデータも一緒に取る指定です。`createdBy` と `assignee` に `USER_SELECT` を挟んでいるのは`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで返るからです。今日のカードが使うのは担当者だけですが`getAll` は Day 17 のマイタスクからも呼ばれるので取る範囲をここでそろえてあります。
-
 **getAll の並び順と件数**:
 
 ```typescript
@@ -1397,8 +1389,6 @@ export const taskRouter = createTRPCRouter({
       });
     }),
 ```
-
-並び順を指定しないとデータベースが返す順序は保証されません。読み込むたびにカードの位置が入れ替わって見えるので`orderBy` は必ず付けます。`take` で上限を置くのはタスクが数千件へ育ったときに全件をまとめて送って画面が固まるのを防ぐためです。
 
 **getById の取得**:
 
@@ -1426,8 +1416,6 @@ export const taskRouter = createTRPCRouter({
           },
 ```
 
-`getAll` との違いは `project` の取り方です。`members` を `ctx.session.userId` で絞って一緒に取るのでこの1件を見るだけで自分がそのプロジェクトに入っているかが分かります。判定の材料をタスクと同じ問い合わせで取ればデータベースへの往復は1回で済みます。`where` を落とすと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
-
 **getById のコメント**:
 
 ```typescript
@@ -1444,8 +1432,6 @@ export const taskRouter = createTRPCRouter({
         },
       });
 ```
-
-コメントも投稿者と一緒に、新しい順で取ります。詳細ダイアログはコメント欄を持つのでここで取っておけば表示のために追加の通信が要りません。`});` で `findUnique` の呼び出しが閉じ、結果が `task` に入ります。
 
 **getById の存在確認と権限確認**:
 
@@ -1465,8 +1451,6 @@ export const taskRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1591,15 +1575,11 @@ export const taskRouter = createTRPCRouter({
 });
 ```
 
-`findUnique` は見つからないときに例外ではなく `null` を返すため`NOT_FOUND` は自分で投げます。`assertMemberPermission` に渡しているのは上で自分に絞って取った `members` です。空の配列が渡ればそこで止まるので他人のタスクの id を直接指定されても中身は返りません。最後の `});` が `taskRouter` 全体を閉じる行です。
-
-
 ### `src/server/api/root.ts`
 このファイルの全文は Step 0 に順に載っています。
 
-### `src/component/layout/app-layout.tsx`
 
-今日書き換えたのは次の2か所です。最後のブロックが Day 08 の土台を含めた全文です。
+### `src/component/layout/app-layout.tsx`
 
 **アイコンのインポート**:
 
@@ -1614,8 +1594,6 @@ import {
   LogOut,
 } from 'lucide-react';
 ```
-
-今日足したのは `ClipboardList` の1行です。サイドバーに置くタスク項目のアイコンで、すでにある `FolderOpen` などと同じ `lucide-react` からまとめて読み込みます。この行を足し忘れると `ClipboardList is not defined` というエラーになり、サイドバーごと表示されなくなります。
 
 **サイドバーのメニュー項目**:
 
@@ -1645,8 +1623,6 @@ const menuItems: MenuItem[] = [
   },
 ];
 ```
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1844,9 +1820,6 @@ export function AppLayout({
 }
 ```
 
-項目をコードの中へ直接書かず配列にまとめてあるので要素を1つ足すだけでリンクが1本増えます。Day 08 で作った描画の仕組みには手を入れません。`path` の `/task` は `src/app/task/page.tsx` の置き場所と一致している必要があります。App Router はフォルダの並びをそのまま URL にするため`/tasks` と書き間違えるとクリックしても404ページに飛びます。
-
-
 ### `src/app/task/page.tsx`
 
 **クライアント宣言とインポートの前半**:
@@ -1864,8 +1837,6 @@ import { TaskDetailDialog } from '@/component/task/task-detail-dialog';
 import { PageLoadingSpinner } from '@/component/ui/loading-spinner';
 ```
 
-`'use client'` はこのファイルをブラウザ側で動く部品として扱う宣言です。App Router のページは既定でサーバー側だけで動くのでこの1行が無いと `useState` を書いた時点でエラーになります。`TaskCard` と `TaskDetailDialog` は前の Day までに用意した表示部品で、今日は呼び出す側だけを書きました。
-
 **インポートの後半**:
 
 ```typescript
@@ -1882,8 +1853,6 @@ import { hasPermission, isProjectMemberRole, type ProjectMemberRole } from '@/li
 import { isTaskStatus, TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constant/status';
 import { api } from '@/trpc/react';
 ```
-
-ステータスとロールを `@/lib/constant/...` から取り込んでいるのが要点です。`hasPermission` と `isProjectMemberRole` は Day 12 でサーバー側の判定に使ったものと同じで、画面とサーバーで基準を分けないための選択です。基準が分かれると画面ではボタンが見えるのにサーバーは拒む、というちぐはぐな状態になります。
 
 **state と URL パラメータ**:
 
@@ -1907,8 +1876,6 @@ function TaskPageContent() {
   }, [taskIdParam]);
 ```
 
-絞り込みの初期値を `'all'` にしているのは、開いた直後は全件を見せたいからです。`selectedTask` と `detailOpen` を分けているのは閉じる動きの途中で id を消すと中身が一瞬空になるためです。`useEffect` の第2引数 `[taskIdParam]` が見張る値で、URL の `taskId` が変わったときだけ中身が動きます。ここを `[]` にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。
-
 **データ取得**:
 
 ```typescript
@@ -1924,8 +1891,6 @@ function TaskPageContent() {
   );
   const { data: projects } = api.project.getAll.useQuery();
 ```
-
-`'all'` のときに `undefined` を渡すとサーバーはその条件を足さず全件を返します。三項演算子で書き分けているのは画面の「すべて」という選択肢と、サーバーの「条件を使わない」という状態を結ぶためです。`data: tasks` と名前を付け替えているのはプロジェクトも取得するので `data` のままでは名前がぶつかるからです。
 
 **プロジェクトごとのロールの表**:
 
@@ -1949,8 +1914,6 @@ function TaskPageContent() {
   }, [projects, session?.user?.id]);
 ```
 
-プロジェクトの id から自分のロールを引ける表を作ります。`session` を取れていないときや `projects` が空のときは空の Map をそのまま返します。ここで `undefined` を返すと後ろの `.get()` を呼んだ時点で落ちます。`useMemo` の第2引数を `[projects, session?.user?.id]` にしているので表を作り直すのはこの2つが変わったときだけです。カードが1枚描かれるたびに全プロジェクトを走査し直すと件数が増えたときに操作の反応が鈍くなります。
-
 **編集と削除の権限判定**:
 
 ```typescript
@@ -1972,8 +1935,6 @@ function TaskPageContent() {
     [myRoleByProject],
   );
 ```
-
-ロールが引けなかったときは `false` を返します。判定できない状態を「たぶん許可」に倒すと権限の無い人にボタンが見えます。閲覧者のロールでは両方とも `false` になり、カードの編集ボタンと削除ボタンが消えます。
 
 **ハンドラーと読み込み中の表示**:
 
@@ -2003,8 +1964,6 @@ function TaskPageContent() {
   }
 ```
 
-`handleEdit` と `handleDelete` が空のままなのは編集と削除を Day 15 で作るからです。押しても何も起きませんが`TaskCard` が受け取る形はここで決まります。読み込み中の早期 `return` を置いているのは`tasks` がまだ `undefined` の状態で下の `.map()` へ進むと画面が落ちるためです。
-
 **見出しとプロジェクトの絞り込み**:
 
 ```typescript
@@ -2032,8 +1991,6 @@ function TaskPageContent() {
             </Select>
           </div>
 ```
-
-`aria-label` を付けているのはこの絞り込みに画面上の見出しが無いためです。`placeholder` は値を選んだ時点で消えるので読み上げソフトを使う人には選んだ値だけが読まれます。選択肢は `projects` から `.map()` で作るためプロジェクトが増えても手で書き足す必要がありません。
 
 **ステータスの絞り込み**:
 
@@ -2063,8 +2020,6 @@ function TaskPageContent() {
         </div>
 ```
 
-`onValueChange` が受け取る値はただの文字列なので`isTaskStatus` を通ったものだけを state へ入れます。`as TaskStatus` で黙らせると中身を確かめないまま正しいと言い張ることになり、想定外の文字列がそのままサーバーへ飛びます。選択肢を `TASK_STATUS_LABELS` から作っているのでステータスが増えたときは `status.ts` へ1行足すだけで反映されます。
-
 **タスクカードの一覧**:
 
 ```typescript
@@ -2092,8 +2047,6 @@ function TaskPageContent() {
           ) : (
 ```
 
-`canEdit` と `canDelete` を必ず渡すのは省くと `TaskCard` 側の既定値である `true` が使われ、閲覧者にも編集ボタンと削除ボタンが見えるからです。押してもサーバー側の権限確認で弾かれますが押せないはずのボタンを見せること自体が利用者を迷わせます。`key={task.id}` は React がどのカードがどれかを見分けるための印です。
-
 **0件のときの表示と詳細ダイアログ**:
 
 ```typescript
@@ -2115,8 +2068,6 @@ function TaskPageContent() {
 }
 ```
 
-`col-span-full` を外すとメッセージが1列分の幅へ押し込まれ、4列表示のときに左端へ寄って見えます。0件のときに何も出さないと読者は読み込み中なのか本当に0件なのかを判断できません。`TaskDetailDialog` をグリッドの外へ置くのはカードの並びに影響されず画面の最前面へ重ねるためです。
-
 **Suspense で包んだページ本体**:
 
 ```typescript
@@ -2130,8 +2081,6 @@ export default function TaskPage() {
   );
 }
 ```
-
-完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2326,8 +2275,6 @@ export default function TaskPage() {
   );
 }
 ```
-
-`useSearchParams` を使う部品は `Suspense` の内側に置く決まりがあります。外へ出すと境界が無いというエラーでビルドが止まります。`export default` を付けたこの関数が`/task` を開いたときに読まれるページ本体です。
 
 ## 今日のまとめ
 
