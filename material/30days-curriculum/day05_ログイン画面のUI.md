@@ -874,11 +874,12 @@ export default function LoginPage() {
 ### Pro パターンで書こう（ログインフォームは `as` で信じ切らず zod で受け止める）
 
 入力境界で zod の検査を挟むと不正な値を実行時にはじけます。`safeParse` で受け取った値を実行時に検証し、検証を通った値だけを `z.infer` で型付けされたデータとして扱えます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ `as` で済ませず zod で受け止めるのかを **Before/After** で見比べてみましょう。
 
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type LoginFormValues = {
   email: string;
   password: string;
@@ -951,6 +952,7 @@ console.log(readLoginForm(demoFormData));
 ### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 
 const loginSchema = z.object({

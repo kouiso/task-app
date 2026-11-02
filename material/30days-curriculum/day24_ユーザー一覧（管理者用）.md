@@ -1053,16 +1053,31 @@ npm run dev
 
 ---
 
-### Pro パターンで書こう（ユーザー一覧カードの Props は Pick で切り出す）
+### Pro パターンで書こう（表の1行の props は元の型から Pick する）
 
-ユーザー一覧カードはユーザー情報の一部だけを使います。
-`User` 型を丸ごと渡すより使う列だけを `Pick` すると
-カードの責務が読みやすくなります。
+これは発展パターンです。今日の `page.tsx` は行を切り出していません。行が長くなったときの発展パターンです。
+
+表の1行を部品に切り出すとき、行が使うのはユーザー情報の一部だけです。
+`User` を丸ごと渡すより、使う列だけを `Pick` すると「この行が何を使うか」が型で分かります。
+
+```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import type { inferRouterOutputs } from '@trpc/server';
+import type { AppRouter } from '@/server/api/root';
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type UserRow = RouterOutputs['user']['getAll'][number];
+
+// 表の1行に使う列だけを受け取る
+type UserRowProps = Pick<UserRow, 'id' | 'name' | 'avatar' | 'email'>;
+```
 
 | 書き方 | 特徴 |
 |--------|------|
-| `User` を丸ごと渡す | 使わない情報も混ざる |
-| `Pick<User, ...>` | 必要な列だけ分かる |
+| `UserRow` を丸ごと渡す | 使わない情報も混ざる |
+| `Pick<UserRow, ...>` | 必要な列だけ分かる |
+
+`RouterOutputs['user']['getAll'][number]` は「`getAll` が返すユーザー1人分」の型です。手続き側が返す列を増やしても `UserRow` は自動で追いつきます。
 
 **覚えておきたいこと**: 表示部品には必要な情報だけ渡します。
 

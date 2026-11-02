@@ -2008,7 +2008,7 @@ import { Alert, AlertDescription, AlertTitle }
 ### Pro パターンで書こう（ユーザー編集フォームは zod で境界バリデーションする）
 
 入力境界に zod を置くと`role` などのフィールドに不正値が混入したときに実行時エラーとして検出できます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ `as` で済ませず zod で確かめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 

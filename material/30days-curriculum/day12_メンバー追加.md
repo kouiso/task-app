@@ -1451,7 +1451,24 @@ Day 13 のタスク一覧でプロジェクトの絞り込みを試すときに�
 | 書き方 | 特徴 |
 |--------|------|
 | props を手書き | 項目変更に弱い |
-| `Pick<ProjectMember, ...>` | 元データの型に追従しやすい |
+| tRPC の出力型から `Pick<Member, ...>` を取る | 元データの型に追従しやすい |
+
+`Pick` に渡す元の型も手で書きません。tRPC が画面へ返す型から `inferRouterOutputs` で取り出すと、手続きの返す形とカードの受け取る形がずれなくなります。
+
+```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import type { inferRouterOutputs } from '@trpc/server';
+import type { AppRouter } from '@/server/api/root';
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type ProjectDetail = NonNullable<RouterOutputs['project']['getById']>;
+type Member = ProjectDetail['members'][number];
+
+// 1人分の表示に使う列だけを受け取る
+type MemberRowProps = Pick<Member, 'userId' | 'role' | 'user'>;
+```
+
+`ProjectDetail['members'][number]` は「`getById` が返すメンバー1人分」の型です。手続き側が返す列を増やしても `Member` は自動で追いつき、カードが必要とする3列だけを `Pick` で切り出せます。
 
 **覚えておきたいこと**: 元の型の一部だけを使うなら `Pick` を選びます。
 

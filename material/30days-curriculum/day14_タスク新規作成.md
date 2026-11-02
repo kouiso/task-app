@@ -1564,11 +1564,12 @@ npm run dev
 ### Pro パターンで書こう（タスクのステータス・優先度型を1か所に集約する）
 
 型・zod・ラベル・初期値の定義を1か所に集約すると値を追加・変更するときの対応漏れを防げます。
-なぜスキーマで定数ファイルの値を使うのか、**Before/After** で見比べてみましょう。
+なぜスキーマで定数ファイルの値を使うのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 
 type TaskStatus =
@@ -1665,6 +1666,7 @@ const defaultTaskValues = {
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { z } from 'zod';
 import {
   TASK_PRIORITY,

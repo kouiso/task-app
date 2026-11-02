@@ -1353,23 +1353,42 @@ npm run lint
 
 ---
 
-### Pro パターンで書こう（一括操作のハンドラーは Map で選ぶ）
+### Pro パターンで書こう（一括操作のハンドラーは `Record` の表から選ぶ）
 
 一括操作は完了・削除・ステータス変更のように種類が増えやすいです。
 今日は Step 6 から Step 8 で、この3つをそれぞれ別のハンドラーとして書きました。
 種類が3つのうちはこの形がいちばん追いやすいです。
 
 増えてくると事情が変わります。呼び出し口を1つにまとめたくなり、操作名で分ける
-`switch` が縦に伸びていきます。そこまで来たら操作名と処理を1つの表にまとめて
+`switch` が縦に伸びていきます。そこまで来たら操作名と処理を `Record` の表にまとめて
 その表から引く形に変えます。操作を足すときの変更が1行で済むようになります。
+
+```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
+import { TASK_STATUS } from '@/lib/constant/status';
+
+// 3つのハンドラーは Step 6〜8 で page.tsx に書いた関数
+type BulkAction = 'complete' | 'delete' | 'startProgress';
+
+const bulkHandlers: Record<BulkAction, () => void> = {
+  complete: handleBulkComplete,
+  delete: handleBulkDelete,
+  // ステータス変更は行き先ごとに1行。ここでは「進行中」だけを載せる
+  startProgress: () => handleBulkUpdateStatus(TASK_STATUS.IN_PROGRESS),
+};
+
+const runBulkAction = (action: BulkAction) => bulkHandlers[action]();
+```
+
+推奨は `Record` のオブジェクトです。キーを1つ書き忘れると TypeScript が止めてくれます。`Map` では書き忘れを型で止められません。`bulkHandlers` からは「進行中」へのステータス変更の1行だけを載せています。Step 8 の `handleBulkUpdateStatus(status)` は行き先を引数で受けるので、行き先の数だけ行が増えます。
 
 | 書き方 | 向いている場面 |
 |--------|----------------|
 | ハンドラーを別々に書く | 操作が3つ程度。今日の実装がこれです |
 | `switch` で分ける | 呼び出し口を1つにまとめたいとき |
-| handler map | 操作が増えてきた実務コード |
+| `Record` のオブジェクト | 操作が増えてきた実務コード |
 
-**覚えておきたいこと**: 分岐が増えたら処理表を検討します。
+**覚えておきたいこと**: 分岐が増えたら `Record` の処理表を検討します。
 
 ## 完成コード全体
 
