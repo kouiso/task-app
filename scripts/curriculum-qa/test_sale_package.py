@@ -17,6 +17,7 @@ check_zip_reference が「ZIP に無い照合先」として弾き、check_tag_b
 """
 
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -256,12 +257,16 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
     delimiters: list[tuple[str, bool]] = []
     quote = ""
     index = 0
-    heredoc = re.compile(r"(?<!<)<<(-?)(?!<)\s*(['\"]?)\\?([A-Za-z_][A-Za-z0-9_-]*)\2")
+    continued = False
+    heredoc = re.compile(
+        r'''(?<!<)<<(-?)(?!<)\s*((?:[^\s;&|<>()'"\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+)'''
+    )
     while index < len(line):
         ch = line[index]
         if ch == "\\" and quote != "'":
             if index == len(line) - 1:
                 return delimiters, True
+            continued = False
             index += 2
             continue
         if quote:
@@ -273,15 +278,22 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
             break
         if ch in "'\"":
             quote = ch
+            continued = False
             index += 1
             continue
         match = heredoc.match(line, index)
         if match:
-            delimiters.append((match.group(3), match.group(1) == "-"))
+            delimiters.append((shlex.split(match.group(2))[0], match.group(1) == "-"))
+            continued = False
             index = match.end()
+        elif line.startswith(("||", "&&"), index):
+            continued = True
+            index += 2
         else:
+            if not ch.isspace():
+                continued = ch == "|"
             index += 1
-    return delimiters, False
+    return delimiters, continued
 
 
 def _shell_lines(text: str) -> list[str]:
@@ -289,7 +301,7 @@ def _shell_lines(text: str) -> list[str]:
     lines: list[str] = []
     delimiters: list[tuple[str, bool]] = []
     pending = ""
-    for line in active_lines(text):
+    for line in text.splitlines():
         if delimiters:
             delimiter, strip_tabs = delimiters[0]
             # シェルは終端の行を完全一致でしか認めない。字下げした終端を終わりと見なすと、
@@ -297,10 +309,14 @@ def _shell_lines(text: str) -> list[str]:
             if (line.lstrip("\t") if strip_tabs else line) == delimiter:
                 delimiters.pop(0)
             continue
+        if line.lstrip().startswith("#"):
+            continue
         line = pending + line
         delimiters, continued = _heredocs_and_continuation(line)
         if continued:
-            pending = line[:-1]
+            pending = (
+                line[:-1] if line.endswith("\\") else _strip_unquoted_comment(line).rstrip() + " "
+            )
             delimiters = []
             continue
         pending = ""
@@ -409,6 +425,65 @@ def check_workflow_wiring() -> tuple[int, int]:
             live_workflow,
             live_phase.replace(" || ", " \\\n|| ").replace(" -ne ", " \\\n-ne "),
             0,
+        ),
+        (
+            "OR の後で暗黙に行継続した実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '|| [ "$salepkg_status" -ne 0 ]', '||\n  [ "$salepkg_status" -ne 0 ]'
+            ),
+            0,
+        ),
+        (
+            "コメント付き OR の後で暗黙に行継続した呼び出しは合格",
+            live_workflow,
+            live_phase.replace(" || ", " || # collect status\n"),
+            0,
+        ),
+        (
+            "引用符内の OR は行継続にしない",
+            live_workflow,
+            'echo "||"\n' + live_phase,
+            0,
+        ),
+        (
+            "句点を含むヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            "cat <<EOF.txt\nexample output\nEOF.txt\n" + live_phase,
+            0,
+        ),
+        (
+            "引用符を混ぜたヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            'cat <<E"OF.txt"\nexample output\nEOF.txt\n' + live_phase,
+            0,
+        ),
+        (
+            "空白を含むヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            "cat <<'END OF FILE'\nexample output\nEND OF FILE\n" + live_phase,
+            0,
+        ),
+        (
+            "空のヒアドキュメント終端後の配線は合格",
+            live_workflow,
+            'cat <<""\nexample output\n\n' + live_phase,
+            0,
+        ),
+        (
+            "コメント記号で始まるヒアドキュメント終端後の配線は合格",
+            live_workflow,
+            "cat <<'#EOF'\nexample output\n#EOF\n" + live_phase,
+            0,
+        ),
+        (
+            "終端の接頭辞の後にあるヒアドキュメント本文は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF.txt\nEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF.txt',
+            ),
+            1,
         ),
         (
             "複数ヒアドキュメントの後ろの本文は不合格",
