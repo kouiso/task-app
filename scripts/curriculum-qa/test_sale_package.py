@@ -265,7 +265,7 @@ def _argv(line: str) -> list[list[str]]:
     return [_tokenize(command) for command in _split_commands(text)]
 
 
-def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]:
+def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool, bool]:
     """引用符とエスケープの外にあるヒアドキュメントと行継続を拾う。"""
     delimiters: list[tuple[str, bool]] = []
     quote = ""
@@ -279,7 +279,7 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
         ch = line[index]
         if ch == "\\" and quote != "'":
             if index == len(line) - 1:
-                return delimiters, True
+                return delimiters, True, False
             continued = False
             index += 2
             continue
@@ -324,7 +324,7 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
             if not ch.isspace():
                 continued = ch == "|"
             index += 1
-    return delimiters, continued or bool(arithmetic_closers) or bool(quote)
+    return delimiters, continued or bool(arithmetic_closers) or bool(quote), not (arithmetic_closers or quote)
 
 
 def _shell_lines(text: str) -> list[str]:
@@ -346,17 +346,18 @@ def _shell_lines(text: str) -> list[str]:
         if not pending and line.lstrip().startswith("#"):
             continue
         line = pending + line
-        delimiters, continued = _heredocs_and_continuation(line)
+        delimiters, continued, newline = _heredocs_and_continuation(line)
         delimiters = delimiters[consumed_heredocs:]
         if continued:
             pending = (
                 line[:-1] if line.endswith("\\") else _strip_unquoted_comment(line).rstrip() + " "
             )
-            delimiters = []
+            if not newline:
+                delimiters = []
             continue
         commands, conditional = _scan_commands(_strip_unquoted_comment(line))
         if_headers = [
-            index for index, command in enumerate(commands) if re.match(r"^\s*if(?:\s|$)", command)
+            index for index, command in enumerate(commands) if re.match(r"^\s*(?:if|elif)(?:\s|$)", command)
         ]
         if (
             if_headers
@@ -365,7 +366,7 @@ def _shell_lines(text: str) -> list[str]:
             )
         ):
             pending = _strip_unquoted_comment(line).rstrip() + (
-                " " if conditional or _tokenize(commands[-1]) == ["if"] else "; "
+                " " if conditional or _tokenize(commands[-1]) in (["if"], ["elif"]) else "; "
             )
             continue
         pending = ""
@@ -379,9 +380,9 @@ def _is_gate4_status_condition(line: str) -> bool:
     commands = _split_commands(_strip_unquoted_comment(line))
     in_condition = False
     for command in commands:
-        if re.match(r"^\s*if(?:\s|$)", command):
+        if re.match(r"^\s*(?:if|elif)(?:\s|$)", command):
             in_condition = True
-            raw = re.sub(r"^\s*if\s+", "", command, count=1)
+            raw = re.sub(r"^\s*(?:if|elif)\s+", "", command, count=1)
         elif re.match(r"^\s*then(?:\s|$)", command):
             in_condition = False
             continue
@@ -481,6 +482,55 @@ def check_workflow_wiring() -> tuple[int, int]:
             live_workflow,
             'if cat <<EOF\nmessage\nEOF\nthen\n  :\nfi\n' + live_phase,
             0,
+        ),
+        (
+            "OR の暗黙継続でも先にヒアドキュメント本文を消費する",
+            live_workflow,
+            "cat <<EOF ||\nit's a banner\nEOF\ntrue\n" + live_phase,
+            0,
+        ),
+        (
+            "AND の暗黙継続でも先にヒアドキュメント本文を消費する",
+            live_workflow,
+            "cat <<EOF &&\nit's a banner\nEOF\ntrue\n" + live_phase,
+            0,
+        ),
+        (
+            "暗黙継続のヒアドキュメント本文内の偽呼び出しは不合格",
+            live_workflow,
+            'cat <<EOF ||\n' + live_phase + 'EOF\ntrue\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n',
+            1,
+        ),
+        (
+            "明示継続ではヒアドキュメントのヘッダーを読み終えてから本文を消費する",
+            live_workflow,
+            "cat <<EOF \\\n/dev/stdin\nit's a banner\nEOF\n" + live_phase,
+            0,
+        ),
+        (
+            "引用符の継続でもヒアドキュメントのヘッダーを先に読み終える",
+            live_workflow,
+            'cat <<EOF "arg\ncontinued"\nit\'s a banner\nEOF\n' + live_phase,
+            0,
+        ),
+        (
+            "実ファイルの elif の集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace('if [', 'if false; then :; elif ['),
+            0,
+        ),
+        (
+            "改行した elif の集計条件は合格",
+            live_workflow,
+            live_phase.replace('if [', 'if false; then :; elif\n[').replace('; then exit', '\nthen exit'),
+            0,
+        ),
+        (
+            "引用符内の elif は集計条件ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo \'elif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\''),
+            1,
         ),
         (
             "消費済みの if ヘッダーの複数ヒアドキュメントを再消費しない",
