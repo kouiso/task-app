@@ -6,9 +6,11 @@
 思われていたが、「直後に地の文がどれだけ続くか」は機械で数えられる。
 説明が短すぎるブロックを出して、書き手に見直させる。
 
-除外する場合が2つある。どちらも入れないと誤検出になる（day01 で実測）。
+除外する場合が3つある。どれも入れないと誤検出になる（day01 で実測）。
   1. 閉じフェンスの直後が見出しのとき。説明はその見出しの下に書かれている。
   2. 「読み比べ用」と明記されたブロック。写経させない前提で並べているため。
+  3. 直近の `## ` 見出しに「完成コード」を含む節のブロック。写経の照合先として
+     並べているため、各ブロックに理由は書かない（issue #461 の B3）。
 """
 
 import re
@@ -34,6 +36,10 @@ LIST_ITEM = re.compile(r"^\s*([-*+]\s|\d+[.)]\s)")
 # 写経させないブロックの目印。この語がブロックの直前の1行にあれば対象から外す。
 COMPARE_ONLY = re.compile(r"読み比べ用|写経しません|比較用")
 
+# 「## 完成コード…」の節は写経の照合先。理由を書かない前提で並べるので対象外。
+# `## `（第2レベル）の見出しだけを見る。`### ` のファイル見出しでは節は切れない。
+COMPLETE_CODE_HEADING = re.compile(r"^## .*完成コード")
+
 TARGET_LANG = re.compile(r"^(tsx|ts|typescript|jsx|javascript)\b", re.IGNORECASE)
 
 MIN_CHARS = 60
@@ -48,9 +54,14 @@ def blocks_with_following_prose(text: str):
     rows = list(fence_states(mask_html_comments(text)))
     i = 0
     prev_prose: list[str] = []
+    in_complete_code = False
     while i < len(rows):
         lineno, line, state, fence = rows[i]
         if state != "open":
+            # 「## 完成コード…」の節は照合用の掲載で、ブロックに理由を書かない。
+            # 第2レベルの見出しでのみ節を切り替える。
+            if line.startswith("## "):
+                in_complete_code = bool(COMPLETE_CODE_HEADING.match(line))
             # 見出しが来たら、そこまでの前置きは別の話として捨てる。
             # 残したままだと、離れた場所の「読み比べ用」という断りが
             # 次の節の実装コードまで検査対象から外してしまう。
@@ -68,6 +79,10 @@ def blocks_with_following_prose(text: str):
         while i < len(rows) and rows[i][2] != "close":
             i += 1
         i += 1  # 閉じフェンスの次へ
+
+        if in_complete_code:
+            prev_prose = []
+            continue
 
         # 次のコードブロックまでを、このブロックの説明として数える。
         # 空行で打ち切る案も試したが、1つ目の段落が短く2つ目が本体という
