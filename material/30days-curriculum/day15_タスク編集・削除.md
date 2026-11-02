@@ -2400,13 +2400,12 @@ export default function TaskPage() {
 - [ ] `DeleteConfirmDialog` で確認ダイアログを表示できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（協定世界時、タイムゾーンの基準）の開始時刻にそろえる |
-| 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
-| 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
+| 編集しても一覧や詳細が古いまま | `updateMutation` の `onSuccess` で `invalidate` を呼んでいない | 画面で編集後に値が変わらないのを確認する。`src/app/task/page.tsx` の `onSuccess` に `void utils.task.getAll.invalidate()` を足す |
+| 締切日が1日ずれて表示される | 日付だけの値をローカル時刻のまま送っている | エディタで `src/component/task/task-dialog.tsx` の締切の変換を見る。`dateOnlyToUtcStartIso()` で UTC の開始時刻にそろえる |
+| 削除ボタンで確認なしに消えてしまう | 確認ダイアログを配置していない | 画面で削除がそのまま走るのを確認する。`src/app/task/page.tsx` の JSX に `DeleteConfirmDialog` を足して `deleteDialogOpen` で開く |
+| 編集を開くと前回の値が残る | フォームの同期が足りていない | エディタで `src/component/task/task-dialog.tsx` を見る。`useEffect` の中で `reset(...)` が初期データに追従する形か確認する |
 
 ## 今日学んだ用語
 

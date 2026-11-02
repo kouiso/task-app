@@ -2110,14 +2110,15 @@ export function AppLayout({
 - [ ] 空状態UIを実装した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 一般ユーザーで表示される | 権限チェック漏れ | `if (!isAdmin)` の早期リターンをテーブルより前に置く |
-| アバターが空白 | avatar が null | AvatarFallback で頭文字表示 |
+| 一般ユーザーでも一覧が見えてしまう | 権限チェックがテーブルの前に無い | 画面を一般ユーザーで開いて見えるのを確認する。`src/app/user/page.tsx` で `if (!isAdmin)` の早期リターンをテーブルより前に置く |
+| アバターが空白の丸だけ | `avatar` が null | 画面で画像が出ないのを確認する。`AvatarFallback` で頭文字を出す |
 | 登録日の表示が想定と違う | 書式または日時の受け取り方が違う可能性 | `createdAt` が Date であることと `yyyy/MM/dd` の書式を確認する |
-| ボタンが押せない | onClick 未設定 | router.push を追加 |
-| テーブルが空で不安 | 空状態UI未実装 | length === 0 のメッセージを追加 |
+| ボタンを押しても遷移しない | `onClick` を設定していない | エディタで `src/app/user/page.tsx` のボタンを見る。`onClick` に `router.push` を足す |
+| テーブルが空のまま | 空状態の表示を書いていない | 画面で空のとき何も出ないのを確認する。`length === 0` のメッセージを足す |
+| `Cannot find name 'Users'. Did you mean 'user'?` | `lucide-react` から `Users` を import していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/user/page.tsx` の import 行に `Users` を足す |
+| `JSX element 'div' has no corresponding closing tag.` | 閉じタグを書き忘れてエラー行が原因の場所とズレる | `npx tsc --noEmit` の出力の行番号より少し上を見る。`src/app/user/page.tsx` で `</div>` や `</Card>` の閉じ忘れを直す |
 
 ## 今日学んだ用語
 

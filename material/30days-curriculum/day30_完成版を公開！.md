@@ -952,13 +952,13 @@ App Router では Server Component を標準にして
 - [ ] 次のステップを決めた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ビルドが失敗する | 環境変数が未設定 | Vercel で全変数を追加 |
-| DB 接続エラー | DATABASE_URL が不正 | 接続文字列を再確認 |
-| JWT エラー | JWT_SECRET が未設定 | openssl で生成して設定 |
-| ページが真っ白 | JS エラー | DevTools Console を確認 |
+| `環境変数の検証に失敗しました:` | Vercel で環境変数が未設定 | Vercel の Environment Variables に Day 30 で使う全変数を登録する。ローカルでは `npm run dev` のターミナルに API 呼び出し時に同じ文が出る |
+| `Can't reach database server`（`P1001`） | `DATABASE_URL` の接続先に DB が届かない | `npm run dev` のターミナルか `prisma db push` の出力でエラーコードを見る。`.env` と Vercel の `DATABASE_URL` の接続文字列を照合する |
+| `JWT_SECRETは32文字以上である必要があります` | `JWT_SECRET` が32文字未満（未設定だと同じ場所に `Required` と出る） | `npm run dev` のターミナルで `環境変数の検証に失敗しました:` の下の行を見る。`.env` と Vercel に `openssl rand -base64 32` で生成した値を設定する |
+| ページが真っ白 | JavaScript のエラー | Console タブで赤いエラーを見る。出ているファイル名から原因を特定する |
+| 本番に上がらず Preview デプロイになる | push したブランチが Vercel の Production Branch と違う | Vercel の Deployments タブでそのデプロイが `Preview` になっているか見る。Production Branch に設定したブランチへマージする |
 
 ## 今日学んだ用語
 

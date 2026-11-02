@@ -3059,13 +3059,12 @@ export default function ReportPage() {
 - [ ] 棒グラフで完了タスクの優先度別分布を表示した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
+| テーブルが空 | 対象プロジェクトがないか、`getOverview` の取得に失敗している | Network タブで `report.getOverview` の応答を見る。`error` ならサーバーのログを、200 で `projectStats` が空なら所属プロジェクトとアーカイブ状態を確認する |
 | 進捗率が NaN | 集計コードの写し間違いで `totalTasks > 0` の確認が抜けた | 完成コードの `totalTasks > 0 ? ... : 0` と照合 |
 | 週次データが空 | 初期データの完了タスクは2025年の日付で、しかも担当者が別のユーザー | 自分が担当のタスクを1件「完了」にしてから読み込み直す |
-| 型エラーが出る | weeks が string | Number.parseInt で変換 |
+| `Type 'string' is not assignable to type 'number'.` | `weeks` に文字列を渡している | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/report/page.tsx` の `weeks` に渡す値を `Number.parseInt` で数値に直す |
 | グラフが表示されない | recharts 未インストール | Day 01 の `scripts/scaffold-from-scratch.sh` が入れています。`npm list recharts` で `(empty)` と出たら `npm install recharts` で入れる（Day 22 Step 1 と同じ手順） |
 
 ## 今日学んだ用語
