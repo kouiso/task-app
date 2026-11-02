@@ -2351,14 +2351,13 @@ export default function ProjectPage() {
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ダイアログが開かない | `open` prop が渡されていない | `open={dialogOpen}` を確認 |
+| `Property 'open' is missing in type '{ onClose: () => void; onSubmit: (data: ProjectFormData) => void; }' but required in type 'ProjectDialogProps'.` | `<ProjectDialog>` に `open` を渡していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/project/page.tsx` の `<ProjectDialog>` に `open={dialogOpen}` を足す |
 | `dialogOpen is not defined` | state 宣言が漏れている | Day 09 Step 8 で `useState(false)` を宣言したか確認 |
-| 作成後に一覧が更新されない | キャッシュ無効化の呼び忘れ | `void utils.project.getAll.invalidate()` を追加 |
-| バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(projectFormSchema)` を確認 |
-| 入力しても値が反映されない | `register` の接続漏れ | `{...register('name')}` のスプレッド構文を確認 |
+| 作成しても一覧に新しいプロジェクトが出ない | `createMutation` の `onSuccess` でキャッシュを無効化していない | 画面で作成直後の一覧に名前が出ないのを確認する。`src/app/project/page.tsx` の `onSuccess` に `void utils.project.getAll.invalidate()` を足す |
+| 名前が空でも送信できてしまう | `useForm` に `resolver` を設定していない | エディタで `src/component/project/project-dialog.tsx` の `useForm` を見る。`resolver: zodResolver(projectFormSchema)` を足す |
+| 名前を入れても `プロジェクト名は必須です` と出る | `<Input>` に `register` を繋いでいない（文字は見えるがフォームの値に取り込まれない） | エディタで `src/component/project/project-dialog.tsx` の名前欄を見る。`{...register('name')}` を `<Input>` に戻す |
 | 作成ボタンを押しても何も起きない | 入力がバリデーションで止まっているか、サーバーがエラーを返している | まず名前欄が空でないか確認する。Day 10 の `createMutation` には `onError` を書いていないのでサーバー側で失敗しても画面には何も出ない。ブラウザの開発者ツールで Network タブを開き、失敗した `/api/trpc/project.create` の応答を見る |
 
 ## 今日学んだ用語

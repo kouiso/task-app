@@ -49,7 +49,7 @@ function LoginForm() {
       window.location.replace(callbackUrl);
     },
     onError: (error) => {
-      setError(error.message ?? 'ログイン中にエラーが発生しました');
+      setError(error.message || 'ログイン中にエラーが発生しました');
     },
   });
 

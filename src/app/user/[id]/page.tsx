@@ -26,7 +26,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <AppLayout>
           <div className="container mx-auto max-w-6xl mt-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 sm:pt-6">
                 <h1 className="text-2xl font-bold mb-2">アクセス権限がありません</h1>
                 <p className="text-muted-foreground">このユーザーを見る権限がありません</p>
               </CardContent>
