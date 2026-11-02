@@ -1,0 +1,678 @@
+{
+  "schemaVersion": 3,
+  "runId": "20261102T021244.229403Z-a40e3f5a44be",
+  "recordedAt": "2026-11-02T02:12:44.229403+00:00",
+  "command": "python3 scripts/curriculum-qa/build_day_snapshots.py --all --verify",
+  "verify": true,
+  "coverage": "full",
+  "targetDays": [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30
+  ],
+  "availableDays": [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30
+  ],
+  "days": [
+    {
+      "day": 1,
+      "status": "PASS",
+      "sourceInputHash": "6bb0bcd0ee640a0734c347edcd1e8b47e53813abffc3e0c37e42d0d2eae4c601",
+      "sourceInputHashAfter": "6bb0bcd0ee640a0734c347edcd1e8b47e53813abffc3e0c37e42d0d2eae4c601",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 76
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 2,
+      "status": "PASS",
+      "sourceInputHash": "0df06db2485acf5a4c993f137a5beea7d8fc2ea6b1248bf100be061cfe20666d",
+      "sourceInputHashAfter": "0df06db2485acf5a4c993f137a5beea7d8fc2ea6b1248bf100be061cfe20666d",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 76
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 3,
+      "status": "PASS",
+      "sourceInputHash": "965ce8ac0f4fb8f9fbc9001c5e9618a2d270d46fb543e0f0cad543fac57a51d7",
+      "sourceInputHashAfter": "965ce8ac0f4fb8f9fbc9001c5e9618a2d270d46fb543e0f0cad543fac57a51d7",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 76
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 4,
+      "status": "PASS",
+      "sourceInputHash": "c2834efe21e8c3df24b64f0399cb7f0ee6fe0ca79ff61f9b867b2aa3e5f3616c",
+      "sourceInputHashAfter": "c2834efe21e8c3df24b64f0399cb7f0ee6fe0ca79ff61f9b867b2aa3e5f3616c",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 76
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 5,
+      "status": "PASS",
+      "sourceInputHash": "a2baa56aa482528cbf9765014a9a8c3df03a8e5c11054700e91a7a3b4631cf22",
+      "sourceInputHashAfter": "a2baa56aa482528cbf9765014a9a8c3df03a8e5c11054700e91a7a3b4631cf22",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 78
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 6,
+      "status": "PASS",
+      "sourceInputHash": "56957b54f530b056758850fb27df9e920bd3d8e3fca1abd9c0e7bc8884603675",
+      "sourceInputHashAfter": "56957b54f530b056758850fb27df9e920bd3d8e3fca1abd9c0e7bc8884603675",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 79
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 7,
+      "status": "PASS",
+      "sourceInputHash": "a6ee7d08178fd7d783ff4a807f9661093f6c86d8395306693b0c039217c9325b",
+      "sourceInputHashAfter": "a6ee7d08178fd7d783ff4a807f9661093f6c86d8395306693b0c039217c9325b",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 86
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 8,
+      "status": "PASS",
+      "sourceInputHash": "c7136b475bf8474ce2e6f21b647fc9900c4de98d1c2ddc763d3d1b2000d711cc",
+      "sourceInputHashAfter": "c7136b475bf8474ce2e6f21b647fc9900c4de98d1c2ddc763d3d1b2000d711cc",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 89
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 9,
+      "status": "PASS",
+      "sourceInputHash": "4faa239dde14a0d97bf425a2241cf21d49f9411621b90139c863d70571b6ac15",
+      "sourceInputHashAfter": "4faa239dde14a0d97bf425a2241cf21d49f9411621b90139c863d70571b6ac15",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 91
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 10,
+      "status": "PASS",
+      "sourceInputHash": "b04bc0641afea9ff2aaeea634e75f0fc32b7fd791311ab9e99d6a7f9e4131000",
+      "sourceInputHashAfter": "b04bc0641afea9ff2aaeea634e75f0fc32b7fd791311ab9e99d6a7f9e4131000",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 92
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 11,
+      "status": "PASS",
+      "sourceInputHash": "79caab0b7fb69dcfb9e371e8f633cdb92082cac51a9eb5b6faf2405de019c69e",
+      "sourceInputHashAfter": "79caab0b7fb69dcfb9e371e8f633cdb92082cac51a9eb5b6faf2405de019c69e",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 93
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 12,
+      "status": "PASS",
+      "sourceInputHash": "f308c9263de8389ae3b77460f944ab1f792a38fbb380804dd614c45c7fc61c21",
+      "sourceInputHashAfter": "f308c9263de8389ae3b77460f944ab1f792a38fbb380804dd614c45c7fc61c21",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 93
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 13,
+      "status": "PASS",
+      "sourceInputHash": "0cb287c905cce3ec733ceee456107213d9910e5dbc8a005379993fbeedf9f1ec",
+      "sourceInputHashAfter": "0cb287c905cce3ec733ceee456107213d9910e5dbc8a005379993fbeedf9f1ec",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 95
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 14,
+      "status": "PASS",
+      "sourceInputHash": "cad1bd160e05adce72ce1f74a297446bfdca86295e38200f15845d193bb6f7ab",
+      "sourceInputHashAfter": "cad1bd160e05adce72ce1f74a297446bfdca86295e38200f15845d193bb6f7ab",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 97
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 15,
+      "status": "PASS",
+      "sourceInputHash": "144254213302bb1c3aff69aba93d1493b4b4645969e28ecc94f54cebd89c1771",
+      "sourceInputHashAfter": "144254213302bb1c3aff69aba93d1493b4b4645969e28ecc94f54cebd89c1771",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 97
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 16,
+      "status": "PASS",
+      "sourceInputHash": "908a0eccc72089c1b293e965066aab854ac3cbb6ff6b5c5337235e4011623d6f",
+      "sourceInputHashAfter": "908a0eccc72089c1b293e965066aab854ac3cbb6ff6b5c5337235e4011623d6f",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 99
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 17,
+      "status": "PASS",
+      "sourceInputHash": "229268431eff6afa653f9eed416a556fe8d3886f5f5212c73cc9bc918aeb7d7d",
+      "sourceInputHashAfter": "229268431eff6afa653f9eed416a556fe8d3886f5f5212c73cc9bc918aeb7d7d",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 100
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 18,
+      "status": "PASS",
+      "sourceInputHash": "34c6966a027326163add29930e4b538fb7dcb70bdf940d6db08fa0196fc50b54",
+      "sourceInputHashAfter": "34c6966a027326163add29930e4b538fb7dcb70bdf940d6db08fa0196fc50b54",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 102
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 19,
+      "status": "PASS",
+      "sourceInputHash": "f98aa43b376b73a5205ac9b955257e7456d242cfbb7b359e604d530ed622944d",
+      "sourceInputHashAfter": "f98aa43b376b73a5205ac9b955257e7456d242cfbb7b359e604d530ed622944d",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 102
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 20,
+      "status": "PASS",
+      "sourceInputHash": "fbf72dafc979eb01288f5acd0105e2c69669ef59c060a02117f706d03a082a75",
+      "sourceInputHashAfter": "fbf72dafc979eb01288f5acd0105e2c69669ef59c060a02117f706d03a082a75",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 104
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 21,
+      "status": "PASS",
+      "sourceInputHash": "61cb00ba99ebd3136c7207383759e7a7d9dfbd18b14d38e57cc694947cc17e51",
+      "sourceInputHashAfter": "61cb00ba99ebd3136c7207383759e7a7d9dfbd18b14d38e57cc694947cc17e51",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 106
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 22,
+      "status": "PASS",
+      "sourceInputHash": "9132ae96be658f5c3830ed0542e3fdf2c8ab37fbe1049ed9a8f85d45be9a4d58",
+      "sourceInputHashAfter": "9132ae96be658f5c3830ed0542e3fdf2c8ab37fbe1049ed9a8f85d45be9a4d58",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 106
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 23,
+      "status": "PASS",
+      "sourceInputHash": "f611228db47500236029f89daa079105d0ef90aa7d7a94d1bd4dd8e2c9568461",
+      "sourceInputHashAfter": "f611228db47500236029f89daa079105d0ef90aa7d7a94d1bd4dd8e2c9568461",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 107
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 24,
+      "status": "PASS",
+      "sourceInputHash": "0b2ef060a2d11ae25a191e341b79e50eb6f68ec316c2f1be21b117a1ecaaa93d",
+      "sourceInputHashAfter": "0b2ef060a2d11ae25a191e341b79e50eb6f68ec316c2f1be21b117a1ecaaa93d",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 109
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 25,
+      "status": "PASS",
+      "sourceInputHash": "bc16b2151166288d11c75a402491f079c7cab643151f2efb83f8b38a9fb1c71c",
+      "sourceInputHashAfter": "bc16b2151166288d11c75a402491f079c7cab643151f2efb83f8b38a9fb1c71c",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 112
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 26,
+      "status": "PASS",
+      "sourceInputHash": "c6b223fe1ac81785bdaebac9630a7d5be47deed9078c37cd41fa08d9cefba0d4",
+      "sourceInputHashAfter": "c6b223fe1ac81785bdaebac9630a7d5be47deed9078c37cd41fa08d9cefba0d4",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 119
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 27,
+      "status": "PASS",
+      "sourceInputHash": "6cdb7c216c59b0c4bf38b8b31f161f08c7c50d00f8db31b2ca2eaca548c7c6ef",
+      "sourceInputHashAfter": "6cdb7c216c59b0c4bf38b8b31f161f08c7c50d00f8db31b2ca2eaca548c7c6ef",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 120
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 28,
+      "status": "PASS",
+      "sourceInputHash": "ab062511b82496ab447f879508a0256035fc5520247f246ba3b51dec60e3388d",
+      "sourceInputHashAfter": "ab062511b82496ab447f879508a0256035fc5520247f246ba3b51dec60e3388d",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 120
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 29,
+      "status": "PASS",
+      "sourceInputHash": "fabc6524b4b7ddd2d036d36cf12f21100957eab88a2d28ee800d0b0c1b42180a",
+      "sourceInputHashAfter": "fabc6524b4b7ddd2d036d36cf12f21100957eab88a2d28ee800d0b0c1b42180a",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 124
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    },
+    {
+      "day": 30,
+      "status": "PASS",
+      "sourceInputHash": "14e269c3284a03e2a2ae7b9e17db58e6390473846ab572c03bd0008d4cd6b11b",
+      "sourceInputHashAfter": "14e269c3284a03e2a2ae7b9e17db58e6390473846ab572c03bd0008d4cd6b11b",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 124
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    }
+  ]
+}

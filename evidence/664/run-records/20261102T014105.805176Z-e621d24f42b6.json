@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 3,
+  "runId": "20261102T014105.805176Z-e621d24f42b6",
+  "recordedAt": "2026-11-02T01:41:05.805176+00:00",
+  "command": "python3 scripts/curriculum-qa/build_day_snapshots.py --day 25 --verify",
+  "verify": true,
+  "coverage": "partial",
+  "targetDays": [25],
+  "availableDays": [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30
+  ],
+  "days": [
+    {
+      "day": 25,
+      "status": "PASS",
+      "sourceInputHash": "92ee7773a14ecfb6d2bc53710ad68e8758b6e368cbb666687fe5c6735a3a533a",
+      "sourceInputHashAfter": "92ee7773a14ecfb6d2bc53710ad68e8758b6e368cbb666687fe5c6735a3a533a",
+      "sourceInputStable": true,
+      "tree": {
+        "ok": true,
+        "files": 112
+      },
+      "generation": "OK",
+      "tsc": "OK",
+      "build": "OK",
+      "evidence": {
+        "errors": [],
+        "generationErrors": [],
+        "tscErrors": [],
+        "buildErrors": [],
+        "sourceInputError": null,
+        "verificationError": null
+      }
+    }
+  ]
+}
