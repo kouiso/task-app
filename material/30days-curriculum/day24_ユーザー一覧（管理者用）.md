@@ -354,7 +354,7 @@ import { api } from '@/trpc/react';
 
 > `PageLoadingSpinner` は
 > `@/component/ui/loading-spinner` にあります。
-> 画面の中央で回る円を1つ描くだけの部品で、
+> 画面の上の方で回る円を1つ描くだけの部品で、
 > サイドバーやヘッダーは含みません。
 
 **確認ポイント**:
