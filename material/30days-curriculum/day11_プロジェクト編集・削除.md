@@ -908,7 +908,7 @@ Step 3 で書いた分岐は `initialData` がそろったここで初めて `up
 
 ```mermaid
 flowchart TD
-    A[詳細画面のアーカイブボタン] --> B{現在の状態}
+    A[詳細画面の<br/>アーカイブボタン] --> B{現在の状態}
     B -->|isArchived = false| C[archiveMutation.mutate]
     B -->|isArchived = true| D[unarchiveMutation.mutate]
     C --> E[setArchiveStatus:<br/>isArchived=true]

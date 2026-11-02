@@ -53,7 +53,7 @@ Day 27 では`/project?projectId=...` で
 
 ```mermaid
 flowchart TD
-    A[タスク一覧表示] --> B[チェックボックスをクリック]
+    A[タスク一覧表示] --> B[チェックボックスを<br/>クリック]
     B --> C{selectedTasks.size ><br/>0?}
     C -->|Yes| D[ヘッダーに<br/>一括操作ボタンが現れる]
     C -->|No| E[通常表示のまま]

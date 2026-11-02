@@ -45,7 +45,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[ユーザーがフィルターを変更] --> B[state更新]
+    A[フィルターを変更] --> B[state更新]
     B --> C[useQueryが再実行される]
     C --> D[サーバーから<br/>絞り込み結果を取得]
     D --> E[画面が自動更新される]
@@ -225,10 +225,10 @@ export const taskRouter = createTRPCRouter({
 
 ```mermaid
 flowchart TB
-    ALL["すべてのタスク"] --> S1["1段目: 自分が<br/>参加している<br/>プロジェクトのタスクに絞る"]
+    ALL["すべてのタスク"] --> S1["1段目: 参加中の<br/>プロジェクトの<br/>タスクに絞る"]
     S1 --> Q{"input.projectId の<br/>指定はあるか"}
     Q -->|"無い"| R1["自分の全プロジェクトの<br/>タスクを返す"]
-    Q -->|"有る・自分の一覧に含まれる"| S2["2段目: その1件だけに<br/>上書きする"]
+    Q -->|"有る・一覧に含む"| S2["2段目: その1件だけに<br/>上書きする"]
     Q -->|"有る・自分の一覧に無い"| NG["FORBIDDEN を<br/>投げて打ち切る"]
     S2 --> R2["指定したプロジェクトの<br/>タスクを返す"]
 ```
@@ -2293,7 +2293,7 @@ export default function TaskPage() {
 | `Module not found: Can't resolve '@/components/task/task-card'` | `TaskCard` の import パスが間違っている（`component` を `components` と複数形にするなど） | `npm run dev` のターミナルで `Can't resolve` の次のパスを見る。`src/app/task/page.tsx` の import を `@/component/task/task-card` に直す |
 | 絞り込んでも一覧が変わらない | `useQuery` に絞り込み条件が渡っていない | Network タブで `task.getAll` の応答を開き、送った条件が `input` に入っているか見る。入っていなければ `src/app/task/page.tsx` の `useQuery` の引数を Step 4 の形に直す |
 | 詳細が取得できない | `TaskDetailDialog` に渡す `taskId` が空 | 自分の `page.tsx` の `taskId={selectedTask}` と、その上の `setSelectedTask` を確認 |
-| `Argument of type 'string' is not assignable to parameter of type 'SetStateAction<TaskStatus \| "all">'.` | ステータス選択の `onValueChange` で型ガード無しに `setFilterStatus(value)` と書いている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` のその行を `if (value === 'all' \|\| isTaskStatus(value)) setFilterStatus(value);` の形に直す |
+| `Argument of type 'string' is not assignable` `to parameter of type 'SetStateAction<TaskStatus \| "all">'.` | ステータス選択の `onValueChange` で型ガード無しに `setFilterStatus(value)` と書いている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` のその行を `if (value === 'all' \|\| isTaskStatus(value)) setFilterStatus(value);` の形に直す |
 
 ## 今日学んだ用語
 

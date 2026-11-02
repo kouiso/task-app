@@ -60,7 +60,7 @@ flowchart TD
     E --> F["ProjectDetailView を<br/>インライン表示"]
     F --> G["メンバー一覧"]
     F --> H["タスク一覧"]
-    F --> I["アーカイブ / アーカイブ解除"]
+    F --> I["アーカイブ /<br/>アーカイブ解除"]
     I --> J["tRPC:<br/>project.archive /<br/>unarchive"]
     J --> K["一覧を invalidate<br/>して /project に戻る"]
 ```
