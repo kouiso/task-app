@@ -17,6 +17,7 @@ check_zip_reference が「ZIP に無い照合先」として弾き、check_tag_b
 """
 
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -180,11 +181,12 @@ def _strip_unquoted_comment(text: str) -> str:
     return "".join(out)
 
 
-def _split_commands(text: str) -> list[str]:
-    """引用符の外の `&&` `||` `;` でコマンドを分ける。"""
+def _scan_commands(text: str) -> tuple[list[str], bool]:
+    """引用符と二重角括弧の外の `&&` `||` `;` でコマンドを分ける。"""
     parts: list[str] = []
     buf: list[str] = []
     quote = ""
+    conditional = False
     i = 0
     while i < len(text):
         ch = text[i]
@@ -199,12 +201,20 @@ def _split_commands(text: str) -> list[str]:
             buf.append(ch)
             i += 1
             continue
-        if text.startswith("&&", i) or text.startswith("||", i):
+        if (
+            text.startswith("[[", i)
+            and (i + 2 == len(text) or text[i + 2].isspace())
+            and re.fullmatch(r"\s*(?:(?:if|elif|then|else|while|until|do|!)\s+)*", "".join(buf))
+        ):
+            conditional = True
+        elif text.startswith("]]", i) and conditional:
+            conditional = False
+        if not conditional and (text.startswith("&&", i) or text.startswith("||", i)):
             parts.append("".join(buf))
             buf = []
             i += 2
             continue
-        if ch == ";":
+        if ch == ";" and not conditional:
             parts.append("".join(buf))
             buf = []
             i += 1
@@ -212,7 +222,11 @@ def _split_commands(text: str) -> list[str]:
         buf.append(ch)
         i += 1
     parts.append("".join(buf))
-    return parts
+    return parts, conditional
+
+
+def _split_commands(text: str) -> list[str]:
+    return _scan_commands(text)[0]
 
 
 def _tokenize(command: str) -> list[str]:
@@ -251,6 +265,149 @@ def _argv(line: str) -> list[list[str]]:
     return [_tokenize(command) for command in _split_commands(text)]
 
 
+def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool, bool]:
+    """引用符とエスケープの外にあるヒアドキュメントと行継続を拾う。"""
+    delimiters: list[tuple[str, bool]] = []
+    quote = ""
+    index = 0
+    continued = False
+    arithmetic_closers: list[str] = []
+    heredoc = re.compile(
+        r'''(?<!<)<<(-?)(?!<)\s*((?:[^\s;&|<>()'"\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+)'''
+    )
+    while index < len(line):
+        ch = line[index]
+        if ch == "\\" and quote != "'":
+            if index == len(line) - 1:
+                return delimiters, True, False
+            continued = False
+            index += 2
+            continue
+        if quote:
+            if ch == quote:
+                quote = ""
+            index += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            continued = False
+            index += 1
+            continue
+        if arithmetic_closers:
+            if ch == "(":
+                arithmetic_closers.append(")")
+            elif ch == arithmetic_closers[-1]:
+                arithmetic_closers.pop()
+            index += 1
+            continue
+        if ch == "#":
+            break
+        if line.startswith("((", index):
+            arithmetic_closers = [")", ")"]
+            continued = False
+            index += 2
+            continue
+        if line.startswith("$[", index):
+            arithmetic_closers = ["]"]
+            continued = False
+            index += 2
+            continue
+        match = heredoc.match(line, index)
+        if match:
+            delimiters.append((shlex.split(match.group(2))[0], match.group(1) == "-"))
+            continued = False
+            index = match.end()
+        elif line.startswith(("||", "&&"), index):
+            continued = True
+            index += 2
+        else:
+            if not ch.isspace():
+                continued = ch == "|"
+            index += 1
+    return delimiters, continued or bool(arithmetic_closers) or bool(quote), not (arithmetic_closers or quote)
+
+
+def _shell_lines(text: str) -> list[str]:
+    """コメント行とヒアドキュメントの本文を除いたシェル行。"""
+    lines: list[str] = []
+    delimiters: list[tuple[str, bool]] = []
+    pending = ""
+    consumed_heredocs = 0
+    for line in text.splitlines():
+        if delimiters:
+            delimiter, strip_tabs = delimiters[0]
+            # シェルは終端の行を完全一致でしか認めない。字下げした終端を終わりと見なすと、
+            # その後ろの本文行が実行行として残ってしまう。`<<-` だけは先頭のタブを許す。
+            if (line.lstrip("\t") if strip_tabs else line) == delimiter:
+                delimiters.pop(0)
+                if pending:
+                    consumed_heredocs += 1
+            continue
+        if not pending and line.lstrip().startswith("#"):
+            continue
+        line = pending + line
+        delimiters, continued, newline = _heredocs_and_continuation(line)
+        delimiters = delimiters[consumed_heredocs:]
+        if continued:
+            pending = (
+                line[:-1] if line.endswith("\\") else _strip_unquoted_comment(line).rstrip() + " "
+            )
+            if not newline:
+                delimiters = []
+            continue
+        commands, conditional = _scan_commands(_strip_unquoted_comment(line))
+        if_headers = [
+            index for index, command in enumerate(commands) if re.match(r"^\s*(?:if|elif)(?:\s|$)", command)
+        ]
+        if (
+            if_headers
+            and not any(
+                re.match(r"^\s*then(?:\s|$)", command) for command in commands[if_headers[-1] :]
+            )
+        ):
+            pending = _strip_unquoted_comment(line).rstrip() + (
+                " " if conditional or _tokenize(commands[-1]) in (["if"], ["elif"]) else "; "
+            )
+            continue
+        pending = ""
+        consumed_heredocs = 0
+        lines.append(line)
+    return lines
+
+
+def _is_gate4_status_condition(line: str) -> bool:
+    """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
+    commands = _split_commands(_strip_unquoted_comment(line))
+    in_condition = False
+    for command in commands:
+        if re.match(r"^\s*(?:if|elif)(?:\s|$)", command):
+            in_condition = True
+            raw = re.sub(r"^\s*(?:if|elif)\s+", "", command, count=1)
+        elif re.match(r"^\s*then(?:\s|$)", command):
+            in_condition = False
+            continue
+        elif in_condition:
+            raw = command
+        else:
+            continue
+        condition = _tokenize(raw)
+        if condition[:1] == ["["] and condition[-1:] == ["]"]:
+            groups = [raw.strip().split(maxsplit=1)[1].rsplit(maxsplit=1)[0]]
+        elif re.match(r"^\s*\[\[\s", raw) and condition[-1:] == ["]]"]:
+            groups = _split_commands(raw.strip()[2:-2])
+        elif condition[:1] == ["test"]:
+            groups = [raw.strip().split(maxsplit=1)[1]] if len(condition) > 1 else []
+        else:
+            continue
+        for group in groups:
+            group = group.strip("() \t")
+            if ["$salepkg_status", "-ne", "0"] == _tokenize(group) and re.search(
+                r'(?:^|\s)(?:"\$salepkg_status"|\$salepkg_status)(?=\s)', group
+            ):
+                return True
+    return False
+
+
 # 本物の Gate 4 の起動。語の並びがこれと一致するときだけ配線が生きている。
 _GATE4_WORKFLOW = ["bash", ".github/ci/run.sh", "material-corpus"]
 _GATE4_PHASE = ["python3", "scripts/curriculum-qa/test_sale_package.py"]
@@ -262,12 +419,12 @@ def wiring_problems(workflow: str, phase: str) -> list[str]:
     problems: list[str] = []
     if not any(_GATE4_WORKFLOW in _argv(line) for line in active_lines(workflow)):
         problems.append("material-gate.yml が Gate 4（run.sh material-corpus）を呼んでいない")
-    phase_lines = active_lines(phase)
+    phase_lines = _shell_lines(phase)
     if not any(_GATE4_PHASE in _argv(line) and _GATE4_STATUS in _argv(line) for line in phase_lines):
         problems.append(
             "material-corpus.sh の Gate 4 が test_sale_package.py を呼び、終了コードを salepkg_status に受けていない"
         )
-    if not any('"$salepkg_status" -ne 0' in _strip_unquoted_comment(line) for line in phase_lines):
+    if not any(_is_gate4_status_condition(line) for line in phase_lines):
         problems.append("test_sale_package.py の終了コードが Gate 4 の集計に入っていない")
     return problems
 
@@ -296,7 +453,397 @@ def check_workflow_wiring() -> tuple[int, int]:
         'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
     )
     synthetic = [
+        (
+            "先行コマンドと同じ行の集計条件は合格",
+            live_workflow,
+            live_phase.replace('\nif ', '; if '),
+            0,
+        ),
+        (
+            "先行コマンドと同じ行の実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace('\nif ', '; if '),
+            0,
+        ),
+        (
+            "二重引用中のハッシュで始まる終了行はコメントではない",
+            live_workflow,
+            'echo "banner\n#"\n' + live_phase,
+            0,
+        ),
+        (
+            "単一引用中のハッシュで始まる終了行はコメントではない",
+            live_workflow,
+            "echo 'banner\n#'\n" + live_phase,
+            0,
+        ),
+        (
+            "消費済みの if ヘッダーのヒアドキュメントを再消費しない",
+            live_workflow,
+            'if cat <<EOF\nmessage\nEOF\nthen\n  :\nfi\n' + live_phase,
+            0,
+        ),
+        (
+            "OR の暗黙継続でも先にヒアドキュメント本文を消費する",
+            live_workflow,
+            "cat <<EOF ||\nit's a banner\nEOF\ntrue\n" + live_phase,
+            0,
+        ),
+        (
+            "AND の暗黙継続でも先にヒアドキュメント本文を消費する",
+            live_workflow,
+            "cat <<EOF &&\nit's a banner\nEOF\ntrue\n" + live_phase,
+            0,
+        ),
+        (
+            "暗黙継続のヒアドキュメント本文内の偽呼び出しは不合格",
+            live_workflow,
+            'cat <<EOF ||\n' + live_phase + 'EOF\ntrue\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n',
+            1,
+        ),
+        (
+            "明示継続ではヒアドキュメントのヘッダーを読み終えてから本文を消費する",
+            live_workflow,
+            "cat <<EOF \\\n/dev/stdin\nit's a banner\nEOF\n" + live_phase,
+            0,
+        ),
+        (
+            "引用符の継続でもヒアドキュメントのヘッダーを先に読み終える",
+            live_workflow,
+            'cat <<EOF "arg\ncontinued"\nit\'s a banner\nEOF\n' + live_phase,
+            0,
+        ),
+        (
+            "実ファイルの elif の集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace('if [', 'if false; then :; elif ['),
+            0,
+        ),
+        (
+            "改行した elif の集計条件は合格",
+            live_workflow,
+            live_phase.replace('if [', 'if false; then :; elif\n[').replace('; then exit', '\nthen exit'),
+            0,
+        ),
+        (
+            "引用符内の elif は集計条件ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo \'elif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\''),
+            1,
+        ),
+        (
+            "消費済みの if ヘッダーの複数ヒアドキュメントを再消費しない",
+            live_workflow,
+            "if cat <<FIRST <<'SECOND'\none\nFIRST\ntwo\nSECOND\nthen\n  :\nfi\n"
+            + live_phase,
+            0,
+        ),
+        (
+            "if ヘッダーのヒアドキュメント内の偽呼び出しは不合格",
+            live_workflow,
+            'if cat <<EOF\n'
+            + live_phase
+            + 'EOF\nthen\n  :\nfi\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n',
+            1,
+        ),
+        (
+            "先行する if の then より後の裸の比較は集計ではない",
+            live_workflow,
+            live_phase.splitlines()[0]
+            + '\nif true; then :; fi; test "$salepkg_status" -ne 0\n',
+            1,
+        ),
+        (
+            "二重引用符の中のヒアドキュメント記号は合格",
+            live_workflow,
+            'echo "Use <<EOF for a heredoc"\n' + live_phase,
+            0,
+        ),
+        (
+            "単一引用符の中のヒアドキュメント記号は合格",
+            live_workflow,
+            "echo 'Use <<EOF for a heredoc'\n" + live_phase,
+            0,
+        ),
+        (
+            "エスケープしたヒアドキュメント記号は合格",
+            live_workflow,
+            "echo \\<\\<EOF\n" + live_phase,
+            0,
+        ),
+        (
+            "行継続した実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '[ "$salepkg_status" -ne 0 ]', '\\\n[ "$salepkg_status" -ne 0 ]'
+            ),
+            0,
+        ),
+        (
+            "行継続した呼び出しと集計条件は合格",
+            live_workflow,
+            live_phase.replace(" || ", " \\\n|| ").replace(" -ne ", " \\\n-ne "),
+            0,
+        ),
+        (
+            "OR の後で暗黙に行継続した実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '|| [ "$salepkg_status" -ne 0 ]', '||\n  [ "$salepkg_status" -ne 0 ]'
+            ),
+            0,
+        ),
+        (
+            "算術展開の左シフトはヒアドキュメントではない",
+            live_workflow,
+            'mask=$((1 << 2))\n' + live_phase,
+            0,
+        ),
+        (
+            "算術コマンドの左シフトはヒアドキュメントではない",
+            live_workflow,
+            '((mask = (1 << 2) << 1))\n' + live_phase,
+            0,
+        ),
+        (
+            "角括弧の算術展開の左シフトはヒアドキュメントではない",
+            live_workflow,
+            'mask=$[1 << 2]\n' + live_phase,
+            0,
+        ),
+        (
+            "複数行と基数指定を含む算術展開はヒアドキュメントではない",
+            live_workflow,
+            'mask=$((16#ff\n << 2))\n' + live_phase,
+            0,
+        ),
+        (
+            "if の後がタブでも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("if [", "if\t["),
+            0,
+        ),
+        (
+            "if の後が改行でも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("if [", "if\n["),
+            0,
+        ),
+        (
+            "then の前が改行でも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("; then", "\nthen"),
+            0,
+        ),
+        (
+            "引用した if と then は制御構文として受け入れない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                '\'if\' [ "$salepkg_status" -ne 0 ]; \'then\'',
+            ),
+            1,
+        ),
+        (
+            "条件中の引用した then は条件の終わりではない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then',
+                'if :; "then"; [ "$salepkg_status" -ne 0 ]; then',
+            ),
+            0,
+        ),
+        (
+            "二重角括弧の複合条件でも集計を受け入れる",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]',
+                'if [[ "$terms_status" -ne 0 || "$salepkg_status" -ne 0 ]]'),
+            0,
+        ),
+        (
+            "二重角括弧の括弧付き複合条件でも集計を受け入れる",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]',
+                'if [[ ( "$terms_status" -ne 0 || "$salepkg_status" -ne 0 ) ]]'),
+            0,
+        ),
+        (
+            "複合条件中の単一引用符の変数は集計に数えない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]',
+                "if [[ '$salepkg_status' -ne 0 || x == \"$salepkg_status\" ]]"),
+            1,
+        ),
+        (
+            "二重角括弧の条件は改行で区切っても集計に含める",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '[ "$salepkg_status" -ne 0 ]', '[[\n "$salepkg_status" -ne 0\n]]'
+            ),
+            0,
+        ),
+        (
+            "複合条件の比較と then を別の行に置いても集計に含める",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then',
+                'if [[\n "$terms_status" -ne 0 ||\n "$salepkg_status" -ne 0\n]]\nthen',
+            ),
+            0,
+        ),
+        (
+            "二重角括弧の途中のコメントは次行の比較を隠さない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]',
+                'if [[ # aggregate statuses\n "$salepkg_status" -ne 0 # compare status\n]]',
+            ),
+            0,
+        ),
+        (
+            "複数行の条件でも単一引用符の変数は集計に数えない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]', "if [[\n '$salepkg_status' -ne 0\n]]"
+            ),
+            1,
+        ),
+        (
+            "複数行でも引用した二重角括弧は条件構文ではない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]', 'if "[["\n "$salepkg_status" -ne 0\n"]]"'
+            ),
+            1,
+        ),
+        (
+            "echo の複数行の引用符内の if は集計ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo "example:\nif [ $salepkg_status -ne 0 ]; then exit 1; fi\n"'),
+            1,
+        ),
+        (
+            "echo の複数行の単一引用符内の if も集計ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                "echo 'example:\nif [ \"$salepkg_status\" -ne 0 ]; then exit 1; fi\n'"),
+            1,
+        ),
+        (
+            "引用した二重角括弧は条件構文ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]',
+                "if '[[' \"$salepkg_status\" -ne 0 ']]'"),
+            1,
+        ),
+        (
+            "コメントの後の then を集計に含める",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("; then", " # aggregate statuses\nthen"),
+            0,
+        ),
+        (
+            "if 直後のコメントも次の条件を隠さない",
+            live_workflow,
+            live_phase.replace('if [', 'if # aggregate statuses\n['),
+            0,
+        ),
+        (
+            "コメント付き OR の後で暗黙に行継続した呼び出しは合格",
+            live_workflow,
+            live_phase.replace(" || ", " || # collect status\n"),
+            0,
+        ),
+        (
+            "引用符内の OR は行継続にしない",
+            live_workflow,
+            'echo "||"\n' + live_phase,
+            0,
+        ),
+        (
+            "句点を含むヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            "cat <<EOF.txt\nexample output\nEOF.txt\n" + live_phase,
+            0,
+        ),
+        (
+            "引用符を混ぜたヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            'cat <<E"OF.txt"\nexample output\nEOF.txt\n' + live_phase,
+            0,
+        ),
+        (
+            "空白を含むヒアドキュメントの終端後の配線は合格",
+            live_workflow,
+            "cat <<'END OF FILE'\nexample output\nEND OF FILE\n" + live_phase,
+            0,
+        ),
+        (
+            "空のヒアドキュメント終端後の配線は合格",
+            live_workflow,
+            'cat <<""\nexample output\n\n' + live_phase,
+            0,
+        ),
+        (
+            "コメント記号で始まるヒアドキュメント終端後の配線は合格",
+            live_workflow,
+            "cat <<'#EOF'\nexample output\n#EOF\n" + live_phase,
+            0,
+        ),
+        (
+            "終端の接頭辞の後にあるヒアドキュメント本文は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF.txt\nEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF.txt',
+            ),
+            1,
+        ),
+        (
+            "複数ヒアドキュメントの後ろの本文は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF <<END\nEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEND',
+            ),
+            1,
+        ),
+        (
+            "then より後の比較は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'if true; then :; fi; [ "$salepkg_status" -ne 0 ] || :',
+            ),
+            1,
+        ),
+        (
+            "展開されない単一引用符の比較は不合格",
+            live_workflow,
+            live_phase.replace('"$salepkg_status" -ne 0', "'$salepkg_status' -ne 0"),
+            1,
+        ),
+        (
+            "実ファイルの配線は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8"),
+            0,
+        ),
         ("生きた配線は合格", live_workflow, live_phase, 0),
+        (
+            "二重角括弧の集計条件は合格",
+            live_workflow,
+            live_phase.replace('[ "$salepkg_status" -ne 0 ]', '[[ "$salepkg_status" -ne 0 ]]'),
+            0,
+        ),
+        (
+            "test コマンドの集計条件は合格",
+            live_workflow,
+            live_phase.replace('[ "$salepkg_status" -ne 0 ]', 'test "$salepkg_status" -ne 0'),
+            0,
+        ),
         ("workflow の呼び出しをコメント化したら落ちる", "# " + live_workflow, live_phase, 1),
         (
             "phase の呼び出しをコメント化したら落ちる",
@@ -367,6 +914,96 @@ def check_workflow_wiring() -> tuple[int, int]:
                 "python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?",
                 "printf '%s' 'python3 scripts/curriculum-qa/test_sale_package.py || salepkg_status=$?'",
                 1,
+            ),
+            1,
+        ),
+        (
+            "集計条件を echo の引数に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を printf の引数に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'printf \'%s\' \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を単一引用符の文字列に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                ': \'"$salepkg_status" -ne 0\'',
+            ),
+            1,
+        ),
+        (
+            "集計条件を二重引用符の文字列に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                ': "\\"\\$salepkg_status\\" -ne 0"',
+            ),
+            1,
+        ),
+        (
+            "集計条件をヒアドキュメントの本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<\'EOF\'\n"$salepkg_status" -ne 0\nEOF',
+            ),
+            1,
+        ),
+        (
+            "字下げした終端の後ろのヒアドキュメント本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF\n  EOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF',
+            ),
+            1,
+        ),
+        (
+            "バックスラッシュ付きの開始のヒアドキュメント本文に置いたら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<\\EOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEOF',
+            ),
+            1,
+        ),
+        (
+            "タブで字下げした <<- の終端の後ろの集計条件は合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<-EOF\n\tx\n\tEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+            ),
+            0,
+        ),
+        (
+            "here-string の後ろの集計条件は合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<< hi\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+            ),
+            0,
+        ),
+        (
+            "集計条件をコメント化したら落ちる",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                '# if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
             ),
             1,
         ),
