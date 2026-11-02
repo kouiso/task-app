@@ -199,6 +199,8 @@ Day 15 の `handleSubmit` は `api.task.update` を
 // 完成版: 削除の通信
 ```
 
+完了のままタイトルを直す編集や完了から中止への変更では `isReopening` は `false` です。どちらも終わったタスクです。実績として担当を残す扱いは変わりません。
+
 Day 15 の更新処理をそのまま使います。成功時は一覧と開いている詳細を取り直します。失敗時は `notifyMutationError` が理由や再ログインの案内を表示します。入力画面は成功したときだけ閉じます。
 
 `onSuccess` の中で `getAll.invalidate()` を呼ぶのが
@@ -1218,8 +1220,6 @@ const taskTimeUpdateSchema = z.object({
 });
 ```
 
-このスキーマは `taskRouter` の前、Day 15 で足したスキーマの近くに置きます。手続きの中ではなく外に置くのは入口の検査を型と一緒に1か所へ集めるためです。`.min(0)` が入口に無いとマイナスの分数がそのまま加算へ流れ、合計が減った理由を後から追えなくなります。
-
 **addTime 手続き**:
 
 ```typescript
@@ -1240,16 +1240,6 @@ const taskTimeUpdateSchema = z.object({
 ```
 
 **ステータスを戻したときの担当者**:
-
-Day 12 の `removeMember` はメンバーを外すときに完了と中止のタスクの担当を消しません。誰が終わらせたかを実績として残すためです。そのまま完了のタスクを未完了へ戻すとプロジェクトから外れた人が未完了タスクの担当に戻ってしまいます。そこで `update` は戻す操作を見分けます。
-
-Day 15 の `update` は、完了か中止から未完了へ戻す更新を `isReopening` として見分けます。見分けたら担当者がまだメンバーかを確かめます。今日の `update` でステータスだけを変える呼び出しも同じ経路を通ります。新しく書き足すコードはありません。
-
-たとえば完了のタスクを `TODO` に戻す操作では `isReopening` が `true` になります。このときは先に `lockTaskProjects` でプロジェクト行をロックします。そのあと担当者がまだメンバーかを確かめます。外れていれば `disconnect` で担当を外します。メンバーのままなら担当は残します。先にロックを取る理由は、確認の直後に `removeMember` が割り込むと外された人が担当に残るからです。
-
-完了のままタイトルを直す編集や完了から中止への変更では `isReopening` は `false` です。どちらも終わったタスクです。実績として担当を残す扱いは変わりません。
-
-完成版の `src/server/api/routers/task.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1677,8 +1667,6 @@ export const taskRouter = createTRPCRouter({
 });
 ```
 
-置き場所は Day 15 で書いた `delete` の直後です。合計の足し算をここへ集めたので画面側は増えたあとの数字を受け取るだけで済みます。`increment` を使うのは読み出してから書き戻す形だと2回の記録がほぼ同時に届いたときに片方が消えるからです。
-
 ### `src/component/task/time-log-dialog.tsx`
 
 **インポート**:
@@ -1704,8 +1692,6 @@ import { Label } from '@/component/ui/label';
 import { api } from '@/trpc/react';
 ```
 
-先頭の `'use client'` はこの部品がブラウザ側で動くという宣言です。入力欄の値を持つ画面なのでサーバーだけで組み立てるわけにはいきません。並び順が手元と違っていても直す必要はありません。`npm run fix` を実行すると Biome が並べ替えます。
-
 **バリデーションスキーマ**:
 
 ```typescript
@@ -1722,8 +1708,6 @@ const timeLogSchema = z.object({
 type TimeLogFormData =
   z.infer<typeof timeLogSchema>;
 ```
-
-このスキーマをコンポーネント関数の外に置いてあるのは画面が描き直されるたびにルールを組み立て直さないためです。欄をまたぐ判定である `refine` をここへ入れたので時間と分のどちらか片方だけを見る検査では拾えない「両方0」を、送信の直前に1回で弾けます。
 
 **Props とフォームの初期化**:
 
@@ -1749,8 +1733,6 @@ export function TimeLogDialog({
   });
 ```
 
-`taskId` を親から受け取る形にしたのでこの小窓はどのカードからでも使い回せます。`defaultValues` に0を入れてあるのは初期値が無いと両方の欄が `undefined` から始まり、`refine` の足し算が `NaN` になって検証そのものが成り立たなくなるからです。
-
 **閉じる処理と通信**:
 
 ```typescript
@@ -1769,8 +1751,6 @@ export function TimeLogDialog({
       },
     });
 ```
-
-閉じる経路は記録の成功後・キャンセル・右上の×・背景クリックの4つあります。`reset()` と `onClose()` を `handleClose` に1つへまとめてあるのでどの経路をたどっても入力欄は空に戻ります。この画面は足し算なので前の入力が残ったまま次のタスクで開くと身に覚えのない分数が合計へ乗ります。
 
 **送信ハンドラー**:
 
@@ -1797,8 +1777,6 @@ export function TimeLogDialog({
   };
 ```
 
-時間と分を1つの数へ直す係を、この1か所だけに置いてあります。`addTime` は分しか受け取らないので変換をあちこちに散らすと片方だけ直し忘れたときに足りない記録が残ります。`mutate` ではなく `mutateAsync` を選んだのは `await` で待たないと失敗を `catch` で受け止められず、通信が落ちても画面が黙ってしまうからです。
-
 **ダイアログの見出し**:
 
 ```typescript
@@ -1817,8 +1795,6 @@ export function TimeLogDialog({
           </DialogDescription>
         </DialogHeader>
 ```
-
-`onOpenChange` に `onClose` を直接渡さず `handleClose` を挟んであるのはEsc キーと背景クリックもここを通るためです。`DialogDescription` を省くと画面読み上げでは見出しの「作業時間の記録」しか読まれず、時間を足す画面なのか消す画面なのかが伝わりません。
 
 **時間の入力欄**:
 
@@ -1841,8 +1817,6 @@ export function TimeLogDialog({
           </div>
 ```
 
-`valueAsNumber: true` が要るのは入力欄の返す値が文字列で、スキーマ側は `z.number()` を求めているためです。付け忘れると型が合わず、正しい数字を打っても検証で弾かれます。`inputMode="numeric"` は数字のキーボードを先に出すための指定で、値が正しいかどうかの判定は zod 側に寄せてあります。
-
 **分の入力欄**:
 
 ```typescript
@@ -1863,8 +1837,6 @@ export function TimeLogDialog({
           </div>
         </div>
 ```
-
-`errors.minutes` の表示がこの位置にあるので `refine` の `path` に `['minutes']` を指定した「合計0分」のエラーも分欄の下に出ます。表示先を決めずに `refine` だけを足すとエラーはどの欄にも結び付かず、利用者にはボタンが効かない画面として見えます。
 
 **フッターのボタン**:
 
@@ -1888,8 +1860,6 @@ export function TimeLogDialog({
   );
 }
 ```
-
-完成版の `src/component/task/time-log-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2034,8 +2004,6 @@ export function TimeLogDialog({
 }
 ```
 
-`handleSubmit(onSubmit)` という包み方をしているので検証を通らないかぎり `onSubmit` は呼ばれません。通信中にボタンを押せなくしているのは返事が来る前にもう一度押されると同じ分数が2回足されて合計が狂うからです。
-
 ### `src/component/task/task-card.tsx`
 
 **インポート**:
@@ -2060,8 +2028,6 @@ import { StatusBadge } from './status-badge';
 import { TimeLogDialog } from './time-log-dialog';
 ```
 
-今日この行に足したのは `Clock`、`useState`、`TimeLogDialog` の3つです。`TimeLogDialog` だけ `./time-log-dialog` という書き方なのは同じフォルダに置いた部品だからです。`Clock` は時計の絵ですが計測は始まりません。押すと入力用の小窓が開くだけです。
-
 **分を読みやすい形に直す関数**:
 
 ```typescript
@@ -2073,8 +2039,6 @@ const formatMinutes = (minutes: number) => {
   return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 };
 ```
-
-サーバーが持っているのは分の合計だけなので `150` をそのまま出すとどれくらいか直感で分かりません。`Math.floor` が2回あるのは `150 / 60` が `2.5` を返すためです。切り捨ててから `%` の余りを足すと `2h 30m` になります。保存される値は分のままでこの文字は残りません。
 
 **Props の型**:
 
@@ -2103,8 +2067,6 @@ interface TaskCardProps {
 }
 ```
 
-今日足した口は `timeSpentMinutes` と `onTimeLogSuccess` の2つです。どちらも `?` を付けてあるのはDay 13 から Day 15 で書いた呼び出し側を直さなくても型が通るようにするためです。必須にするとこの2つを渡していないすべての画面が同時に型エラーになります。
-
 **関数の宣言と受け取り**:
 
 ```typescript
@@ -2128,8 +2090,6 @@ export function TaskCard({
 }: TaskCardProps) {
 ```
 
-`timeSpentMinutes = 0` の既定値がここでの要点です。オプショナルにした口は渡されなければ `undefined` になり、そのまま `formatMinutes` へ入ると `NaN` が表示されます。0を入れておけばまだ記録の無いタスクは `0m` と出ます。
-
 **状態とカードのクリック**:
 
 ```typescript
@@ -2145,8 +2105,6 @@ export function TaskCard({
     }
   };
 ```
-
-開閉の状態をカードの内側に持たせてあるので一覧に10枚並んでも開くのは押した1枚だけです。`overdue` の判定から完了と取り消しを外しているのは終わったタスクに期限切れの赤を付けても読む人がやることは何も増えないからです。
 
 **3つのボタンのハンドラー**:
 
@@ -2169,8 +2127,6 @@ export function TaskCard({
   };
 ```
 
-3つとも先頭で `e.stopPropagation()` を呼びます。HTML のクリックは内側の要素から外側へ順に届く決まりなのでこれが無いとボタンを押しただけでカード全体のクリックまで走り、詳細と小窓が一度に立ち上がります。押した本人には何が起きたのか判断がつきません。
-
 **カードの外枠**:
 
 ```typescript
@@ -2187,8 +2143,6 @@ export function TaskCard({
         onClick={handleCardClick}
       >
 ```
-
-`<>` で始まっているのはこの後ろに `TimeLogDialog` を並べて返すためです。React は要素を2つ並べて返せないので空タグでまとめます。`cn()` に条件を渡すと `onClick` がある場合だけ指差しカーソルになり、期限切れの場合だけ枠が赤くなります。
 
 **タイトル**:
 
@@ -2217,8 +2171,6 @@ export function TaskCard({
           </CardTitle>
 ```
 
-`onClick` がある場合だけタイトルを `<button>` で包みます。カード全体が押せてもキーボードだけで操作する人には押せる場所が伝わりません。ボタンにしておくと Tab キーで移動でき、`focus-visible` の枠でどこにいるかも見えます。
-
 **編集ボタン**:
 
 ```typescript
@@ -2237,8 +2189,6 @@ export function TaskCard({
               </Button>
             )}
 ```
-
-`canEdit &&` で囲ってあるので権限の無い人にはボタンそのものが出ません。中身が鉛筆の絵だけなので `aria-label` を付けています。これが無いと読み上げでは「ボタン」としか伝わらず、押すと何が起きるのか分かりません。
 
 **削除ボタン**:
 
@@ -2259,8 +2209,6 @@ export function TaskCard({
           </div>
         </CardHeader>
 ```
-
-削除だけ `text-destructive` で赤くしてあります。取り消せない操作を編集と見分けがつかない見た目にすると押し間違いがそのまま消失につながります。色は警告であって確認ではないので実際の確認は Day 15 で作ったダイアログが受け持ちます。
 
 **説明文とバッジ**:
 
@@ -2286,8 +2234,6 @@ export function TaskCard({
           </div>
 ```
 
-`line-clamp-2` で説明文を2行に切っています。長さの違う説明が並ぶとカードの高さがそろわず、一覧が読みにくくなるためです。ステータスと優先度の日本語は定数から引くので表記を変えたいときにこの画面へ手を入れる必要はありません。
-
 **担当者**:
 
 ```typescript
@@ -2312,8 +2258,6 @@ export function TaskCard({
               )}
 ```
 
-外側の `mt-auto` がこの一帯をカードの下端へ押し下げています。説明文の長さが違ってもボタンの位置がそろうので続けて押すときに手が迷いません。担当者がいない場合に「未割当」と出すのは空欄のままでは読み込み中と未設定を区別できないからです。
-
 **期限**:
 
 ```typescript
@@ -2337,8 +2281,6 @@ export function TaskCard({
               )}
             </div>
 ```
-
-`sr-only` を付けた「期限切れ」は画面には出ないまま読み上げにだけ届きます。期限切れを赤い文字でしか示していないと色を見分けられない人には日付が並んでいるだけに見えます。色で伝える情報は言葉でも用意しておきます。
 
 **合計作業時間と時間記録ボタン**:
 
@@ -2367,8 +2309,6 @@ export function TaskCard({
       </Card>
 ```
 
-まだ記録の無いタスクにも `0m` と出しているのは記録できる場所だと気づいてもらうためです。`aria-label` にタスク名を入れているのはこれが無いと読み上げで「時間記録」というボタンがカードの枚数だけ並び、どれを押しているのか分からなくなるからです。ボタンを `canEdit &&` で囲んでいるのは編集ボタンと同じ理由です。`addTime` は `canEdit` を確かめてから足し算するので閲覧者が押しても必ずエラーで戻ります。合計の表示だけは囲まず読むだけの人にも見えるようにしています。
-
 **ダイアログの設置**:
 
 ```typescript
@@ -2386,8 +2326,6 @@ export function TaskCard({
   );
 }
 ```
-
-完成版の `src/component/task/task-card.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2625,8 +2563,6 @@ export function TaskCard({
 }
 ```
 
-小窓を `<Card>` の外に置いてあるのはカードの枠や `overflow` の影響を受けずに画面の中央へ出すためです。ボタンと同じ `canEdit` で囲ってあるので閲覧者の画面には小窓そのものが置かれません。`onSuccess={onTimeLogSuccess}` の受け渡しが1本つながっているので記録が成功すると親のコールバックが呼ばれ、一覧の取り直しを通じて合計作業時間が新しい値に置き換わります。
-
 ### `src/app/task/page.tsx`
 
 **記録の成功を受け取るハンドラー**:
@@ -2638,8 +2574,6 @@ export function TaskCard({
     void utils.task.getAll.invalidate();
   }, [utils.task.getAll]);
 ```
-
-`utils` の宣言のすぐ下に置きます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。だから `refetch` を重ねて呼ぶ必要はありません。先頭の `void` は戻り値を使わないことを読み手へ示す書き方で、動きは変わりません。
 
 **TaskCard へ渡す2つの props**:
 
@@ -2664,8 +2598,6 @@ export function TaskCard({
                         canDelete={canDeleteProject(task.projectId)}
                       />
 ```
-
-完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2824,7 +2756,6 @@ function TaskPageContent() {
         error, 'タスクの作成に失敗しました',
       ),
     });
-
 
   const updateMutation =
     api.task.update.useMutation({
@@ -3066,8 +2997,6 @@ export default function TaskPage() {
   );
 }
 ```
-
-Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `onTimeLogSuccess` の2行だけを足しました。先頭の `key={task.id}` は Day 13 で書いたものがそのまま残ります。消すと Day 09 で見たのと同じ key の警告がコンソールに出ます。`task.timeSpentMinutes` は一覧の取得が返した DB の今の値で、カードはこれを映すだけです。渡し忘れると記録は保存されているのに数字が `0m` のまま止まります。
 
 ## 今日のまとめ
 
