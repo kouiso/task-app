@@ -83,11 +83,9 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">登録日</p>
                   <p className="text-base">
-                    {currentUser.createdAt
-                      ? format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
-                          locale: ja,
-                        })
-                      : '-'}
+                    {format(new Date(currentUser.createdAt), 'yyyy年MM月dd日', {
+                      locale: ja,
+                    })}
                   </p>
                 </div>
               </div>
@@ -99,11 +97,9 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">最終更新日</p>
                   <p className="text-base">
-                    {currentUser.updatedAt
-                      ? format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
-                          locale: ja,
-                        })
-                      : '-'}
+                    {format(new Date(currentUser.updatedAt), 'yyyy年MM月dd日', {
+                      locale: ja,
+                    })}
                   </p>
                 </div>
               </div>
