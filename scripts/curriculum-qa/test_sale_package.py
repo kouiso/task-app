@@ -251,10 +251,44 @@ def _argv(line: str) -> list[list[str]]:
     return [_tokenize(command) for command in _split_commands(text)]
 
 
+def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]:
+    """引用符とエスケープの外にあるヒアドキュメントと行継続を拾う。"""
+    delimiters: list[tuple[str, bool]] = []
+    quote = ""
+    index = 0
+    heredoc = re.compile(r"(?<!<)<<(-?)(?!<)\s*(['\"]?)\\?([A-Za-z_][A-Za-z0-9_-]*)\2")
+    while index < len(line):
+        ch = line[index]
+        if ch == "\\" and quote != "'":
+            if index == len(line) - 1:
+                return delimiters, True
+            index += 2
+            continue
+        if quote:
+            if ch == quote:
+                quote = ""
+            index += 1
+            continue
+        if ch == "#":
+            break
+        if ch in "'\"":
+            quote = ch
+            index += 1
+            continue
+        match = heredoc.match(line, index)
+        if match:
+            delimiters.append((match.group(3), match.group(1) == "-"))
+            index = match.end()
+        else:
+            index += 1
+    return delimiters, False
+
+
 def _shell_lines(text: str) -> list[str]:
     """コメント行とヒアドキュメントの本文を除いたシェル行。"""
     lines: list[str] = []
     delimiters: list[tuple[str, bool]] = []
+    pending = ""
     for line in active_lines(text):
         if delimiters:
             delimiter, strip_tabs = delimiters[0]
@@ -263,12 +297,14 @@ def _shell_lines(text: str) -> list[str]:
             if (line.lstrip("\t") if strip_tabs else line) == delimiter:
                 delimiters.pop(0)
             continue
+        line = pending + line
+        delimiters, continued = _heredocs_and_continuation(line)
+        if continued:
+            pending = line[:-1]
+            delimiters = []
+            continue
+        pending = ""
         lines.append(line)
-        for match in re.finditer(
-            r"(?<!<)<<(-?)(?!<)\s*(['\"]?)\\?([A-Za-z_][A-Za-z0-9_-]*)\2",
-            _strip_unquoted_comment(line),
-        ):
-            delimiters.append((match.group(3), match.group(1) == "-"))
     return lines
 
 
@@ -342,6 +378,38 @@ def check_workflow_wiring() -> tuple[int, int]:
         'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
     )
     synthetic = [
+        (
+            "二重引用符の中のヒアドキュメント記号は合格",
+            live_workflow,
+            'echo "Use <<EOF for a heredoc"\n' + live_phase,
+            0,
+        ),
+        (
+            "単一引用符の中のヒアドキュメント記号は合格",
+            live_workflow,
+            "echo 'Use <<EOF for a heredoc'\n" + live_phase,
+            0,
+        ),
+        (
+            "エスケープしたヒアドキュメント記号は合格",
+            live_workflow,
+            "echo \\<\\<EOF\n" + live_phase,
+            0,
+        ),
+        (
+            "行継続した実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '[ "$salepkg_status" -ne 0 ]', '\\\n[ "$salepkg_status" -ne 0 ]'
+            ),
+            0,
+        ),
+        (
+            "行継続した呼び出しと集計条件は合格",
+            live_workflow,
+            live_phase.replace(" || ", " \\\n|| ").replace(" -ne ", " \\\n-ne "),
+            0,
+        ),
         (
             "複数ヒアドキュメントの後ろの本文は不合格",
             live_workflow,
