@@ -258,6 +258,7 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
     quote = ""
     index = 0
     continued = False
+    arithmetic_closers: list[str] = []
     heredoc = re.compile(
         r'''(?<!<)<<(-?)(?!<)\s*((?:[^\s;&|<>()'"\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+)'''
     )
@@ -274,12 +275,29 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
                 quote = ""
             index += 1
             continue
-        if ch == "#":
-            break
         if ch in "'\"":
             quote = ch
             continued = False
             index += 1
+            continue
+        if arithmetic_closers:
+            if ch == "(":
+                arithmetic_closers.append(")")
+            elif ch == arithmetic_closers[-1]:
+                arithmetic_closers.pop()
+            index += 1
+            continue
+        if ch == "#":
+            break
+        if line.startswith("((", index):
+            arithmetic_closers = [")", ")"]
+            continued = False
+            index += 2
+            continue
+        if line.startswith("$[", index):
+            arithmetic_closers = ["]"]
+            continued = False
+            index += 2
             continue
         match = heredoc.match(line, index)
         if match:
@@ -293,7 +311,7 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
             if not ch.isspace():
                 continued = ch == "|"
             index += 1
-    return delimiters, continued
+    return delimiters, continued or bool(arithmetic_closers)
 
 
 def _shell_lines(text: str) -> list[str]:
@@ -319,6 +337,14 @@ def _shell_lines(text: str) -> list[str]:
             )
             delimiters = []
             continue
+        commands = _split_commands(_strip_unquoted_comment(line))
+        if (
+            commands
+            and _tokenize(commands[0])[:1] == ["if"]
+            and not any(_tokenize(command)[:1] == ["then"] for command in commands)
+        ):
+            pending = line.rstrip() + (" " if _tokenize(commands[-1]) == ["if"] else "; ")
+            continue
         pending = ""
         lines.append(line)
     return lines
@@ -327,7 +353,7 @@ def _shell_lines(text: str) -> list[str]:
 def _is_gate4_status_condition(line: str) -> bool:
     """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
     commands = _split_commands(_strip_unquoted_comment(line))
-    if not commands or not commands[0].lstrip().startswith("if "):
+    if not commands or _tokenize(commands[0])[:1] != ["if"]:
         return False
     for index, command in enumerate(commands):
         argv = _tokenize(command)
@@ -432,6 +458,48 @@ def check_workflow_wiring() -> tuple[int, int]:
             GATE4_PHASE.read_text(encoding="utf-8").replace(
                 '|| [ "$salepkg_status" -ne 0 ]', '||\n  [ "$salepkg_status" -ne 0 ]'
             ),
+            0,
+        ),
+        (
+            "算術展開の左シフトはヒアドキュメントではない",
+            live_workflow,
+            'mask=$((1 << 2))\n' + live_phase,
+            0,
+        ),
+        (
+            "算術コマンドの左シフトはヒアドキュメントではない",
+            live_workflow,
+            '((mask = (1 << 2) << 1))\n' + live_phase,
+            0,
+        ),
+        (
+            "角括弧の算術展開の左シフトはヒアドキュメントではない",
+            live_workflow,
+            'mask=$[1 << 2]\n' + live_phase,
+            0,
+        ),
+        (
+            "複数行と基数指定を含む算術展開はヒアドキュメントではない",
+            live_workflow,
+            'mask=$((16#ff\n << 2))\n' + live_phase,
+            0,
+        ),
+        (
+            "if の後がタブでも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("if [", "if\t["),
+            0,
+        ),
+        (
+            "if の後が改行でも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("if [", "if\n["),
+            0,
+        ),
+        (
+            "then の前が改行でも実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace("; then", "\nthen"),
             0,
         ),
         (
