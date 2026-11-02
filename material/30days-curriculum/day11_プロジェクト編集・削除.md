@@ -1641,43 +1641,10 @@ console.log(
 
 ### After（プロが書くコード）
 
+型の宣言は Before から1文字も変えていません。`toDateInputValue` も同じです。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-type ProjectFromApi = {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  owner: {
-    name: string | null;
-    email: string;
-  } | null;
-};
-
-type ProjectEditFormData = {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  ownerLabel: string;
-  startDate?: string;
-  endDate?: string;
-};
-
-function toDateInputValue(value: Date): string {
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  return value.toISOString().slice(0, 10);
-}
-
 export function buildProjectEditForm(
   project: ProjectFromApi | null | undefined,
 ): ProjectEditFormData | undefined {
@@ -1699,30 +1666,14 @@ export function buildProjectEditForm(
     color: project.color ?? '#3b82f6',
     ownerLabel: project.owner?.name ?? project.owner?.email ?? '担当者未設定',
     ...(startDate ? { startDate } : {}),
+    ...(endDate ? { endDate } : {}),
+  };
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    ...(endDate ? { endDate } : {}),
-  };
-}
-
-console.log(
-  buildProjectEditForm({
-    id: 'project_001',
-    name: '教材制作',
-    description: null,
-    color: null,
-    startDate: new Date('2026-05-01T00:00:00.000Z'),
-    endDate: null,
-    owner: { name: null, email: 'owner@example.com' },
-  }),
-);
-```
+日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。呼び出し側の `console.log` も Before と同じです。
 
 **このコードの強み**:
 

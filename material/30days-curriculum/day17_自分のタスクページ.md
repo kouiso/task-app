@@ -1270,7 +1270,12 @@ function groupTasksByStatus(
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return groups;
 }
+```
 
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。`switch` での仕分けはここまでで、次のブロックでは出来上がった `groups` から画面に並べるセクションを組み立てます。
+
+```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 function buildStatusSections(tasks: MyTask[]) {
   const groups = groupTasksByStatus(tasks);
 
@@ -1292,16 +1297,12 @@ function buildStatusSections(tasks: MyTask[]) {
       tasks: groups.done,
     },
   ];
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 3回目がこの戻り値の配列です。画面に出す並び順を決めているのはここだけです。`switch` の `case` を入れ替えても表示の順番は変わらず、この配列を入れ替えたときだけ変わります。同じ4つが3か所に散っているせいで、どこを直せば何が変わるのかが読み取りにくくなっています。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-}
-```
 
 **このコードの問題点**:
 
@@ -1311,20 +1312,10 @@ function buildStatusSections(tasks: MyTask[]) {
 
 #### After（プロが書くコード）
 
+import と `MyTask` の型は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-import {
-  TASK_STATUS,
-  TASK_STATUS_LABELS,
-  type TaskStatus,
-} from '@/lib/constant/status';
-
-type MyTask = {
-  id: string;
-  title: string;
-  status: TaskStatus;
-};
-
 type StatusSection = {
   status: TaskStatus;
   title: string;
@@ -1345,7 +1336,6 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-
 function buildStatusSections(
   tasks: MyTask[],
 ): StatusSection[] {

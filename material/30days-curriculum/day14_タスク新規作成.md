@@ -1699,20 +1699,6 @@ After では値の出どころが `@/lib/constant/status` と `@/lib/constant/pr
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-type TaskFormValues = z.infer<typeof taskFormSchema>;
-
-export interface TaskFormData {
-  id?: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  dueDate?: string;
-  estimatedHours?: number;
-  projectId: string;
-  assigneeId?: string;
-}
-
 const defaultTaskValues: Pick<
   TaskFormValues,
   'status' | 'priority'
@@ -1723,14 +1709,6 @@ const defaultTaskValues: Pick<
 
 const statusOptions = Object.entries(
   TASK_STATUS_LABELS,
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-初期値に `Pick<TaskFormValues, 'status' | 'priority'>` を付けたところが効きます。スキーマ側の値を変えるとこの定数がその場で型エラーになり、直し忘れが起動前に見つかります。Before の `'TODO' as TaskStatus` は型を名乗らせるだけなので綴りが違っても素通りしました。`statusOptions` もラベル定数から組み立てるため選択肢を並べ直す場所はここにも残りません。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 ).map(([value, label]) => ({
   value,
   label,
@@ -1743,6 +1721,12 @@ const priorityOptions = Object.entries(
   label,
 }));
 ```
+
+`TaskFormValues` と `TaskFormData` の型は Before と同じです。
+
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
+
+初期値に `Pick<TaskFormValues, 'status' | 'priority'>` を付けたところが効きます。スキーマ側の値を変えるとこの定数がその場で型エラーになり、直し忘れが起動前に見つかります。Before の `'TODO' as TaskStatus` は型を名乗らせるだけなので綴りが違っても素通りしました。`statusOptions` もラベル定数から組み立てるため選択肢を並べ直す場所はここにも残りません。
 
 **このコードの強み**:
 

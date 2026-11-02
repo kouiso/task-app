@@ -2116,14 +2116,7 @@ type UpdateUserInput = {
 
 ```
 
-`UpdateUserInput` の `avatar` は `null` を受け取れるようにします。空欄を `undefined` にすると既存画像を更新しない意味になるため、画像を削除するリクエストには `null` が必要です。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-type UpdateUserMutation = {
-  mutate: (input: UpdateUserInput) => void;
-};
-```
+`UpdateUserInput` の `avatar` は `null` を受け取れるようにします。空欄を `undefined` にすると既存画像を更新しない意味になるため、画像を削除するリクエストには `null` が必要です。`UpdateUserMutation` の型は Before と同じです。
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
@@ -2140,39 +2133,15 @@ export function submitUserEditForm(
 ) {
   const values: UserEditFormValues = userEditSchema.parse(rawValues);
 
-  updateUser.mutate({
-    id: userId,
-    name: values.name,
-    avatar: values.avatar || null,
-    ...(canManageAccount
-      ? {
-          role: values.role,
-          isActive: values.isActive,
-        }
-      : {}),
-  });
+  // ...Before と同じ（`updateUser.mutate` への送信と呼び出し例）...
 }
-
-submitUserEditForm(
-  {
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 `as` が `userEditSchema.parse(rawValues)` に置き換わりました。`parse` は値を1項目ずつスキーマと照らし合わせて合っていれば型の付いた値を返し、合っていなければその場で例外を投げます。`role` に `'OWNER'` が紛れ込んでいればサーバーへ送る前にここで止まります。左辺に `UserEditFormValues` と型を書いても `as` のような信じるだけの宣言にはなりません。中身が確かめられた後の値だからです。このサンプルは `@/lib/utils` を読み込まないので `|| null` で空欄を `null` に寄せています。Step 10 の `normalizeAvatarValue` と結果は同じです。
 
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    name: 'Taro',
-    avatar: '',
-    role: USER_ROLE.ADMIN,
-    isActive: true,
-  },
-  'clx_user_123',
-  updateUser,
-  true,
-);
-```
+`updateUser.mutate` へ送る中身は Before と同じです。`canManageAccount` のときだけ `role` と `isActive` を足す条件付きスプレッドです。呼び出し側の `submitUserEditForm(...)` の例も同じです。
 
 **このコードの強み**:
 
