@@ -1714,6 +1714,8 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 **確認ポイント**:
 - セクション見出しに件数が表示される
 
+検索結果でも `TaskCard` をそのまま使い回します。タスク一覧と別のカードを作ると片方だけ表示が古いままになるためです。権限と作業時間の props もここで一度に渡します。次の2ブロックを上から続けて書いてください。
+
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
 {/* タスクカード一覧 */}
@@ -1731,32 +1733,12 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
               priority={task.priority}
               dueDate={task.dueDate}
               assignee={task.assignee}
-              onEdit={handleTaskEdit}
-              onDelete={handleTaskDelete}
-              onClick={
-                handleTaskClick} />
-          ))}
-        </div>
-      </div>
-    )}
 ```
-検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCardに権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
+ここまででカードの基本情報を渡しました。続けて作業時間・操作ハンドラー・権限を渡して map と外側のタグを閉じます。まだ開きタグが閉じていないため2ブロックをつなげ終えてから保存してください。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
-          {searchResults.tasks
-            .map((task) => (
-            <TaskCard key={task.id}
-              id={task.id}
-              title={task.title}
-              description={
-                task.description}
-              status={task.status}
-              priority={task.priority}
-              dueDate={task.dueDate}
-              assignee={task.assignee}
               timeSpentMinutes={
                 task.timeSpentMinutes}
               onEdit={handleTaskEdit}
@@ -1770,7 +1752,11 @@ TaskCardに権限フラグと作業時間を渡します。上のブロックの
               canDelete={canDeleteProject(
                 task.projectId)} />
           ))}
+        </div>
+      </div>
+    )}
 ```
+
 > `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
 
 `timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないとこの画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
