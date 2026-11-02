@@ -1603,16 +1603,59 @@ def prepare_work_dir() -> None:
                  if fmt == "truetype"}:
         shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
     # macOS では Chromium が fontconfig ではなく CoreText で解決するため、
-    # XDG_DATA_HOME に置いても計測側へ届かない。ユーザーフォントへ同じ実体を
-    # 置いて、測る側と描く側の書体をそろえる（Darwin 版の同対策）。
+    # XDG_DATA_HOME に置いても計測側へ届かない。~/Library/Fonts への複製も
+    # CoreText の一覧へは即時反映されない（実測: copy 直後も BIZ が空）。
+    # CTFontManagerRegisterFontsForURL をセッションスコープで呼んで明示登録する
+    # （Darwin 版の同対策）。
     if sys.platform == "darwin":
-        user_fonts = Path.home() / "Library" / "Fonts"
-        user_fonts.mkdir(parents=True, exist_ok=True)
-        for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
-                     if fmt == "truetype"}:
-            target = user_fonts / name
-            if not target.exists():
-                shutil.copy2(WORK_DIR / "fonts" / name, target)
+        register_coretext_fonts(
+            [WORK_DIR / "fonts" / Path(path).name
+             for _, path, _, _, fmt in FONT_SOURCES if fmt == "truetype"])
+
+
+def register_coretext_fonts(paths: list[Path]) -> None:
+    """macOS の CoreText セッションへフォントを登録する。
+
+    `CTFontManagerRegisterFontsForURL` を scope=kCTFontManagerScopeSession(3) で
+    呼ぶ。Swift 等の依存を増やさないため Python 標準の ctypes 経由。
+    kCTFontManagerErrorAlreadyRegistered(105) だけは登録済みとして成功扱いし、
+    それ以外の CFError は失敗として例外を投げる。
+    """
+    import ctypes
+
+    core_foundation = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    core_text = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreText.framework/CoreText")
+
+    core_foundation.CFURLCreateFromFileSystemRepresentation.restype = ctypes.c_void_p
+    core_foundation.CFURLCreateFromFileSystemRepresentation.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_bool]
+    core_text.CTFontManagerRegisterFontsForURL.restype = ctypes.c_bool
+    core_text.CTFontManagerRegisterFontsForURL.argtypes = [
+        ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+    core_foundation.CFErrorGetCode.restype = ctypes.c_long
+    core_foundation.CFErrorGetCode.argtypes = [ctypes.c_void_p]
+    core_foundation.CFRelease.argtypes = [ctypes.c_void_p]
+
+    scope_session = 3
+    error_already_registered = 105
+
+    for path in paths:
+        raw = os.fsencode(str(path))
+        url = core_foundation.CFURLCreateFromFileSystemRepresentation(
+            None, raw, len(raw), False)
+        error = ctypes.c_void_p()
+        ok = core_text.CTFontManagerRegisterFontsForURL(
+            url, scope_session, ctypes.byref(error))
+        code = core_foundation.CFErrorGetCode(error) if error else 0
+        if error:
+            core_foundation.CFRelease(error)
+        core_foundation.CFRelease(url)
+        if not ok and code != error_already_registered:
+            raise RuntimeError(
+                f"CoreText のフォント登録に失敗: {path.name} "
+                f"(CTFontManager error {code})")
 
 
 def unescape_table_cell_pipes(markup: str) -> str:
