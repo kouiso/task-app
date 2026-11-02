@@ -181,7 +181,7 @@ def _strip_unquoted_comment(text: str) -> str:
     return "".join(out)
 
 
-def _split_commands(text: str) -> list[str]:
+def _scan_commands(text: str) -> tuple[list[str], bool]:
     """引用符と二重角括弧の外の `&&` `||` `;` でコマンドを分ける。"""
     parts: list[str] = []
     buf: list[str] = []
@@ -222,7 +222,11 @@ def _split_commands(text: str) -> list[str]:
         buf.append(ch)
         i += 1
     parts.append("".join(buf))
-    return parts
+    return parts, conditional
+
+
+def _split_commands(text: str) -> list[str]:
+    return _scan_commands(text)[0]
 
 
 def _tokenize(command: str) -> list[str]:
@@ -320,7 +324,7 @@ def _heredocs_and_continuation(line: str) -> tuple[list[tuple[str, bool]], bool]
             if not ch.isspace():
                 continued = ch == "|"
             index += 1
-    return delimiters, continued or bool(arithmetic_closers)
+    return delimiters, continued or bool(arithmetic_closers) or bool(quote)
 
 
 def _shell_lines(text: str) -> list[str]:
@@ -346,14 +350,14 @@ def _shell_lines(text: str) -> list[str]:
             )
             delimiters = []
             continue
-        commands = _split_commands(_strip_unquoted_comment(line))
+        commands, conditional = _scan_commands(_strip_unquoted_comment(line))
         if (
             commands
             and re.match(r"^\s*if(?:\s|$)", commands[0])
             and not any(re.match(r"^\s*then(?:\s|$)", command) for command in commands)
         ):
             pending = _strip_unquoted_comment(line).rstrip() + (
-                " " if _tokenize(commands[-1]) == ["if"] else "; "
+                " " if conditional or _tokenize(commands[-1]) == ["if"] else "; "
             )
             continue
         pending = ""
@@ -552,6 +556,62 @@ def check_workflow_wiring() -> tuple[int, int]:
             live_workflow,
             live_phase.replace('if [ "$salepkg_status" -ne 0 ]',
                 "if [[ '$salepkg_status' -ne 0 || x == \"$salepkg_status\" ]]"),
+            1,
+        ),
+        (
+            "二重角括弧の条件は改行で区切っても集計に含める",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace(
+                '[ "$salepkg_status" -ne 0 ]', '[[\n "$salepkg_status" -ne 0\n]]'
+            ),
+            0,
+        ),
+        (
+            "複合条件の比較と then を別の行に置いても集計に含める",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then',
+                'if [[\n "$terms_status" -ne 0 ||\n "$salepkg_status" -ne 0\n]]\nthen',
+            ),
+            0,
+        ),
+        (
+            "二重角括弧の途中のコメントは次行の比較を隠さない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]',
+                'if [[ # aggregate statuses\n "$salepkg_status" -ne 0 # compare status\n]]',
+            ),
+            0,
+        ),
+        (
+            "複数行の条件でも単一引用符の変数は集計に数えない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]', "if [[\n '$salepkg_status' -ne 0\n]]"
+            ),
+            1,
+        ),
+        (
+            "複数行でも引用した二重角括弧は条件構文ではない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]', 'if "[["\n "$salepkg_status" -ne 0\n"]]"'
+            ),
+            1,
+        ),
+        (
+            "echo の複数行の引用符内の if は集計ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'echo "example:\nif [ $salepkg_status -ne 0 ]; then exit 1; fi\n"'),
+            1,
+        ),
+        (
+            "echo の複数行の単一引用符内の if も集計ではない",
+            live_workflow,
+            live_phase.replace('if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                "echo 'example:\nif [ \"$salepkg_status\" -ne 0 ]; then exit 1; fi\n'"),
             1,
         ),
         (
