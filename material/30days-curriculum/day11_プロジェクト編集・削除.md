@@ -1641,43 +1641,10 @@ console.log(
 
 ### After（プロが書くコード）
 
+型の宣言は Before から1文字も変えていません。`toDateInputValue` も同じです。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-type ProjectFromApi = {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  owner: {
-    name: string | null;
-    email: string;
-  } | null;
-};
-
-type ProjectEditFormData = {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  ownerLabel: string;
-  startDate?: string;
-  endDate?: string;
-};
-
-function toDateInputValue(value: Date): string {
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  return value.toISOString().slice(0, 10);
-}
-
 export function buildProjectEditForm(
   project: ProjectFromApi | null | undefined,
 ): ProjectEditFormData | undefined {
@@ -1699,30 +1666,14 @@ export function buildProjectEditForm(
     color: project.color ?? '#3b82f6',
     ownerLabel: project.owner?.name ?? project.owner?.email ?? '担当者未設定',
     ...(startDate ? { startDate } : {}),
+    ...(endDate ? { endDate } : {}),
+  };
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    ...(endDate ? { endDate } : {}),
-  };
-}
-
-console.log(
-  buildProjectEditForm({
-    id: 'project_001',
-    name: '教材制作',
-    description: null,
-    color: null,
-    startDate: new Date('2026-05-01T00:00:00.000Z'),
-    endDate: null,
-    owner: { name: null, email: 'owner@example.com' },
-  }),
-);
-```
+日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。呼び出し側の `console.log` も Before と同じです。
 
 **このコードの強み**:
 
@@ -2167,69 +2118,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
 1件だけを取る読み取り専用の手続きなので `.query` を使います。見つからない `id` には `NOT_FOUND` を返し、メンバー以外が直指定しても `canView` の権限チェックで弾きます。最後の `});` で `projectRouter` 全体を閉じます。
 
 ### `src/lib/query-error.ts`
-
-表示と再試行の判断で使う共通関数です。Step 9 で掲載コードから作成した3ブロックを再掲します。作成した6つの関数を確認するための掲載なので書き換える必要はありません。
-
-```typescript
-// filepath: src/lib/query-error.ts
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return typeof value === 'object'
-    && value !== null;
-}
-
-export function httpStatusOf(
-  error: unknown,
-): number | null {
-  if (!isRecord(error)
-    || !isRecord(error['data'])) return null;
-  const status = error['data']['httpStatus'];
-  return typeof status === 'number'
-    ? status
-    : null;
-}
-```
-
-`unknown` のまま `error.data` を読むと型エラーになるため、`isRecord` を通してから段階的に調べます。状態番号が無い通信失敗では `null` を返します。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function isAuthError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 401;
-}
-
-export function isForbiddenError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 403;
-}
-
-export function isUnknownResult(
-  error: unknown,
-): boolean {
-  return isRecord(error)
-    && error['data'] == null;
-}
-```
-
-401と403を分けると、再ログインと一覧へ戻る操作を選べます。`isUnknownResult` は後の日に更新結果が分からない通信失敗を扱うときにも使います。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function shouldRetryQuery(
-  failureCount: number,
-  error: unknown,
-): boolean {
-  return !isAuthError(error)
-    && !isForbiddenError(error)
-    && failureCount < 3;
-}
-```
-
-認証と権限のエラーは同じ要求を送っても解決しません。通信失敗だけを最大3回まで試す条件として各クエリから共通利用します。
+このファイルの全文は Step 9 に順に載っています。
 
 ### `src/app/project/page.tsx`
 

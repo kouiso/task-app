@@ -1595,30 +1595,7 @@ export const taskRouter = createTRPCRouter({
 
 
 ### `src/server/api/root.ts`
-
-**登録済みの router 一覧**:
-
-```typescript
-// filepath: src/server/api/root.ts
-// 完成版: 登録済みの router 一覧
-import { authRouter } from './routers/auth';
-import { projectRouter } from './routers/project';
-import { taskRouter } from './routers/task';
-import { createCallerFactory, createTRPCRouter } from './trpc';
-
-export const appRouter = createTRPCRouter({
-  auth: authRouter,
-  project: projectRouter,
-  task: taskRouter,
-});
-
-export type AppRouter = typeof appRouter;
-
-export const createCaller = createCallerFactory(appRouter);
-```
-
-router を書いただけでは画面から呼べません。この一覧へ `task: taskRouter` を並べたことで、`api.task.getAll` と `api.task.getById` という呼び名が生まれます。`AppRouter` 型を書き出しているのが要点で、画面側はこの型をたどって引数と戻り値を知ります。`comment` や `search` はそれを使う Day で1行ずつ足していきます。
-
+このファイルの全文は Step 0 に順に載っています。
 
 ### `src/component/layout/app-layout.tsx`
 
