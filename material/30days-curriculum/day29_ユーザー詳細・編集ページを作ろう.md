@@ -228,6 +228,8 @@ const userUpdateSchema = z
       });
 ```
 
+`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
+
 `where` の後半は見ている人によって返すタスクを変えます。ADMIN は全件を見られますが、それ以外の人は自分が所属するプロジェクトのタスクだけです。この絞り込みがないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに表示され続けます。`members: { some: { userId: ctx.session.userId } }` はメンバー一覧に自分が入っているプロジェクトのタスクだけを残す条件です。ADMIN は全件を見られる仕様なので空のオブジェクトを展開して条件を足しません。
 
 ```typescript
@@ -2187,8 +2189,6 @@ import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-今日の追加は `TASK_STATUS` の1行だけです。`getById` が担当タスクを絞り込むときに使います。ここを取り込まずに `'DONE'` と文字列で書くと綴りを間違えても TypeScript は黙ったままで絞り込みだけが効かなくなります。他の9行は Day 24 と Day 25 で入れたものなので手元に無い行があればその日の Step へ戻ってください。
-
 **userUpdateSchema**:
 
 ```typescript
@@ -2212,8 +2212,6 @@ const userUpdateSchema = z
   );
 ```
 
-`id` 以外の4項目すべてに `.optional()` が付いているので項目ごとの検査だけでは `{ id }` だけの送信も通ってしまいます。それを許すと何も変えない更新が DB まで届き、`updatedAt` だけが動いたレコードが残ります。末尾の `.refine` は項目単位では表せない「4つのうち1つは入っていること」を最後に足すための書き方です。
-
 **getById の権限判定**:
 
 ```typescript
@@ -2229,8 +2227,6 @@ const userUpdateSchema = z
         });
       }
 ```
-
-`adminProcedure` を使わず `protectedProcedure` の中で判定しているのは本人なら自分の詳細を見られる必要があるからです。管理者専用にすると一般ユーザーは自分のページさえ開けません。判定に使うのが `ctx.session` の中身であるところも要点です。`input` の値で判定すると送信内容を書き換えるだけで誰でも管理者を名乗れます。
 
 **getById が返す基本情報とプロジェクト**:
 
@@ -2256,8 +2252,6 @@ const userUpdateSchema = z
           },
 ```
 
-`select` に列を並べる形にしてあるのでパスワードのハッシュのような返してはいけない列が混ざりません。`USER_DETAIL_SELECT` を展開しているのは一覧と詳細で同じ列の組み合わせを使い回すためです。`projects` の下がもう1段深いのは参加情報の中間テーブルを経由してプロジェクト本体へたどる形になっているからです。
-
 **getById が返す担当タスク**:
 
 ```typescript
@@ -2276,8 +2270,6 @@ const userUpdateSchema = z
                 notIn: [TASK_STATUS.DONE, TASK_STATUS.CANCELLED],
               },
 ```
-
-完了とキャンセルを `notIn` で外しているのは詳細ページで知りたいのが「いま抱えている作業」だからです。過去の全タスクを返すと長く使っている人のページだけ表が何百行にもなります。
 
 **getById が返す担当タスクの所属絞り込み**:
 
@@ -2301,8 +2293,6 @@ const userUpdateSchema = z
       });
 ```
 
-ADMIN 以外の人には自分が所属するプロジェクトのタスクだけを返します。この条件がないとプロジェクトを抜けた後もそのプロジェクトのタスクの題名と期限が自分の詳細ページに残ります。`orderBy` で期限の近い順に並べてあるので画面側で並べ替える処理は要りません。並び順の決定を DB 側へ寄せておくと表示する場所が増えても順番がそろいます。
-
 **getById の見つからない場合**:
 
 ```typescript
@@ -2318,8 +2308,6 @@ ADMIN 以外の人には自分が所属するプロジェクトのタスクだ�
       return user;
     }),
 ```
-
-`findUnique` は見つからないとき例外ではなく `null` を返します。そのまま返すと画面側は「読み込み中」と「存在しない」を区別できません。`NOT_FOUND` へ変換しておくと画面側は届いたエラーの種類で分岐できます。
 
 **update の他人を更新するときの権限判定**:
 
@@ -2338,8 +2326,6 @@ ADMIN 以外の人には自分が所属するプロジェクトのタスクだ�
       }
 ```
 
-`getById` と判定の材料をそろえてあるので閲覧できる相手と更新できる相手の基準がずれません。片方だけ `input` の値で判定していると見ることはできないのに更新だけ通る、という抜け道が生まれます。`const { id, ...data } = input` で `id` を切り離しているのは次のブロックで残りの4項目だけを扱いたいからです。
-
 **update の自分を更新するときの制限**:
 
 ```typescript
@@ -2354,8 +2340,6 @@ ADMIN 以外の人には自分が所属するプロジェクトのタスクだ�
       }
     }
 ```
-
-本人の更新では名前とアバターだけを許して `role` と `isActive` を断ります。ここが無いと一般ユーザーが送信内容へ `role` を足すだけで管理者になれます。画面側の Step 9 でも入力欄そのものを出さない作りにしていますが画面に出ていないことは送れないことと違います。最後に断るのはこの4行です。
 
 **update が更新する項目の組み立て**:
 
@@ -2377,8 +2361,6 @@ ADMIN 以外の人には自分が所属するプロジェクトのタスクだ�
     }
 ```
 
-届いた項目だけを `updateData` に加えます。この教材の Prisma 6 では`undefined` の項目は更新されず、`null` は値を消す指示です。判定を `!== undefined` にそろえると`isActive` の `false` も変更として受け取れます。
-
 **update の書き込みと戻り値**:
 
 ```typescript
@@ -2394,8 +2376,6 @@ ADMIN 以外の人には自分が所属するプロジェクトのタスクだ�
     });
   }),
 ```
-
-完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2669,8 +2649,6 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
-更新した中身をそのまま返しているので画面側は保存の直後に新しい値を持てます。もう一度取りに行く必要がありません。`updatedAt` を含めているのは詳細ページの最終更新日をこの値で描き替えられるようにするためです。ここで全列を返さず `select` で絞るのは`getById` と返す形をそろえて画面側の型を1つに保つためです。
-
 ### `src/app/user/[id]/page.tsx`
 
 **認証・認可の先行確認**:
@@ -2700,8 +2678,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     const trpcError = getTRPCErrorFromUnknown(error);
 ```
 
-`await params` を忘れると Promise に `id` がないという型エラーになります。`getById` を先に呼ぶことで、対象の存在を調べる前に認証と認可を適用できます。
-
 **エラーごとの行き先**:
 
 ```tsx
@@ -2729,8 +2705,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     }
 ```
 
-401・403・404を分けるとログインし直すべき人とURLを直すべき人へ異なる案内を出せます。形式が正しいIDの403は実在しても未発見でも同じ表示になります。
-
 **client 部品への受け渡し**:
 
 ```tsx
@@ -2742,8 +2716,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   return <UserDetailClient userId={id} />;
 }
 ```
-
-完成版の `src/app/user/[id]/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -2792,8 +2764,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 }
 ```
 
-想定外の失敗は元のエラーを投げ直し、成功時だけ client 部品へIDを渡します。500相当の障害を404へ変えないため、原因を追える状態が残ります。
-
 ### `src/app/user/[id]/user-detail-client.tsx`
 
 **外部ライブラリの import**:
@@ -2808,8 +2778,6 @@ import { ja } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Mail, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 ```
-
-`'use client'` が1行目にあるのは、このファイルがブラウザ側で動く部品だという宣言です。この行が無いと `useRouter` が使えません。アイコンを4つとも1行にまとめてあるのは`lucide-react` からの取り込みを2行に分けると Biome が1行へ直すからです。`Pencil` は Step 6 で足した4つ目です。
 
 **プロジェクト内の部品の import**:
 
@@ -2842,8 +2810,6 @@ import { api } from '@/trpc/react';
 
 ```
 
-日付の道具が `format` と `formatDateOnly` の2つある理由がここで一番大事です。`format` は時刻を持つ値へ使い、`formatDateOnly` は期限のような日付だけの値へ使います。取り違えると期限の表示が地域によって1日ずれます。`@/lib/query-error` からの4つは取得の失敗を「ログイン切れ」「権限なし」「見つからない」「一時的な通信失敗」へ分けるための道具です。バッジ類を自作せず取り込んでいるのはDay 24 の一覧と同じ色と文言をそのまま使うためです。
-
 **リトライ判定と props**:
 
 ```tsx
@@ -2857,8 +2823,6 @@ interface UserDetailClientProps {
 }
 
 ```
-
-`shouldRetryUserQuery` を自分で作るのはユーザー取得だけ再試行の条件が1つ違うからです。`shouldRetryQuery` は一時的な通信失敗だけをやり直しますが、404（ユーザーが存在しない）は何度聞き直しても同じ答えです。`httpStatusOf(error) !== 404` を先に確かめて、404以外なら共通の判定へ渡します。
 
 **2つのデータ取得**:
 
@@ -2891,8 +2855,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-取得が2本あるのは見ている本人と表示する相手が別物だからです。`currentUser` は編集ボタンを出すかどうかの判断に使い、`user` は画面に描く中身です。6つの値を別名で受け取るのは、下の分岐で「どちらが」「どう失敗したか」を個別に見るためです。`isLoading` は初回取得中、`isFetching` は再取得中も含む状態です。再試行ボタンを連打できないようにするには後者も必要です。
-
 **エラーの分類**:
 
 ```tsx
@@ -2912,8 +2874,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   const requiredFetching = isCurrentUserFetching || isUserFetching;
 
 ```
-
-`queryErrors` に2本の失敗をまとめるのは、どちらが401や403でも画面を閉じるためです。`authFailed`・`forbidden`・`notFound` の3つに分けることで「ログインし直せばよい」「権限が無い」「存在しない」を出し分けられます。`hasRequiredData` は、失敗した問い合わせに前回のデータが残っているかを確かめます。片方でも失敗してデータがなければ `false` になります。後続の `!currentUser` と `!user` でも確認するため、両方のデータがそろったときだけ詳細を表示します。
 
 **再取得と読み込み中の早期リターン**:
 
@@ -2935,8 +2895,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-`refetchRequiredData` で2本まとめて取り直すのは、再試行ボタンを押した人が「どちらを取り直すか」を考えなくてよいようにするためです。読み込み中はスピナーだけを出します。失敗の種類がもう決まっているときはスピナーではなく次の拒否画面へ進ませるので、`!authFailed && !forbidden && !notFound` が条件に入っています。
-
 **拒否画面を出す条件**:
 
 ```tsx
@@ -2951,8 +2909,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     !user
   ) {
 ```
-
-拒否画面へ進む条件は5つあります。`authFailed`・`forbidden`・`notFound` は失敗の種類が決まった状態です。`hasFetchError && !hasRequiredData` は再試行しても届かず手元にも前回のデータが無い状態、`!currentUser`・`!user` は失敗ではないのに中身が無い状態です。どれか1つでも当てはまれば詳細画面は描きません。
 
 **拒否画面のメッセージ**:
 
@@ -2982,8 +2938,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
           </p>
 ```
 
-見出しと説明文を分けてあるのは「何が起きたか」と「次に何をすればよいか」を読み分けられるようにするためです。どちらも失敗の種類ごとに文言を変えます。権限が無い人には「管理者または本人のみ」と断り、見つからないときは「削除されたかURLが違う」可能性を伝えます。原因の分からない失敗だけ再読み込みを案内します。
-
 **拒否画面のボタンの分岐**:
 
 ```tsx
@@ -3010,8 +2964,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
           >
 ```
 
-ボタンは1つですが押した先は失敗の種類で変わります。ログイン切れは `/login`、権限不足は `/dashboard` へ戻します。404のときだけ `currentUser?.role` を見て、管理者はユーザー一覧へ、それ以外はダッシュボードへ分けます。一般ユーザーにはユーザー一覧画面が無いからです。どれにも当てはまらない失敗は `refetchRequiredData` で取り直します。
-
 **ボタンのラベルと拒否画面の閉じタグ**:
 
 ```tsx
@@ -3034,8 +2986,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-ラベルも行き先と同じ分岐で切り替えます。「再読み込み」と書くのは通信失敗のときだけです。`disabled={requiredFetching}` で再取得中は押せなくしてあるので、連打して同じ通信を何本も投げることはありません。
-
 **権限フラグと画面の開始**:
 
 ```tsx
@@ -3048,8 +2998,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     <AppLayout>
       <div className="container mx-auto max-w-6xl py-8">
 ```
-
-ここまで来たとき `currentUser` と `user` は両方そろっています。比べる相手が `userId` ではなく `user.id` になっているところが要点です。`userId` はURLに打ち込まれた文字列で、まだ誰のものとも決まっていません。`user.id` はサーバーが `getById` で認めた本物のIDです。名前を2つ付けておくとStep 6 の表示条件が `(isAdmin || isOwnProfile)` の1行で読めます。
 
 **取得失敗の警告バナー**:
 
@@ -3075,8 +3023,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
         )}
 ```
 
-`hasFetchError` のままここへ来られるのは、前回取得済みのデータが両方残っている場合だけです。一覧を隠す代わりに、黄色の帯で「前回の内容です」と伝えて再試行ボタンを置きます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。
-
 **戻るボタンとグリッドの開始**:
 
 ```tsx
@@ -3096,8 +3042,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             <Card>
               <CardContent style={{ paddingTop: '2.5rem' }}>
 ```
-
-戻るボタンを置くとURLを直接開いた人にも戻り先を示せます。管理者はユーザー一覧へ戻します。一般ユーザーは一覧を開く権限がないためダッシュボードへ戻します。`isAdmin` で行き先と文言をそろえます。`md:grid-cols-12` に `md:` が付いているので狭い画面では左右に割らず上下へ積まれます。スマートフォンの幅で12列を横に割ると1列がどちらも読めない幅になります。
 
 **左カラムのアバターとバッジ**:
 
@@ -3120,8 +3064,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-`user.avatar` と `user.name` はどちらもデータベース側で空を許している列です。`{user.avatar && ...}` で囲まないとURLの無い人のページで行き先の無い画像を読み込もうとして枠が壊れます。`user.name?.[0]` の `?.` を外すと名前未設定のユーザーのページが Day 26 で作ったエラー画面へ切り替わります。`user.name || user.email` は名前が無い人をメールアドレスで呼ぶための代わりです。
-
 **左カラムのメールアドレス**:
 
 ```tsx
@@ -3138,8 +3080,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     </div>
                   </div>
 ```
-
-`Separator` を1本挟むのは線の上と下で情報の性質が変わるからです。上は名前とバッジで誰かを示し、下はメールと日付でその人の属性を並べます。線が無いと縦に9行続くだけになり、目の休む場所がありません。ここで決めた「アイコン・小さい見出し・値」の形を、下の2つがそのまま繰り返します。
 
 **左カラムの登録日**:
 
@@ -3158,8 +3098,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     </div>
                   </div>
 ```
-
-表示の形から時刻を落としているのは登録日で知りたいのが「いつからいる人か」だけだからです。`createdAt` と `updatedAt` は必須の列なので `getById` が返した日時をそのまま整形します。ユーザー全体の取得状態は先に判定しています。
 
 **左カラムの最終更新日**:
 
@@ -3181,8 +3119,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 
 ```
 
-最終更新日を画面に出しておくとStep 10 の保存が本当に届いたかを自分で確かめられます。`updatedAt` はレコードが更新されるたびに DB 側で書き換わる列だからです。トーストは数秒で消えるので通知が出ただけでは証拠になりません。末尾の `</div>` はメールから最終更新日までを囲んでいた枠を閉じています。
-
 **左カラムの編集ボタン**:
 
 ```tsx
@@ -3201,8 +3137,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
           </div>
 
 ```
-
-ボタンを左カラムの下端へ置いたのはプロフィールを読んでから操作へ進む順番にするためです。`<>` で `Separator` とボタンをまとめてあるので権限が無い人には線も出ません。条件を外すと一般ユーザーにも他人のページの編集ボタンが見えます。押した先はサーバーが断りますが押せると思わせる表示そのものが誤解の元です。
 
 **右カラムの参加プロジェクトのバッジ**:
 
@@ -3230,8 +3164,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </div>
 ```
 
-プロジェクトをバッジで、タスクを表で出しているのは比べる項目の数が違うからです。プロジェクトは名前だけなので横へ流し、タスクは4つの項目を並べて縦に読ませます。背景色を `className` ではなく `style` で当てているのはTailwind CSS がその場で決まる色をクラス名として作れないからです。`md:col-span-8` の `8` は左の `4` と足して12になる数です。
-
 **右カラムのプロジェクトが無い場合**:
 
 ```tsx
@@ -3246,8 +3178,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             </Card>
 
 ```
-
-`) : (` から下が、参加プロジェクトが0件の人に出る表示です。ここを書かないと入ったばかりの人のページだけ見出しの下が空白になります。空白は「読み込みに失敗した」とも読めるので確かめた結果として文章を1行置きます。
 
 **右カラムの担当タスクの見出し**:
 
@@ -3270,8 +3200,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       </TableRow>
                     </TableHeader>
 ```
-
-`CardContent` へ `p-0` を付けてあるのは表の枠線とカードの内側の余白が二重になるのを防ぐためです。`assignedTasks` が無い人でも `&&` のおかげで表を描こうとして止まることはありません。
 
 **右カラムのタスク行**:
 
@@ -3301,8 +3229,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </Table>
 ```
 
-`onClick` を `TableRow` そのものへ付けているので行のどこを押してもタスク詳細へ移動します。タイトルの文字だけを押せる形にすると押せる場所が細くなって当てにくくなります。`hover:bg-muted/50` で色が変わるのは押せる場所だと目で分かるようにするためです。期限だけ `format` を使わず `formatDateOnly` に任せているのは、`dueDate` が時刻を UTC の0時にそろえて保存してあるからです。`new Date()` で読み直して各自の時計へ合わせるとUTC より西の地域では前日にずれます。
-
 **右カラムのタスクが無い場合**:
 
 ```tsx
@@ -3317,8 +3243,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             </Card>
 ```
 
-タスクが0件の人にも「担当中のタスクはありません」と1行置きます。`p-6` で表のときと同じだけ内側へ余白を取ってあるので、枠の中で文字だけが端へ寄りません。末尾の `</Card>` で右カラムの2枚目のカードを閉じています。
-
 **全体の閉じタグ**:
 
 ```tsx
@@ -3331,8 +3255,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   );
 }
 ```
-
-完成版の `src/app/user/[id]/user-detail-client.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -3662,8 +3584,6 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
 }
 ```
 
-閉じタグが4段続くのは右カラム・グリッド・中央寄せの箱・全体のレイアウトを順にたたんでいるからです。数を1つ間違えるとエラーはこの行ではなくファイルの末尾に出ます。写経した結果が動かないときはここの段の数だけを先に数え直してください。
-
 ### `src/app/user/[id]/edit/page.tsx`
 
 **認証・認可の先行確認**:
@@ -3693,8 +3613,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     const trpcError = getTRPCErrorFromUnknown(error);
 ```
 
-編集URLを直接開かれても、詳細ページと同じ `getById` で認証と認可を先に適用します。詳細画面から来たという前提には頼りません。
-
 **エラーごとの行き先**:
 
 ```tsx
@@ -3722,8 +3640,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     }
 ```
 
-権限がある人にだけ未発見の404を返します。形式が正しいIDに権限がない人には実在を知らせません。編集できる条件を画面に残します。
-
 **client 部品への受け渡し**:
 
 ```tsx
@@ -3735,8 +3651,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   return <UserEditClient userId={id} />;
 }
 ```
-
-完成版の `src/app/user/[id]/edit/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -3785,8 +3699,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 }
 ```
 
-成功したときだけ編集フォームを描画します。分類していないエラーは `error.tsx` に届くように投げ直します。
-
 ### `src/app/user/[id]/edit/user-edit-client.tsx`
 
 **外部ライブラリの import**:
@@ -3804,8 +3716,6 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
-
-`zodResolver` はzod で書いた検査ルールを `useForm` へつなぐ継ぎ手です。これが無いと `useForm` は実際の入力を検査せず、名前を空のまま送信してもその場で止まりません。サーバーへ届いてから断られるので押した場所と赤字の出る場所が離れます。読者は原因を追いにくくなります。`useEffect` と `toast` はフォームの初期値の流し込みと保存結果の通知に使います。
 
 **プロジェクト内の部品の import**:
 
@@ -3835,8 +3745,6 @@ import { api } from '@/trpc/react';
 
 ```
 
-`@/lib/constant/roles` からの3つを1行に集めているのは同じ場所からの取り込みを何本も並べるとエラーになるからです。`isUserRole` は Step 9 の型ガード、`USER_ROLE` は初期値、`USER_ROLE_LABELS` は選択肢の文言に使います。`@/lib/query-error` の4つは詳細ページと同じく、取得の失敗を種類別に分ける道具です。`normalizeAvatarValue` は空欄を送る形へ整える関数です。
-
 **リトライ判定とロールの定数**:
 
 ```tsx
@@ -3848,8 +3756,6 @@ const shouldRetryUserQuery = (failureCount: number, error: unknown) =>
 const USER_ROLE_VALUES = ['USER', 'ADMIN'] as const;
 
 ```
-
-`shouldRetryUserQuery` は詳細ページと同じで、404は再試行しても結果が変わらないため外します。`USER_ROLE_VALUES` へ `as const` を付けているのは `z.enum` へ渡す値を「USERかADMINだけ」の型へ絞るためです。普通の文字列の配列のまま渡すとロールの型がゆるいまま残ります。
 
 **zod スキーマと型**:
 
@@ -3865,8 +3771,6 @@ const userEditSchema = z.object({
 type UserEditFormValues = z.infer<typeof userEditSchema>;
 
 ```
-
-`avatar` に `.or(z.literal(''))` を足してあるのは任意の項目として空欄も許すためです。`.url()` だけにすると何も入れていない人が保存できません。`z.infer` で型を作っているので入力の形を2か所に書く必要がありません。スキーマを直せば型も追いかけて変わるため検査と型の食い違いが起きません。
 
 **props と useForm の初期値**:
 
@@ -3892,8 +3796,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-`defaultValues` を埋めておくのはサーバーからデータが届く前にフォームが1度描かれるからです。ここを省くと初期状態が定まらず、入力欄が管理下に入ったかどうかの判定が期待どおりになりません。中身は下の `form.reset` で本物のデータへ差し替わるのでこの値が使われるのは最初の一瞬だけです。
-
 **現在ユーザーの取得と権限フラグ**:
 
 ```tsx
@@ -3912,8 +3814,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   const canEditUser = isAdmin || isOwnProfile;
   const canManageAccount = isAdmin && !isOwnProfile;
 ```
-
-真偽値を2段に分けてあるのが要点です。`canEditUser` はページへ入れる権限、`canManageAccount` はロールとアクティブ状態を触れる権限です。後者に `!isOwnProfile` が入っているので管理者が自分の権限を自分で下げる操作が塞がれます。
 
 **編集対象の取得**:
 
@@ -3936,8 +3836,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   );
 
 ```
-
-`enabled` で権限を確かめてから取得するため入れない人の画面では通信そのものが起きません。`!!currentUser` が条件に入っているのは `currentUser` が届く前に `canEditUser` を確定できないからです。`retry: shouldRetryUserQuery` は詳細ページと同じく、存在しないユーザーを何度も聞き直さないためです。
 
 **保存する mutation**:
 
@@ -3965,8 +3863,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-`invalidate` が4つ並ぶのは同じ人の情報を4か所が別々に覚えているからです。詳細の `getById`、一覧の `getAll`、サイドバーへ名前を出す `getCurrentUser`、そしてセッションです。1つ書き忘れると名前を変えたのにサイドバーだけ古いまま残ります。`Promise.allSettled` でまとめてあるのでどれか1つが失敗しても残りの取り直しは進み、通知と画面の移動までたどり着きます。
-
 **フォームへ値を流し込む useEffect**:
 
 ```tsx
@@ -3985,8 +3881,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-`form.reset` を `useEffect` の中へ入れているのは`user` の到着が最初の描画より後になるからです。描画の途中で値を書き換えるとReact が同じ描画を繰り返します。`?? ''` で空を空文字へ寄せているのは入力欄に `null` を渡すとブラウザが警告を出すからです。`reset` は初期値そのものを置き換えるのでこの後の取り消し操作もサーバーの値へ戻ります。
-
 **送信する値の組み立て**:
 
 ```tsx
@@ -4003,8 +3897,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   };
 
 ```
-
-`canManageAccount` で分岐して項目ごと落としているのはStep 0 の `update` が本人編集で `role` を受け取ると `FORBIDDEN` を返すからです。値を `undefined` にするのではなく、項目そのものを送らない形にします。`normalizeAvatarValue` は空文字を `null` へ寄せます。空文字をそのまま送るとサーバー側の `.url()` が断り、値を送らないと登録済みの画像が消せません。
 
 **エラーの分類**:
 
@@ -4026,8 +3918,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-詳細ページと同じ5つの判定です。違いは `requiredLoading` だけで、`canEditUser &&` を足してあるのは入れない人の `user` 取得が `enabled` で止まっているためです。動かない通信の読み込みを待っても読み込み中のまま止まります。
-
 **再取得と読み込み中の早期リターン**:
 
 ```tsx
@@ -4047,8 +3937,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 
 ```
-
-`refetchRequiredData` は `canEditUser` のときだけ `user` も取り直します。権限の無い人の画面では `user` の取得が `enabled` で止まっているので取り直す対象がありません。読み込み中で、失敗の種類がまだ決まっていない間はスピナーを出します。
 
 **拒否画面の条件とメッセージ**:
 
@@ -4079,8 +3967,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
           </p>
 ```
 
-詳細ページと同じ分岐です。`!currentUser` まで含めてあるのは読み込みが終わっても中身が空の場合があるからです。そのまま下へ進むと `currentUser?.role` がずっと `undefined` のままで権限の判定が必ず「権限なし」へ倒れ、ログイン済みの本人にまで拒否画面が出ます。メッセージは「見る」ではなく「編集する」権限の文言になっています。
-
 **拒否画面のボタンの分岐**:
 
 ```tsx
@@ -4107,8 +3993,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
           >
 ```
 
-行き先の分け方も詳細ページと同じです。404のとき管理者をユーザー一覧へ戻すのは一般ユーザーにはユーザー一覧画面が無いからです。ここでは `isAdmin` を使っているので `currentUser` が無い途中の状態でも安全に `false` へ倒れます。
-
 **ボタンのラベルと拒否画面の閉じタグ**:
 
 ```tsx
@@ -4131,8 +4015,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-ラベルも行き先と同じ分岐で切り替えます。「再読み込み」と書くのは通信失敗のときだけです。
-
 **権限が無い場合の拒否画面**:
 
 ```tsx
@@ -4154,8 +4036,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 
 ```
-
-ここへ来るのは失敗ではなく権限が無いと確定した場合だけです。サーバーのエラーを見せずに、自分でこの画面を返しています。ページ側の `edit/page.tsx` が先に断った場合と同じ見た目にしてあるので、どちらが止めても読者には同じ画面が出ます。
 
 **編集対象のデータが無い場合**:
 
@@ -4181,8 +4061,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   }
 
 ```
-
-失敗が確定していないのに `user` が無い場合の保険です。この分岐より下では `user.email` へ直接触るため、ここを通さないと型が値の無い可能性を指摘し続けます。スピナーではなく文章とボタンを出すのは、読み込みが終わった後でもここへ来る場合があるからです。
 
 **画面の開始と警告バナー**:
 
@@ -4211,8 +4089,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
         )}
 ```
 
-前回取得済みのデータが残っているときは、フォームを隠さず黄色の帯で知らせます。「入力内容は保持されています」と書くのは、入力の途中で再取得に失敗しても打った文字は消えないことを先に伝えるためです。
-
 **戻るボタンとカードの枠**:
 
 ```tsx
@@ -4234,8 +4110,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
           <CardContent>
 ```
 
-横幅を `max-w-md` に絞ってあるのは入力欄が横に伸びすぎると視線の動く距離が長くなるからです。詳細ページは一覧を並べるので `max-w-6xl` でしたがフォームは1列で読ませます。戻る先を `/user/${userId}` にしているので編集をやめた人は一覧ではなく元の詳細ページへ帰ります。
-
 **フォームの開始とアバターのプレビュー**:
 
 ```tsx
@@ -4252,8 +4126,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
               </div>
 
 ```
-
-`form.watch` はその項目の今の値を読み出して変わるたびに描き直させる書き方です。だからURLを1文字打つごとにプレビューが差し替わります。`handleSubmit` という名前が2つ出てきますが、外側の `form.handleSubmit` が react-hook-form の検査付き送信で、内側がこのファイルで定義した送信処理です。`handleSubmit` が呼ばれるのは zod の検査を全部通った後だけです。
 
 **名前の入力欄**:
 
@@ -4280,8 +4152,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-`{...form.register('name')}` の1行で、この入力欄が `useForm` の管理下へ入ります。`register` は `name`・`onChange`・`onBlur`・`ref` を渡し、入力値を読み取れるようにします。エラーの文言を `form.formState.errors` から読んでいるので文章はスキーマ側にだけ置けます。`{' '}` は「名前」と `*` の間の空白を保つ書き方で、JSX はタグの直前の空白を削ってしまうからです。
-
 **メールアドレスとアバターURLの入力欄**:
 
 ```tsx
@@ -4306,8 +4176,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-メールの欄だけ `register` を使わず `disabled` にしてあるのは送信の対象から外しているからです。ログインに使う値なのでここで気軽に書き換えられると本人が締め出されます。それでも欄ごと消さないのはいま誰を編集しているのかを画面で確かめられるようにするためです。開くページを間違えたことに、その場で気付けます。
-
 **ロール選択の入口**:
 
 ```tsx
@@ -4331,8 +4199,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                       </SelectTrigger>
 ```
 
-ここだけ `register` を使わず、`value` と `onValueChange` の2つでつないでいます。`Select` は素の `<select>` タグではなく、ボタンと一覧を組み合わせて作られた部品なので`register` が待っている `onChange` が起きないからです。`isUserRole` で確かめてから渡すのは`onValueChange` が渡す値の型が `string` までしか絞られないためです。`canManageAccount` で囲んでいるので本人の編集画面にはこの欄自体が出ません。
-
 **ロールの選択肢**:
 
 ```tsx
@@ -4349,8 +4215,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
                   </div>
 
 ```
-
-選択肢を `USER_ROLE_LABELS` から作っているのでロールを1つ増やしたときにこの画面を直す必要がありません。文言も定数側にあるため一覧の表示とこの選択肢で呼び名が食い違いません。ここへ `<SelectItem value="USER">ユーザー</SelectItem>` と手書きすると増やしたロールだけ選べない状態になります。
 
 **アクティブ状態の切り替え**:
 
@@ -4371,8 +4235,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-`checked === true` と書くのは`onCheckedChange` が `'indeterminate'` という文字列を渡す場合があるからです。この文字列は真として扱われるので比較を省くと中途半端な状態が「オン」として保存されます。すべての入力欄に `disabled={updateUser.isPending}` を付けているのは保存中に値を変えられると送った内容と画面の見た目が食い違うからです。
-
 **保存の失敗を残すアラート**:
 
 ```tsx
@@ -4387,8 +4249,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
               )}
 
 ```
-
-トーストと同じ内容をここへも出すのはトーストが数秒で消えるからです。目を離している間に失敗すると通知を見逃した読者には何も起きなかったように見えます。`Alert` はフォームの中に残り続けるので後から画面へ戻っても理由が読めます。
 
 **送信ボタンとキャンセルボタン**:
 
@@ -4412,8 +4272,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
             </form>
 ```
 
-キャンセル側の `type="button"` は書き忘れると事故になる1行です。`<button>` はフォームの中に置くと指定が無ければ送信ボタンとして扱われます。つまり `type` を省くとキャンセルを押した瞬間に保存が走ります。取り消すつもりの操作が保存になるので読者は自分が何をしたのか分かりません。
-
 **全体の閉じタグ**:
 
 ```tsx
@@ -4426,8 +4284,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   );
 }
 ```
-
-完成版の `src/app/user/[id]/edit/user-edit-client.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -4822,8 +4678,6 @@ export function UserEditClient({ userId }: UserEditClientProps) {
   );
 }
 ```
-
-`</form>` を閉じた後、カードの中身・カード・中央寄せの箱・全体のレイアウトを順にたたみます。Step 9 と Step 10 の途中では「閉じタグが足りない」というエラーが出続けていましたがこの6行でそれが消えます。エラーが残る場合は`</>` と `)}` の組が1つ足りていないところを探してください。
 
 ## 今日のまとめ
 
