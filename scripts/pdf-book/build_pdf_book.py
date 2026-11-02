@@ -1602,6 +1602,30 @@ def prepare_work_dir() -> None:
     for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
                  if fmt == "truetype"}:
         shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
+    # macOS では Chromium が fontconfig ではなく CoreText で解決するため、
+    # XDG_DATA_HOME に置いても計測側へ届かない。ユーザーフォントへ同じ実体を
+    # 置いて、測る側と描く側の書体をそろえる（Darwin 版の同対策）。
+    if sys.platform == "darwin":
+        user_fonts = Path.home() / "Library" / "Fonts"
+        user_fonts.mkdir(parents=True, exist_ok=True)
+        for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
+                     if fmt == "truetype"}:
+            target = user_fonts / name
+            if not target.exists():
+                shutil.copy2(WORK_DIR / "fonts" / name, target)
+
+
+def unescape_table_cell_pipes(markup: str) -> str:
+    """表のセル内に残る `\\|` をパイプ文字へ戻す。
+
+    GFM ではセル内の `\\|` はセル区切りから逃がすためのエスケープで、
+    コード片の中でも同じ扱いになる。vfm はコード片内のエスケープを戻さず
+    バックスラッシュごと出力するので、セル内だけ `|` に復元する。
+    セルの外の `\\|` は実際のバックスラッシュなので触らない。
+    """
+    def cell(match: re.Match) -> str:
+        return match.group(0).replace("\\|", "|")
+    return re.sub(r"<t[dh]\b[^>]*>.*?</t[dh]>", cell, markup, flags=re.S)
 
 
 def work_slug(stem: str) -> str:
@@ -1698,6 +1722,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         protected = protect_prose_latin(
             protect_table_latin(join_cjk_soft_breaks(converted.stdout))
         )
+        protected = unescape_table_cell_pipes(protected)
         # 空白を含む長い行内コードを空白の位置で分けてから、前で改行できない字で
         # 始まるコード（分けた後の先頭の片を含む）の直前へ <wbr> を置く。
         # restructure_tables は一部の表のセルを dt/dd へ変えるため、
