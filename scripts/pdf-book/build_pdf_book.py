@@ -1668,14 +1668,48 @@ def unescape_table_cell_pipes(markup: str) -> str:
     正しく復元済みで、残った `\\|` は本物のバックスラッシュなので触らない。
     セルの外の `\\|` も本物のバックスラッシュなので触らない。
     """
-    def code(match: re.Match) -> str:
-        return match.group(0).replace("\\|", "|")
+    class Restorer(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=False)
+            self.parts: list[str] = []
+            self.cell_depth = 0
+            self.code_depth = 0
+            self.pre_depth = 0
 
-    def cell(match: re.Match) -> str:
-        return re.sub(r"<code\b[^>]*>.*?</code>", code,
-                      match.group(0), flags=re.S)
+        def _track(self, tag: str, delta: int) -> None:
+            if tag in ("td", "th"):
+                self.cell_depth += delta
+            elif tag == "code":
+                self.code_depth += delta
+            elif tag == "pre":
+                self.pre_depth += delta
 
-    return re.sub(r"<t[dh]\b[^>]*>.*?</t[dh]>", cell, markup, flags=re.S)
+        def handle_starttag(self, tag: str, attrs) -> None:
+            self._track(tag, 1)
+            self.parts.append(self.get_starttag_text())
+
+        def handle_startendtag(self, tag: str, attrs) -> None:
+            self.parts.append(self.get_starttag_text())
+
+        def handle_endtag(self, tag: str) -> None:
+            self._track(tag, -1)
+            self.parts.append(f"</{tag}>")
+
+        def handle_data(self, data: str) -> None:
+            if self.cell_depth > 0 and self.code_depth > 0 and self.pre_depth == 0:
+                data = data.replace("\\|", "|")
+            self.parts.append(data)
+
+        def handle_entityref(self, name: str) -> None:
+            self.parts.append(f"&{name};")
+
+        def handle_charref(self, name: str) -> None:
+            self.parts.append(f"&#{name};")
+
+    restorer = Restorer()
+    restorer.feed(markup)
+    restorer.close()
+    return "".join(restorer.parts)
 
 
 def work_slug(stem: str) -> str:

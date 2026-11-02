@@ -49,6 +49,18 @@ class TableCellPipeUnescapeTest(unittest.TestCase):
                 '<td>t \\| <code>c \\| d</code> u</td>'),
             '<td>t \\| <code>c | d</code> u</td>')
 
+    def test_code_inside_pre_is_untouched(self):
+        # <pre> 内のコードブロックは本物のバックスラッシュなので触らない。
+        source = '<td><pre><code>/\\|/</code></pre></td>'
+        self.assertEqual(unescape_table_cell_pipes(source), source)
+
+    def test_code_attributes_are_untouched(self):
+        # 属性値（data-original 等）の `\\|` はテキストではないので触らない。
+        source = '<td><code data-original="\\|">x \\| y</code></td>'
+        self.assertEqual(
+            unescape_table_cell_pipes(source),
+            '<td><code data-original="\\|">x | y</code></td>')
+
 
 if __name__ == "__main__":
     unittest.main()
