@@ -257,8 +257,8 @@ def main() -> int:
         'scaffold scripts.vercel-build="prisma generate && next build"': (
             'scripts.vercel-build="prisma generate && next build"' in scaffold_script
         ),
-        'scaffold scripts.postinstall="prisma generate"': (
-            'scripts.postinstall="prisma generate"' in scaffold_script
+        'scaffold scripts.postinstall="prisma generate && npx patch-package"': (
+            'scripts.postinstall="prisma generate && npx patch-package"' in scaffold_script
         ),
         "source production dependency audit overrides": (
             dependencies.get("next") == "^15.5.24"
