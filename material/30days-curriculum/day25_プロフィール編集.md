@@ -2105,15 +2105,11 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-`avatarUrl` と `initial` の2つを作るのに `if` が5つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。`displayName`・`createdAtLabel`・`updatedAtLabel` も同じ形があと3つ続きます。
+アイコン表示の `avatarUrl` と頭文字の `initial` を作るのに `if` が5つ並びました。どれも「`currentUser` があるか」「その中の項目があるか」を2段で確かめています。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  return {
-    avatarUrl,
-    initial,
-    // displayName・createdAtLabel・updatedAtLabel も同じ形で作って返す
-  };
+  return { avatarUrl, initial };
 }
 ```
 
@@ -2129,29 +2125,21 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-function formatProfileDate(value: NonNullable<CurrentUser>['createdAt']) {
-  return format(new Date(value), 'yyyy年MM月dd日', { locale: ja });
-}
-
 export function buildProfileViewModel(currentUser: CurrentUser) {
   return {
     avatarUrl: currentUser?.avatar ?? '',
-    displayName: currentUser?.name ?? '未設定',
-    email: currentUser?.email ?? '',
     initial: currentUser?.name?.[0]?.toUpperCase() ?? '?',
-    createdAtLabel: currentUser ? formatProfileDate(currentUser.createdAt) : '-',
-    updatedAtLabel: currentUser ? formatProfileDate(currentUser.updatedAt) : '-',
   };
 }
 ```
 
-同じ内容が1項目1行になりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
+同じ2項目が1行ずつになりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
 
 **このコードの強み**:
 
 - `?.` で「存在するときだけ進む」ことを1行で表せる
 - `??` で null / undefined のときの表示を近くに置けるので代替値が読みやすい
-- 日付整形を helper に寄せることで、登録日と更新日のルールを1か所でそろえられる
+- 表示項目が増えるときは1行足すだけで済み、`let` と `if` を重ねなくてよい
 
 #### 覚えておきたいエッセンス
 
