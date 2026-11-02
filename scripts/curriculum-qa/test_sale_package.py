@@ -340,8 +340,8 @@ def _shell_lines(text: str) -> list[str]:
         commands = _split_commands(_strip_unquoted_comment(line))
         if (
             commands
-            and _tokenize(commands[0])[:1] == ["if"]
-            and not any(_tokenize(command)[:1] == ["then"] for command in commands)
+            and re.match(r"^\s*if(?:\s|$)", commands[0])
+            and not any(re.match(r"^\s*then(?:\s|$)", command) for command in commands)
         ):
             pending = line.rstrip() + (" " if _tokenize(commands[-1]) == ["if"] else "; ")
             continue
@@ -353,11 +353,11 @@ def _shell_lines(text: str) -> list[str]:
 def _is_gate4_status_condition(line: str) -> bool:
     """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
     commands = _split_commands(_strip_unquoted_comment(line))
-    if not commands or _tokenize(commands[0])[:1] != ["if"]:
+    if not commands or not re.match(r"^\s*if(?:\s|$)", commands[0]):
         return False
     for index, command in enumerate(commands):
         argv = _tokenize(command)
-        if argv[:1] == ["then"]:
+        if re.match(r"^\s*then(?:\s|$)", command):
             break
         condition = argv[1:] if index == 0 else argv
         if condition[:1] == ["["] and condition[-1:] == ["]"]:
@@ -500,6 +500,24 @@ def check_workflow_wiring() -> tuple[int, int]:
             "then の前が改行でも実ファイルの集計条件は合格",
             WORKFLOW.read_text(encoding="utf-8"),
             GATE4_PHASE.read_text(encoding="utf-8").replace("; then", "\nthen"),
+            0,
+        ),
+        (
+            "引用した if と then は制御構文として受け入れない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                '\'if\' [ "$salepkg_status" -ne 0 ]; \'then\'',
+            ),
+            1,
+        ),
+        (
+            "条件中の引用した then は条件の終わりではない",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then',
+                'if :; "then"; [ "$salepkg_status" -ne 0 ]; then',
+            ),
             0,
         ),
         (
