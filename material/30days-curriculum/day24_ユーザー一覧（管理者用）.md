@@ -1107,8 +1107,6 @@ import { adminProcedure, createTRPCRouter } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-取り込むのは今日の `getAll` が使う6つだけです。手元のファイルに `bcrypt` や `protectedProcedure` が並んでいたらそれは先の Day で足す道具を早く書きすぎています。使っていない取り込みが残っていると保存のたびに未使用の警告が出続け、本当に直すべき警告が混ざって見えなくなります。
-
 **getAll の入口と入力の定義**:
 
 ```typescript
@@ -1128,8 +1126,6 @@ export const userRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const where: Prisma.UserWhereInput = {};
 ```
-
-`adminProcedure` で始まっているかを最初に確かめてください。ここが `protectedProcedure` になっているとログインさえしていれば誰でも全員のメールアドレスを受け取れます。画面側の `if (!isAdmin)` は書き換えられる場所で動くので他人の情報を守っているのはこの1語だけです。`.optional()` が2つ付いているのは絞り込みの条件をまだ画面から渡していないためです。
 
 **絞り込みと取得**:
 
@@ -1156,8 +1152,6 @@ export const userRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1205,8 +1199,6 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
-`isActive` の判定だけ `!== undefined` になっているのは`false` が意味を持つ値だからです。`if (input?.isActive)` と書くと無効なアカウントだけを見たいという指定が「指定なし」として捨てられます。`select` を書かずに `findMany` を呼ぶとパスワードのハッシュまで画面へ送られます。返してよい列を並べておけばテーブルに列を足したときも勝手に外へ出ません。
-
 ### `src/server/api/root.ts`
 
 **import**:
@@ -1223,8 +1215,6 @@ import { taskRouter } from './routers/task';
 import { userRouter } from './routers/user';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
-
-この並びはファイル名のアルファベット順で、保存すると整形ツールが自動でこの形へ直します。手で並べ替える必要はありません。`userRouter` の1行が抜けていると次のブロックの `user: userRouter` で名前が見つからないという型エラーが出ます。
 
 **ルーターの登録と書き出し**:
 
@@ -1245,8 +1235,6 @@ export type AppRouter = typeof appRouter;
 
 export const createCaller = createCallerFactory(appRouter);
 ```
-
-完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -1275,8 +1263,6 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-こちらの並びは教材で作った時系列に従い、`user` が最後に来ます。上の import 側と順番が違って見えますが動作は変わりません。時系列を保っておくと`root.ts` を開いたときにどの Day で何が増えたのかを上から順にたどれます。下2行は前の Day から置いてあるもので今日は触りません。
-
 ### `src/app/user/page.tsx`
 
 **外部ライブラリの import**:
@@ -1291,8 +1277,6 @@ import { ja } from 'date-fns/locale';
 import { Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 ```
-
-先頭の `'use client'` は`useRouter` をこのページで使うための宣言です。この1行が無いとNext.js はページをサーバー側で組み立てようとしてブラウザにしか無い仕組みを呼んだところで止まります。並びがアルファベット順になっているのは保存すると整形ツールが並べ替えるからです。書いた順番と違っていても手で直す必要はありません。
 
 **プロジェクト内の import**:
 
@@ -1318,8 +1302,6 @@ import { isAuthError, isForbiddenError, shouldRetryQuery } from '@/lib/query-err
 import { api } from '@/trpc/react';
 ```
 
-`@/component/ui/...` が単数形になっている点はこれまでの Day と同じで、複数形で書くとファイルが見つからないというエラーが起動時に出ます。`Table` の6つをまとめて取り込んでいるのは表の外枠・見出し行・本体・行・セルがそれぞれ別の部品として分かれているからです。1つでも欠けるとその部分だけタグが見つからないと言われます。
-
 **ユーザー情報の取得**:
 
 ```typescript
@@ -1339,8 +1321,6 @@ export default function UsersPage() {
   const isAdmin = currentUser?.role === USER_ROLE.ADMIN;
 ```
 
-ユーザー情報ではロールだけでなく、読み込み・失敗・再取得の状態も受け取ります。401や403を繰り返し送らないため、共通の `shouldRetryQuery` をqueryへ渡します。
-
 **ユーザー一覧の取得**:
 
 ```typescript
@@ -1358,8 +1338,6 @@ export default function UsersPage() {
     retry: shouldRetryQuery,
   });
 ```
-
-`enabled: isAdmin` が抜けると一般ユーザーがページを開いた瞬間にも `getAll` へリクエストが飛びます。サーバーは管理者権限が必要ですと返すため情報は漏れませんが、不要な通信が発生します。`retry` は401と403を繰り返し送らず、500だけを最大3回まで再試行します。
 
 **取得状態の判定**:
 
@@ -1384,8 +1362,6 @@ export default function UsersPage() {
   };
 ```
 
-401・403はキャッシュがあっても一覧を隠します。500でデータが残っている場合だけ、前回取得した内容と警告を一緒に表示します。
-
 **ローディング**:
 
 ```typescript
@@ -1399,8 +1375,6 @@ export default function UsersPage() {
     );
   }
 ```
-
-読み込み中は権限カードを先に出しません。ユーザー情報が届く前の `isAdmin` は `false` なので、順番を逆にすると管理者にも権限不足が一瞬表示されるためです。
 
 **初回取得エラー**:
 
@@ -1425,8 +1399,6 @@ export default function UsersPage() {
     );
   }
 ```
-
-初回500をここで返すため、その後の `!isAdmin` は通信失敗を権限不足として誤表示しません。取得失敗と0件の成功も区別できます。
 
 **認証・権限エラー**:
 
@@ -1454,8 +1426,6 @@ export default function UsersPage() {
   }
 ```
 
-認証・認可エラーでは一覧の有無を調べる前に返します。キャッシュにユーザー情報が残っていても、現在の権限で読めない内容は画面へ出しません。
-
 **前回の一覧を示す警告**:
 
 ```typescript
@@ -1476,8 +1446,6 @@ export default function UsersPage() {
           </div>
         )}
 ```
-
-この警告へ進むのは、500が発生しても表示可能なキャッシュが残っている場合だけです。再試行中はボタンを無効にし、同じqueryを重ねて送らないようにします。
 
 **ページヘッダーと列の定義**:
 
@@ -1502,8 +1470,6 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
 ```
-
-ここまで届くのは上の3つの判定を通り抜けた場合だけです。だから本体では `isAdmin` を確かめ直しません。`TableHead` の個数と、次のブロックから並べる `TableCell` の個数はそろえます。片方だけ増やすとその行から下の列がすべて1つずつ横にずれます。エラーは出ないので見た目のずれで気づくしかありません。
 
 **行の描画とバッジ**:
 
@@ -1531,8 +1497,6 @@ export default function UsersPage() {
                     </TableCell>
 ```
 
-`user.name?.[0]?.toUpperCase()` の `?.` を2回はさむのは名前が未設定のユーザーが1人いるだけで式が例外を投げ、一覧全体が真っ白になるのを防ぐためです。バッジの2つは値を見た目へ翻訳する仕事を引き受ける部品です。`user.role` をそのまま置くと画面には `ADMIN` という文字が出るので管理者を探すたびに1行ずつ読む作業が発生します。
-
 **登録日と詳細ボタン**:
 
 ```typescript
@@ -1555,8 +1519,6 @@ export default function UsersPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
 ```
-
-取得したユーザーの `createdAt` は必須項目です。API が登録日を選んで返すのでその値を整形します。`aria-label="詳細"` で読み上げ用の名前を付け、`title="詳細"` でマウスを載せたときにも名前を表示します。
 
 **編集ボタンとテーブルの閉じタグ**:
 
@@ -1582,8 +1544,6 @@ export default function UsersPage() {
         </Card>
 ```
 
-`))}` の3文字は別のものを閉じています。内側の丸括弧は `map` に渡した関数が返す JSX の囲み、外側の丸括弧は `map` の呼び出し、波括弧は JSX の中に JavaScript を書くための入れ物です。数が合わないとエラーの行番号はこの近くではなくファイルの末尾を指すので開いた順の逆にたどって数えてください。
-
 **空状態と最後の閉じタグ**:
 
 ```typescript
@@ -1599,8 +1559,6 @@ export default function UsersPage() {
   );
 }
 ```
-
-完成版の `src/app/user/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1819,8 +1777,6 @@ export default function UsersPage() {
 }
 ```
 
-条件を `users.length === 0` だけにせず `users &&` を前に置いているのは取得前の `users` が `undefined` だからです。前置きが無いと読み込み中にも0件のメッセージが一瞬出ます。件数が0のときに何も描かないと読者は表が壊れたのかデータが無いのかを区別できません。
-
 ### `src/component/layout/app-layout.tsx`
 
 **追加する import**:
@@ -1831,8 +1787,6 @@ export default function UsersPage() {
 import { Users } from 'lucide-react';
 import { USER_ROLE } from '@/lib/constant/roles';
 ```
-
-今日足すのはこの2つです。`Users` は下のリンクに置くアイコンです。Day 08 で書いた `lucide-react` の取り込みには入っていません。足さないと `Users is not defined` で止まります。`USER_ROLE` は管理者かどうかを比べるための定数です。文字列の `'ADMIN'` を直接書かないのは綴りを間違えた瞬間に型エラーで気づけるようにするためです。比べる側と比べられる側で書き方をそろえておくと間違いが画面の表示ではなく保存の時点で分かります。
 
 **管理者だけに出すリンク**:
 
@@ -1860,8 +1814,6 @@ import { USER_ROLE } from '@/lib/constant/roles';
   </li>
 )}
 ```
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2092,8 +2044,6 @@ export function AppLayout({
   );
 }
 ```
-
-`条件 && (...)` は条件が成り立つときだけ後ろの要素を描く書き方です。成り立たないと式の値は `false` になり、React は `false` を何も描かない値として扱います。一般ユーザーのサイドバーには空の行すら残りません。ただしこのリンクを消しても `/user` は開けます。他人のメールアドレスを守っているのは`user.ts` の `adminProcedure` のほうです。
 
 ## 今日のまとめ
 

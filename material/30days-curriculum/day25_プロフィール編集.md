@@ -2146,7 +2146,6 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 深い null チェックを何段も書くより
 `?.` と `??` で「安全なアクセス」と「代替表示」を近くに置きます。
 
-> **完成形の参考コード**: 完成版には `src/app/profile/change-password/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違うのは2種類です。1つ目は完成版の画面のパスワード条件が `.min(8)` だけになっており、大文字・小文字・数字・記号の `.regex()` が書かれていない点です。4本の `.regex()` はサーバー側の `src/server/api/routers/user.ts` にだけあります。今日の書き方は同じ条件を画面にも置いて送る前に読者へ知らせる形です。2つ目は完成版の入力欄に読み上げ用の `aria-` 指定が付いている点です。見比べるときはこの2種類は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ## 完成コード全体
 
@@ -2180,8 +2179,6 @@ import { adminProcedure, createTRPCRouter, protectedProcedure } from '../trpc';
 import { USER_DETAIL_SELECT } from './_helpers/select';
 ```
 
-Day 24 から4つの名前を追加しました。`protectedProcedure` は既存の import 行に加えるため行数は6行から9行になります。`TRPCError` は理由を添えて処理を止め、`bcrypt` はパスワードを照合します。`createSession` はメールアドレス変更後のセッション再発行に使います。`protectedProcedure` はログイン済みの人を通す入口です。
-
 **2つの入力スキーマ**:
 
 ```typescript
@@ -2205,8 +2202,6 @@ const changePasswordSchema = z.object({
 });
 ```
 
-`profileUpdateSchema` に `role` と `isActive` が無い点を確かめてください。ここへ `role` を足すと画面のフォームを通さずリクエストを組み立てた人が自分を管理者へ昇格させられます。受け取らない項目はあとから弾くのではなく入口で持たせない形にします。パスワード側の4本の `.regex()` はこの教材でいちばん最後に効く検査です。画面側の同じ検査は書き換えられる場所で動きます。
-
 **getAll の入口と入力の定義**:
 
 ```typescript
@@ -2226,8 +2221,6 @@ export const userRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const where: Prisma.UserWhereInput = {};
 ```
-
-ここは Day 24 で書いたままで今日は1文字も変えません。載せているのは今日足す2本がこの `getAll` の下に並ぶことを位置で示すためです。`adminProcedure` のまま残っているかも一緒に確かめてください。今日足す2本は `protectedProcedure` なので3本で使い分けが2種類になります。
 
 **getAll の絞り込みと取得**:
 
@@ -2254,8 +2247,6 @@ export const userRouter = createTRPCRouter({
     }),
 ```
 
-末尾が `});` ではなく `}),` で終わっている点が大事です。Day 24 の時点では `getAll` が最後だったのでこの下にルーターを閉じる `});` がありました。今日は続きを足すため閉じる行は最後の `changePassword` の後ろへ移ります。`}),` のカンマは次の手続きが続くという意味です。
-
 **updateProfile のメール重複チェック**:
 
 ```typescript
@@ -2281,8 +2272,6 @@ export const userRouter = createTRPCRouter({
     }
 ```
 
-`userId` を入力ではなくセッションから取っているところがこの手続きの守りです。更新先のIDをフォームから受け取る形にすると送信内容を書き換えるだけで他人のプロフィールを上書きできます。`id: { not: userId }` を付けているのは自分のメールアドレスを変えずに名前だけ直したときに自分自身が重複相手として引っかかるのを避けるためです。
-
 **updateProfile の更新**:
 
 ```typescript
@@ -2306,8 +2295,6 @@ export const userRouter = createTRPCRouter({
     });
 ```
 
-`avatar` は任意の項目なので届いたときだけ更新内容へ加えます。この教材の Prisma 6 では`undefined` の項目は更新されません。画像を消す指示は `null` です。この分岐で、未指定なら保持し、`null` なら消す扱いを明示しています。`updatedAt` も返すので保存後に更新日を表示できます。
-
 **updateProfile のセッション再発行**:
 
 ```typescript
@@ -2324,8 +2311,6 @@ export const userRouter = createTRPCRouter({
     return updatedUser;
   }),
 ```
-
-セッションの中にはメールアドレスが入っています。DBだけ書き換えてここを飛ばすとブラウザは古いメールアドレスを持ったまま動き続けます。次のログインまで気づけないので変わったときだけ作り直します。`input.email !== ctx.session.email` の条件を外して毎回作り直しても動きますが名前だけ直した人の Cookie を書き換える理由はありません。
 
 **changePassword の入口と存在チェック**:
 
@@ -2350,8 +2335,6 @@ export const userRouter = createTRPCRouter({
       }
 ```
 
-`select` で取っているのは `password` と `isActive` の2つだけです。名前やメールはこの手続きで使わないので取りに行きません。取る列を絞ると必要な情報だけを扱っているという意図がコードから読み取れます。`!user?.password` の `?.` はユーザーそのものが見つからない場合と、見つかってもパスワードが未設定の場合を1行でまとめて弾くための書き方です。
-
 **changePassword の状態と照合**:
 
 ```typescript
@@ -2374,8 +2357,6 @@ export const userRouter = createTRPCRouter({
       }
 ```
 
-`bcrypt.compare` は入力された今のパスワードと、DBに入っている元へ戻せない形の文字列を照合します。この確認があるのでCookie を持ち出しただけの相手はパスワードを変えられません。`isActive` の判定は二重の守りです。`protectedProcedure` の中でも同じ判定をしていますがこの手続きを別の入口へ付け替えたときに守りが1枚も残らない状態を避けます。
-
 **changePassword の保存**:
 
 ```typescript
@@ -2392,8 +2373,6 @@ export const userRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/user.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2551,8 +2530,6 @@ export const userRouter = createTRPCRouter({
 });
 ```
 
-`bcrypt.hash` を通してから保存するのはDBを見られたときに元のパスワードが読み取れない形にしておくためです。第2引数の `10` は計算にかける手間の指定で、大きくすると総当たりに時間がかかる代わりにログインも遅くなります。最後の `});` がルーター全体を閉じる行です。ここが2つ並んでいたらDay 24 の `});` を消し忘れています。
-
 ### `src/app/profile/page.tsx`
 
 **外部ライブラリの import**:
@@ -2569,8 +2546,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 ```
 
-`lucide-react` から6つ取り込んでいるのはこの画面が項目ごとにアイコンを持つからです。カレンダーは日付の行に2回使うので取り込みは1つで足ります。`'use client'` が抜けると`useRouter` と `useEffect` をサーバー側で実行しようとして失敗します。
-
 **プロジェクト内の import**:
 
 ```typescript
@@ -2586,8 +2561,6 @@ import { ActiveStatusBadge, UserRoleBadge } from '@/component/ui/user-badges';
 import { USER_ROLE } from '@/lib/constant/roles';
 import { api } from '@/trpc/react';
 ```
-
-バッジの2つを部品として取り込んでいるのは`ADMIN` や `true` という値をそのまま画面へ出しても読者に意味が伝わらないためです。値を見た目へ翻訳する仕事を部品へ閉じ込めておくと色や文言を変えたくなったときの直し先が1か所で済みます。`USER_ROLE` を使うのは文字列の綴り間違いを保存の時点で見つけるためです。
 
 **データ取得と表示の前判定**:
 
@@ -2613,8 +2586,6 @@ export default function ProfilePage() {
   }
 ```
 
-`useEffect` の条件に `!isLoading` を入れているのは取得の途中でも `currentUser` が `undefined` だからです。この条件が無いとログイン済みの人まで開いた瞬間にログイン画面へ飛ばされます。`if (!currentUser) return null` は転送が始まるまでの一瞬に空の枠を見せないための行です。この下の `return` では `currentUser` が必ずあると分かるので`?.` を並べずに書けます。
-
 **ページの外枠とアバター**:
 
 ```typescript
@@ -2639,8 +2610,6 @@ export default function ProfilePage() {
               </Avatar>
 ```
 
-`CardContent` に付けた `space-y-6` が、この中に並べる4つのかたまりの間隔をまとめて決めます。ひとつずつ余白を書くより親側で1回決めるほうがあとから項目を足しても間隔がそろいます。`AvatarFallback` にアイコンを置いているのは画像を設定していない人の丸が真っ白のまま残らないようにするためです。
-
 **名前とバッジ**:
 
 ```typescript
@@ -2660,8 +2629,6 @@ export default function ProfilePage() {
             </div>
 ```
 
-`UserRoleBadge` を `ADMIN` のときだけ出しているのは一般ユーザーに「あなたはユーザーです」と伝える価値が薄いからです。バッジは他と違う人を目立たせるための表示なので全員に付けると意味が薄れます。`ActiveStatusBadge` は条件なしで出します。自分のアカウントが有効かどうかは全員に関わる情報だからです。
-
 **メールアドレスの行**:
 
 ```typescript
@@ -2680,8 +2647,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 ```
-
-`items-start` を指定してあるので本文が2行になってもアイコンは上端でそろいます。`items-center` にすると長いメールアドレスで折り返したときにアイコンが中央へ下がり、3つの行で高さがばらつきます。左の四角は飾りなので消しても文字は表示されます。この形をこの下の2つの行でも繰り返すため3行の見た目がそろいます。
 
 **登録日の行**:
 
@@ -2703,8 +2668,6 @@ export default function ProfilePage() {
               </div>
 ```
 
-取得したユーザーの `createdAt` は必須です。読み込み中かどうかはページの先頭で判定しているのでここでは日付を整形します。`locale: ja` は `yyyy` と `MM` だけの書き方では見た目に出ませんがあとで月名の書き方へ変えたときにここだけ英語へ戻るのを防ぎます。
-
 **最終更新日の行**:
 
 ```typescript
@@ -2725,8 +2688,6 @@ export default function ProfilePage() {
               </div>
             </div>
 ```
-
-参照する項目が `updatedAt` に変わっただけで、組み方は登録日の行と共通です。まとめて1つの部品にせず並べて書いてあるのは片方の並びだけ変えたくなったときに手を入れやすくするためです。この `updatedAt` は Step 0 の `updateProfile` が返している項目なので編集を保存して戻ると日付が新しくなります。
 
 **編集とパスワード変更のボタン**:
 
@@ -2750,8 +2711,6 @@ export default function ProfilePage() {
               </Button>
 ```
 
-`variant` を書かない既定は塗りつぶし、`outline` は枠線だけになります。押してほしい順に濃さを変えると開いた人がどこから触ればいいか迷いません。`router.push` を使っているのでページ全体を読み込み直さずに移れます。`<a href="...">` で書くとサイドバーの描画とログイン状態の確認までやり直しになります。
-
 **管理者向けのボタンと閉じタグ**:
 
 ```typescript
@@ -2771,8 +2730,6 @@ export default function ProfilePage() {
   );
 }
 ```
-
-完成版の `src/app/profile/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2918,13 +2875,8 @@ export default function ProfilePage() {
 }
 ```
 
-この `&&` が隠しているのはボタンだけで、`/user` に入れなくなるわけではありません。URLを手で打てば一般ユーザーでもそのページを開けます。実際に止めているのは`/user` の画面側の権限チェックと、一覧を返す `getAll` の `adminProcedure` です。閉じタグは開いた順の逆にたどり、`CardContent` から `Card`、`div`、`AppLayout` の順で閉じます。
-
-> **完成形の参考コード**: 完成版には `src/app/profile/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違いは長い名前への備えです。完成版は名前の欄に `min-w-0` と `break-words` を付けて折り返す形にし、名前が空の人はメールアドレスを代わりに出しています。見比べるときはこの指定は違って当たり前だと思って読んでください（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/component/layout/app-layout.tsx`
-
-この章のナビゲーションは Day 08 のサイドバーにプロフィールへの入口を足した形です。狭い画面では横スクロールのメニューを使います。完成アプリの `src/` は開閉できるモバイルメニューと上部の検索欄を持つ別構成です。名前の横にはプロフィール画像も出します。本教材では次のコードを使います。認証確認と管理者だけのメニュー表示とログアウト時のキャッシュ破棄は両方で維持しています。販売用 ZIP に完成アプリの `src/` は入っていません。
 
 **サイドバーのユーザー情報**:
 
@@ -2940,8 +2892,6 @@ export default function ProfilePage() {
   {/* 既存のユーザーアイコンと名前を残す */}
 </Link>
 ```
-
-囲む `<div>` を `Link` に変えるだけなので中の表示は触りません。見た目は変わらないまま、サイドバーのユーザー情報そのものがプロフィールへの入口になります。`hover:bg-sidebar-accent` を付けているのは指を乗せたときに背景色が変わって押せると目で分かるようにするためです。押せる場所を見た目で示さないと読者はそこを押そうと思いません。
 
 **モバイル用のナビゲーション**:
 
@@ -2968,8 +2918,6 @@ export default function ProfilePage() {
     )}
 ```
 
-`md:hidden` が付いた `<nav>` は画面が広いときは消えてサイドバーに任せ、狭いときだけ現れます。`overflow-x-auto` を付けているので項目が入りきらない幅では横スクロールになり、消えてしまう項目がありません。`menuItems` を `map` で回しているためメニューが増えてもここは書き直しません。
-
 **本文の枠**:
 
 ```typescript
@@ -2986,8 +2934,6 @@ export default function ProfilePage() {
   </main>
 </div>
 ```
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -3249,8 +3195,6 @@ export function AppLayout({
 }
 ```
 
-`<main>` の `flex-1` は上のナビゲーションが使った分を除いた残りの高さを本文が受け取るという指定です。`overflow-y-auto` は本文が長いときに本文の中だけをスクロールさせます。これが無いとページ全体が伸び、狭い画面ではメニューが上へ流れて見えなくなります。
-
 ### `src/app/profile/change-password/page.tsx`
 
 **外部ライブラリの import**:
@@ -3268,8 +3212,6 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
 
-`useForm`、`z`、`zodResolver` の3点が今日のフォームの土台です。`useForm` が入力欄の値とエラーを預かり、`z` が満たすべき条件を書き、`zodResolver` がその2つをつなぎます。この画面には `useEffect` がありません。サーバーから値を取ってきて入力欄へ入れる必要が無く、3つの欄はどれも空から始まるためです。
-
 **プロジェクト内の import**:
 
 ```typescript
@@ -3283,8 +3225,6 @@ import { Label } from '@/component/ui/label';
 import { PasswordInput } from '@/component/ui/password-input';
 import { api } from '@/trpc/react';
 ```
-
-`Input` ではなく `PasswordInput` を取り込んでいます。この部品は文字を隠す表示と、目のアイコンで見せる切り替えを内側に持っています。だからこの画面には切り替えの状態を覚える変数がありません。同じ働きを3つの欄それぞれに書くと状態が3つに増えて取り違えが起きます。
 
 **スキーマの前半**:
 
@@ -3305,8 +3245,6 @@ const changePasswordPasswordSchema = changePasswordCurrentSchema.extend({
     .regex(/[^A-Za-z0-9]/, 'パスワードには特殊文字を含める必要があります'),
 });
 ```
-
-`extend` で段を分けているのは1つの大きな定義を一度に書くと写している途中で括弧の対応を見失うからです。`currentPassword` に `.min(1)` しか置いていないのは合っているかを画面側では判定できないためです。正しいパスワードの照合はサーバーの `bcrypt.compare` が行います。4本の `.regex()` の文言はStep 0 のサーバー側とそろえてあります。
 
 **スキーマの後半と型**:
 
@@ -3329,8 +3267,6 @@ const changePasswordSchema = changePasswordBaseSchema.refine(
 type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 ```
 
-`refine` は1項目ずつの検査が終わったあとで値どうしを見比べるための書き方です。`path: ['confirmPassword']` を付けているのはエラーの置き場所を確認欄に決めるためです。指定しないとフォーム全体のエラー扱いになり、どの欄を直せばいいのかが伝わりません。この一致チェックは画面側だけの決まりで、サーバーへ `confirmPassword` は送りません。
-
 **useForm の初期化**:
 
 ```typescript
@@ -3349,8 +3285,6 @@ export default function ChangePasswordPage() {
   });
 ```
 
-`resolver` にスキーマを渡すと送信のたびに3つの欄がまとめて検査されます。検査を通らなければ下で書く送信ハンドラーは呼ばれません。だから送信処理の中で `if` を並べずに済みます。`defaultValues` を空文字で埋めるのはフォームの初期状態を確定させるためです。ここが決まっていないとまだ触っていないという判定が正しく動きません。
-
 **更新処理の設定**:
 
 ```typescript
@@ -3366,8 +3300,6 @@ export default function ChangePasswordPage() {
     },
   });
 ```
-
-この呼び出しを送信ハンドラーの外に置いているのは送信中かどうかの状態も一緒に返すからです。`changePassword.isPending` をボタンや入力欄から読むためハンドラーの中では作れません。`router.push` だけで `router.refresh()` を呼んでいないのはパスワードが移動先の画面に表示されないためです。表示が変わらないものを取り直す理由はありません。
 
 **送信ハンドラーとページの外枠**:
 
@@ -3392,8 +3324,6 @@ export default function ChangePasswordPage() {
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
 ```
 
-`mutate` へ渡す項目が2つしか無い点を確かめてください。`confirmPassword` を足すとサーバー側のスキーマに無い項目を送ることになり、型エラーが出ます。`form.handleSubmit(handleSubmit)` を挟んでいるので検査を通った値だけが `handleSubmit` に届きます。`max-w-md` は入力欄の横幅の上限で、広い画面で1行が長く伸びるのを防ぎます。
-
 **現在のパスワードの入力欄**:
 
 ```typescript
@@ -3416,8 +3346,6 @@ export default function ChangePasswordPage() {
                 )}
               </div>
 ```
-
-`htmlFor="currentPassword"` と `id="currentPassword"` を同じ文字にそろえているのはラベルと入力欄を結び付けるためです。そろえておくとラベルを押しただけでカーソルが移り、読み上げソフトもどの欄かを伝えられます。`{...form.register(...)}` の1行で、この欄がフォームの管理下に入ります。値の保持もエラーの受け取りも自動になります。
 
 **新しいパスワードの入力欄**:
 
@@ -3445,8 +3373,6 @@ export default function ChangePasswordPage() {
               </div>
 ```
 
-灰色の文章とエラーの文章を別々の `<p>` に分けてあります。同じ場所を書き換える形にするとエラーが出た瞬間に条件の説明が消えて何を直せばいいのか確かめながら入力できません。灰色のほうを最初から出しておくのは条件を満たせない理由をあとから見せるより直す回数が減るからです。
-
 **確認用パスワードの入力欄**:
 
 ```typescript
@@ -3470,8 +3396,6 @@ export default function ChangePasswordPage() {
               </div>
 ```
 
-この欄に出るエラーは2種類あります。空欄のときの `確認用パスワードを入力してください` と、`refine` が出す `パスワードが一致しません` です。どちらも同じ `<p>` に流れ込むので表示のコードは1つで足ります。`path: ['confirmPassword']` を書いておいたおかげで、一致しないという指摘もこの欄の下に出ます。
-
 **サーバーエラーの表示**:
 
 ```typescript
@@ -3485,8 +3409,6 @@ export default function ChangePasswordPage() {
                 </Alert>
               )}
 ```
-
-ここに出るのは画面の検査を通り抜けたあとにサーバーが返した理由です。現在のパスワードが合っているかどうかはブラウザには判定できません。正しいパスワードの元へ戻せない形の文字列を手元に持っていないからです。入力欄ごとのエラーと違って画面の上寄りに大きく出すのはどの欄が原因とも言えないためです。
 
 **送信とキャンセルのボタン**:
 
@@ -3509,8 +3431,6 @@ export default function ChangePasswordPage() {
               </div>
 ```
 
-キャンセル側の `type="button"` が見落としやすい部分です。`<form>` の中のボタンは既定で送信ボタンとして扱われるのでこの指定を省くと押した瞬間に変更が走ります。`disabled` を両方へ付けるのは通信中の二重送信を防ぐためで、文字を `変更中...` へ差し替えるのは押せない理由を目で分かる形にするためです。
-
 **閉じタグ**:
 
 ```typescript
@@ -3524,8 +3444,6 @@ export default function ChangePasswordPage() {
   );
 }
 ```
-
-完成版の `src/app/profile/change-password/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -3702,8 +3620,6 @@ export default function ChangePasswordPage() {
 }
 ```
 
-閉じタグは開いた順の逆に並べます。`<form>` を閉じてから `CardContent`、`Card`、`div`、`AppLayout` の順です。ここがずれていると保存した瞬間にタグが閉じられていないという趣旨のエラーが出ます。エディタで開始タグをクリックすると対応する終了タグにも色が付きます。迷ったらそれで確かめてください。
-
 ### `src/app/profile/edit/page.tsx`
 
 **外部ライブラリの import**:
@@ -3722,8 +3638,6 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
 
-パスワード変更の画面と比べて `useEffect` が1つ増えています。この画面は今の名前とメールを入力欄に入れておく必要があり、その値はサーバーへの問い合わせが終わってから届くためです。届いた時点で入れ直す仕掛けが `useEffect` です。他の取り込みはパスワード変更の画面と共通です。
-
 **プロジェクト内の import**:
 
 ```typescript
@@ -3741,8 +3655,6 @@ import { normalizeAvatarValue } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
-`normalizeAvatarValue` は空のアバターURLを `null` へ直す関数で、送信の直前に使います。画面側は空文字を許し、サーバー側は許さないという食い違いがあるため、この変換が必要です。`Avatar` 系の3つは入力したURLの見え方を保存する前に確かめるためのものです。
-
 **スキーマと型**:
 
 ```typescript
@@ -3756,8 +3668,6 @@ const profileEditSchema = z.object({
 
 type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 ```
-
-`avatar` に `.or(z.literal(''))` を足しているのはアバターを空のままにしたい人がいるからです。`.url()` だけだと空欄がURLの形式ではないと弾かれ、名前だけ直したいときにも画像URLの入力を強いられます。`name` を `.min(1)` にしているのは表示名が空になると一覧やサイドバーで誰なのか分からなくなるためです。
 
 **useForm の初期化**:
 
@@ -3777,8 +3687,6 @@ export default function ProfileEditPage() {
     },
   });
 ```
-
-`api.useUtils()` をここで呼んでいるのはあとで書く更新成功時の処理でキャッシュへ古い印を付けるためです。この呼び出しは関数の本体でしか使えないので必要になる場所より先に用意します。`defaultValues` が空文字なのはサーバーからの値がまだ届いていないためです。この空の状態は一瞬で終わります。
 
 **データ取得と更新処理**:
 
@@ -3803,8 +3711,6 @@ export default function ProfileEditPage() {
   });
 ```
 
-2か所のキャッシュへ古い印を付けているところがこの画面でいちばん間違えやすい部分です。`getCurrentUser` はプロフィール画面が読むデータ、`getSession` はサイドバーの表示が読むデータで、置き場所が別々です。片方だけ無効にするとプロフィールの名前は新しいのにサイドバーだけ古いまま残ります。手で再読み込みすると直ってしまうため原因を追うのがいちばん難しい種類の不具合になります。
-
 **サーバーデータの反映**:
 
 ```typescript
@@ -3820,8 +3726,6 @@ export default function ProfileEditPage() {
     }
   }, [currentUser, form]);
 ```
-
-`defaultValues` を書き換えるのではなく `form.reset` を使うのは入力欄の値とまだ触っていないという状態を同時にそろえるためです。`?? ''` を付けているのは`name` と `avatar` が未設定なら `null` になる項目で、フォームの型が文字列を求めているからです。`null` のままでは型が合わず、保存の時点でエラーになります。
 
 **送信ハンドラーとローディング**:
 
@@ -3839,8 +3743,6 @@ export default function ProfileEditPage() {
     return <PageLoadingSpinner />;
   }
 ```
-
-`avatar` だけ変換をはさむのは画面側とサーバー側で許す値が違うからです。このページのスキーマは空文字を許しますがサーバー側は `.url()` だけを許すので空文字をそのまま送ると弾かれます。`if (isLoading)` をここへ置くとこの行より下は値が届いたあとにしか動きません。空の入力欄が一瞬映ってから値が入る見え方を避けられます。
 
 **ページの外枠とアバタープレビュー**:
 
@@ -3866,8 +3768,6 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-`form.watch` は入力欄の今の値を読み続ける仕組みです。URLを1文字入れるたびに上の丸い画像も差し替わるので保存する前に見た目を確かめられます。`AvatarFallback` に名前の1文字目を置いているのはURLが空のときや画像を読み込めなかったときに丸が真っ白のまま残らないようにするためです。
-
 **名前の入力欄**:
 
 ```typescript
@@ -3890,8 +3790,6 @@ export default function ProfileEditPage() {
                 )}
               </div>
 ```
-
-`disabled={updateProfile.isPending}` を付けているのは送信中に書き換えられて送った内容と画面の表示がずれるのを防ぐためです。ずれたまま結果が返ると読者は入力した文字がそのまま保存されたと思い込みます。赤い `*` は必須を示す印で、任意の欄には付けません。付ける欄と付けない欄をそろえておくと記号の有無だけで判断できます。
 
 **メールアドレスの入力欄**:
 
@@ -3917,8 +3815,6 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-`type="email"` を付けるとスマートフォンのキーボードが `@` を出しやすい配列に変わります。形式そのものの検査は zod の `.email()` が行うのでこの属性は入力しやすさのための指定です。他の人が同じアドレスを先に使っていないかはStep 0 の `findFirst` がサーバー側で確かめます。
-
 **アバターURLの入力欄**:
 
 ```typescript
@@ -3940,8 +3836,6 @@ export default function ProfileEditPage() {
                 </p>
 ```
 
-灰色のヒントは入力前から表示します。入力形式に合わないときは、次のコードでスキーマのエラーメッセージも入力欄の下へ表示します。何を直せば送信できるのかを、その欄の近くで伝えるためです。
-
 ```typescript
 {/* filepath: src/app/profile/edit/page.tsx（続き） */}
                 {form.formState.errors.avatar && (
@@ -3951,8 +3845,6 @@ export default function ProfileEditPage() {
                 )}
               </div>
 ```
-
-ラベルに「（任意）」と書き、赤い `*` を付けていないのはこの欄だけ空のままでも送信できるからです。必須かどうかは見た目でしか伝わらないので印の有無を全欄でそろえておく必要があります。`placeholder` へ実物に近い形の例を入れているのは何を貼ればいいのか分からずに手が止まるのを防ぐためです。
 
 **サーバーエラーの表示**:
 
@@ -3967,8 +3859,6 @@ export default function ProfileEditPage() {
                 </Alert>
               )}
 ```
-
-この枠が出る代表例は他の人と同じメールアドレスを入力したときです。Step 0 の `updateProfile` が `CONFLICT` を返し、その文言がそのままここへ表示されます。重複の判定を画面側だけで済ませようとすると全ユーザーのメールアドレスをブラウザへ配ることになります。だから判定はサーバーへ任せ、画面は返ってきた理由を出す役に徹します。
 
 **送信とキャンセルのボタン**:
 
@@ -3991,8 +3881,6 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-パスワード変更の画面と組み方をそろえてあります。2つの画面で枠の作り方を共通にしておくと片方を読めばもう片方も追えます。キャンセル側の `type="button"` を省くと取り消すつもりの操作が保存になります。間違いに気づく機会も無いのでこの1語は必ず書いてください。
-
 **閉じタグ**:
 
 ```typescript
@@ -4006,8 +3894,6 @@ export default function ProfileEditPage() {
   );
 }
 ```
-
-完成版の `src/app/profile/edit/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -4200,9 +4086,6 @@ export default function ProfileEditPage() {
 }
 ```
 
-閉じる順番はパスワード変更の画面と共通です。`</form>` から `AppLayout` まで開いたときの逆をたどれば迷いません。ここまで3画面がそろえばプロフィールの表示、編集、パスワード変更が1つの流れとしてつながります。
-
-> **完成形の参考コード**: 完成版には `src/app/profile/edit/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違いは2つです。1つ目は完成版の入力欄に読み上げ用の `aria-` 指定が付いている点です。2つ目はアバターのURLが空のとき画像タグ自体を出さない形になっている点です。フォームの組み立て方は今日書いたコードのほうを正としてください（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ## 今日のまとめ
 
