@@ -332,6 +332,7 @@ def _shell_lines(text: str) -> list[str]:
     lines: list[str] = []
     delimiters: list[tuple[str, bool]] = []
     pending = ""
+    consumed_heredocs = 0
     for line in text.splitlines():
         if delimiters:
             delimiter, strip_tabs = delimiters[0]
@@ -339,11 +340,14 @@ def _shell_lines(text: str) -> list[str]:
             # その後ろの本文行が実行行として残ってしまう。`<<-` だけは先頭のタブを許す。
             if (line.lstrip("\t") if strip_tabs else line) == delimiter:
                 delimiters.pop(0)
+                if pending:
+                    consumed_heredocs += 1
             continue
-        if line.lstrip().startswith("#"):
+        if not pending and line.lstrip().startswith("#"):
             continue
         line = pending + line
         delimiters, continued = _heredocs_and_continuation(line)
+        delimiters = delimiters[consumed_heredocs:]
         if continued:
             pending = (
                 line[:-1] if line.endswith("\\") else _strip_unquoted_comment(line).rstrip() + " "
@@ -351,16 +355,21 @@ def _shell_lines(text: str) -> list[str]:
             delimiters = []
             continue
         commands, conditional = _scan_commands(_strip_unquoted_comment(line))
+        if_headers = [
+            index for index, command in enumerate(commands) if re.match(r"^\s*if(?:\s|$)", command)
+        ]
         if (
-            commands
-            and re.match(r"^\s*if(?:\s|$)", commands[0])
-            and not any(re.match(r"^\s*then(?:\s|$)", command) for command in commands)
+            if_headers
+            and not any(
+                re.match(r"^\s*then(?:\s|$)", command) for command in commands[if_headers[-1] :]
+            )
         ):
             pending = _strip_unquoted_comment(line).rstrip() + (
                 " " if conditional or _tokenize(commands[-1]) == ["if"] else "; "
             )
             continue
         pending = ""
+        consumed_heredocs = 0
         lines.append(line)
     return lines
 
@@ -368,12 +377,18 @@ def _shell_lines(text: str) -> list[str]:
 def _is_gate4_status_condition(line: str) -> bool:
     """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
     commands = _split_commands(_strip_unquoted_comment(line))
-    if not commands or not re.match(r"^\s*if(?:\s|$)", commands[0]):
-        return False
-    for index, command in enumerate(commands):
-        if re.match(r"^\s*then(?:\s|$)", command):
-            break
-        raw = re.sub(r"^\s*if\s+", "", command, count=1) if index == 0 else command
+    in_condition = False
+    for command in commands:
+        if re.match(r"^\s*if(?:\s|$)", command):
+            in_condition = True
+            raw = re.sub(r"^\s*if\s+", "", command, count=1)
+        elif re.match(r"^\s*then(?:\s|$)", command):
+            in_condition = False
+            continue
+        elif in_condition:
+            raw = command
+        else:
+            continue
         condition = _tokenize(raw)
         if condition[:1] == ["["] and condition[-1:] == ["]"]:
             groups = [raw.strip().split(maxsplit=1)[1].rsplit(maxsplit=1)[0]]
@@ -437,6 +452,58 @@ def check_workflow_wiring() -> tuple[int, int]:
         'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
     )
     synthetic = [
+        (
+            "先行コマンドと同じ行の集計条件は合格",
+            live_workflow,
+            live_phase.replace('\nif ', '; if '),
+            0,
+        ),
+        (
+            "先行コマンドと同じ行の実ファイルの集計条件は合格",
+            WORKFLOW.read_text(encoding="utf-8"),
+            GATE4_PHASE.read_text(encoding="utf-8").replace('\nif ', '; if '),
+            0,
+        ),
+        (
+            "二重引用中のハッシュで始まる終了行はコメントではない",
+            live_workflow,
+            'echo "banner\n#"\n' + live_phase,
+            0,
+        ),
+        (
+            "単一引用中のハッシュで始まる終了行はコメントではない",
+            live_workflow,
+            "echo 'banner\n#'\n" + live_phase,
+            0,
+        ),
+        (
+            "消費済みの if ヘッダーのヒアドキュメントを再消費しない",
+            live_workflow,
+            'if cat <<EOF\nmessage\nEOF\nthen\n  :\nfi\n' + live_phase,
+            0,
+        ),
+        (
+            "消費済みの if ヘッダーの複数ヒアドキュメントを再消費しない",
+            live_workflow,
+            "if cat <<FIRST <<'SECOND'\none\nFIRST\ntwo\nSECOND\nthen\n  :\nfi\n"
+            + live_phase,
+            0,
+        ),
+        (
+            "if ヘッダーのヒアドキュメント内の偽呼び出しは不合格",
+            live_workflow,
+            'if cat <<EOF\n'
+            + live_phase
+            + 'EOF\nthen\n  :\nfi\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n',
+            1,
+        ),
+        (
+            "先行する if の then より後の裸の比較は集計ではない",
+            live_workflow,
+            live_phase.splitlines()[0]
+            + '\nif true; then :; fi; test "$salepkg_status" -ne 0\n',
+            1,
+        ),
         (
             "二重引用符の中のヒアドキュメント記号は合格",
             live_workflow,
