@@ -2285,7 +2285,7 @@ export default function ProjectPage() {
 ## つまずきポイント
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| `Property 'open' is missing in type '{ onClose: () => void; onSubmit: (data: ProjectFormData) => void; }' but required in type 'ProjectDialogProps'.` | `<ProjectDialog>` に `open` を渡していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/project/page.tsx` の `<ProjectDialog>` に `open={dialogOpen}` を足す |
+| `Property 'open' is missing in type '{ onClose: () => void;` `onSubmit: (data: ProjectFormData) => void; }' but required in type 'ProjectDialogProps'.` | `<ProjectDialog>` に `open` を渡していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/project/page.tsx` の `<ProjectDialog>` に `open={dialogOpen}` を足す |
 | `dialogOpen is not defined` | state 宣言が漏れている | Day 09 Step 8 で `useState(false)` を宣言したか確認 |
 | 作成しても一覧に新しいプロジェクトが出ない | `createMutation` の `onSuccess` でキャッシュを無効化していない | 画面で作成直後の一覧に名前が出ないのを確認する。`src/app/project/page.tsx` の `onSuccess` に `void utils.project.getAll.invalidate()` を足す |
 | 名前が空でも送信できてしまう | `useForm` に `resolver` を設定していない | エディタで `src/component/project/project-dialog.tsx` の `useForm` を見る。`resolver: zodResolver(projectFormSchema)` を足す |
