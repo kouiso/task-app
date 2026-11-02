@@ -3139,7 +3139,7 @@ export default function ReportPage() {
 ## つまずきポイント
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | データが0件か、`getOverview` の取得に失敗している | Network タブで `report.getOverview` の応答を見る。`error` ならサーバーのログを、200 で `projectStats` が空ならタスクを追加して読み込み直す |
+| テーブルが空 | 対象プロジェクトがないか、`getOverview` の取得に失敗している | Network タブで `report.getOverview` の応答を見る。`error` ならサーバーのログを、200 で `projectStats` が空なら所属プロジェクトとアーカイブ状態を確認する |
 | 進捗率が NaN | 集計コードの写し間違いで `totalTasks > 0` の確認が抜けた | 完成コードの `totalTasks > 0 ? ... : 0` と照合 |
 | 週次データが空 | 初期データの完了タスクは2025年の日付で、しかも担当者が別のユーザー | 自分が担当のタスクを1件「完了」にしてから読み込み直す |
 | `Type 'string' is not assignable to type 'number'.` | `weeks` に文字列を渡している | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/report/page.tsx` の `weeks` に渡す値を `Number.parseInt` で数値に直す |
