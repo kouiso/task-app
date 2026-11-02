@@ -347,7 +347,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   }
 ```
 
-`fallback` に `PageLoadingSpinner` を置いてあるので待っているあいだも画面は白のままになりません。
 
 `viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
 
@@ -458,7 +457,6 @@ if (viewingDetail) {
 }
 ```
 
-3つのうちその場で通信するのは `handleUpdateMemberRole` と `handleArchive` だけです。権限の変更は選んだ時点で保存されます。管理者が自分をメンバーや閲覧者へ変更すると権限を変更する操作欄が消えます。自分では元に戻せないためオーナーなどメンバー管理権限のある人に復旧を依頼します。
 
 この分岐で `return` すると、下にある一覧の JSX には進みません。`viewingDetail` は URL に詳細IDがあるかを表し、直接開いた初回から読み込み分岐へ入ります。`ProjectDetailView` はデータを自分で取得しないため、取得済みデータと操作用の props を親から渡します。
 
@@ -845,7 +843,6 @@ const handleRemoveMember = (userId: string) => {
 />
 ```
 
-`removeMemberMutation.isPending` を渡しているので返事を待つあいだボタンが押せなくなります。これが無いと反応が遅いときに読者が何度も押し、同じ削除の要求が重なって飛びます。
 
 `onConfirm` の中で `selectedProject && removeMemberTargetId` を確かめてから `mutate` を呼びます。`selectedProject` の型は `string | null` なのでこの確認が無いと `projectId` に `null` が入りうる形になり、TypeScript が先に止めます。`isPending` を渡しているのは通信の返事を待つ間にボタンを押せなくするためです。`DeleteConfirmDialog` は `isPending` が `true` の間、削除ボタンの文字を「削除中...」に変えてキャンセルも含めて `disabled` にします。これが無いと連打で同じ削除要求が何本も飛びます。`title` を上書きしているのは既定の文言が削除対象を名指ししない一般的な言い回しで、プロジェクトそのものの削除と見分けが付かないためです。
 
