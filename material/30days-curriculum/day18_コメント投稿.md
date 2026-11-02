@@ -148,7 +148,7 @@ const commentCreateSchema = z.object({
 先に確かめます。
 
 ```typescript
-// filepath: src/server/api/routers/comment.ts
+// filepath: src/server/api/routers/comment.ts（続き）
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
@@ -221,7 +221,7 @@ Day 19 の update/delete でも同じ形が増えて読みづらくなります�
 Day 18 の完成形は `getByTaskId` と `create` の2つです。
 
 ```typescript
-// filepath: src/server/api/routers/comment.ts
+// filepath: src/server/api/routers/comment.ts（続き）
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))

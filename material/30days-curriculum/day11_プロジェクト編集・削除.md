@@ -2118,69 +2118,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
 1件だけを取る読み取り専用の手続きなので `.query` を使います。見つからない `id` には `NOT_FOUND` を返し、メンバー以外が直指定しても `canView` の権限チェックで弾きます。最後の `});` で `projectRouter` 全体を閉じます。
 
 ### `src/lib/query-error.ts`
-
-表示と再試行の判断で使う共通関数です。Step 9 で掲載コードから作成した3ブロックを再掲します。作成した6つの関数を確認するための掲載なので書き換える必要はありません。
-
-```typescript
-// filepath: src/lib/query-error.ts
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return typeof value === 'object'
-    && value !== null;
-}
-
-export function httpStatusOf(
-  error: unknown,
-): number | null {
-  if (!isRecord(error)
-    || !isRecord(error['data'])) return null;
-  const status = error['data']['httpStatus'];
-  return typeof status === 'number'
-    ? status
-    : null;
-}
-```
-
-`unknown` のまま `error.data` を読むと型エラーになるため、`isRecord` を通してから段階的に調べます。状態番号が無い通信失敗では `null` を返します。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function isAuthError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 401;
-}
-
-export function isForbiddenError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 403;
-}
-
-export function isUnknownResult(
-  error: unknown,
-): boolean {
-  return isRecord(error)
-    && error['data'] == null;
-}
-```
-
-401と403を分けると、再ログインと一覧へ戻る操作を選べます。`isUnknownResult` は後の日に更新結果が分からない通信失敗を扱うときにも使います。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function shouldRetryQuery(
-  failureCount: number,
-  error: unknown,
-): boolean {
-  return !isAuthError(error)
-    && !isForbiddenError(error)
-    && failureCount < 3;
-}
-```
-
-認証と権限のエラーは同じ要求を送っても解決しません。通信失敗だけを最大3回まで試す条件として各クエリから共通利用します。
+このファイルの全文は Step 9 に順に載っています。
 
 ### `src/app/project/page.tsx`
 
