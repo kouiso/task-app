@@ -254,32 +254,33 @@ def _argv(line: str) -> list[list[str]]:
 def _shell_lines(text: str) -> list[str]:
     """コメント行とヒアドキュメントの本文を除いたシェル行。"""
     lines: list[str] = []
-    delimiter = ""
-    strip_tabs = False
+    delimiters: list[tuple[str, bool]] = []
     for line in active_lines(text):
-        if delimiter:
+        if delimiters:
+            delimiter, strip_tabs = delimiters[0]
             # シェルは終端の行を完全一致でしか認めない。字下げした終端を終わりと見なすと、
             # その後ろの本文行が実行行として残ってしまう。`<<-` だけは先頭のタブを許す。
             if (line.lstrip("\t") if strip_tabs else line) == delimiter:
-                delimiter = ""
+                delimiters.pop(0)
             continue
         lines.append(line)
-        match = re.search(
+        for match in re.finditer(
             r"(?<!<)<<(-?)(?!<)\s*(['\"]?)\\?([A-Za-z_][A-Za-z0-9_-]*)\2",
             _strip_unquoted_comment(line),
-        )
-        if match:
-            strip_tabs = match.group(1) == "-"
-            delimiter = match.group(3)
+        ):
+            delimiters.append((match.group(3), match.group(1) == "-"))
     return lines
 
 
 def _is_gate4_status_condition(line: str) -> bool:
     """Gate 4 の終了コードを判定する実際の `if` 条件だけを受け入れる。"""
-    commands = _argv(line)
-    if not commands or not commands[0] or commands[0][0] != "if":
+    commands = _split_commands(_strip_unquoted_comment(line))
+    if not commands or not commands[0].lstrip().startswith("if "):
         return False
-    for index, argv in enumerate(commands):
+    for index, command in enumerate(commands):
+        argv = _tokenize(command)
+        if argv[:1] == ["then"]:
+            break
         condition = argv[1:] if index == 0 else argv
         if condition[:1] == ["["] and condition[-1:] == ["]"]:
             condition = condition[1:-1]
@@ -289,7 +290,9 @@ def _is_gate4_status_condition(line: str) -> bool:
             condition = condition[1:]
         else:
             continue
-        if ["$salepkg_status", "-ne", "0"] == condition:
+        if ["$salepkg_status", "-ne", "0"] == condition and re.search(
+            r'(?:^|\s)(?:"\$salepkg_status"|\$salepkg_status)(?=\s)', command
+        ):
             return True
     return False
 
@@ -339,6 +342,30 @@ def check_workflow_wiring() -> tuple[int, int]:
         'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi\n'
     )
     synthetic = [
+        (
+            "複数ヒアドキュメントの後ろの本文は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'cat <<EOF <<END\nEOF\nif [ "$salepkg_status" -ne 0 ]; then exit 1; fi\nEND',
+            ),
+            1,
+        ),
+        (
+            "then より後の比較は不合格",
+            live_workflow,
+            live_phase.replace(
+                'if [ "$salepkg_status" -ne 0 ]; then exit 1; fi',
+                'if true; then :; fi; [ "$salepkg_status" -ne 0 ] || :',
+            ),
+            1,
+        ),
+        (
+            "展開されない単一引用符の比較は不合格",
+            live_workflow,
+            live_phase.replace('"$salepkg_status" -ne 0', "'$salepkg_status' -ne 0"),
+            1,
+        ),
         (
             "実ファイルの配線は合格",
             WORKFLOW.read_text(encoding="utf-8"),
