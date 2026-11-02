@@ -2488,20 +2488,7 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
 最後の `});` で `searchRouter` が閉じます。ここまでで5つの手続きが1つのファイルに入りました。閉じ括弧の数が合わないときは5つそれぞれの末尾が `}),` で終わっているかを上から数えてください。
 
 ### `src/app/search/loading.tsx`
-
-**ページ移動中の仮表示**:
-
-```tsx
-// filepath: src/app/search/loading.tsx
-// 完成版: ページ移動中の仮表示
-import { PageSkeleton }
-  from '@/component/ui/page-skeleton';
-
-export default function Loading() {
-  return <PageSkeleton />;
-}
-```
-ファイル名が `loading.tsx` であることに意味があります。Next.js はページと同じフォルダにこの名前のファイルを見つけるとページの読み込み中に自動で表示します。自分で呼び出す行はどこにもありません。名前を `Loading.tsx` や `loader.tsx` にするとこの仕組みは動かず、画面は白いまま止まります。
+このファイルの全文は Step 0 に順に載っています。
 
 ### `src/app/search/page.tsx`
 

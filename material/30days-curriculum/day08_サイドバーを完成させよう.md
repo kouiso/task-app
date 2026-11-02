@@ -751,27 +751,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 
 ### `src/app/providers.tsx`
 
-**Provider の本体**:
-
-```tsx
-// filepath: src/app/providers.tsx
-// 完成版: Provider の本体
-'use client';
-
-import { Toaster } from 'react-hot-toast';
-import { TRPCReactProvider } from '@/trpc/react';
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <TRPCReactProvider>
-      {children}
-      <Toaster />
-    </TRPCReactProvider>
-  );
-}
-```
-
-このファイルは Day 01 の scaffold が配布したままなので手元と1文字も違わないはずです。`TRPCReactProvider` で囲んだ内側だけが `api` を使えます。囲みの外に置いた部品から呼ぶと送り先が決まらずエラーになります。`<Toaster />` を `{children}` の隣に1つだけ置いているのは通知の描画先をアプリ全体で1か所にそろえるためです。ページごとに置くと同じ通知が置いた枚数だけ重なって出ます。
+このファイルの全文は Step 1 に順に載っています。
 
 ### `src/app/layout.tsx`
 

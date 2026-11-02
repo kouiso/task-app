@@ -876,7 +876,6 @@ npm run dev
 > いまはアーカイブ済みが1件も無いのでON にすると一覧が空になります。これで正常です。
 > アーカイブする操作そのものは Day 11 で作ります。
 
-
 ---
 
 ### Pro パターンで書こう（プロジェクト一覧は `useQuery` に任せる）
@@ -1152,26 +1151,7 @@ export const projectRouter = createTRPCRouter({
 
 ### `src/server/api/root.ts`
 
-**手続きの一覧表**:
-
-```typescript
-// filepath: src/server/api/root.ts
-// 完成版: 手続きの一覧表
-import { authRouter } from './routers/auth';
-import { projectRouter } from './routers/project';
-import { createCallerFactory, createTRPCRouter } from './trpc';
-
-export const appRouter = createTRPCRouter({
-  auth: authRouter,
-  project: projectRouter,
-});
-
-export type AppRouter = typeof appRouter;
-
-export const createCaller = createCallerFactory(appRouter);
-```
-
-ここに並べた名前がそのまま画面側の呼び名になります。`project: projectRouter` と書いたので `api.project.getAll` が使えます。左側の名前を `projects` にすると画面側も `api.projects.getAll` に変わります。`export type AppRouter` の行があるおかげで、画面側は関数名も引数の形もサーバー側の定義から受け取れます。
+このファイルの全文は Step 0 の 0-6 に順に載っています。
 
 ### `src/app/project/page.tsx`
 
@@ -1640,28 +1620,6 @@ Day 10 ではプロジェクトの新規作成機能を実装します。ダイ�
 ### `src/app/project/page.tsx`（完成版との違いの説明）
 
 完成版には `src/app/project/page.tsx` がありますがそちらは Day 12 と Day 27 まで書き足した後の姿です。作成ダイアログ、削除確認、アーカイブ、詳細表示が入っているので今日の終わりの手元のコードより長くなります。今日の時点では一覧を取ってきて並べるところまでが書けていれば大丈夫です。足りない部分はこれから何日かかけて自分で足していきます。（販売用 ZIP に完成版の `src/` は入っていません。ここに書いた完成版との差はこの先どう伸びるかの説明として読んでください。合否は教材内の確認ポイントで判断します）。
-
-### `src/server/api/root.ts`
-
-Day 09 を終えた時点の `root.ts` はDay 07 で登録した `auth` と、今日 Step 0-6 で登録した `project` の2つだけです。`comment` や `task` などはそれを使う Day で1つずつ足していくので今はまだ登場しません。
-
-```typescript
-// filepath: src/server/api/root.ts
-import { authRouter } from './routers/auth';
-import { projectRouter } from './routers/project';
-import { createCallerFactory, createTRPCRouter } from './trpc';
-
-export const appRouter = createTRPCRouter({
-  auth: authRouter,
-  project: projectRouter,
-});
-
-export type AppRouter = typeof appRouter;
-
-export const createCaller = createCallerFactory(appRouter);
-```
-
-手元の `root.ts` がこの形になっていればStep 0-6 の登録は正しく終わっています。ここに並べた名前がそのまま画面側の呼び名です。`project: projectRouter` の行を消すと`api.project.getAll` は呼べなくなります。一覧にはカードが1枚も出ません。Day 10 以降はこの `createTRPCRouter({ ... })` の中へ1行ずつ足していきます。
 
 ---
 
