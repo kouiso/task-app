@@ -3086,7 +3086,7 @@ Day 15 までに書いた `<TaskCard>` へ、今日は `timeSpentMinutes` と `o
 ## つまずきポイント
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 手動で記録しても合計時間が増えない | `addTimeMutation` の `onSuccess` で再取得を呼んでいない | 画面で記録後に合計が変わらないのを確認する。`src/component/task/time-log-dialog.tsx` の `onSuccess` で `utils.task.getById.invalidate()` を呼ぶ |
+| 手動で記録しても合計時間が増えない | 親へ渡す `onSuccess` で一覧の再取得を呼んでいない | 画面で記録後に合計が変わらないのを確認する。`src/app/task/page.tsx` の `onTimeLogSuccess` で `utils.task.getAll.invalidate()` を呼ぶ |
 | `Expected number, received string` | `register` に `valueAsNumber: true` が付いていない | 画面で時間欄の下に出るこの文を見る。`src/component/task/time-log-dialog.tsx` の `register` に `{ valueAsNumber: true }` を足す |
 | 時間と分が両方0でも送信できてしまう | `refine` で合計を検証していない | 画面で両方0のまま送信できるのを確認する。`timeLogSchema` の `refine` で合計が 0 より大きいことを検証する |
 | 記録中に追加ボタンを連打できてしまう | `isPending` を `disabled` に反映していない | 画面で送信中にもボタンが押せるのを確認する。`disabled={addTimeMutation.isPending}` を足す |

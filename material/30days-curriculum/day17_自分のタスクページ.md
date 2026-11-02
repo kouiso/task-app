@@ -2440,14 +2440,14 @@ Day 17 おつかれさまでした。これで自分専用のタスクダッシ�
 ## つまずきポイント
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 自分以外のタスクも一覧に出る | `assigneeId` に `currentUser?.id` を渡していない | 画面で他人名のタスクが混ざるのを確認する。`src/app/task/page.tsx` の `api.task.getAll.useQuery` の引数に `assigneeId: currentUser?.id` を足す |
-| ログイン済みなのにタスクが0件のまま | `currentUser` の取得前に `useQuery` が空で走っている | 画面でログイン直後に空になるのを確認する。`src/app/task/page.tsx` の `useQuery` に `{ enabled: !!currentUser }` を足す |
-| 今日のタスクが出ない、違う日が出る | `Date` の時刻・タイムゾーンまで比較している | エディタで `src/app/task/page.tsx` の今日判定を見る。`dateOnlyFromValue()` か `localDateOnly()` で `YYYY-MM-DD` にそろえる |
-| 編集ボタンを押しても編集画面が開かない | Step 8 の仮 `handleEdit` が残っている | エディタで `src/app/task/page.tsx` の `handleEdit` を探し、Step 9 の手順で本実装に置き換える |
-| `Block-scoped variable 'filterProject' used before its declaration.` | `filterProject` を `useState` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` で `filterProject` の `useState` をそれを使う `useQuery` より上に置く |
-| `Cannot access 'filterProject' before initialization` | 宣言より上での参照がブラウザに出た形 | Console タブにこの文が出てページが真っ白になる。`src/app/task/page.tsx` で `filterProject` の `useState` を先に置く |
-| `Block-scoped variable 'tasks' used before its declaration.` | `tasks` を `useQuery` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/task/page.tsx` で tasks の `useQuery` を `useMemo` より上に置く |
-| `Rendered fewer hooks than expected.` | hooks の呼び出しが条件分岐や早期 return の後に来ている | Console タブにこの文が出る。`src/app/task/page.tsx` で `useState` と `useQuery` を早期 return より上の同じ順番に戻す |
+| 自分以外のタスクも一覧に出る | `assigneeId` に `currentUser?.id` を渡していない | 画面で他人名のタスクが混ざるのを確認する。`src/app/my-task/page.tsx` の `api.task.getAll.useQuery` の引数に `assigneeId: currentUser?.id` を足す |
+| ログイン済みなのにタスクが0件のまま | `currentUser` の取得前に `useQuery` が空で走っている | 画面でログイン直後に空になるのを確認する。`src/app/my-task/page.tsx` の `useQuery` に `{ enabled: !!currentUser }` を足す |
+| 今日のタスクが出ない、違う日が出る | `Date` の時刻・タイムゾーンまで比較している | エディタで `src/app/my-task/page.tsx` の今日判定を見る。`dateOnlyFromValue()` か `localDateOnly()` で `YYYY-MM-DD` にそろえる |
+| 編集ボタンを押しても編集画面が開かない | Step 8 の仮 `handleEdit` が残っている | エディタで `src/app/my-task/page.tsx` の `handleEdit` を探し、Step 9 の手順で本実装に置き換える |
+| `Block-scoped variable 'filterProject' used before its declaration.` | `filterProject` を `useState` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/my-task/page.tsx` で `filterProject` の `useState` をそれを使う `useQuery` より上に置く |
+| `Cannot access 'filterProject' before initialization` | 宣言より上での参照がブラウザに出た形 | Console タブにこの文が出てページが真っ白になる。`src/app/my-task/page.tsx` で `filterProject` の `useState` を先に置く |
+| `Block-scoped variable 'tasks' used before its declaration.` | `tasks` を `useQuery` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/my-task/page.tsx` で tasks の `useQuery` を `useMemo` より上に置く |
+| `Rendered fewer hooks than expected.` | hooks の呼び出しが条件分岐や早期 return の後に来ている | Console タブにこの文が出る。`src/app/my-task/page.tsx` で `useState` と `useQuery` を早期 return より上の同じ順番に戻す |
 
 ## 今日学んだ用語
 
