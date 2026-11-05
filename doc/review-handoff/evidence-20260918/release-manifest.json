@@ -2525,8 +2525,8 @@
       },
       {
         "name": "day19_コメント編集・削除.pdf",
-        "size": 1184804,
-        "sha256": "a532e9531a4361de69ae76dd320bf4f76f7add5b52e0c09bff514cadfff01f2d",
+        "size": 1190850,
+        "sha256": "1c6971edd9d1fcfdcbe00f1aae7594cffe48787d2e6e4e82a3cab49424885d5d",
         "pages": 111,
         "parse_error": null
       },
@@ -2567,9 +2567,9 @@
       },
       {
         "name": "day25_プロフィール編集.pdf",
-        "size": 2025339,
-        "sha256": "cfdf565d6046401e25db30312286817155191390f39041ce3be8a7280b27d242",
-        "pages": 193,
+        "size": 2033479,
+        "sha256": "ddbb71ac7cf5c585becd6d2b4c75f304d6837012ec7ce978c01c7842555b5de7",
+        "pages": 194,
         "parse_error": null
       },
       {
@@ -2581,23 +2581,23 @@
       },
       {
         "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
-        "size": 1650977,
-        "sha256": "9927b37c1c0373fb03f04ba38940a4aac0508355b266953a420d03be89ca9f68",
+        "size": 1658781,
+        "sha256": "b30b74f3ba47a06e4e925a3fcfd62fd57fc153143a3155cb13a5a10fbfd26b38",
         "pages": 120,
         "parse_error": null
       },
       {
         "name": "day28_タスク一括操作を実装しよう.pdf",
-        "size": 2213076,
-        "sha256": "5656fdaf9f6eaa38993a94bffcdb1ed4d89884522c9464282b69298b4f7891d4",
+        "size": 2220515,
+        "sha256": "2ef3340330cdd3baaaabed8161da7931ed493adf3b886bfaa9f524c48333b674",
         "pages": 137,
         "parse_error": null
       },
       {
         "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
-        "size": 2202930,
-        "sha256": "c83bf5499e64458039c4d9fe0778fc01b1c8a17d2332d110d24cf051ef7cf751",
-        "pages": 220,
+        "size": 2206576,
+        "sha256": "f188c273d371508e63d6b2d760657da57ea918e3b70f0c6ea52dfdea6aace28c",
+        "pages": 221,
         "parse_error": null
       },
       {
@@ -2823,7 +2823,7 @@
       "id": "1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI",
       "name": "day19_コメント編集・削除.pdf",
       "url": "https://drive.google.com/file/d/1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI/view?usp=drivesdk",
-      "uploaded_sha256": "a532e9531a4361de69ae76dd320bf4f76f7add5b52e0c09bff514cadfff01f2d"
+      "uploaded_sha256": "1c6971edd9d1fcfdcbe00f1aae7594cffe48787d2e6e4e82a3cab49424885d5d"
     },
     {
       "id": "1ribgG0JH4lD0DAkaYd5VragjRzxn8wyX",
@@ -2859,7 +2859,7 @@
       "id": "1ZxIG1alOFSR758Rak5knuSA7A15gwcAj",
       "name": "day25_プロフィール編集.pdf",
       "url": "https://drive.google.com/file/d/1ZxIG1alOFSR758Rak5knuSA7A15gwcAj/view?usp=drivesdk",
-      "uploaded_sha256": "cfdf565d6046401e25db30312286817155191390f39041ce3be8a7280b27d242"
+      "uploaded_sha256": "ddbb71ac7cf5c585becd6d2b4c75f304d6837012ec7ce978c01c7842555b5de7"
     },
     {
       "id": "1N8cjb_xZ4jPK8z5U95xMrRK7I3_Dzs_P",
@@ -2871,19 +2871,19 @@
       "id": "16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX",
       "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
       "url": "https://drive.google.com/file/d/16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX/view?usp=drivesdk",
-      "uploaded_sha256": "9927b37c1c0373fb03f04ba38940a4aac0508355b266953a420d03be89ca9f68"
+      "uploaded_sha256": "b30b74f3ba47a06e4e925a3fcfd62fd57fc153143a3155cb13a5a10fbfd26b38"
     },
     {
       "id": "1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v",
       "name": "day28_タスク一括操作を実装しよう.pdf",
       "url": "https://drive.google.com/file/d/1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v/view?usp=drivesdk",
-      "uploaded_sha256": "5656fdaf9f6eaa38993a94bffcdb1ed4d89884522c9464282b69298b4f7891d4"
+      "uploaded_sha256": "2ef3340330cdd3baaaabed8161da7931ed493adf3b886bfaa9f524c48333b674"
     },
     {
       "id": "1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI",
       "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
       "url": "https://drive.google.com/file/d/1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI/view?usp=drivesdk",
-      "uploaded_sha256": "c83bf5499e64458039c4d9fe0778fc01b1c8a17d2332d110d24cf051ef7cf751"
+      "uploaded_sha256": "f188c273d371508e63d6b2d760657da57ea918e3b70f0c6ea52dfdea6aace28c"
     },
     {
       "id": "1brFAifMLznqc1jDyTDLukCIHgxL2JwXL",
@@ -3609,5 +3609,67 @@
       "scope": "release-ready-with-full-build-receipt",
       "failures": []
     }
-  }
+  },
+  "redistributions": [
+    {
+      "event": "partial-redistribution",
+      "recorded_at": "2026-11-05T15:35:00Z",
+      "scope": "5 of 46 folder entries: 5 PDFs rebuilt from current sources and overwritten in place on the same Drive file IDs",
+      "reason": "教材本文の5冊へ注記ブロック（完成版との差異を読者へ説明する節）が main に入ったため、配布PDFを新版へ差し替え",
+      "source_commit": "bf0e331888610059b632da8d93fc0389756a40a2",
+      "content_change_commit": "c8178aaf588f4f6528e82c77411fdc13eac749a7",
+      "drive_folder_id": "1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU",
+      "build": "python3 scripts/pdf-book/build_pdf_book.py <5 files>（make book-pdf-one と同経路。dist/.pdf-book-build の検査用成果物が実行ごとに作り直されるため5冊を1回の実行にまとめた）",
+      "upload": "rclone copyto で同名ファイルの中身を更新（replaced existing・file ID 維持・他41件は未変更）",
+      "checks": {
+        "check_pdf_book": "PASS: 5冊すべて商品として出せる状態（subset ビルド用の --allow-gaps で連番抜け検査のみ退避）",
+        "check_page_layout": "PASS: 5冊すべて紙面が崩れていません（表の断片の計測記録 5/5 冊）",
+        "check_inline_break": "PASS: 失敗カテゴリ4種すべて0件（quarter_line_gap 34件は非失敗の参考値）",
+        "verify_pdf_copy": "PASS: Poppler extraction 9326/9326 nonblank fenced-code lines across 5 PDFs（--allow-missing、未ビルド31冊は not checked と明記）"
+      },
+      "postupload_verification": "rclone cat で再取得した sha256 がローカル生成物と全5件一致。上書き前のリモート sha256 も全5件 previous_sha256 と一致することを確認済み",
+      "books": [
+        {
+          "name": "day19_コメント編集・削除.pdf",
+          "drive_file_id": "1fxqVw24Ib7a2g_AvXucqoAowi9aGtvnI",
+          "previous_sha256": "a532e9531a4361de69ae76dd320bf4f76f7add5b52e0c09bff514cadfff01f2d",
+          "sha256": "1c6971edd9d1fcfdcbe00f1aae7594cffe48787d2e6e4e82a3cab49424885d5d",
+          "size": 1190850,
+          "pages": 111
+        },
+        {
+          "name": "day25_プロフィール編集.pdf",
+          "drive_file_id": "1ZxIG1alOFSR758Rak5knuSA7A15gwcAj",
+          "previous_sha256": "cfdf565d6046401e25db30312286817155191390f39041ce3be8a7280b27d242",
+          "sha256": "ddbb71ac7cf5c585becd6d2b4c75f304d6837012ec7ce978c01c7842555b5de7",
+          "size": 2033479,
+          "pages": 194
+        },
+        {
+          "name": "day27_プロジェクト詳細・アーカイブを実装しよう.pdf",
+          "drive_file_id": "16zGgynKmh0LG4wF5u7p2xrkm5yunRZIX",
+          "previous_sha256": "9927b37c1c0373fb03f04ba38940a4aac0508355b266953a420d03be89ca9f68",
+          "sha256": "b30b74f3ba47a06e4e925a3fcfd62fd57fc153143a3155cb13a5a10fbfd26b38",
+          "size": 1658781,
+          "pages": 120
+        },
+        {
+          "name": "day28_タスク一括操作を実装しよう.pdf",
+          "drive_file_id": "1gnCqq_w3xfJxrKoltDW7UMydml93Jy7v",
+          "previous_sha256": "5656fdaf9f6eaa38993a94bffcdb1ed4d89884522c9464282b69298b4f7891d4",
+          "sha256": "2ef3340330cdd3baaaabed8161da7931ed493adf3b886bfaa9f524c48333b674",
+          "size": 2220515,
+          "pages": 137
+        },
+        {
+          "name": "day29_ユーザー詳細・編集ページを作ろう.pdf",
+          "drive_file_id": "1jxIONgRWWgaENJ1d3oE2OwQmG_uF7KPI",
+          "previous_sha256": "c83bf5499e64458039c4d9fe0778fc01b1c8a17d2332d110d24cf051ef7cf751",
+          "sha256": "f188c273d371508e63d6b2d760657da57ea918e3b70f0c6ea52dfdea6aace28c",
+          "size": 2206576,
+          "pages": 221
+        }
+      ]
+    }
+  ]
 }
