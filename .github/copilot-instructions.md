@@ -142,12 +142,11 @@ MW-CANARY-CLAUDEMD-7f3a9c
 **`material/**` 配下のファイルを編集する前に、必ず `.claude/skills/material-writing/SKILL.md` を読み、その手順に従うこと。**
 
 これは任意ではない。外部レビューで**AI独特の言い回しと翻訳文感を指摘され、商品として通用しないと判断された実績がある**。
-以前はこの指示が CLAUDE.md にだけ抜けていたため、Claude は一度もスキルを適用していなかった。今はこのファイルに一本化し、
-CLAUDE.md は AGENTS.md を読み込む1行（`@AGENTS.md`）だけにしている。`--add-dir` で足したリポジトリでは AGENTS.md が
-直接は読まれない。`CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` を付けた `--add-dir` では shim の CLAUDE.md は読まれるが、
-`@AGENTS.md` の取り込みは展開されなかった（2026-10-30 の `claude -p` 実測。記録は redmine-clone の
-`material/_meta/agents-canary.md`）。環境変数を付けなければ、追加ディレクトリの CLAUDE.md そのものが読まれない。だから task-app の作業も
-cwd=/home/user/task-app で起動したセッションで行う。cwd=リポジトリなら shim 経由で AGENTS.md が読まれる。
+以前はこの指示が CLAUDE.md にだけ抜けていたため、Claude は一度もスキルを適用していなかった。今はこのファイルに一本化している。
+CLAUDE.md は削除済み。現行の Claude Code は AGENTS.md をネイティブに読む。
+古い版では `--add-dir` で足したリポジトリの AGENTS.md が読まれない実測記録があったため
+（2026-10-30 の `claude -p` 実測。記録は redmine-clone の `material/_meta/agents-canary.md`）、
+AGENTS.md を取り込む1行（`@AGENTS.md`）の shim として CLAUDE.md を残していたが、現行版では不要になったため削除した。
 
 **恒久ルール: 教材は実コードを編集しながら、その場で書く。** 1 Step は「作業ツリーの実コードを1か所変える → 動かして確かめる →
 その差分と理由を Step に書く」で1単位とする。教材に載せるコードは作業ツリーの実ファイルから写し、手で打ち直さない。
