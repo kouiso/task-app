@@ -31,3 +31,12 @@
 
 - `scripts/build-zip.sh` で生成。内容: scaffold-from-scratch.sh + scripts/_*-base 一式 + README + .env.example + doc/SUPPORTED_ENVIRONMENTS.md（`material/`・`src/` は含まない — 教材はPDFで別配布、srcは読者がscaffoldで作る）
 - ZIPの共有権限はPDFと同一フォルダの権限モデルに従う
+
+## 配布リンク（2026-11-05 有効化・#404）
+
+- 配布方式: Drive 共有リンク（`type=anyone, role=reader`、リンクを知っている全員が閲覧可）
+- 配布フォルダ: `30日教材PDF_36冊_2026-09-02`（ID `1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU`）
+- リンク: https://drive.google.com/drive/folders/1LXf2Ws7MKN0hBjEGCU6W3CmwH5Y4GjxU
+- 権限付与: 2026-11-05 に Drive API `files.permissions` で付与（`allowFileDiscovery=false` — 検索には出ずリンク保持者のみ）
+- 外部実検証（未認証・ログインなし）: フォルダ表示 HTTP 200・配下 PDF の `uc?export=download` が HTTP 200 で本文取得を確認（ファイルはフォルダ権限を継承）
+- 旧版フォルダ `旧版-20260912`（ID `1oL6mKfjH-TY8TIKc_A647eGHTAFuAfak`）: 権限は domain reader + organizer のみで anyone 権限なし・未認証アクセスは 302（ログイン要求）を確認

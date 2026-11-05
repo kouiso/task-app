@@ -172,6 +172,11 @@ export const userRouter = createTRPCRouter({
     }
     if (data.isActive !== undefined) {
       updateData.isActive = data.isActive;
+      // 無効化されたユーザーの発行済みJWTも残らないよう、同時にセッションを失効させる。
+      // 再有効化時は旧トークンが復活しないようsessionVersionは戻さない
+      if (data.isActive === false) {
+        updateData.sessionVersion = { increment: 1 };
+      }
     }
 
     return await prisma.user.update({
@@ -211,20 +216,23 @@ export const userRouter = createTRPCRouter({
       updateData.avatar = input.avatar;
     }
 
-    const updatedUser = await prisma.user.update({
+    const { sessionVersion, ...updatedUser } = await prisma.user.update({
       where: { id: userId },
       data: updateData,
       select: {
         ...USER_DETAIL_SELECT,
         updatedAt: true,
+        sessionVersion: true,
       },
     });
 
     if (input.email !== ctx.session.email) {
+      // プロフィール更新ではセッションを失効させないため、現在のsessionVersionをそのまま再発行に載せる
       await createSession({
         id: updatedUser.id,
         email: updatedUser.email,
         role: updatedUser.role,
+        sessionVersion,
       });
     }
 
@@ -268,7 +276,12 @@ export const userRouter = createTRPCRouter({
 
       await prisma.user.update({
         where: { id: userId },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          // 旧パスワードで発行されたJWTを全端末ぶん失効させるため、同じ更新で版番号を繰り上げる。
+          // 変更した本人のセッションも失効し、新パスワードでの再ログインが必要になる
+          sessionVersion: { increment: 1 },
+        },
       });
 
       return { success: true, message: 'パスワードを変更しました' };

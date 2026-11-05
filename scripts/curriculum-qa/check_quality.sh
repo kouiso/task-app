@@ -214,6 +214,7 @@ CORPUS_CHECKS=(
   check_unused_image
   check_jsx_marker
   check_ja_line_break
+  check_ja_latin_space
   check_why
   check_terms
   check_crossref
@@ -244,6 +245,7 @@ SELF_TESTS=(
   test_check_unused_image
   test_check_jsx_marker
   test_check_ja_line_break
+  test_check_ja_latin_space
   test_check_scaffold_alignment
   test_check_why
   test_check_tone

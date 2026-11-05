@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
+  callWhileMemberIsRemoved,
   createAuthenticatedCaller,
   createTestProject,
   createTestTask,
@@ -646,6 +647,83 @@ describe('projectRouter', () => {
       const rejection = results.find((result) => result.status === 'rejected');
       expect(rejection?.status === 'rejected' && rejection.reason.message).toBe(
         'この操作を実行する権限がありません',
+      );
+    });
+  });
+
+  describe('認可確認と書き込みの間の競合（TOCTOU・#626）', () => {
+    // update/delete/archive/addMember は removeMember・updateMemberRole と同じ
+    // プロジェクト行ロックを取ってから認可を再確認する。ロックを待つ間に
+    // 呼び出し側のメンバーが外れたら、書き込まずに FORBIDDEN になることを確かめる。
+
+    it('update: ロックを待つ間に呼び出し側が外れたら、プロジェクトを更新しない', async () => {
+      const { actor, project, caller } = await setupProjectWithActor('ADMIN');
+      const before = project.name;
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.project.update({ id: project.id, name: '取り消し後の更新' }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      const after = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+      expect(after.name).toBe(before);
+    });
+
+    it('delete: ロックを待つ間に呼び出し側が外れたら、プロジェクトを削除しない', async () => {
+      const { actor, project, caller } = await setupProjectWithActor('OWNER');
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.project.delete({ id: project.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      expect(await prisma.project.findUnique({ where: { id: project.id } })).not.toBeNull();
+    });
+
+    it('archive: ロックを待つ間に呼び出し側が外れたら、アーカイブしない', async () => {
+      const { actor, project, caller } = await setupProjectWithActor('OWNER');
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.project.archive({ id: project.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      const after = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+      expect(after.isArchived).toBe(false);
+    });
+
+    it('addMember: ロックを待つ間に呼び出し側が外れたら、メンバーを追加しない', async () => {
+      const { actor, project, caller } = await setupProjectWithActor('ADMIN');
+      const newUser = await createTestUser({ email: 'toctou-add@example.com' });
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.project.addMember({ projectId: project.id, userId: newUser.id, role: 'MEMBER' }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      const member = await prisma.projectMember.findUnique({
+        where: { userId_projectId: { userId: newUser.id, projectId: project.id } },
+      });
+      expect(member).toBeNull();
+    });
+
+    it('archive: 存在しないプロジェクトは NOT_FOUND', async () => {
+      const user = await createTestUser({ email: 'arch-nf@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+      await expect(caller.project.archive({ id: 'clxxxxxxxxxxxxxxxxxxxxxxxx' })).rejects.toThrow(
+        'プロジェクトが見つかりません',
       );
     });
   });

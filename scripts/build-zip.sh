@@ -128,7 +128,8 @@ cd "${BUILD_PARENT}"
 # いるため、上の rsync に除外を足すとその一覧に紛れ込んで検査が壊れる。
 # 同じ理由で、このコメントにも rsync の除外指定の書式を書いてはいけない。
 zip -qr "${CANDIDATE_ZIP}" "task-app" \
-  -x "*.DS_Store"
+  -x "*.DS_Store" \
+  -x "task-app/scripts/_server-routers/_helpers/lock.ts"
 
 bash "${PROJECT_ROOT}/scripts/curriculum-qa/check-sale-package.sh" "${CANDIDATE_ZIP}"
 mv -f "${CANDIDATE_ZIP}" "${OUTPUT_ZIP}"

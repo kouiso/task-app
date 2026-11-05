@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 12 ではプロジェクトへのメンバー追加・削除機能を実装しました。`addMember` / `removeMember` のtRPCルーターや権限チェックの仕組みを学んだので今日はアプリの核となるタスク一覧画面の構築に取り組みます。
+Day 12 ではプロジェクトへのメンバー追加・削除機能を実装しました。`addMember` / `removeMember` の tRPC ルーターや権限チェックの仕組みを学んだので今日はアプリの核となるタスク一覧画面の構築に取り組みます。
 
 ---
 
@@ -18,7 +18,7 @@ Day 12 ではプロジェクトへのメンバー追加・削除機能を実装�
 
 タスクは日々増えていきます。一覧で全体を見渡せて絞り込みで目的のタスクにすぐたどり着けないと件数が増えた途端に管理が立ち行かなくなります。だから最初に「探しやすい一覧」を用意します。
 
-> 例え話: タスク一覧は「To-Doリストのホワイトボード」です。付箋（タスク）が貼ってあり、色（優先度）や列（ステータス）で整理されています。フィルターは「この列の付箋だけ見せて」というフィルタリング機能です。
+> 例え話: タスク一覧は「To-Do リストのホワイトボード」です。付箋（タスク）が貼ってあり、色（優先度）や列（ステータス）で整理されています。フィルターは「この列の付箋だけ見せて」というフィルタリング機能です。
 
 ### タスク一覧の構成
 
@@ -68,7 +68,7 @@ flowchart TD
 | TaskCard でカード表示 | タスク詳細ページ |
 | レスポンシブなグリッドレイアウト | 作業時間の記録（Day 16） |
 | | 絞り込み条件の URL 保存（再読み込みで条件は初期化されます） |
-| | 優先度・担当者の絞り込みUI（サーバー側は Step 0 で用意しますが画面には置きません） |
+| | 優先度・担当者の絞り込み UI（サーバー側は Step 0 で用意しますが画面には置きません） |
 
 ### 新しく学ぶ概念
 
@@ -99,17 +99,17 @@ src/
     status.ts             ... ステータス定義・型ガード（既存）
 ```
 
-新しく作るのは `src/app/task/page.tsx` と `src/server/api/routers/task.ts` です。`src/server/api/root.ts` にAPIを登録し、`src/component/layout/app-layout.tsx` のリンクも変更します。`task-card.tsx` と `task-detail-dialog.tsx` はスターターに同梱されています。`loading-spinner.tsx` も前の Day までに用意した部品で、今日は呼び出す側を書きます。カードの見た目まで今日ゼロから作ろうとすると覚えることが一度に増えて手が止まります。表示部品はすでにあるものを使い、「サーバーから取ってきて絞り込んで、並べる」という流れの理解に集中してください。`status.ts` にはステータスの日本語ラベルと型ガード（値が想定の種類かを確かめる関数）が入っていてStep 3 と Step 4 で使います。
+新しく作るのは `src/app/task/page.tsx` と `src/server/api/routers/task.ts` です。`src/server/api/root.ts` に API を登録し、`src/component/layout/app-layout.tsx` のリンクも変更します。`task-card.tsx` と `task-detail-dialog.tsx` はスターターに同梱されています。`loading-spinner.tsx` も前の Day までに用意した部品で、今日は呼び出す側を書きます。カードの見た目まで今日ゼロから作ろうとすると覚えることが一度に増えて手が止まります。表示部品はすでにあるものを使い、「サーバーから取ってきて絞り込んで、並べる」という流れの理解に集中してください。`status.ts` にはステータスの日本語ラベルと型ガード（値が想定の種類かを確かめる関数）が入っていて Step 3 と Step 4 で使います。
 
 ### 完成ファイルの全体像
 
 最終的に `src/app/task/page.tsx` は以下の構造になります。Step 1〜7 で少しずつ組み立てていきます。
 
-| セクション | 内容 | 対応Step |
+| セクション | 内容 | 対応 Step |
 |-----------|------|---------|
-| import群 | コンポーネント・ライブラリの読み込み | Step 1, 2, 3, 6, 7 |
-| `TaskPageContent` 関数 | state定義・データ取得・ハンドラー・JSX | Step 1〜7 |
-| `TaskPage` 関数（default export） | Suspenseでラップして公開 | Step 1 |
+| import 群 | コンポーネント・ライブラリの読み込み | Step 1, 2, 3, 6, 7 |
+| `TaskPageContent` 関数 | state 定義・データ取得・ハンドラー・JSX | Step 1〜7 |
+| `TaskPage` 関数（default export） | Suspense でラップして公開 | Step 1 |
 
 ## 実装ステップ一覧
 
@@ -118,10 +118,10 @@ src/
 | Step 0 | タスク取得 API（getAll・getById）を自分で書く | 20分 |
 | Step 1 | ページの土台を作る | 5分 |
 | Step 2 | タスクデータを取得する | 5分 |
-| Step 3 | フィルター用のstateとimportを追加する | 5分 |
-| Step 4 | フィルターUIを作る | 7分 |
-| Step 5 | フィルター条件をAPIに渡す | 5分 |
-| Step 6 | TaskCardでタスクを表示する | 7分 |
+| Step 3 | フィルター用の state と import を追加する | 5分 |
+| Step 4 | フィルター UI を作る | 7分 |
+| Step 5 | フィルター条件を API に渡す | 5分 |
+| Step 6 | TaskCard でタスクを表示する | 7分 |
 | Step 7 | タスク詳細ダイアログを追加する | 7分 |
 | Step 8 | 動作確認 | 4分 |
 
@@ -149,7 +149,7 @@ Day 09 で見たとおり、tRPC の手続き（procedure）はいつも同じ3�
 | 処理（query） | 受け取った条件で DB に問い合わせる | Prisma でタスクを検索する |
 | 戻り値（return） | 画面に返すデータ | タスクの配列 |
 
-今日は一覧取得の `getAll` に加えてStep 7 の詳細ダイアログが呼ぶ `getById` も書きます。`create` や `update` はそれを実際に使う Day 14 以降で1つずつ足していきます。
+今日は一覧取得の `getAll` に加えて Step 7 の詳細ダイアログが呼ぶ `getById` も書きます。`create` や `update` はそれを実際に使う Day 14 以降で1つずつ足していきます。
 
 #### 0-1. まず import から
 
@@ -250,7 +250,7 @@ flowchart TB
 
 #### 0-5. Prisma でタスクを取得する
 
-組み立てた `where` を使ってPrisma で一覧を取得します。画面はプロジェクト名・担当者・コメントを表示するので関連するデータも `include` で一緒に取ってきます。
+組み立てた `where` を使って Prisma で一覧を取得します。画面はプロジェクト名・担当者・コメントを表示するので関連するデータも `include` で一緒に取ってきます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -266,7 +266,7 @@ flowchart TB
           },
 ```
 
-ここまでで `project`・`createdBy`・`assignee` の3つを一緒に取る指定を書きました。ブロックが長いので残りは次に分けます。行末が `,` のままで `include` の中括弧も閉じていないのはまだ途中だからです。エディタが赤い波線を出してもこの時点では正しい状態です。`createdBy` と `assignee` に `USER_SELECT` を挟んでいるのは`assignee: true` と書くとハッシュ化済みパスワードを含む全項目が画面まで返ってしまうためです。続きをそのまま下へ書き足してください。
+ここまでで `project`・`createdBy`・`assignee` の3つを一緒に取る指定を書きました。ブロックが長いので残りは次に分けます。行末が `,` のままで `include` の中括弧も閉じていないのはまだ途中だからです。エディタが赤い波線を出してもこの時点では正しい状態です。`createdBy` と `assignee` に `USER_SELECT` を挟んでいるのは `assignee: true` と書くとハッシュ化済みパスワードを含む全項目が画面まで返ってしまうためです。続きをそのまま下へ書き足してください。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -298,11 +298,11 @@ flowchart TB
     }),
 ```
 
-`orderBy` は `position`（並べ替え用の番号）の昇順で、同じなら作成日の新しい順にします。`take` と `skip` は取得件数と開始位置の指定です。ここでは `}),` で `getAll` までを閉じ、次の手続きを続けられる状態にします。並び順を指定しないとDB が返す順序は保証されません。読み込むたびにカードの位置が入れ替わって見えるので`orderBy` は必ず付けます。`take` で上限を置くのはタスクが数千件へ育った状態で全件をまとめて送り、画面が固まるのを防ぐためです。
+`orderBy` は `position`（並べ替え用の番号）の昇順で、同じなら作成日の新しい順にします。`take` と `skip` は取得件数と開始位置の指定です。ここでは `}),` で `getAll` までを閉じ、次の手続きを続けられる状態にします。並び順を指定しないと DB が返す順序は保証されません。読み込むたびにカードの位置が入れ替わって見えるので `orderBy` は必ず付けます。`take` で上限を置くのはタスクが数千件へ育った状態で全件をまとめて送り、画面が固まるのを防ぐためです。
 
 #### 0-7. 詳細ダイアログ用の getById を書く
 
-Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getById` で取得します。画面を置く前に API を用意してDay 13 の終了時点で型チェックと詳細表示の両方が成立するようにします。`getAll` の直後へ追加してください。
+Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getById` で取得します。画面を置く前に API を用意して Day 13 の終了時点で型チェックと詳細表示の両方が成立するようにします。`getAll` の直後へ追加してください。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（getAll の直後に追加）
@@ -327,7 +327,7 @@ Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getBy
           },
 ```
 
-`getById` の `include` も、ここでいったん切ります。`getAll` と違うのは `project` の取り方で、`members` を `ctx.session.userId` で絞って一緒に取っています。この1件を見るだけで「自分がこのタスクのプロジェクトに入っているか」が分かる形です。判定の材料をタスクと同じ問い合わせで取っておくとDB への往復が1回で済みます。`where: { userId: ctx.session.userId }` を落とすと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。残りのコメント部分は次に続けます。
+`getById` の `include` も、ここでいったん切ります。`getAll` と違うのは `project` の取り方で、`members` を `ctx.session.userId` で絞って一緒に取っています。この1件を見るだけで「自分がこのタスクのプロジェクトに入っているか」が分かる形です。判定の材料をタスクと同じ問い合わせで取っておくと DB への往復が1回で済みます。`where: { userId: ctx.session.userId }` を落とすと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。残りのコメント部分は次に続けます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（getById の続き）
@@ -367,7 +367,7 @@ Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getBy
 - `src/server/api/routers/task.ts` に `getAll` と `getById` を書き、`}),` と `});` まで閉じた
 - `getUserProjectIds` を使って自分のプロジェクトのタスクだけに絞っている
 - `getById` でも `assertMemberPermission` で閲覧権限を確認している
-- `npx tsc --noEmit` で型エラーが出ていない（画面から呼ぶ前に、ここまで書いたAPIの型を確認する）
+- `npx tsc --noEmit` で型エラーが出ていない（画面から呼ぶ前に、ここまで書いた API の型を確認する）
 
 #### 0-8. root.ts に task ルーターを登録する
 
@@ -448,7 +448,7 @@ const menuItems: MenuItem[] = [
 ];
 ```
 
-`menuItems` は配列なので要素を1つ足すだけでサイドバーのリンクが1本増えます。Day 08 で作った仕組みへ手を入れずに済むのは項目をコードの中に直接書かず、配列にまとめてあるからです。`path` の `/task` はこのあと作る `src/app/task/page.tsx` の URL と一致している必要があります。App Router はフォルダの並びをそのまま URL にするので`/tasks` と書き間違えるとクリックしても404ページに飛びます。
+`menuItems` は配列なので要素を1つ足すだけでサイドバーのリンクが1本増えます。Day 08 で作った仕組みへ手を入れずに済むのは項目をコードの中に直接書かず、配列にまとめてあるからです。`path` の `/task` はこのあと作る `src/app/task/page.tsx` の URL と一致している必要があります。App Router はフォルダの並びをそのまま URL にするので `/tasks` と書き間違えるとクリックしても404ページに飛びます。
 
 `src/app/task/page.tsx` を新規作成します。まずインポートとメインコンテンツの骨格です。
 
@@ -495,7 +495,7 @@ function TaskPageContent() {
 - `TaskPageContent` 関数が定義できた
 - `AppLayout` でラップしている
 
-`TaskPage` は `Suspense` で `TaskPageContent` をラップします。`useSearchParams`（Step 7で追加）はApp Routerのクライアントコンポーネントで使う場合`Suspense` 境界が必要です。読み込み中は `PageLoadingSpinner` を表示します。
+`TaskPage` は `Suspense` で `TaskPageContent` をラップします。`useSearchParams`（Step 7 で追加）は App Router のクライアントコンポーネントで使う場合 `Suspense` 境界が必要です。読み込み中は `PageLoadingSpinner` を表示します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -510,7 +510,7 @@ export default function TaskPage() {
 }
 ```
 
-`export default` を付けた関数がそのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのはStep 7 で `useSearchParams` を使うからです。`useSearchParams` を含むコンポーネントを `Suspense` の外に置くとビルド時に境界が無いというエラーで止まります。今は中身が軽いのでスピナーはほとんど見えませんが先に器を用意しておけば Step 7 でここを書き直さずに済みます。
+`export default` を付けた関数がそのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのは Step 7 で `useSearchParams` を使うからです。`useSearchParams` を含むコンポーネントを `Suspense` の外に置くとビルド時に境界が無いというエラーで止まります。今は中身が軽いのでスピナーはほとんど見えませんが先に器を用意しておけば Step 7 でここを書き直さずに済みます。
 
 **確認ポイント**:
 - `/task` にアクセスして「タスク」と表示される
@@ -524,7 +524,7 @@ export default function TaskPage() {
 
 **実装**:
 
-ファイル先頭のimport群に以下を追加します。
+ファイル先頭の import 群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -532,7 +532,7 @@ export default function TaskPage() {
 import { api } from '@/trpc/react';
 ```
 
-`@/trpc/react` の `api` はStep 0 で書いたサーバー側の手続きへ、型を保ったままつながる入口です。`api.task.getAll` と打った時点でエディタが引数の形を教えてくれるのは`root.ts` に登録した `appRouter` の型がそのまま画面側へ届いているからです。URL を文字列で組み立てないので綴りを間違えれば通信の前に赤い波線が出ます。
+`@/trpc/react` の `api` は Step 0 で書いたサーバー側の手続きへ、型を保ったままつながる入口です。`api.task.getAll` と打った時点でエディタが引数の形を教えてくれるのは `root.ts` に登録した `appRouter` の型がそのまま画面側へ届いているからです。URL を文字列で組み立てないので綴りを間違えれば通信の前に赤い波線が出ます。
 
 **確認ポイント**:
 - `api` のインポートが追加できた
@@ -567,7 +567,7 @@ const { data: projects } =
   api.project.getAll.useQuery();
 ```
 
-Day 09 で書いた `project.getAll` を、そのまま呼び直しています。一度サーバーに置いた手続きは別の画面からでも同じ呼び方で使えます。ここで取ったプロジェクトは Step 4 のドロップダウンの選択肢になり、Step 6 では自分のロール（プロジェクト内での権限の種類）を調べるのにも使います。引数を渡していないのは`project.getAll` の入力がすべて省略できる形だからです。
+Day 09 で書いた `project.getAll` を、そのまま呼び直しています。一度サーバーに置いた手続きは別の画面からでも同じ呼び方で使えます。ここで取ったプロジェクトは Step 4 のドロップダウンの選択肢になり、Step 6 では自分のロール（プロジェクト内での権限の種類）を調べるのにも使います。引数を渡していないのは `project.getAll` の入力がすべて省略できる形だからです。
 
 Day 09 の一覧画面は `isArchived: showArchived` を渡していました。ここでは渡していないのでアーカイブ済みのプロジェクトも選択肢に並びます。Day 11 でアーカイブしたものが残っていればそれもドロップダウンに出ます。今日はタスクを絞り込むのが目的で、プロジェクトの状態は問わないためこの形のままにしておきます。
 
@@ -588,7 +588,7 @@ if (tasksLoading) {
 }
 ```
 
-`tasksLoading` が `true` の間、`tasks` はまだ `undefined` です。この早期 return を置かずに先へ進むとStep 6 で書く `tasks.map(...)` が `undefined` に対して呼ばれ、`Cannot read properties of undefined` で画面が落ちます。`return` でそこまで到達させないのがいちばん確実な防ぎ方です。スピナーも `AppLayout` で包むのは読み込み中にサイドバーとヘッダーが消えて画面が跳ねるのを避けるためです。Day 09 のプロジェクト一覧でも同じ形を書きました。
+`tasksLoading` が `true` の間、`tasks` はまだ `undefined` です。この早期 return を置かずに先へ進むと Step 6 で書く `tasks.map(...)` が `undefined` に対して呼ばれ、`Cannot read properties of undefined` で画面が落ちます。`return` でそこまで到達させないのがいちばん確実な防ぎ方です。スピナーも `AppLayout` で包むのは読み込み中にサイドバーとヘッダーが消えて画面が跳ねるのを避けるためです。Day 09 のプロジェクト一覧でも同じ形を書きました。
 
 **確認ポイント**:
 - データ取得中にスピナーが表示される
@@ -607,13 +607,13 @@ if (tasksLoading) {
 
 ---
 
-### Step 3: フィルター用のstateとimportを追加する（5分）
+### Step 3: フィルター用の state と import を追加する（5分）
 
-**ゴール**: フィルターUIに必要なインポートとstateを準備します。
+**ゴール**: フィルター UI に必要なインポートと state を準備します。
 
 **実装**:
 
-ファイル先頭のimport群に以下を追加します。
+ファイル先頭の import 群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -654,9 +654,9 @@ const [filterStatus, setFilterStatus] =
 
 ---
 
-### Step 4: フィルターUIを作る（7分）
+### Step 4: フィルター UI を作る（7分）
 
-**ゴール**: プロジェクトとステータスの選択UIを作ります。
+**ゴール**: プロジェクトとステータスの選択 UI を作ります。
 
 **実装**:
 
@@ -686,7 +686,7 @@ const [filterStatus, setFilterStatus] =
 
 **確認ポイント**:
 - `Select` の `value` に `filterProject` state を渡している
-- JSXが閉じタグまで完結している
+- JSX が閉じタグまで完結している
 
 プロジェクト選択の `SelectContent` を `SelectTrigger` の直後に追加します。
 
@@ -705,7 +705,7 @@ const [filterStatus, setFilterStatus] =
 </SelectContent>
 ```
 
-選択肢の中身はStep 2 で取得した `projects` から作ります。プロジェクトが増えても手で書き足さずに済むのは`.map()` が配列の要素1つにつき `SelectItem` を1つ返すからです。先頭の「すべてのプロジェクト」だけは配列に無い値なので手で1行書いています。`projects?.` の `?.` はまだ取得できていない `undefined` の状態で `.map()` を呼んで落ちるのを防ぐ書き方です。
+選択肢の中身は Step 2 で取得した `projects` から作ります。プロジェクトが増えても手で書き足さずに済むのは `.map()` が配列の要素1つにつき `SelectItem` を1つ返すからです。先頭の「すべてのプロジェクト」だけは配列に無い値なので手で1行書いています。`projects?.` の `?.` はまだ取得できていない `undefined` の状態で `.map()` を呼んで落ちるのを防ぐ書き方です。
 
 **確認ポイント**:
 - 「すべてのプロジェクト」が先頭にある
@@ -731,7 +731,7 @@ const [filterStatus, setFilterStatus] =
 </div>
 ```
 
-`onValueChange` が受け取る値はshadcn/ui の都合でただの `string` です。そのまま `setFilterStatus(value)` と書くと型が合わず、`as TaskStatus` で黙らせたくなります。ただ、それは中身を確かめずに正しいと言い張る書き方なので想定外の文字列がそのままサーバーへ飛びます。`isTaskStatus(value)` を通せば確かめて真だったときだけ代入されるため型と実際の値がそろいます。
+`onValueChange` が受け取る値は shadcn/ui の都合でただの `string` です。そのまま `setFilterStatus(value)` と書くと型が合わず、`as TaskStatus` で黙らせたくなります。ただ、それは中身を確かめずに正しいと言い張る書き方なので想定外の文字列がそのままサーバーへ飛びます。`isTaskStatus(value)` を通せば確かめて真だったときだけ代入されるため型と実際の値がそろいます。
 
 **確認ポイント**:
 - `as` キャストではなく `isTaskStatus()` 型ガードで安全に判定している
@@ -756,7 +756,7 @@ const [filterStatus, setFilterStatus] =
 </SelectContent>
 ```
 
-`Object.entries` は`TASK_STATUS_LABELS` のような対応表を `[値, 見出し]` の配列へ並べ替える関数です。`value` を `SelectItem` の値に、`label` を画面の文字にすればステータスが増えたときも `status.ts` の表へ1行足すだけで選択肢に出ます。ステータスの一覧をこの画面の中へ書き写すと後で表を直したときに片方だけ古いまま残ります。
+`Object.entries` は `TASK_STATUS_LABELS` のような対応表を `[値, 見出し]` の配列へ並べ替える関数です。`value` を `SelectItem` の値に、`label` を画面の文字にすればステータスが増えたときも `status.ts` の表へ1行足すだけで選択肢に出ます。ステータスの一覧をこの画面の中へ書き写すと後で表を直したときに片方だけ古いまま残ります。
 
 **確認ポイント**:
 - プロジェクトとステータスの2つのドロップダウンが並んで表示される
@@ -764,13 +764,13 @@ const [filterStatus, setFilterStatus] =
 
 ---
 
-### Step 5: フィルター条件をAPIに渡す（5分）
+### Step 5: フィルター条件を API に渡す（5分）
 
-**ゴール**: 選択したフィルターでAPIリクエストを変更します。
+**ゴール**: 選択したフィルターで API リクエストを変更します。
 
 **実装**:
 
-Step 2で追加した `useQuery` を、フィルター付きに書き換えます。三項演算子（さんこうえんざんし）は `条件 ? 真の値 : 偽の値` という書き方です。「もし `'all'` なら `undefined`、それ以外なら値をそのまま」という意味です。
+Step 2 で追加した `useQuery` を、フィルター付きに書き換えます。三項演算子（さんこうえんざんし）は `条件 ? 真の値 : 偽の値` という書き方です。「もし `'all'` なら `undefined`、それ以外なら値をそのまま」という意味です。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -789,7 +789,7 @@ const {
 );
 ```
 
-ここで渡す `projectId` はStep 0 の 0-3 が受け取る値です。ドロップダウンには自分のプロジェクトしか並びませんがサーバーはその前提を信用しません。通信を書き換えて他人のプロジェクト id を送っても`projectIds.includes(...)` の確認で弾かれ、タスクの代わりに FORBIDDEN が返ります。画面の絞り込みは見やすさのための道具で、見せてよい範囲を決めているのはサーバーです。
+ここで渡す `projectId` は Step 0 の 0-3 が受け取る値です。ドロップダウンには自分のプロジェクトしか並びませんがサーバーはその前提を信用しません。通信を書き換えて他人のプロジェクト id を送っても `projectIds.includes(...)` の確認で弾かれ、タスクの代わりに FORBIDDEN が返ります。画面の絞り込みは見やすさのための道具で、見せてよい範囲を決めているのはサーバーです。
 
 **確認ポイント**:
 - `useQuery` に `projectId` と `status` を渡す形へ書き換えた
@@ -797,17 +797,17 @@ const {
 
 絞り込みの効き目が画面に出るのはカードを並べる Step 6 からです。いまの画面にはドロップダウン2つしか無いので選び方を変えても見た目は変わりません。
 
-> `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびにReactが `useQuery` を再実行し、画面が自動更新されます。
+> `'all'` の場合に `undefined` を渡すと「この条件は使わない」という意味になり、サーバーは全件を返します。フィルターの選択が変わるたびに React が `useQuery` を再実行し、画面が自動更新されます。
 
 ---
 
-### Step 6: TaskCardでタスクを表示する（7分）
+### Step 6: TaskCard でタスクを表示する（7分）
 
 **ゴール**: 各タスクをカード形式でグリッド表示します。
 
 **実装**:
 
-ファイル先頭のimport群に以下を追加します。
+ファイル先頭の import 群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -821,7 +821,7 @@ import { TaskCard }
 **確認ポイント**:
 - `TaskCard` のインポートが追加できた
 
-ハンドラーを仮実装します。`TaskPageContent` 関数内、`return` 文の前に追加してください。クリック・編集・削除は後のDayで本実装に差し替えます。
+ハンドラーを仮実装します。`TaskPageContent` 関数内、`return` 文の前に追加してください。クリック・編集・削除は後の Day で本実装に差し替えます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -846,7 +846,7 @@ const handleDelete =
 
 > `timeSpentMinutes`（合計作業時間）という作業時間まわりの prop はいまの `TaskCard` にはまだありません。作業時間の記録は Day 16 で扱い、そのときに `TaskCard` 側へ追加します。
 
-TaskCardには編集・削除ボタンが付いています。ボタンを表示するかどうかはログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。まずログインユーザーの情報を取得し、import群に追加してください。
+TaskCard には編集・削除ボタンが付いています。ボタンを表示するかどうかはログインユーザーがそのタスクの属するプロジェクトで何のロールかによって決まります。まずログインユーザーの情報を取得し、import 群に追加してください。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -862,7 +862,7 @@ import {
 
 `useMemo`（計算した結果を覚えておく仕組み）と `useCallback`（作った関数を覚えておく仕組み）は必要のない作り直しを避けるための道具です。`hasPermission` と `isProjectMemberRole` は Day 12 で使った関数です。ロールから何ができるかを判定します。サーバー側と同じ関数をここでも読み込むのが要点で、判定の基準を2か所に書き分けないためです。基準が分かれると画面ではボタンが見えるのにサーバーは拒む、といったちぐはぐな状態になります。
 
-続けて`TaskPageContent` 内にログインユーザーの情報とプロジェクトごとのロールを求める処理を追加します。`tasks` の `useQuery` の近くに置いてください。
+続けて `TaskPageContent` 内にログインユーザーの情報とプロジェクトごとのロールを求める処理を追加します。`tasks` の `useQuery` の近くに置いてください。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -891,7 +891,7 @@ const myRoleByProject = useMemo(() => {
 
 `project.getAll` は Day 09 で `members` を含めて返すようにしました。ここではそのメンバー一覧から、自分のプロジェクト内ロールを取得します。
 
-> `myRoleByProject` はプロジェクトIDをキーに「自分がそのプロジェクトで何のロールか」を引けるMapです。
+> `myRoleByProject` はプロジェクト ID をキーに「自分がそのプロジェクトで何のロールか」を引ける Map です。
 
 `session` を取れていないときや `projects` がまだ空のときは空の Map をそのまま返します。ここで `undefined` を返すとこの後の `.get()` を呼んだ時点で落ちます。`useMemo` の第2引数に `[projects, session?.user?.id]` を渡しているので表を作り直すのはこの2つが変わったときだけです。カードが1枚描画されるたびに全プロジェクトを走査し直すと件数が増えたときに操作の反応が鈍くなります。
 
@@ -917,13 +917,13 @@ const canDeleteProject = useCallback(
 );
 ```
 
-> `canEditProject` / `canDeleteProject` はそのロールに編集・削除の権限があるかを返します。サーバー側の判定と同じ `hasPermission`（Day 12 で学んだ関数）を使うのでフロントとサーバーで基準がずれません。閲覧者（VIEWER）ロールのプロジェクトでは両方とも `false` になり、TaskCardの編集・削除ボタンが表示されなくなります。
+> `canEditProject` / `canDeleteProject` はそのロールに編集・削除の権限があるかを返します。サーバー側の判定と同じ `hasPermission`（Day 12 で学んだ関数）を使うのでフロントとサーバーで基準がずれません。閲覧者（VIEWER）ロールのプロジェクトでは両方とも `false` になり、TaskCard の編集・削除ボタンが表示されなくなります。
 
 **確認ポイント**:
 - `myRoleByProject` / `canEditProject` / `canDeleteProject` が定義できた
 - `npm run dev` でエラーが出ていない
 
-フィルターUIの直下にグリッドを追加します。タスクがある場合のカード表示です。
+フィルター UI の直下にグリッドを追加します。タスクがある場合のカード表示です。
 
 ```typescript
 {/* filepath: src/app/task/page.tsx */}
@@ -953,9 +953,9 @@ const canDeleteProject = useCallback(
 </div>
 ```
 
-`tasks && tasks.length > 0` で先に件数を確かめ、1件以上あるときだけ `.map()` へ進みます。`tasks` は読み込み中だと `undefined` なのでこの確認が無いと `undefined` に対して `.map()` を呼んでしまいます。`key={task.id}` はReact がどのカードがどれかを見分けるための印です。`grid` の後ろに並ぶ `sm:` `lg:` `xl:` は画面幅ごとの列数で、狭い画面では1列、広い画面では4列に増えます。else 側をいったん `<div />` にしているのは0件のときの表示をこの節の最後で差し替えるからです。
+`tasks && tasks.length > 0` で先に件数を確かめ、1件以上あるときだけ `.map()` へ進みます。`tasks` は読み込み中だと `undefined` なのでこの確認が無いと `undefined` に対して `.map()` を呼んでしまいます。`key={task.id}` は React がどのカードがどれかを見分けるための印です。`grid` の後ろに並ぶ `sm:` `lg:` `xl:` は画面幅ごとの列数で、狭い画面では1列、広い画面では4列に増えます。else 側をいったん `<div />` にしているのは0件のときの表示をこの節の最後で差し替えるからです。
 
-TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。コメントも開始タグの内側にあるのでブロック全体をコピーできます。
+TaskCard に `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` を以下に**置き換えて**ください。コメントも開始タグの内側にあるのでブロック全体をコピーできます。
 
 ```typescript
 <TaskCard
@@ -977,11 +977,11 @@ TaskCardに `canEdit` / `canDelete` を渡します。上の `<TaskCard ... />` 
 />
 ```
 
-> `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。ボタンを押すとサーバー側の権限チェックで弾かれる（403 FORBIDDEN）ので必ずロールに応じた値を渡してください。
+> `canEdit` / `canDelete` を渡さないと TaskCard 側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。ボタンを押すとサーバー側の権限チェックで弾かれる（403 FORBIDDEN）ので必ずロールに応じた値を渡してください。
 
 **確認ポイント**:
 - タスクがカード形式で表示されている
-- ステータス・優先度がBadgeで表示される
+- ステータス・優先度が Badge で表示される
 
 タスクが0件のときの表示です。`src/app/task/page.tsx` にある `<div />`（1つ前のブロックの三項演算子の else 側）を、以下に差し替えてください。
 
@@ -1012,14 +1012,14 @@ Step 5 で書いた絞り込みはカードが並ぶここで初めて目に見�
 
 ![ステータスを「完了」に絞った一覧。「データベース設計」1枚だけが残っている](./screenshots/day13/task-list-filtered.png)
 
-#### TaskCardに渡す主なprops
+#### TaskCard に渡す主な props
 
 | prop | 型 | 説明 |
 |------|-----|------|
-| `id` | `string` | タスクID |
+| `id` | `string` | タスク ID |
 | `title` | `string` | タスク名 |
 | `description` | `string` または `null`（省略可） | 説明文 |
-| `status` | `TaskStatus` | ステータス（TODO, IN_PROGRESS等） |
+| `status` | `TaskStatus` | ステータス（TODO, IN_PROGRESS 等） |
 | `priority` | `TaskPriority` | 優先度（LOW, MEDIUM, HIGH, URGENT） |
 | `assignee` | `object?` | 担当者情報 |
 | `dueDate` | `Date?` | 期限日 |
@@ -1033,11 +1033,11 @@ Step 5 で書いた絞り込みはカードが並ぶここで初めて目に見�
 
 ### Step 7: タスク詳細ダイアログを追加する（7分）
 
-**ゴール**: カードクリックでタスクの詳細を表示します。URLパラメータにも対応します。
+**ゴール**: カードクリックでタスクの詳細を表示します。URL パラメータにも対応します。
 
 **実装**:
 
-ファイル先頭のimport群に以下を追加します。
+ファイル先頭の import 群に以下を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1053,13 +1053,13 @@ import {
 } from 'react';
 ```
 
-`useSearchParams` はURL の `?` 以降を読み取る Next.js のフックです。`useEffect` は指定した値が変わった後に処理を走らせる React の仕組みで、ここでは URL の変化を拾うために使います。`TaskDetailDialog` は Day 09 以降で作ってきたダイアログと同じ形の部品で、開くかどうかと、どのタスクを見せるかを親から受け取ります。
+`useSearchParams` は URL の `?` 以降を読み取る Next.js のフックです。`useEffect` は指定した値が変わった後に処理を走らせる React の仕組みで、ここでは URL の変化を拾うために使います。`TaskDetailDialog` は Day 09 以降で作ってきたダイアログと同じ形の部品で、開くかどうかと、どのタスクを見せるかを親から受け取ります。
 
 **確認ポイント**:
 - `TaskDetailDialog` と `useSearchParams` がインポートできた
 - `useEffect` も `react` からインポートしている
 
-詳細表示用のstateとURLパラメータ対応を追加します。`TaskPageContent` 関数の先頭（他のstateの近く）に追加してください。`useSearchParams` で URL の `?taskId=xxx` を読み取り、そのタスクの詳細を自動で開きます。
+詳細表示用の state と URL パラメータ対応を追加します。`TaskPageContent` 関数の先頭（他の state の近く）に追加してください。`useSearchParams` で URL の `?taskId=xxx` を読み取り、そのタスクの詳細を自動で開きます。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1075,13 +1075,13 @@ const taskIdParam =
   searchParams.get('taskId');
 ```
 
-`selectedTask` は「どのタスクを見ているか」、`detailOpen` は「ダイアログが開いているか」を覚えます。2つに分けるのは閉じる動きの途中で id を消すと中身が一瞬空になるからです。`searchParams.get('taskId')` は`/task?taskId=abc` の `abc` の部分を取り出します。開いている画面の状態を URL に載せておくとそのアドレスをそのまま人へ送れます。
+`selectedTask` は「どのタスクを見ているか」、`detailOpen` は「ダイアログが開いているか」を覚えます。2つに分けるのは閉じる動きの途中で id を消すと中身が一瞬空になるからです。`searchParams.get('taskId')` は `/task?taskId=abc` の `abc` の部分を取り出します。開いている画面の状態を URL に載せておくとそのアドレスをそのまま人へ送れます。
 
 **確認ポイント**:
 - `selectedTask` と `detailOpen` の state が追加された
 - `searchParams` から `taskId` を取得している
 
-URLパラメータがある場合に自動で詳細を開く `useEffect` を追加します。
+URL パラメータがある場合に自動で詳細を開く `useEffect` を追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1094,12 +1094,12 @@ useEffect(() => {
 }, [taskIdParam]);
 ```
 
-第2引数の `[taskIdParam]` が「見張る値」で、URL の `taskId` が変わったときだけ中身が動きます。ここを空配列の `[]` にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。逆に第2引数ごと省くと描画のたびに中身が動きます。ダイアログを閉じても `setDetailOpen(true)` がすぐまた走るので閉じられない画面になります。見張る値を正しく書くことが`useEffect` を安全に使う条件です。
+第2引数の `[taskIdParam]` が「見張る値」で、URL の `taskId` が変わったときだけ中身が動きます。ここを空配列の `[]` にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。逆に第2引数ごと省くと描画のたびに中身が動きます。ダイアログを閉じても `setDetailOpen(true)` がすぐまた走るので閉じられない画面になります。見張る値を正しく書くことが `useEffect` を安全に使う条件です。
 
 **確認ポイント**:
 - `taskIdParam` が変わると `useEffect` が実行される
 
-Step 6 の `handleTaskClick` は`void taskId;` と書いただけの仮実装でした。以下の本実装に差し替えます。`handleDetailClose` も追加します。
+Step 6 の `handleTaskClick` は `void taskId;` と書いただけの仮実装でした。以下の本実装に差し替えます。`handleDetailClose` も追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -1171,16 +1171,16 @@ npm run dev
 | ブラウザ幅を変更 | カードの列数が変わる |
 | `/task?taskId=xxx` でアクセス | 自動で詳細ダイアログが開く |
 
-#### URLに入れるタスクIDの確認
+#### URL に入れるタスク ID の確認
 
-`xxx` は説明用の仮の値です。タスク名とは別に保存されている `id` に置き換えます。Prisma Studio（DBのデータを表で確認する画面）で実際の値を調べましょう。
+`xxx` は説明用の仮の値です。タスク名とは別に保存されている `id` に置き換えます。Prisma Studio（DB のデータを表で確認する画面）で実際の値を調べましょう。
 
 
 **1.** タスク一覧に表示されているタスクを1件選びます。タスク名を控えてください。
 
-**2.** 開発サーバーのターミナルはそのままにしてVS Codeで新しいターミナルを開きます。作業場所が `task-app` であることを確認します。
+**2.** 開発サーバーのターミナルはそのままにして VS Code で新しいターミナルを開きます。作業場所が `task-app` であることを確認します。
 
-**3.** 次のコマンドでPrisma Studioを起動します。
+**3.** 次のコマンドで Prisma Studio を起動します。
 
 ```bash
 # filepath: ターミナル
@@ -1195,7 +1195,7 @@ npx prisma studio --port 5555
 
 **6.** アプリのタブで `http://localhost:3000/task?taskId=xxx` の `xxx` をコピーした値に置き換えて開きます。同じタスク名の詳細が表示されれば成功です。
 
-**7.** 確認後は `http://localhost:3000/task` に戻ります。Prisma Studioのターミナルで `Ctrl+C` を押して終了します。
+**7.** 確認後は `http://localhost:3000/task` に戻ります。Prisma Studio のターミナルで `Ctrl+C` を押して終了します。
 
 5555番が使用中と表示された場合は `--port 5556` に変えて起動します。ブラウザも `http://localhost:5556` を開いてください。詳細が取得できない場合は一覧に表示されるタスクを選び直して `id` を確認します。
 
@@ -1209,7 +1209,7 @@ npx prisma studio --port 5555
 
 **確認ポイント**:
 - フィルタリングが正しく動作する
-- カードにステータス・優先度のBadgeがある
+- カードにステータス・優先度の Badge がある
 - 詳細ダイアログが開閉する
 
 ---
@@ -2279,12 +2279,12 @@ export default function TaskPage() {
 ## 今日のまとめ
 
 - [ ] `api.task.getAll` でタスク一覧を取得できた
-- [ ] フィルター条件をAPIパラメータに反映できた
+- [ ] フィルター条件を API パラメータに反映できた
 - [ ] `isTaskStatus` 型ガードで安全にフィルター値を設定できた
 - [ ] TaskCard でタスクをカード表示できた
 - [ ] `canEditProject` / `canDeleteProject` でロールに応じて編集・削除ボタンの表示を切り替えられた
 - [ ] レスポンシブなグリッドレイアウトを実装できた
-- [ ] URLパラメータからタスク詳細を自動オープンできた
+- [ ] URL パラメータからタスク詳細を自動オープンできた
 
 ## つまずきポイント
 | エラー / 問題 | 原因 | 解決方法 |
@@ -2302,8 +2302,8 @@ export default function TaskPage() {
 | フィルタリング | データを条件で絞り込む操作 |
 | TaskCard | タスク1件を表示する再利用可能なコンポーネント |
 | 三項演算子 | `条件 ? 真の値 : 偽の値` で分岐する構文 |
-| Suspense | データ読み込み中にフォールバック表示するReactの仕組み |
-| useSearchParams | URLの `?key=value` を読み取るNext.jsのフック |
+| Suspense | データ読み込み中にフォールバック表示する React の仕組み |
+| useSearchParams | URL の `?key=value` を読み取る Next.js のフック |
 
 ## 理解チェック
 

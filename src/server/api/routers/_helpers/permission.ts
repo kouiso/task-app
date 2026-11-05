@@ -1,3 +1,4 @@
+import { type Prisma, ProjectMemberRole } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { hasPermission, isProjectMemberRole, type PermissionKey } from '@/lib/constant/roles';
 import { prisma } from '@/lib/prisma';
@@ -41,6 +42,11 @@ export const assertMemberPermission = (
   }
 };
 
+// 書き込みの WHERE 条件に埋め込む認可用のロール一覧を出す。
+// assertMemberPermission と同じ hasPermission で判定するため、読み取り側と条件がずれない。
+export const rolesWithPermission = (permission: PermissionKey): ProjectMemberRole[] =>
+  Object.values(ProjectMemberRole).filter((role) => hasPermission(role, permission));
+
 const taskWithPermissionInclude = (userId: string) =>
   ({
     project: {
@@ -52,12 +58,16 @@ const taskWithPermissionInclude = (userId: string) =>
     },
   }) as const;
 
+// db はロック取得後の再確認を同じトランザクションで行うための差し替え口。
+// 認可確認と書き込みの間に権限が変わる（TOCTOU）のを防ぐ経路では、
+// 行ロックを取ったトランザクションのクライアントを渡す。
 export const findTaskWithPermission = async (
   taskId: string,
   userId: string,
   permission?: PermissionKey,
+  db: Prisma.TransactionClient = prisma,
 ) => {
-  const task = await prisma.task.findUnique({
+  const task = await db.task.findUnique({
     where: { id: taskId },
     include: taskWithPermissionInclude(userId),
   });

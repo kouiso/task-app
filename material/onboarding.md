@@ -34,9 +34,9 @@ asdf reshim
 
 ### 環境変数
 
-- dev環境の.envを以下のURLから取得する
+- dev 環境の.env を以下の URL から取得する
   [develop]()
-  localの開発環境もこれで動かす。
+  local の開発環境もこれで動かす。
 
 ```bash
 # firebaseの認証情報
@@ -51,7 +51,7 @@ NEXT_PUBLIC_MEASUREMENT_ID=
 
 ## セットアップ手順
 
-- `task init` で環境初期化（Docker起動、依存インストール、DB作成・シーディング）
+- `task init` で環境初期化（Docker 起動、依存インストール、DB 作成・シーディング）
 - `npm run dev` で 開発サーバー起動
 
 ```bash
@@ -64,6 +64,6 @@ npm run dev
 (知っておくと便利)
 
 - `npm run lint`
-  - 実行するとBiomeのコードチェックが走る
+  - 実行すると Biome のコードチェックが走る
 - `npm run fix`
-  - 実行するとBiomeの自動修正が走る
+  - 実行すると Biome の自動修正が走る

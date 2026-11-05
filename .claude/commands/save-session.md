@@ -205,7 +205,7 @@ refreshes without exposing the token to JavaScript.
 ## What WORKED (with evidence)
 
 - **`/api/auth/register` endpoint** — confirmed by: Postman POST returns 200 with user
-  object, row visible in Supabase dashboard, bcrypt hash stored correctly
+  object, row visible in Prisma Studio, bcrypt hash stored correctly
 - **JWT generation in `lib/auth.ts`** — confirmed by: unit test passes
   (`npm test -- auth.test.ts`), decoded token at jwt.io shows correct payload
 - **Password hashing** — confirmed by: `bcrypt.compare()` returns true in test

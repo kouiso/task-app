@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
+  callWhileMemberIsRemoved,
   createAuthenticatedCaller,
   createTestComment,
   createTestProject,
@@ -132,6 +133,63 @@ describe('commentRouter', () => {
       await expect(caller.comment.delete({ id: othersComment.id })).rejects.toThrow(
         '自分のコメントのみ編集・削除できます',
       );
+    });
+
+    it('存在しないコメントは NOT_FOUND', async () => {
+      const { caller } = await setup('OWNER');
+      await expect(caller.comment.delete({ id: NON_EXISTENT_ID })).rejects.toThrow(
+        'コメントが見つかりません',
+      );
+    });
+  });
+
+  describe('認可確認と書き込みの間の競合（TOCTOU・#626）', () => {
+    // create/update/delete はプロジェクト行をロックしてから認可を再確認する。
+    // ロックを待つ間にメンバーが外れたら、書き込まずに FORBIDDEN になることを確かめる。
+
+    it('create: ロックを待つ間にメンバーが外れたら、コメントを残さない', async () => {
+      const { actor, project, task, caller } = await setup('MEMBER');
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.comment.create({ taskId: task.id, content: '取り消し後の投稿' }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      expect(await prisma.comment.count({ where: { taskId: task.id } })).toBe(0);
+    });
+
+    it('update: ロックを待つ間にメンバーが外れたら、書き換えない', async () => {
+      const { actor, project, task, caller } = await setup('MEMBER');
+      const comment = await createTestComment(task.id, actor.id, { content: '元の内容' });
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.comment.update({ id: comment.id, content: '書き換え' }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      const after = await prisma.comment.findUniqueOrThrow({ where: { id: comment.id } });
+      expect(after.content).toBe('元の内容');
+    });
+
+    it('delete: ロックを待つ間にメンバーが外れたら、削除しない', async () => {
+      const { actor, project, task, caller } = await setup('MEMBER');
+      const comment = await createTestComment(task.id, actor.id);
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.comment.delete({ id: comment.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      expect(await prisma.comment.findUnique({ where: { id: comment.id } })).not.toBeNull();
     });
   });
 });
