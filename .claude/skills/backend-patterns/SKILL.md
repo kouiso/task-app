@@ -47,22 +47,12 @@ interface MarketRepository {
   delete(id: string): Promise<void>
 }
 
-class SupabaseMarketRepository implements MarketRepository {
+class PrismaMarketRepository implements MarketRepository {
   async findAll(filters?: MarketFilters): Promise<Market[]> {
-    let query = supabase.from('markets').select('*')
-
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
-    }
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit)
-    }
-
-    const { data, error } = await query
-
-    if (error) throw new Error(error.message)
-    return data
+    return prisma.market.findMany({
+      where: filters?.status ? { status: filters.status } : undefined,
+      take: filters?.limit,
+    })
   }
 
   // Other methods...
@@ -132,17 +122,15 @@ export default withAuth(async (req, res) => {
 
 ```typescript
 // ✅ GOOD: Select only needed columns
-const { data } = await supabase
-  .from('markets')
-  .select('id, name, status, volume')
-  .eq('status', 'active')
-  .order('volume', { ascending: false })
-  .limit(10)
+const markets = await prisma.market.findMany({
+  where: { status: 'active' },
+  select: { id: true, name: true, status: true, volume: true },
+  orderBy: { volume: 'desc' },
+  take: 10,
+})
 
 // ❌ BAD: Select everything
-const { data } = await supabase
-  .from('markets')
-  .select('*')
+const markets = await prisma.market.findMany()
 ```
 
 ### N+1 Query Prevention
@@ -172,35 +160,15 @@ async function createMarketWithPosition(
   marketData: CreateMarketDto,
   positionData: CreatePositionDto
 ) {
-  // Use Supabase transaction
-  const { data, error } = await supabase.rpc('create_market_with_position', {
-    market_data: marketData,
-    position_data: positionData
+  // Interactive transaction: both inserts commit or roll back together
+  return prisma.$transaction(async (tx) => {
+    const market = await tx.market.create({ data: marketData })
+    const position = await tx.position.create({
+      data: { ...positionData, marketId: market.id },
+    })
+    return { market, position }
   })
-
-  if (error) throw new Error('Transaction failed')
-  return data
 }
-
-// SQL function in Supabase
-CREATE OR REPLACE FUNCTION create_market_with_position(
-  market_data jsonb,
-  position_data jsonb
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  -- Start transaction automatically
-  INSERT INTO markets VALUES (market_data);
-  INSERT INTO positions VALUES (position_data);
-  RETURN jsonb_build_object('success', true);
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Rollback happens automatically
-    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
-END;
-$$;
 ```
 
 ## Caching Strategies

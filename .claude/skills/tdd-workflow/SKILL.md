@@ -254,18 +254,15 @@ src/
 
 ## Mocking External Services
 
-### Supabase Mock
+### Prisma Mock
 ```typescript
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({
-          data: [{ id: 1, name: 'Test Market' }],
-          error: null
-        }))
-      }))
-    }))
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    market: {
+      findMany: jest.fn(() => Promise.resolve([
+        { id: '1', name: 'Test Market' }
+      ])),
+    }
   }
 }))
 ```
