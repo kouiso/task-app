@@ -87,7 +87,7 @@ export default function RegisterPage() {
           <CardDescription>新しいアカウントを作成してください</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error.length > 0 && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

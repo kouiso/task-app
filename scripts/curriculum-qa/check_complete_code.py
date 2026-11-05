@@ -96,8 +96,15 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/component/project/project-dialog.tsx": "day10 の注記で必須マーク・列の分け方の差分を説明済み",
     "src/component/task/task-detail-dialog.tsx": "day19 の注記で権限の確かめ方の差分を説明済み",
     "src/lib/session.ts": "day07 の注記で saveSessionCookie 切り出しの差分を説明済み",
-    "src/server/api/routers/auth.ts": "day07 は行の折り方の違いで末尾のカンマの有無が3か所違う。動きは同じ",
+    "src/server/api/routers/auth.ts": "day07 は行の折り方の違い。加えて src/ は sessionVersion による旧 JWT 失効（#625: logout・getSession の版番号照合）を持ち、教材は JWT の基本形を教える版。追跡: #658",
     "src/app/task/page.tsx": "day28 の注記で、絞り込みを URL のクエリへ書き込む処理（task-filter-query.ts）の差分を説明済み",
+    # 以下は #658 で KNOWN_DRIFT から昇格した分。教材は完成済みで後発の修正を
+    # 追えない構造のため、既存と同じく「差分を注記で説明する意図的な差」として扱う。
+    "src/component/layout/app-layout.tsx": "day25 の注記で Sheet・QuickSearch・Avatar 構成への改修差分を説明済み。追跡: #658",
+    "src/server/api/routers/user.ts": "day29 の注記で sessionVersion による旧 JWT 失効（#625 の堅牢化）の差分を説明済み。追跡: #658",
+    "src/server/api/routers/task.ts": "day28 の注記で単体操作の認可TOCTOU対策（#626 の行ロック＋再確認・where へのメンバー条件埋め込み）の差分を説明済み。追跡: #658",
+    "src/server/api/routers/comment.ts": "day19 の注記でコメント操作の認可TOCTOU対策（#626 のプロジェクト行ロック＋トランザクション内再確認）の差分を説明済み。追跡: #658",
+    "src/server/api/routers/project.ts": "day27 の注記でプロジェクト操作の認可TOCTOU対策（#626 のプロジェクト行ロック＋トランザクション内再確認）の差分を説明済み。追跡: #658",
 }
 
 # 実ドリフトの棚卸し。src/ が後から改良されて教材が追いついていない差分、
@@ -111,22 +118,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
 # どの処置でも、完成版と src/ が一致するか EXPECTED_DIFFERENT へ移した時点で
 # この登録は不要になる。一致したまま残すと「登録が古い」として失敗するので、
 # 消し忘れは CI が拾う。
-KNOWN_DRIFT: dict[str, str] = {
-    # 教材の day25 完成版は Day 08 の簡易サイドバーに Day 13〜25 の変更を積んだ形
-    # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
-    # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
-    "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658。消す条件: 3択（教材 day25 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
-    # セキュリティ修正 #625 で src/ に sessionVersion による旧 JWT 失効を追加
-    # （logout・changePassword・isActive=false の update で increment）。
-    # 教材の day29 完成版は未追従で、反映は別作業として扱う。
-    "src/server/api/routers/user.ts": "セキュリティ修正 #625 で src/ は sessionVersion による旧 JWT 失効（logout・changePassword・isActive=false の update で increment）を追加済み。教材の day29 完成版は未追従で、反映は別作業。追跡: #625。消す条件: 教材 day29 の完成版へ sessionVersion の変更を反映して完成版と src が一致するか、EXPECTED_DIFFERENT へ昇格した時点で、この登録を消す",
-    # セキュリティ修正 #626 で src/ は単体操作の認可TOCTOUを解消済み
-    # （認可の読み取り→ID指定書き込みを、プロジェクト行ロック＋再確認 or 書き込み
-    # where へのメンバー条件埋め込みに変更）。教材の完成版は未追従で、反映は別作業。
-    "src/server/api/routers/task.ts": "セキュリティ修正 #626 で src/ は単体操作の認可TOCTOUを修正済み（delete/addTime は removeMember と同じプロジェクト行ロック＋トランザクション内再確認、update は書き込み where にメンバーのロール条件を埋め込み）。教材の完成版（day13〜16・18・28）は未追従で、反映は別作業。追跡: #626。消す条件: 教材の完成版へ同じ修正を反映して完成版と src が一致するか、EXPECTED_DIFFERENT へ昇格した時点で、この登録を消す",
-    "src/server/api/routers/comment.ts": "セキュリティ修正 #626 で src/ はコメントの create/update/delete を、親タスクの属するプロジェクト行ロック＋トランザクション内での認可再確認に変更済み。教材の完成版（day18・19）は未追従で、反映は別作業。追跡: #626。消す条件: 教材の完成版へ同じ修正を反映して完成版と src が一致するか、EXPECTED_DIFFERENT へ昇格した時点で、この登録を消す",
-    "src/server/api/routers/project.ts": "セキュリティ修正 #626 で src/ は project の update/delete/archive/unarchive/addMember を、removeMember・updateMemberRole と同じプロジェクト行ロック＋トランザクション内での認可再確認に変更済み。教材の完成版（day09〜12・27）は未追従で、反映は別作業。追跡: #626。消す条件: 教材の完成版へ同じ修正を反映して完成版と src が一致するか、EXPECTED_DIFFERENT へ昇格した時点で、この登録を消す",
-}
+KNOWN_DRIFT: dict[str, str] = {}
 
 
 class FileReport(NamedTuple):
