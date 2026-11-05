@@ -21,7 +21,7 @@ BECAUSE individual tasks succeed or fail in the context of the project's overall
 
 > "This project has failed to achieve its purpose. What went wrong?"
 
-Read the project's AGENTS.md (CLAUDE.md is a one-line `@AGENTS.md` shim) and `.claude/rules/project-purpose.md`, and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes?
+Read the project's AGENTS.md and `.claude/rules/project-purpose.md`, and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes?
 
 Example for task-app: "The educational app failed to serve learners." → Curriculum quality was poor, UX confused users, features were built but didn't support the learning goal.
 

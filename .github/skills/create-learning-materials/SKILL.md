@@ -268,7 +268,7 @@ task-app/
   - ✅ `task-service.ts`, `task-list.tsx`, `user-auth.ts`
   - ❌ `taskService.ts`, `TaskList.tsx`, `users-auth.ts`
 - **例外**: 慣習的な大文字ファイル名
-  - ✅ `README.md`, `CLAUDE.md`, `LICENSE`
+  - ✅ `README.md`, `AGENTS.md`, `LICENSE`
 - **Reactコンポーネント**: ケバブケースのファイル名、PascalCaseのコンポーネント名
   - ファイル: `task-list.tsx`
   - コンポーネント: `export function TaskList() { ... }`
