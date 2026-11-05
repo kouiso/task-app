@@ -63,7 +63,7 @@ npm run test:coverage
 - Testing implementation details (internal state) instead of behavior
 - Tests depending on each other (shared state)
 - Asserting too little (passing tests that don't verify anything)
-- Not mocking external dependencies (Supabase, Redis, OpenAI, etc.)
+- Not mocking external dependencies (PostgreSQL, Redis, OpenAI, etc.)
 
 ## Quality Checklist
 

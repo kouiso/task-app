@@ -125,7 +125,7 @@ Stripe Checkout, and webhook events keep subscription status in sync.
 ## Implementation Steps
 
 ### Phase 1: Database & Backend (2 files)
-1. **Create subscription migration** (File: supabase/migrations/004_subscriptions.sql)
+1. **Create subscription migration** (File: prisma/migrations/004_subscriptions/migration.sql)
    - Action: CREATE TABLE subscriptions with RLS policies
    - Why: Store billing state server-side, never trust client
    - Dependencies: None

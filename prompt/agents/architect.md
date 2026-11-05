@@ -190,15 +190,15 @@ Example architecture for an AI-powered SaaS platform:
 ### Current Architecture
 - **Frontend**: Next.js 15 (Vercel/Cloud Run)
 - **Backend**: FastAPI or Express (Cloud Run/Railway)
-- **Database**: PostgreSQL (Supabase)
+- **Database**: PostgreSQL (managed Postgres via Prisma)
 - **Cache**: Redis (Upstash/Railway)
 - **AI**: Claude API with structured output
-- **Real-time**: Supabase subscriptions
+- **Real-time**: WebSocket / Server-Sent Events
 
 ### Key Design Decisions
 1. **Hybrid Deployment**: Vercel (frontend) + Cloud Run (backend) for optimal performance
 2. **AI Integration**: Structured output with Pydantic/Zod for type safety
-3. **Real-time Updates**: Supabase subscriptions for live data
+3. **Real-time Updates**: WebSocket / SSE for live data
 4. **Immutable Patterns**: Spread operators for predictable state
 5. **Many Small Files**: High cohesion, low coupling
 
