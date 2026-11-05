@@ -182,7 +182,7 @@ for directory in "${support_directories[@]}"; do
   while IFS= read -r source_file; do
     relative_path="${source_file#"${PROJECT_ROOT}/scripts/"}"
     case "${relative_path}" in
-      "_server-routers/project.ts"|"_server-routers/task.ts"|"_server-routers/search.ts"|"_server-routers/comment.ts"|"_server-routers/report.ts"|"_server-routers/user.ts") continue ;;
+      "_server-routers/project.ts"|"_server-routers/task.ts"|"_server-routers/search.ts"|"_server-routers/comment.ts"|"_server-routers/report.ts"|"_server-routers/user.ts"|"_server-routers/_helpers/lock.ts") continue ;;
     esac
     if ! has_exact_entry "task-app/scripts/${relative_path}"; then
       echo "販売用 ZIP に scaffold 補助ファイルがありません: scripts/${relative_path}" >&2
