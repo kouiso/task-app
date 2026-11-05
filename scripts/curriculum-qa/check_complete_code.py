@@ -116,6 +116,10 @@ KNOWN_DRIFT: dict[str, str] = {
     # （AlertDialogTrigger 式のログアウト確認、md:hidden のモバイル用 nav）。
     # src/ は Sheet・QuickSearch・Avatar を使う別構成へ改修済みで、教材側は未追従
     "src/component/layout/app-layout.tsx": "教材の完成版は Day 08 の簡易サイドバーを積み上げた旧構成（AlertDialogTrigger 式ログアウト・md:hidden のモバイル nav）。src/ は Sheet・QuickSearch・Avatar の別構成へ改修済みで教材は未追従。追跡: #658。消す条件: 3択（教材 day25 を src に追従／src を教材に合わせる／EXPECTED_DIFFERENT へ昇格）の処置を #658 で決めて実施し、完成版と src が一致するか昇格した時点で、この登録を消す",
+    # セキュリティ修正 #625 で src/ に sessionVersion による旧 JWT 失効を追加
+    # （logout・changePassword・isActive=false の update で increment）。
+    # 教材の day29 完成版は未追従で、反映は別作業として扱う。
+    "src/server/api/routers/user.ts": "セキュリティ修正 #625 で src/ は sessionVersion による旧 JWT 失効（logout・changePassword・isActive=false の update で increment）を追加済み。教材の day29 完成版は未追従で、反映は別作業。追跡: #625。消す条件: 教材 day29 の完成版へ sessionVersion の変更を反映して完成版と src が一致するか、EXPECTED_DIFFERENT へ昇格した時点で、この登録を消す",
 }
 
 
