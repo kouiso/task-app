@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   buildComment,
   loadRules,
@@ -119,8 +119,5 @@ test('targetKeyFor: 対象ごとに別キーになる', () => {
   assert.equal(targetKeyFor('pull_request', {}), 'body');
   assert.equal(targetKeyFor('issue_comment', { comment: { id: 7 } }), 'comment-7');
   assert.equal(targetKeyFor('pull_request_review', { review: { id: 9 } }), 'review-9');
-  assert.equal(
-    targetKeyFor('pull_request_review_comment', { comment: { id: 11 } }),
-    'comment-11',
-  );
+  assert.equal(targetKeyFor('pull_request_review_comment', { comment: { id: 11 } }), 'comment-11');
 });

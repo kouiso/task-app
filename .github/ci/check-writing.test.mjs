@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildComment,
-  checkBody,
   COMMENT_MARKER,
+  checkBody,
   parseSections,
   sectionContentIsFilled,
 } from './check-writing.mjs';
@@ -28,10 +28,7 @@ test('issue: 必須見出し5つに中身があれば ok', () => {
 });
 
 test('issue: 見出しが無いと missing', () => {
-  const r = checkBody(
-    'issue',
-    goodIssue.replace('## 完了条件\nPR が入って緑になること。', ''),
-  );
+  const r = checkBody('issue', goodIssue.replace('## 完了条件\nPR が入って緑になること。', ''));
   assert.equal(r.ok, false);
   assert.deepEqual(r.problems, [{ section: '完了条件', reason: 'missing' }]);
 });
@@ -44,10 +41,7 @@ test('issue: 見出しだけで中身が無いと empty', () => {
 });
 
 test('issue: 「-」や空チェックボックスだけの節は未記入(empty)', () => {
-  const body = goodIssue.replace(
-    '公開リポで公開内容を書きすぎる事故を防ぎたい。',
-    '-\n- [ ]\n*',
-  );
+  const body = goodIssue.replace('公開リポで公開内容を書きすぎる事故を防ぎたい。', '-\n- [ ]\n*');
   const r = checkBody('issue', body);
   assert.equal(r.ok, false);
   assert.deepEqual(r.problems, [{ section: '背景', reason: 'empty' }]);

@@ -57,9 +57,7 @@ export function parseSections(body) {
 // 中身があるか。HTMLコメント・空行・「-」や空チェックボックスだけの行は未記入として数えない。
 export function sectionContentIsFilled(section) {
   const text = section.lines.join('\n').replace(HTML_COMMENT, '');
-  return text
-    .split('\n')
-    .some((line) => line.trim() !== '' && !EMPTY_BULLET.test(line.trim()));
+  return text.split('\n').some((line) => line.trim() !== '' && !EMPTY_BULLET.test(line.trim()));
 }
 
 // kind: 'issue' | 'pr'
@@ -116,7 +114,8 @@ function parseArgs(args) {
     else if (args[i] === '--body-file') parsed.bodyFile = args[++i];
     else if (args[i].startsWith('--kind=')) parsed.kind = args[i].slice('--kind='.length);
     else if (args[i].startsWith('--result=')) parsed.result = args[i].slice('--result='.length);
-    else if (args[i].startsWith('--body-file=')) parsed.bodyFile = args[i].slice('--body-file='.length);
+    else if (args[i].startsWith('--body-file='))
+      parsed.bodyFile = args[i].slice('--body-file='.length);
   }
   return parsed;
 }

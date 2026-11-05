@@ -121,7 +121,10 @@ export function buildComment(result, targetLabel = '本文', targetKey = 'body')
     return `${marker}\n✅ 公開内容チェック（${targetLabel}）: 問題は検出されませんでした。`;
   }
   const items = result.violations.map((v) => {
-    const shown = v.lines.slice(0, 5).map((n) => `${n}行目`).join('、');
+    const shown = v.lines
+      .slice(0, 5)
+      .map((n) => `${n}行目`)
+      .join('、');
     const rest = v.lines.length > 5 ? ` 他${v.lines.length - 5}箇所` : '';
     return `- ${v.label}: ${v.count}件（${shown}${rest}付近）`;
   });
@@ -144,7 +147,8 @@ function parseArgs(args) {
     else if (args[i] === '--body-file') parsed.bodyFile = args[++i];
     else if (args[i].startsWith('--rules=')) parsed.rules = args[i].slice('--rules='.length);
     else if (args[i].startsWith('--result=')) parsed.result = args[i].slice('--result='.length);
-    else if (args[i].startsWith('--body-file=')) parsed.bodyFile = args[i].slice('--body-file='.length);
+    else if (args[i].startsWith('--body-file='))
+      parsed.bodyFile = args[i].slice('--body-file='.length);
   }
   return parsed;
 }
