@@ -74,7 +74,7 @@ is_exempt() {
 
   # GitHub/OSS慣習の固定ファイル名(拡張子問わず完全一致)
   case "$basename" in
-    README.md|LICENSE|LICENSE_INVENTORY.md|CODEOWNERS|AGENTS.md|CLAUDE.md|SKILL.md|Makefile|Dockerfile) return 0 ;;
+    README.md|LICENSE|LICENSE_INVENTORY.md|CODEOWNERS|AGENTS.md|SKILL.md|Makefile|Dockerfile) return 0 ;;
     ARCHITECTURE.md|DATABASE_MIGRATIONS.md|DATA_INTEGRITY.md|DEPENDENCY_POLICY.md) return 0 ;;
     DEPLOYMENT.md|INCIDENT_RESPONSE.md|LP_MVP.md|METRICS.md|RUNBOOK.md) return 0 ;;
     SUPPORTED_ENVIRONMENTS.md|SUPPORT_POLICY.md|THIRD_PARTY_LICENSES.md) return 0 ;;

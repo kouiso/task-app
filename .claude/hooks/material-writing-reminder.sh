@@ -6,7 +6,7 @@
 # これは「書いた後の補正（安全網）」であって「書く前の機構」ではない。
 # PreToolUse の additionalContext は tool 結果の隣に届く（docs placement table:
 # "PreToolUse, PostToolUse...: next to the tool result"）。つまりモデルは書いてから読む。
-# 「書く前」に効かせる唯一の経路は CLAUDE.md の常時ロード行（そちらが主機構）。
+# 「書く前」に効かせる唯一の経路は AGENTS.md の常時ロード行（CLAUDE.md の @AGENTS.md 経由。そちらが主機構）。
 # 真の pre-write gate が要るなら permissionDecision:"ask" か SessionStart/UserPromptSubmit。
 #
 # ── 過去のバグ（二度と戻さない）──

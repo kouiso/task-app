@@ -53,7 +53,7 @@ description: プロジェクトのドキュメント（README、開発ガイド�
 - より良い説明方法が見つかった時
 - 誤りや誤字を発見した時
 
-### 5. CLAUDE.md / .gemini/styleguide.md
+### 5. AGENTS.md / .gemini/styleguide.md
 AI アシスタント向けの指示書。
 
 **更新タイミング**:

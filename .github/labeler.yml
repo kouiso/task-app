@@ -8,7 +8,7 @@ documentation:
           - 'doc/**/*'
           - '*.md'
           - 'README.md'
-          - 'CLAUDE.md'
+          - 'AGENTS.md'
           - '.github/copilot-instructions.md'
           - '.github/pull_request_template.md'
 

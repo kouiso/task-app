@@ -122,7 +122,7 @@ zip-export:
 		-x ".git/*" \
 		-x ".github/*" \
 		-x ".claude/*" \
-		-x "CLAUDE.md" \
+		-x "AGENTS.md" \
 		-x ".gemini/*" \
 		-x ".devcontainer/*" \
 		-x ".docker/schemaspy/*" \

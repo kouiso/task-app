@@ -18,7 +18,7 @@ BECAUSE individual tasks succeed or fail in the context of the project's overall
 
 > "This project has failed to achieve its purpose. What went wrong?"
 
-Read the project's CLAUDE.md and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes? Every task you perform should be evaluated against this backdrop.
+Read the project's AGENTS.md and understand its mission. Then ask: if the project's ultimate goal was never achieved, what were the most likely causes? Every task you perform should be evaluated against this backdrop.
 
 Examples:
 - ritmo-corporate: "The corporate site relaunch failed." → Design didn't match Figma, text diverged from WordPress, forms broken, SEO/analytics missing.
@@ -37,7 +37,7 @@ For the specific task at hand, identify concrete failure modes. This is asked be
 
 ### Step 0: Understand the Project's Purpose
 
-IF this is the first task in a session THEN read the project's CLAUDE.md and identify:
+IF this is the first task in a session THEN read the project's AGENTS.md and identify:
 1. What is the project's ultimate goal?
 2. What are the known critical success factors?
 3. What past failures or near-misses are documented?
@@ -123,7 +123,7 @@ Include this section before starting implementation:
 
 ```
 ## Pre-Mortem Analysis
-**Project purpose**: {one-line project goal from CLAUDE.md}
+**Project purpose**: {one-line project goal from AGENTS.md}
 **Task alignment**: {how this task serves the project purpose}
 
 | Failure Mode | Likelihood | Project Impact | Preventive Action |
