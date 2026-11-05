@@ -211,6 +211,17 @@ describe('authRouter', () => {
       const result = await caller.auth.logout();
       expect(result.success).toBe(true);
     });
+
+    it('ログアウト後は同じセッションで保護APIを呼べない', async () => {
+      const user = await createTestUser({ email: 'logout-invalidate@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      const result = await caller.auth.logout();
+      expect(result.success).toBe(true);
+
+      // sessionVersionが繰り上がったため、発行済みのJWTは失効している
+      await expect(caller.auth.getCurrentUser()).rejects.toThrow('セッションが無効になりました');
+    });
   });
 
   describe('getSession（セッション取得）', () => {
@@ -230,6 +241,18 @@ describe('authRouter', () => {
     it('無効化ユーザーのセッションは null を返す', async () => {
       const user = await createTestUser({ email: 'sess-inactive@example.com', isActive: false });
       const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      expect(await caller.auth.getSession()).toBeNull();
+    });
+
+    it('発行後にsessionVersionが繰り上がったセッションは null を返す', async () => {
+      const user = await createTestUser({ email: 'sess-stale@example.com' });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { sessionVersion: { increment: 1 } },
+      });
 
       expect(await caller.auth.getSession()).toBeNull();
     });

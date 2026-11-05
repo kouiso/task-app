@@ -167,6 +167,28 @@ describe('userRouter', () => {
       const result = await caller.user.update({ id: target.id, role: 'ADMIN' });
       expect(result.role).toBe('ADMIN');
     });
+
+    it('無効化で既存セッションが失効し、再有効化しても旧セッションは復活しない', async () => {
+      const { caller } = await adminCaller();
+      const target = await createTestUser({ email: uniqueEmail('u-deactivate') });
+      const targetCaller = await createAuthenticatedCaller(target.id, target.email, target.role);
+
+      await caller.user.update({ id: target.id, isActive: false });
+      await expect(targetCaller.user.getById({ id: target.id })).rejects.toThrow(
+        'このアカウントは無効化されています',
+      );
+
+      await caller.user.update({ id: target.id, isActive: true });
+      // 無効化時にsessionVersionが繰り上がっているため、再有効化後も旧トークンは拒否される
+      await expect(targetCaller.user.getById({ id: target.id })).rejects.toThrow(
+        'セッションが無効になりました',
+      );
+
+      // 再ログインで新しいsessionVersionが発行されたセッションは有効
+      const freshCaller = await createAuthenticatedCaller(target.id, target.email, target.role, 1);
+      const result = await freshCaller.user.getById({ id: target.id });
+      expect(result.id).toBe(target.id);
+    });
   });
 
   describe('updateProfile（プロフィール更新）', () => {
@@ -222,6 +244,23 @@ describe('userRouter', () => {
       await expect(
         caller.user.changePassword({ currentPassword: VALID_PASSWORD, newPassword: 'weak' }),
       ).rejects.toThrow('新しいパスワードは8文字以上で入力してください');
+    });
+
+    it('パスワード変更後は変更前のセッションが拒否される', async () => {
+      const user = await createTestUser({
+        email: uniqueEmail('u-pw-inv'),
+        password: VALID_PASSWORD,
+      });
+      const caller = await createAuthenticatedCaller(user.id, user.email, user.role);
+
+      await caller.user.changePassword({
+        currentPassword: VALID_PASSWORD,
+        newPassword: 'NewPass456!',
+      });
+
+      await expect(caller.user.getById({ id: user.id })).rejects.toThrow(
+        'セッションが無効になりました',
+      );
     });
   });
 

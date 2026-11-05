@@ -43,6 +43,7 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
       id: true,
       role: true,
       isActive: true,
+      sessionVersion: true,
     },
   });
 
@@ -57,6 +58,15 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'このアカウントは無効化されています',
+    });
+  }
+
+  // JWTはステートレスで個別失効できないため、発行時のsvとDBのsessionVersionを照合する。
+  // パスワード変更・ログアウト・無効化で繰り上がった後の旧トークンはここで拒否される
+  if (currentUser.sessionVersion !== ctx.session.sv) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'セッションが無効になりました。再度ログインしてください',
     });
   }
 

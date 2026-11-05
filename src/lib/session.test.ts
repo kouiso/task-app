@@ -1,6 +1,8 @@
+import { SignJWT } from 'jose';
 import type { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 import { cookies } from 'next/headers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { env } from './env';
 import {
   createSession,
   type SessionPayload,
@@ -21,6 +23,7 @@ describe('session', () => {
       userId: 'user_123',
       email: 'user@example.com',
       role: 'USER',
+      sv: 0,
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
 
@@ -80,6 +83,7 @@ describe('session', () => {
       userId: 'user_456',
       email: 'member@example.com',
       role: 'USER',
+      sv: 0,
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     };
     const token = await signSessionToken(payload);
@@ -103,6 +107,21 @@ describe('session', () => {
       id: payload.userId,
       email: payload.email,
       role: payload.role,
+      sessionVersion: payload.sv,
     });
+  });
+
+  it('sv を持たない旧形式トークンは null を返す', async () => {
+    // sv導入前に発行されたトークンを再現するため、svなしのペイロードを直接署名する
+    const legacyToken = await new SignJWT({
+      userId: 'user_legacy',
+      email: 'legacy@example.com',
+      role: 'USER',
+      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(new Uint8Array(new TextEncoder().encode(env.JWT_SECRET)));
+
+    await expect(verifySessionToken(legacyToken)).resolves.toBeNull();
   });
 });
