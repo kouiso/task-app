@@ -213,11 +213,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">登録日</p>
                       <p>
-                        {user.createdAt
-                          ? format(new Date(user.createdAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.createdAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -226,11 +224,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div>
                       <p className="font-medium text-muted-foreground text-xs">最終更新日</p>
                       <p>
-                        {user.updatedAt
-                          ? format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
-                              locale: ja,
-                            })
-                          : '-'}
+                        {format(new Date(user.updatedAt), 'yyyy年MM月dd日', {
+                          locale: ja,
+                        })}
                       </p>
                     </div>
                   </div>

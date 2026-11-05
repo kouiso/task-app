@@ -749,7 +749,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 この画面は説明のための例で、完成版には含まれません。
 
 静的な表示部分を Server Component にまとめるとJS バンドルサイズを小さくでき、初期表示も速くなります。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ静的な表示部分を Server Component にまとめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
@@ -809,25 +809,14 @@ export default function GraduationPage() {
 #### After（プロが書くコード）
 
 ```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { ShareGraduationButton } from './share-graduation-button';
-const CURRICULUM_SUMMARY = [
-  { label: '認証', value: 'JWT ログイン' },
-  { label: 'タスク', value: 'CRUD + 一括操作' },
-  { label: '公開', value: 'Vercel デプロイ' },
-];
+
 export default function GraduationPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-8">
       <h1 className="text-3xl font-bold">Task-App 30日間ハンズオン修了</h1>
-      <div className="grid gap-4 md:grid-cols-2">
-        {CURRICULUM_SUMMARY.map((item) => (
-          <section key={item.label} className="rounded-lg border p-4">
-            <p className="text-sm text-muted-foreground">{item.label}</p>
-            <p className="text-lg font-semibold">{item.value}</p>
-          </section>
-        ))}
-      </div>
+      {/* ...Before と同じ（CURRICULUM_SUMMARY のカード一覧）... */}
       <ShareGraduationButton text="Task-App 30日間カリキュラムを完走しました" />
     </main>
   );
@@ -836,7 +825,7 @@ export default function GraduationPage() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。カードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
+ここまでがサーバー側に残る部分です。`'use client'` が消え、`useState` の取り込みも無くなりました。`CURRICULUM_SUMMARY` の定義とカードを並べる `.map()` は Before とまったく同じままです。動かしたのはボタン1個だけで、置き換えた `<ShareGraduationButton />` の中身は次のブロックで別ファイルとして作ります。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
@@ -860,17 +849,13 @@ export function ShareGraduationButton({ text }: ShareGraduationButtonProps) {
     <button type="button" className="rounded-md border px-4 py-2" onClick={handleShare}>
       {copied ? 'コピー済み' : '卒業メッセージをコピー'}
     </button>
+  );
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 `'use client'` はこの小さなボタンのファイルだけに付きました。コピー済みかどうかを覚える `useState` も、ここに閉じ込められています。親のページは静的なまま配信されるのでブラウザが受け取る JavaScript はこのボタン1個分で済みます。表示だけの部分にまで JavaScript を送らなくなるぶん、公開したページは最初の表示が速くなります。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  );
-}
-```
 
 **このコードの強み**:
 
@@ -893,8 +878,6 @@ App Router では Server Component を標準にして
 
 ### `next.config.ts`
 
-このファイルは丸ごと置き換えません。もとから書かれている設定はそのまま残し、`const nextConfig` の中へ以下の `headers` を足した状態が完成形です。
-
 **ヘッダー設定の開始部分**:
 
 ```typescript
@@ -911,8 +894,6 @@ App Router では Server Component を標準にして
           { key: 'Referrer-Policy',
             value: 'origin-when-cross-origin' },
 ```
-
-入れ子が3段になっている理由はこの形が「どのURLに、どのヘッダーを配るか」の組を何通りでも書けるようにしてあるからです。いちばん外の配列が組の一覧、その中の `source` が対象のURL、内側の `headers` が配る中身です。今回は組が1つしかないので冗長に見えますがあとから管理画面だけ別の指示を配りたくなったときに2つ目の組を並べるだけで済みます。この `headers` 関数は、ヘッダー設定の配列をPromiseで返す形になっています。`async` を付けた関数は `return` した値をPromiseで返します。今回は `await` を書いていませんが、NextConfigが求める返り値の形に合わせて `async` を付けています。`await` を書くためだけの指定ではない、という点を押さえておきましょう。
 
 **通信と権限のヘッダーと閉じかっこ**:
 
@@ -935,10 +916,6 @@ App Router では Server Component を標準にして
   },
 ```
 
-前半の3つと違ってこちらは1つずつ改行して書いています。`value` が長いので教材では2行に分けて載せています。`npm run fix` を実行すると Biome は幅100桁に収まるこの行を1行にまとめます。どちらの形でも同じ設定です。閉じかっこが `]`、`}`、`]`、`}` の順に4段ぶん並ぶので貼り付けたあとは `const nextConfig` の閉じかっこが1つ余っていないかを確かめてください。ここが合っていないと`npm run build` は設定を読む前に構文エラーで止まります。最後の `,` はこの `headers` のうしろに別の設定が並んでも壊れないようにするためのものです。
-
-`Content-Security-Policy` はここに入っていません。Step 2.5 で触れたとおり、書き方を誤ると自分のアプリの画像やスクリプトまで止まるので公開を先に成立させるほうを取っています。上の6つで動く状態を確かめてから次の課題として足してください。
-
 ## 今日のまとめ
 
 - [ ] 環境変数を Vercel に設定した
@@ -952,13 +929,13 @@ App Router では Server Component を標準にして
 - [ ] 次のステップを決めた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ビルドが失敗する | 環境変数が未設定 | Vercel で全変数を追加 |
-| DB 接続エラー | DATABASE_URL が不正 | 接続文字列を再確認 |
-| JWT エラー | JWT_SECRET が未設定 | openssl で生成して設定 |
-| ページが真っ白 | JS エラー | DevTools Console を確認 |
+| `環境変数の検証に失敗しました:` | Vercel で環境変数が未設定 | Vercel の Environment Variables に Day 30 で使う全変数を登録する。ローカルでは `npm run dev` のターミナルに API 呼び出し時に同じ文が出る |
+| `Can't reach database server`（`P1001`） | `DATABASE_URL` の接続先に DB が届かない | `npm run dev` のターミナルか `prisma db push` の出力でエラーコードを見る。`.env` と Vercel の `DATABASE_URL` の接続文字列を照合する |
+| `JWT_SECRETは32文字以上である必要があります` | `JWT_SECRET` が32文字未満（未設定だと同じ場所に `Required` と出る） | `npm run dev` のターミナルで `環境変数の検証に失敗しました:` の下の行を見る。`.env` と Vercel に `openssl rand -base64 32` で生成した値を設定する |
+| ページが真っ白 | JavaScript のエラー | Console タブで赤いエラーを見る。出ているファイル名から原因を特定する |
+| 本番に上がらず Preview デプロイになる | push したブランチが Vercel の Production Branch と違う | Vercel の Deployments タブでそのデプロイが `Preview` になっているか見る。Production Branch に設定したブランチへマージする |
 
 ## 今日学んだ用語
 

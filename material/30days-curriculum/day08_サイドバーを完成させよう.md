@@ -307,6 +307,8 @@ const menuItems: MenuItem[] = [
 ];
 ```
 
+メニュー1件の形をここで決めておくと項目を足すときに何を書けばよいかが決まります。`icon` の型が `React.ReactNode` になっているのは文字列ではなく `<LayoutDashboard />` のような画面部品をそのまま入れるからです。
+
 | コード | 意味 |
 |--------|------|
 | `'use client'` | ユーザー操作（ナビゲーション、ログアウト）があるので Client Component |
@@ -714,6 +716,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 ### Before（改善前のコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // app-layout.tsx 全体が 'use client'
 // → ナビゲーションリンク（静的）まで Client Component になる
 ```
@@ -723,6 +726,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 ### After（プロが書くコード）
 
 ```tsx
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 // app-layout.tsx から 'use client' を外す
 // （Server Component に）
 // ログアウトボタンだけ別ファイルに分離して 'use client'
@@ -749,27 +753,7 @@ Step 3 では AppLayout 全体を `'use client'` にしました。
 
 ### `src/app/providers.tsx`
 
-**Provider の本体**:
-
-```tsx
-// filepath: src/app/providers.tsx
-// 完成版: Provider の本体
-'use client';
-
-import { Toaster } from 'react-hot-toast';
-import { TRPCReactProvider } from '@/trpc/react';
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <TRPCReactProvider>
-      {children}
-      <Toaster />
-    </TRPCReactProvider>
-  );
-}
-```
-
-このファイルは Day 01 の scaffold が配布したままなので手元と1文字も違わないはずです。`TRPCReactProvider` で囲んだ内側だけが `api` を使えます。囲みの外に置いた部品から呼ぶと送り先が決まらずエラーになります。`<Toaster />` を `{children}` の隣に1つだけ置いているのは通知の描画先をアプリ全体で1か所にそろえるためです。ページごとに置くと同じ通知が置いた枚数だけ重なって出ます。
+このファイルの全文は Step 1 に順に載っています。
 
 ### `src/app/layout.tsx`
 
@@ -803,8 +787,6 @@ const notoSansJP = Noto_Sans_JP({
 });
 ```
 
-Step 2 では `Inter` の1つ分だけを載せました。残る2つも書き方は変わりません。3つとも関数の外側で呼んでいるのは`next/font/google` がフォントの取り寄せをビルドのときに1回だけ済ませる作りだからです。関数の中へ入れると画面を描き直すたびに同じ指定を組み立て直すことになります。`variable` で CSS の変数名を決めておくと`globals.css` 側はこの名前だけを見れば済みます。
-
 **題名と全ページの外枠**:
 
 ```tsx
@@ -830,8 +812,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 ```
-
-完成版の `src/app/layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -882,8 +862,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-`metadata` は Step 2 の抜粋には出てきませんがscaffold が配った時点で入っています。ブラウザのタブに出る題名と、検索結果に出る説明文がここで決まります。`<Providers>` を `<body>` のすぐ内側に置いてあるのはこの位置より内側にある全ページへ tRPC を届けるためです。フォントの変数を `<html>` に付けているのも理由は揃っていていちばん外側に置けば配下のどのページからも読めます。
-
 ### `src/component/layout/app-layout.tsx`
 
 **ブラウザ側の宣言と外部ライブラリの取り込み**:
@@ -904,8 +882,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 ```
-
-1枚目は外部ライブラリの取り込みです。並びがアルファベット順になっているのは`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が並べ替えるからです。自分が書いた順番と違っていても手で直す必要はありません。`'use client'` はファイルの1行目に置きます。取り込みの後ろへ動かすとブラウザ側で動かす宣言として読まれず、`useState` の行でエラーになります。
 
 **画面部品と tRPC の取り込み**:
 
@@ -928,8 +904,6 @@ import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
-2枚目は自分のプロジェクトの中にある部品です。`@/` で始まる書き方は `src/` を指す近道で、ファイルの置き場所が深くなっても `../../` を数えずに済みます。`AlertDialog` で始まる名前が9個並ぶのはshadcn/ui のダイアログが枠・見出し・本文・ボタンに分かれているからです。手元で数えて9個に足りない場合はその足りない名前を書いた行が「定義されていません」というエラーになります。
-
 **メニュー項目の型**:
 
 ```tsx
@@ -941,8 +915,6 @@ interface MenuItem {
   path: string;
 }
 ```
-
-メニュー1件の形をここで決めておくと項目を足すときに何を書けばよいかが決まります。`icon` の型が `React.ReactNode` になっているのは文字列ではなく `<LayoutDashboard />` のような画面部品をそのまま入れるからです。
 
 **メニュー項目の一覧**:
 
@@ -967,8 +939,6 @@ const menuItems: MenuItem[] = [
   },
 ];
 ```
-
-この配列を関数の外に置いてあるのは中身が画面の状態で変わらないからです。関数の中へ入れると画面を描き直すたびに同じ3件を作り直します。並びはそのまま画面の上から下の順になります。項目を増やすときに書き足すのはこの配列だけで、後ろに出てくる表示側は書き換えません。
 
 **状態とサーバーへの問い合わせ**:
 
@@ -998,10 +968,6 @@ export function AppLayout({
   });
 ```
 
-関数の先頭が道具をそろえる場所です。`useState` や `useQueryClient`、`useQuery` は毎回同じ順番で呼ばれることを前提に作られているので`if` の中や `return` の後ろへ動かすと React が値を取り違えます。`logoutMutation` をここで用意しておくのも同じ理由です。実際に通信が始まるのは後ろのボタンから `mutate()` が呼ばれたときで、この行では準備だけをしています。
-
-成功時は `cancelQueries()`、`clear()`、画面移動の順です。先に問い合わせを止めるため、ログアウト直前に始まった取得処理が古いデータをキャッシュへ戻すことも防げます。
-
 **未ログインの人を送り出す判定**:
 
 ```tsx
@@ -1030,8 +996,6 @@ export function AppLayout({
   }
 ```
 
-ここが今日のいちばんの要点です。2つの `if` を `return` より前に置いてあるのでこの行より下は「ログイン済みの人だけが通る場所」になります。だから後ろのサイドバーでは `session?.user?.name` と書かずに `session.user.name` と書けます。ただし名前そのものは未設定があり得るので頭文字を取り出す `?.[0] || 'U'` は残します。判定を後ろへ動かすと未ログインの人にサイドバーが一瞬見えてしまいます。`return null` は何も描かずに終わる書き方で、`/login` への移動が終わるまでの短い間だけ働きます。
-
 **サイドバーの外枠とロゴ**:
 
 ```tsx
@@ -1048,8 +1012,6 @@ export function AppLayout({
           </h1>
         </div>
 ```
-
-いちばん外側を `flex` にしてあるのでサイドバーと本文が左右に並びます。`h-screen` は画面の高さいっぱいを指し、これが無いとサイドバーの色帯が中身の高さで止まります。`<aside>` を使っているのは読み上げソフトに「ここは本文ではなく脇の案内です」と伝えるためです。見た目だけなら `<div>` でも同じに見えます。
 
 **ナビゲーション**:
 
@@ -1074,8 +1036,6 @@ export function AppLayout({
                   )}
 ```
 
-この前半でリンク先と、現在地に応じた色を決めています。続きでアイコンと文字を描き、一覧のタグを閉じます。2つのブロックは同じ `Link` の続きなので、間に別のコードは入れません。
-
 ```tsx
                 {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
                 {/* ナビゲーションの続き */}
@@ -1088,8 +1048,6 @@ export function AppLayout({
           </ul>
         </nav>
 ```
-
-`<nav>` に付けた `flex-1` が余った高さをこの区画に全部渡します。だから下のユーザー情報はメニューの件数が変わってもサイドバーの底に貼り付きます。`cn` に渡す2つ目の値は開いているページかどうかで切り替わります。この切り替えが無いとユーザーは自分がどこにいるかを画面から判断できません。
 
 **ユーザー情報**:
 
@@ -1115,8 +1073,6 @@ export function AppLayout({
           </div>
 ```
 
-丸の中へ `session.user.name?.[0] || 'U'` を入れています。名前が未設定の人でも、丸を空にしないためです。`?.` は途中の値が無ければそこで止める書き方です。取り出せなかったときは `|| 'U'` が働きます。ここに出る名前は手前で受け取った `session` の中身そのものです。別のユーザーとしてログインし直せばこの表示も入れ替わります。
-
 **ログアウトボタン**:
 
 ```tsx
@@ -1135,8 +1091,6 @@ export function AppLayout({
               </Button>
             </AlertDialogTrigger>
 ```
-
-`asChild` が付いていると`AlertDialogTrigger` は自分でボタンを描かず、中に置いた `<Button>` へきっかけ役だけを渡します。付け忘れるとボタンが2つ重なって描かれ、サイドバーの見た目が崩れます。手元でボタンが二重に見えるならまずこの1語を確かめてください。
 
 **ログアウトの確認ダイアログ**:
 
@@ -1166,8 +1120,6 @@ export function AppLayout({
       </aside>
 ```
 
-`onClick` が付いているのは `AlertDialogAction` の側だけです。ここを `AlertDialogCancel` に付け替えるとキャンセルを押した人がログアウトする画面になります。取り消せない操作の手前に一段置くという考え方はこの先の削除機能でも使います。最後の `</aside>` でサイドバー全体を閉じています。
-
 **本文の置き場所**:
 
 ```tsx
@@ -1181,8 +1133,6 @@ export function AppLayout({
   );
 }
 ```
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -1383,11 +1333,7 @@ export function AppLayout({
 }
 ```
 
-`{children}` は、この枠で囲んだページの中身が入る場所です。`overflow-y-auto` を本文側だけに付けてあるので縦に長いページでもサイドバーは動かず、本文だけがスクロールします。ページ側が `<main>` を持たないのはこの行がすでに1つ持っているからです。
-
 ### `src/app/dashboard/page.tsx`
-
-Step 4 で書き換えたのは取り込みの1行と `return` の外枠だけです。中の表示は Day 02 で書いたものがそのまま残ります。名前や文言を自分用に書き換えている場合はその値のまま残してください。以下はDay 02 で書いた内容を残したまま外側を囲み直した状態です。
 
 **取り込みと型定義**:
 
@@ -1410,8 +1356,6 @@ type FocusCard = {
   description: string;
 };
 ```
-
-Day 02 のこのファイルには取り込みが1行もありませんでした。今日ここに `AppLayout` の1行が増えます。型を2つ置いてあるのは Day 02 のままです。型はブラウザへ送られる前に消えるので増やしても読み込みは重くなりません。
 
 **表示する値とあいさつの組み立て**:
 
@@ -1439,8 +1383,6 @@ function getGreetingByHour(hour: number): string {
 }
 ```
 
-`dashboardOwner` は人によって変わる値を1か所へ集めた入れ物です。名前を自分のものに書き換えた人はここが違っていて正解です。`getGreetingByHour` を関数に分けてあるのは時刻の判定を表示側から切り離すためです。この関数は時刻だけを受け取り、画面のことを知りません。
-
 **画面の関数とカードの並び**:
 
 ```tsx
@@ -1462,8 +1404,6 @@ export default function DashboardPage() {
       description: dashboardOwner.role,
     },
 ```
-
-`focusCards` の中で `dashboardOwner.name` を読んでいるのは名前をもう一度手で書かないためです。手で書くと`dashboardOwner` を直したのに下段のカードだけ古い名前が残ります。この配列の並び順がそのまま画面の左から右の並びになります。
 
 **残りのカードと外枠の開始**:
 
@@ -1488,8 +1428,6 @@ export default function DashboardPage() {
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
 ```
 
-今日の書き換えはここです。Day 02 では `return (` のすぐ後ろが `<main className="min-h-screen ...">` でした。それを `<AppLayout>` で囲み、内側は `<div>` に変えています。`<main>` を残したままにすると`AppLayout` が持つ `<main>` と2つ重なります。読み上げソフトは本文の入れ物を2つ見つけることになり、どちらが本文なのか決められません。
-
 **ヘッダー**:
 
 ```tsx
@@ -1511,8 +1449,6 @@ export default function DashboardPage() {
           </header>
 ```
 
-中身は Day 02 のままです。囲みが1つ増えたぶん、字下げが2つ分だけ深くなっています。写経し直す必要はありません。エディタの整形機能を使えば囲みを足した時点で自動的にこの位置へ揃います。
-
 **主役のメッセージ**:
 
 ```tsx
@@ -1530,8 +1466,6 @@ export default function DashboardPage() {
                 </h2>
 ```
 
-`{mainMessage}` に入るのは手前の `buildMainMessage` が組み立てた1本の文字列です。表示側は文の作り方を知らず、受け取って出すだけです。この分かれ方ができているとあいさつの言い回しを変えたいときに直すのは関数の側だけで済みます。
-
 **説明文と集中テーマの帯**:
 
 ```tsx
@@ -1548,8 +1482,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 ```
-
-`max-w-2xl` や `max-w-4xl` で幅の上限を決めているのは文が長くなっても決まった位置で折り返すためです。上限が無いと画面の広い人だけ1行が端まで伸びて読みにくくなります。文字の色に `text-muted-foreground` を使っているので主役の見出しとの強弱が保たれます。
 
 **下段の3枚のカード**:
 
@@ -1577,8 +1509,6 @@ export default function DashboardPage() {
             </article>
 ```
 
-`focusCards` の要素が3つなのでカードも3枚出ます。読んでいるのは `label`・`value`・`description` の3項目で、`FocusCard` 型で決めた3つとそろっています。表示する項目を増やしたいときは型・配列・この中身の3か所を合わせて直します。
-
 **右側の補助カード**:
 
 ```tsx
@@ -1604,8 +1534,6 @@ export default function DashboardPage() {
               </article>
 ```
 
-カードの間隔は親の `space-y-4` がまとめて決めています。だから枚数が変わっても1枚ずつ余白を書き足す作業は起きません。この `<aside>` は主役と同じ `<section>` の中にあるので画面が狭いときは主役の下へ回ります。
-
 **最後のカードと閉じタグ**:
 
 ```tsx
@@ -1627,8 +1555,6 @@ export default function DashboardPage() {
   );
 }
 ```
-
-完成版の `src/app/dashboard/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```tsx
@@ -1795,8 +1721,6 @@ export default function DashboardPage() {
   );
 }
 ```
-
-閉じタグが `</div>` から `</AppLayout>` へ続く形になっているかを、ここで確かめてください。Day 02 の終わりは `</main>` で閉じていました。今日はその外側に囲みが1つ増えたので閉じる順番も1段深くなります。ここが合っていればブラウザで `/dashboard` を開いたときに左のサイドバーと Day 02 の中身が同時に出ます。
 
 ## 今日のまとめ
 

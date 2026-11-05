@@ -1602,6 +1602,123 @@ def prepare_work_dir() -> None:
     for name in {Path(path).name for _, path, _, _, fmt in FONT_SOURCES
                  if fmt == "truetype"}:
         shutil.copy2(WORK_DIR / "fonts" / name, xdg_fonts / name)
+    # macOS では Chromium が fontconfig ではなく CoreText で解決するため、
+    # XDG_DATA_HOME に置いても計測側へ届かない。~/Library/Fonts への複製も
+    # CoreText の一覧へは即時反映されない（実測: copy 直後も BIZ が空）。
+    # CTFontManagerRegisterFontsForURL をセッションスコープで呼んで明示登録する
+    # （Darwin 版の同対策）。
+    if sys.platform == "darwin":
+        register_coretext_fonts(
+            [WORK_DIR / "fonts" / Path(path).name
+             for _, path, _, _, fmt in FONT_SOURCES if fmt == "truetype"])
+
+
+def register_coretext_fonts(paths: list[Path]) -> None:
+    """macOS の CoreText セッションへフォントを登録する。
+
+    `CTFontManagerRegisterFontsForURL` を scope=kCTFontManagerScopeSession(3) で
+    呼ぶ。Swift 等の依存を増やさないため Python 標準の ctypes 経由。
+    kCTFontManagerErrorAlreadyRegistered(105) だけは登録済みとして成功扱いし、
+    それ以外の CFError は失敗として例外を投げる。
+    """
+    import ctypes
+
+    core_foundation = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    core_text = ctypes.CDLL(
+        "/System/Library/Frameworks/CoreText.framework/CoreText")
+
+    core_foundation.CFURLCreateFromFileSystemRepresentation.restype = ctypes.c_void_p
+    core_foundation.CFURLCreateFromFileSystemRepresentation.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_bool]
+    core_text.CTFontManagerRegisterFontsForURL.restype = ctypes.c_bool
+    core_text.CTFontManagerRegisterFontsForURL.argtypes = [
+        ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+    core_foundation.CFErrorGetCode.restype = ctypes.c_long
+    core_foundation.CFErrorGetCode.argtypes = [ctypes.c_void_p]
+    core_foundation.CFRelease.argtypes = [ctypes.c_void_p]
+
+    scope_session = 3
+    error_already_registered = 105
+
+    for path in paths:
+        raw = os.fsencode(str(path))
+        url = core_foundation.CFURLCreateFromFileSystemRepresentation(
+            None, raw, len(raw), False)
+        error = ctypes.c_void_p()
+        ok = core_text.CTFontManagerRegisterFontsForURL(
+            url, scope_session, ctypes.byref(error))
+        code = core_foundation.CFErrorGetCode(error) if error else 0
+        if error:
+            core_foundation.CFRelease(error)
+        core_foundation.CFRelease(url)
+        if not ok and code != error_already_registered:
+            raise RuntimeError(
+                f"CoreText のフォント登録に失敗: {path.name} "
+                f"(CTFontManager error {code})")
+
+
+def unescape_table_cell_pipes(markup: str) -> str:
+    """表のセル内コード片に残る `\\|` をパイプ文字へ戻す。
+
+    GFM ではセル内の `\\|` はセル区切りから逃がすためのエスケープで、
+    コード片の中でも同じ扱いになる。vfm は本文側のエスケープは戻すが
+    コード片内のエスケープは戻さずバックスラッシュごと出力するので、
+    セル内の <code> だけ `|` に復元する。本文側の `\\|` は vfm が既に
+    正しく復元済みで、残った `\\|` は本物のバックスラッシュなので触らない。
+    セルの外の `\\|` も本物のバックスラッシュなので触らない。
+    """
+    class Restorer(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=False)
+            self.parts: list[str] = []
+            self.cell_depth = 0
+            self.code_depth = 0
+            self.pre_depth = 0
+
+        def _track(self, tag: str, delta: int) -> None:
+            if tag in ("td", "th"):
+                self.cell_depth += delta
+            elif tag == "code":
+                self.code_depth += delta
+            elif tag == "pre":
+                self.pre_depth += delta
+
+        def handle_starttag(self, tag: str, attrs) -> None:
+            self._track(tag, 1)
+            self.parts.append(self.get_starttag_text())
+
+        def handle_startendtag(self, tag: str, attrs) -> None:
+            self.parts.append(self.get_starttag_text())
+
+        def handle_endtag(self, tag: str) -> None:
+            self._track(tag, -1)
+            self.parts.append(f"</{tag}>")
+
+        def handle_data(self, data: str) -> None:
+            if self.cell_depth > 0 and self.code_depth > 0 and self.pre_depth == 0:
+                data = data.replace("\\|", "|")
+            self.parts.append(data)
+
+        def handle_entityref(self, name: str) -> None:
+            self.parts.append(f"&{name};")
+
+        def handle_charref(self, name: str) -> None:
+            self.parts.append(f"&#{name};")
+
+        def handle_decl(self, decl: str) -> None:
+            self.parts.append(f"<!{decl}>")
+
+        def handle_comment(self, data: str) -> None:
+            self.parts.append(f"<!--{data}-->")
+
+        def handle_pi(self, data: str) -> None:
+            self.parts.append(f"<?{data}>")
+
+    restorer = Restorer()
+    restorer.feed(markup)
+    restorer.close()
+    return "".join(restorer.parts)
 
 
 def work_slug(stem: str) -> str:
@@ -1698,6 +1815,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         protected = protect_prose_latin(
             protect_table_latin(join_cjk_soft_breaks(converted.stdout))
         )
+        protected = unescape_table_cell_pipes(protected)
         # 空白を含む長い行内コードを空白の位置で分けてから、前で改行できない字で
         # 始まるコード（分けた後の先頭の片を含む）の直前へ <wbr> を置く。
         # restructure_tables は一部の表のセルを dt/dd へ変えるため、

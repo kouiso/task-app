@@ -102,12 +102,10 @@ flowchart TD
 | Step 5 | create用の送信ハンドラー | 5分 |
 | Step 6 | 削除用のstateとmutationを定義する | 5分 |
 | Step 7 | 削除ハンドラーとダイアログを配置する | 5分 |
-| Step 8 | 新規作成ハンドラーを実装する | 3分 |
-| Step 9 | TaskCardにハンドラーを接続する | 5分 |
-| Step 10 | TaskDialogにeditingTaskを渡す | 3分 |
-| Step 11 | 動作確認 | 3分 |
+| Step 8 | 作成・編集モードをブラウザで確認する | 5分 |
+| Step 9 | 動作確認 | 3分 |
 
-**合計時間**: 約79分です。
+**合計時間**: 約73分です。
 
 表と Step 見出しの分数は説明とコードを読んで中身をつかむまでの目安です。コードを打ち込む Step では打ち込む時間と詰まって調べる時間がこの分数に加わります。
 
@@ -910,123 +908,29 @@ const handleDelete = (taskId: string) => {
 
 ---
 
-### Step 8: 新規作成ハンドラーを実装する（3分）
+### Step 8: 作成・編集モードをブラウザで確認する（5分）
 
-**ゴール**: 「新規タスク」ボタンのハンドラーを
-実装します。
+**ゴール**: Day 13・14 で書いたカードとダイアログが今日の編集処理を呼ぶことをブラウザで確認します。
 
-**実装**:
+この Step でコードは足しません。`handleCreate`、`TaskCard` の props、`TaskDialog` の `initialData` はすでに書いてあります。
 
-Day 14 で書いた `handleCreate` を**置き換え**ます。増やさず、中身だけ差し替えます。
+まず一覧の「新規タスク」を押します。見出しが「タスク作成」、ボタンが「作成」で入力欄が空になっていることを確認して閉じます。`handleCreate` が `editingTask` を `undefined` にしてから開くので作成用の初期値になります。
 
-```typescript
-// filepath: src/app/task/page.tsx
-// editingTaskをundefinedにして作成モードで開く
-const handleCreate = () => {
-  setEditingTask(undefined);
-  setDialogOpen(true);
-};
-```
+次に自分が編集できるカードの編集ボタンを押します。見出しが「タスク編集」、ボタンが「更新」で既存の値が入っていれば編集モードです。ここでは保存せずに閉じてください。`onEdit` が `task.id` を `handleEdit` へ渡し、取得したタスクが `initialData` に届くことで Step 1 の `buildTaskFormValues` が初期値を作ります。
 
-> `handleCreate` は `editingTask` を
-> `undefined` にしてから開きます。
-> これで「作成モード」になります。
-> `handleEdit` は既存データをセットしてから
-> 開くので「編集モード」になります。
+カードの `canEdit` / `canDelete` は Day 13 の `canEditProject` / `canDeleteProject` を使っています。閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になり編集・削除ボタンを隠します。渡し忘れると既定値の `true` が使われるため権限のないボタンまで表示されます。
+
+`timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に追加してから渡します。今日足すと受け取る側が無いため型エラーになります。
 
 **確認ポイント**:
-- 「新規タスク」を押すと見出しが「タスク作成」、ボタンが「作成」の空のダイアログが開く
-- 作成モードと編集モードの切り替えを理解した
+- 「新規タスク」で空の作成モードが開く
+- カードの編集ボタンで既存値の入った編集モードが開く
+- `src/app/task/page.tsx` の `TaskCard` に `onEdit`・`onDelete` と2つの権限フラグが残っている
 
 ---
 
-### Step 9: TaskCardにハンドラーを接続する（5分）
 
-**ゴール**: Day 13 で配置した TaskCard に
-ハンドラーを接続します。
-
-**実装**:
-
-```typescript
-<TaskCard
-  // filepath: src/app/task/page.tsx
-  // TaskCardにハンドラーを接続
-  key={task.id}
-  id={task.id}
-  title={task.title}
-  description={task.description}
-  status={task.status}
-  priority={task.priority}
-  dueDate={task.dueDate}
-  assignee={task.assignee}
-  onEdit={handleEdit}
-  onDelete={handleDelete}
-  onClick={handleTaskClick}
-  canEdit={canEditProject(task.projectId)}
-  canDelete={canDeleteProject(task.projectId)}
-/>
-```
-
-> `onEdit` と `onDelete` に関数を渡すとカード内の
-> 編集ボタン・削除ボタンが押されたときにその関数が
-> `task.id` を受け取って呼ばれます。ボタンの見た目は
-> `TaskCard`、実際の処理は親ページ、と役割が分かれます。
->
-> `canEdit` / `canDelete` は Day 13 で定義した
-> `canEditProject` / `canDeleteProject` をそのまま使います。
-> 閲覧者（VIEWER）ロールのプロジェクトでは両方 `false` になり、
-> 編集・削除ボタンが表示されません。渡し忘れるとデフォルトの
-> `true` が使われ、ボタンを押しても403エラーになるので注意してください。
->
-> 作業時間まわりの props はいまの `TaskCard` にはまだ
-> ありません。`timeSpentMinutes`（合計作業時間）と
-> `onTimeLogSuccess`（記録成功時のコールバック）の 2 つは
-> Day 16 で `TaskCard` 側へ追加してから渡します。今日の時点で
-> 渡すと受け取る側が無いため型エラーになります。
-
-**確認ポイント**:
-- `onEdit` に `handleEdit` を渡している
-- `onDelete` に `handleDelete` を渡している
-
----
-
-### Step 10: TaskDialogにeditingTaskを渡す（3分）
-
-**ゴール**: ダイアログに `editingTask` を渡して
-編集モードを有効にします。
-
-**実装**:
-
-```typescript
-{/* filepath: src/app/task/page.tsx */}
-{/* ダイアログにeditingTaskを渡す */}
-<TaskDialog
-  open={dialogOpen}
-  onClose={() => setDialogOpen(false)}
-  onSubmit={handleSubmit}
-  initialData={editingTask}
-  projects={projects ?? []}
-/>
-```
-
-> `initialData` に `editingTask` を渡すとStep 1 の
-> `buildTaskFormValues` がその値をフォームの初期値に
-> 使うので編集モードになります。`editingTask` が
-> `undefined` のときは空の初期値になり、作成モードに
-> なります。
-
-**確認ポイント**:
-- 「新規タスク」で作成モードが開く
-- カードの編集ボタンで編集モードが開く
-- カードの削除ボタンで確認→削除される
-
-下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
-
-![赤枠の「API仕様書作成」の優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
-
----
-
-### Step 11: 動作確認（3分）
+### Step 9: 動作確認（3分）
 
 **ゴール**: 編集・削除の全機能を確認します。
 
@@ -1054,67 +958,25 @@ npm run dev
 
 編集の直後に一覧のカードが新しい内容へ変わればStep 3 の `invalidate` が効いています。削除してもカードが残り画面上部にエラーも出ない場合はStep 6 の `deleteMutation` で `utils.task.getAll.invalidate()` を呼び忘れています。DB からは消えているので再読み込みすると一覧から消えます。通知が出た場合は理由を確かめてください。「応答を確認できませんでした」の場合は削除済みの可能性もあります。通信を戻して一覧を更新し、対象が残るか確認します。
 
+
+下の画像は赤枠の「API仕様書作成」を編集して優先度を「中」から「高」に変えたあとの一覧です。自分が編集したタスクのバッジが変わっていれば同じ結果です。画像は初期データだけの状態で撮っているのでDay 14 で自分が作ったタスクは写っていません。カードの枚数が違っても実装の誤りではありません。
+
+![赤枠の「API仕様書作成」の優先度バッジが「高」に変わっている一覧画面](./screenshots/day15/task-list-after-edit.png)
+
+
 ---
+
 
 ### Pro パターンで書こう（編集後の一覧更新を楽観的に反映する）
 
 編集後の一覧更新は動きますが保存が終わるまで画面は古い内容のままです。そこで保存の完了を待たずに結果を先に画面へ反映し、もし保存が失敗したら元の状態へ戻す楽観的更新を使うと待ち時間を感じさせなくできます。
-なぜこの書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ保存の完了を待たずに画面へ反映するのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
-```typescript
-// filepath: 読み比べ用サンプル（実ファイルには対応しません）
-const utils = api.useUtils();
+Before は Step 3 で書いた `updateMutation` と Step 4 で書いた `handleSubmit` の形とほぼ同じです。
 
-const updateMutation =
-  api.task.update.useMutation({
-    onSuccess: () => {
-      utils.task.getAll.invalidate();
-      if (selectedTask) {
-        utils.task.getById.invalidate({
-          id: selectedTask,
-        });
-      }
-      setDialogOpen(false);
-    },
-    onError: (error) => notifyMutationError(
-      error, 'タスクの更新に失敗しました',
-    ),
-  });
-```
-
-mutation の完了後に実行する内容はここまでです。次のブロックでは、その mutation へフォームの値を送る側を確認します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-const handleSubmit = (data: TaskFormData) => {
-  if (!data.id) return;
-
-  updateMutation.mutate({
-    id: data.id,
-    projectId: data.projectId,
-    expectedUpdatedAt: data.expectedUpdatedAt,
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動かす順番は「保存する → サーバーの返事を待つ → `invalidate()` で一覧を取り直す」で、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いはこの待ち時間の扱い方1点だけです。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    title: data.title,
-    description: data.description || null,
-    status: data.status,
-    priority: data.priority,
-    dueDate: data.dueDate
-      ? dateOnlyToUtcStartIso(data.dueDate)
-      : null,
-    estimatedHours: data.estimatedHours ?? null,
-    assigneeId: data.assigneeId || null,
-  });
-};
-```
+`onSuccess` で `invalidate()` を呼んでからダイアログを閉じるので、画面の表示が新しくなるのは通信が往復し終わったあとになります。After との違いはこの待ち時間の扱い方1点だけです。
 
 **このコードの問題点**:
 
@@ -1125,6 +987,7 @@ Before は Step 3 と Step 4 で書いた形とほぼ同じです。手を動か
 #### After（プロが書くコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import { dateOnlyToUtcStartIso } from '@/lib/date';
 import { api } from '@/trpc/react';
 import type { TaskFormData } from '@/component/task/task-dialog';
@@ -1240,37 +1103,7 @@ After が変わるのはここからです。`onMutate` は `mutate` を呼ん�
   });
 ```
 
-キャッシュをサーバーの結果へそろえ直す出口はここまでです。次のブロックでは、フォームの値と更新時刻を mutation へ送る呼び出し側を確認します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-const handleSubmit = (data: TaskFormData) => {
-  if (!data.id) return;
-
-  updateMutation.mutate({
-    id: data.id,
-    projectId: data.projectId,
-    expectedUpdatedAt: data.expectedUpdatedAt,
-    title: data.title,
-    description: data.description || null,
-    status: data.status,
-    priority: data.priority,
-    dueDate: data.dueDate
-      ? dateOnlyToUtcStartIso(data.dueDate)
-      : null,
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-`onSettled` の中で `invalidate()` を呼ぶのは手元で組み立てた表示をサーバーの中身へそろえ直すためです。`updatedAt` のようにサーバー側で決まる値は手元では作れないので最後に必ず本物を取り直します。`handleSubmit` の中身は Step 4 とほとんど同じです。足した処理はすべて `useMutation` の中に収まっているため呼び出し側は書き換えずに済みます。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    estimatedHours: data.estimatedHours ?? null,
-    assigneeId: data.assigneeId || null,
-  });
-};
-```
+キャッシュをサーバーの結果へそろえ直す出口はここまでです。`onSettled` の中で `invalidate()` を呼ぶのは手元で組み立てた表示をサーバーの中身へそろえ直すためで、`updatedAt` のようにサーバー側で決まる値は手元では作れないので最後に必ず本物を取り直します。呼び出し側の `handleSubmit` は Before と同じです。足した処理はすべて `useMutation` の中に収まっているため書き換えずに済みます。
 
 **このコードの強み**:
 
@@ -1285,12 +1118,12 @@ const handleSubmit = (data: TaskFormData) => {
 
 ## 完成コード全体
 
-今日は2つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 10 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
+今日は2つのファイルを触りました。貼り付ける位置が分からなくなった場合は対象ファイルの見出しまで進みます。その見出しの下で `filepath:` が同じパスを示すコードブロックを上から順につなげてください。説明文と囲みの記号はコピーせずコードだけをつなげます。最後のブロックまでそろえたコードで対象ファイルの内容を一度だけ置き換えて保存します。すべてのブロックを合わせると今日の終了時点の全文になります。上から順に読めばStep 0 から Step 7 で書いたものがどう1つのファイルになったかを確かめられます。どちらも前回までに書いた部分を含む、今日の終了時点の姿です。書き換えのない `src/component/task/task-dialog.tsx` はこの節に載せていません。
 
 | ファイル | 役割 | 対応する Step |
 |---------|------|--------------|
 | `src/server/api/routers/task.ts` | タスクの取得・作成・更新・削除の手続き | Step 0 |
-| `src/app/task/page.tsx` | 一覧ページへの編集・削除の組み込み | Step 2 から Step 10 |
+| `src/app/task/page.tsx` | 一覧ページへの編集・削除の組み込み | Step 2 から Step 7 |
 
 ### `src/server/api/routers/task.ts`
 
@@ -1314,7 +1147,6 @@ import {
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 ```
-`_helpers/permission` から借りている3つが権限のかかる処理の入口です。今日足したのは真ん中の `findTaskWithPermission` だけで、新しい `import` 文を増やさず同じ中括弧の中へ並べます。同じファイルを指す `import` が2本並んでも動きますが`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が1本へまとめ直します。
 
 **create の入力スキーマ**:
 
@@ -1332,7 +1164,6 @@ const taskCreateSchema = z.object({
   assigneeId: z.string().cuid().optional(),
 });
 ```
-作成のスキーマには `.nullable()` が1つもありません。まだ存在しない行を作る手続きなので「この項目を空にする」という指示そのものが要らないからです。この違いが次の更新のスキーマとの見分けどころになります。
 
 **update の入力スキーマ**:
 
@@ -1353,7 +1184,6 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().cuid().optional().nullable(),
 });
 ```
-`id` 以外がすべて `.optional()` なのは編集では変えたい項目だけを送るからです。そこへ `.nullable()` が重なっている項目は「送らない」と「空にする」の2つを区別します。この2つを分けておかないと担当者を外す操作と担当者を触らない操作を同じ形で表すことになり、サーバー側はどちらか一方しか実現できません。
 
 **並び順の採番ヘルパー**:
 
@@ -1375,7 +1205,6 @@ const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string
   }
 };
 ```
-同じファイルへ採番用の関数を続けます。退会処理と担当者の確認を同じロックへ入れるためロック用の関数を分けました。採番の直前だけロックしても先に済ませた所属の確認は守れません。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（直前のブロックの続き）
@@ -1384,7 +1213,6 @@ const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string
 const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
 const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
 ```
-完了と中止を Day 12 の `removeMember` と同じ組み合わせで1か所にまとめます。`update` はこの関数で「閉じたタスクを未完了へ戻す更新か」を見分けます。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（直前のブロックの続き）
@@ -1399,7 +1227,6 @@ const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: stri
   return (maxPosition?.position ?? -1) + 1;
 };
 ```
-移動元と移動先はID順にロックします。逆向きの移動でも取得順を揃えるためです。今日この関数の出番が増えます。作成のときだけでなく、タスクを別のプロジェクトへ移すときにも新しい並び番号が要るからです。ロックと採番を同じトランザクション内で行うため呼び出し元の `$transaction` が渡す `tx` を使います。引数の型だけでは通常の `prisma` を渡す誤りを防げないので呼び出し側も確認してください。
 
 **担当者の所属チェック**:
 
@@ -1429,7 +1256,6 @@ async function assertTaskAssigneeBelongsToProject(
   }
 }
 ```
-第1引数を `projectId` にしてあるおかげで、この関数は更新でもそのまま使えます。更新では移動先のプロジェクトを渡して確認します。対象のタスクではなくプロジェクトを受け取る形にしておくとまだ移動していない時点の確認にも使えます。
 
 **getAll の入力**:
 
@@ -1455,7 +1281,6 @@ export const taskRouter = createTRPCRouter({
       const limit = input?.limit ?? 100;
       const offset = input?.offset ?? 0;
 ```
-`limit` と `offset` に `??` の既定値が二重に書いてあるのは `input` そのものが `undefined` のときにスキーマの `.default(...)` が働かないからです。スキーマの既定値は「オブジェクトは来たが項目が無い」場合にだけ効きます。
 
 **getAll の絞り込み**:
 
@@ -1480,7 +1305,6 @@ export const taskRouter = createTRPCRouter({
       if (input?.priority) where.priority = input.priority;
       if (input?.assigneeId) where.assigneeId = input.assigneeId;
 ```
-`where.projectId` を先に自分のプロジェクトへ固定してから指定があれば1つに狭める順番が要点です。逆順で書くと指定されたプロジェクトが自分の一覧に無くても素通りします。
 
 **getAll の取得**:
 
@@ -1507,7 +1331,6 @@ export const taskRouter = createTRPCRouter({
           },
         },
 ```
-`include` で関連を一緒に取っておくと画面側は追加の通信なしでカードを描けます。`createdBy` と `assignee` に `USER_SELECT` を挟んであるのは`true` と書くとハッシュ化済みパスワードを含む全項目が画面まで運ばれるためです。
 
 **getAll の並び順**:
 
@@ -1520,7 +1343,6 @@ export const taskRouter = createTRPCRouter({
       });
     }),
 ```
-第1条件が `position` の昇順なので採番した番号がそのまま画面の並びになります。今日の更新でタスクを別のプロジェクトへ移すと新しい番号が振られ、移動先の末尾へ並びます。
 
 **getById の取得**:
 
@@ -1547,7 +1369,6 @@ export const taskRouter = createTRPCRouter({
             select: USER_SELECT,
           },
 ```
-`project` の中で `members` を自分だけに絞って取っているのでこの1件を見るだけで閲覧してよい相手かが分かります。絞り込みを外すと members が全員分返り、後の判定が「誰かがメンバーなら通す」に化けます。
 
 **getById の権限確認**:
 
@@ -1577,7 +1398,6 @@ export const taskRouter = createTRPCRouter({
       return task;
     }),
 ```
-`assertMemberPermission` に第2引数を渡していないのは閲覧に必要な権限がメンバーであること自体だからです。今日書く更新と削除ではここへ `'canEdit'` と `'canDelete'` を渡して要求を1段上げます。
 
 **create の権限確認**:
 
@@ -1608,17 +1428,13 @@ export const taskRouter = createTRPCRouter({
       if (input.assigneeId) {
         await assertTaskAssigneeBelongsToProject(tx, input.projectId, input.assigneeId);
 ```
-同じファイルへ続けて貼ります。ここはトランザクションを開いたままなので途中では保存しません。権限の確認と担当者の確認が終わるまで次のブロックへ進んでください。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（直前のブロックの続き）
     }
 ```
-権限の確認を保存より先に置いてあるのは弾かれる場合に DB へ1行も書かないためです。作成の対象はまだ存在しないタスクなので確認の相手はプロジェクトになります。この点が対象のタスクから確認を始める更新との違いです。
 
 **create のデータ組み立て**:
-
-最初から完了で作るタスクには作成時刻を `completedAt` に入れます。完了日時が空のままだと完了日を使うレポートで数えられないためです。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（同じファイルの続き）
@@ -1645,7 +1461,6 @@ export const taskRouter = createTRPCRouter({
         createData.estimatedHours = input.estimatedHours;
       }
 ```
-`createdBy` を `ctx.session.userId` から取っているのは作成者を画面に決めさせないためです。画面から送られた値を使うと他人の名前でタスクを作る送信を止められません。
 
 **create の保存**:
 
@@ -1673,7 +1488,6 @@ export const taskRouter = createTRPCRouter({
     });
   }),
 ```
-`prisma.task.create` ではなく `tx.task.create` を呼ぶところがこの部分でいちばん間違えやすい箇所です。`prisma` のまま書くとトランザクションの外で保存され、採番のロックが効きません。
 
 **update の下ごしらえ**:
 
@@ -1693,7 +1507,6 @@ export const taskRouter = createTRPCRouter({
       updateData.description = data.description;
     }
 ```
-`const { id, expectedUpdatedAt, ...data } = input` で3つに分けているのはこの3つの使い道が違うからです。`id` は対象を指す値、`expectedUpdatedAt` はぶつかりの判定に使う値、`data` は書き換える中身です。同じ `input` のまま扱うと書き換え項目を詰める処理へ `id` まで紛れ込みます。
 
 **update のステータスと完了日時**:
 
@@ -1711,7 +1524,6 @@ export const taskRouter = createTRPCRouter({
       }
     }
 ```
-完了日時を自動で変えるのはステータスが変わったときだけです。同じ `DONE` のままタイトルを直した場合は元の完了日時を保ちます。完了日時そのものは入力スキーマに無いので、画面から直接送られてくることはありません。
 
 **update の残りの項目**:
 
@@ -1741,7 +1553,6 @@ export const taskRouter = createTRPCRouter({
       isClosedStatus(existingTask.status) &&
       !isClosedStatus(data.status);
 ```
-判定に `!== undefined` を使い、`if (data.priority)` と書いていないのが要点です。後者だと `0` や空文字が偽と見なされ、`estimatedHours` を0時間へ直す編集が黙って無視されます。日付の2つが `? :` で分かれているのは値があれば `Date` へ、空なら `null` へ、と行き先が2つあるためです。
 
 **update のプロジェクト移動**:
 
@@ -1767,7 +1578,6 @@ export const taskRouter = createTRPCRouter({
           updateData.project = { connect: { id: targetProjectId } };
         }
 ```
-移動元で編集できることは移動先で編集できることを意味しません。だから移動先でも `'canEdit'` を確認します。ここを飛ばすと自分が入っていないプロジェクトへタスクを送り込めてしまいます。`destinationMember ? [destinationMember] : []` と配列に包むのは`assertMemberPermission` が一覧を受け取る形だからです。
 
 **update の担当者**:
 
@@ -1783,8 +1593,6 @@ export const taskRouter = createTRPCRouter({
           }
         } else if ((isProjectChanging || isReopening) && existingTask.assigneeId) {
 ```
-
-完了やキャンセルの記録には以前の担当者が残ります。そのタスクを再開すると退会者へ作業を割り当てる恐れがあります。担当者を省略した場合も移動や再開では所属を確かめます。次のコードを直後に足します。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）
@@ -1804,7 +1612,6 @@ export const taskRouter = createTRPCRouter({
           }
         }
 ```
-`null` は担当を外す指定です。値があれば所属を確認して付け替えます。`undefined` は通常の編集では担当を保ちます。ただしプロジェクトの移動や未完了への再開では所属を確認します。所属していない担当者だけを外すため有効な担当者は残ります。完了やキャンセルのままタイトルを編集しても履歴の担当者は変わりません。
 
 **update の保存**:
 
@@ -1832,7 +1639,6 @@ export const taskRouter = createTRPCRouter({
         });
       });
 ```
-`where` に `updatedAt` を混ぜているのが楽観ロックの本体です。先に読んで比べてから書く形にすると比べた後・書く前の隙間に別の書き換えが入れます。条件を `where` へ入れて1回の問い合わせにまとめるとその隙間そのものが無くなります。`expectedUpdatedAt` が送られてこない場合も、サーバーが読み取った `existingTask.updatedAt` と比較します。読み取り後に別の更新が入れば `CONFLICT` を返します。
 
 **update の競合エラー**:
 
@@ -1852,7 +1658,6 @@ export const taskRouter = createTRPCRouter({
     }
   }),
 ```
-`P2025` だけを `CONFLICT` へ変え、それ以外は `throw err` でそのまま上へ渡します。全部を `CONFLICT` にすると接続エラーや書式の誤りまで「誰かが先に更新しました」と表示され、読者は直しようのない案内を受け取ります。文言で「他の人」と断定していないのは自分の別の操作でも更新時刻が動くからです。
 
 **delete**:
 
@@ -1872,9 +1677,6 @@ export const taskRouter = createTRPCRouter({
     }),
 });
 ```
-`src/server/api/routers/task.ts` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
-
-`findTaskWithPermission` に第3引数を渡さず、その後で `'canDelete'` を確かめているのが更新との違いです。編集はできても削除はできない権限があるため要求する権限を分けます。最後の `});` で `taskRouter` 全体が閉じます。
 
 ### `src/app/task/page.tsx`
 
@@ -1904,8 +1706,6 @@ import {
 } from '@/component/task/task-dialog';
 ```
 
-`toast` は Day 14 で追加済みです。`react-hot-toast` だけ中括弧が付いていないのはこの取り込みが既定の書き出しを受け取る形だからです。このライブラリは `toast` を既定と名前付きの両方で出しているので中括弧を付けた `import { toast }` でも動きます。この教材では既定の形に揃えています。中括弧が要るかどうかは借りる側では決められません。借りられる側のファイルが何をどう書き出しているかで決まります。
-
 **選択欄と定数のインポート**:
 
 ```typescript
@@ -1922,8 +1722,6 @@ import {
   SelectTrigger, SelectValue,
 } from '@/component/ui/select';
 ```
-
-今日足したのは `DeleteConfirmDialog` の行です。すでにある部品を借りているだけで、新しくは作りません。削除の確認画面をプロジェクトの編集画面と共有するとボタンの並びと文言がそろいます。同じ役目のものを画面ごとに作ると見た目と挙動が少しずつずれていきます。
 
 **定数と道具のインポート**:
 
@@ -1948,8 +1746,6 @@ import { taskToFormData }
 import { api } from '@/trpc/react';
 ```
 
-こちらで今日足したのは `taskToFormData` です。編集ボタンから受け取れるのは id の文字列だけなのでタスクをフォーム用の形へ直す変換が要ります。日付を `YYYY-MM-DD` へ直す処理も中に入っているため画面ごとに手で書き直さずに済みます。
-
 **画面の状態**:
 
 ```typescript
@@ -1973,8 +1769,6 @@ function TaskPageContent() {
   const [deleteTargetId, setDeleteTargetId]
     = useState<string | null>(null);
 ```
-
-今日増えたのは下の2つです。消す相手の id を `useState` で覚えるのは確認ダイアログが開いている間ずっと保つ必要があるからです。ふつうの変数に入れるとダイアログが開いた再描画のときに消えます。開いているかどうかと、どれを消すかを別々に持つのも同じ理由で、閉じる動きの途中で id を消すと表示が一瞬崩れます。
 
 **URL と取得**:
 
@@ -2004,8 +1798,6 @@ function TaskPageContent() {
   const utils = api.useUtils();
 ```
 
-`'all'` のときに `undefined` を渡すのはその条件を使わないという合図です。サーバー側は `if (input?.status)` で受けているので`undefined` なら絞り込みません。`utils` は取得済みのデータを操作する入口で、この後の3つの mutation から呼びます。
-
 **権限の判定**:
 
 ```typescript
@@ -2029,8 +1821,6 @@ function TaskPageContent() {
   }, [projects, session?.user?.id]);
 ```
 
-取れないときに空の Map を返すのはこの後の `.get()` が `undefined` に対して呼ばれて落ちるのを防ぐためです。`useMemo` の第2引数を `[projects, session?.user?.id]` にしてあるので表を作り直すのはこの2つが変わったときだけです。
-
 **編集と削除の可否**:
 
 ```typescript
@@ -2053,8 +1843,6 @@ function TaskPageContent() {
   );
 ```
 
-`hasPermission` はサーバー側と共通の判定関数です。基準を画面へ書き写すと権限の表を直したときに片方だけ古いまま残ります。ロールが取れないときに `false` を返すのは判定できない相手へボタンを見せないためです。
-
 **URL からの詳細表示**:
 
 ```typescript
@@ -2067,8 +1855,6 @@ function TaskPageContent() {
     }
   }, [taskIdParam]);
 ```
-
-第2引数の `[taskIdParam]` が見張る値です。空配列にすると最初の1回しか動かず、他の画面から `/task?taskId=...` へ移動しても詳細が開きません。第2引数ごと省くと描画のたびに走り、閉じても値がすぐ戻る画面になります。
 
 **作成と更新の通信**:
 
@@ -2094,8 +1880,6 @@ function TaskPageContent() {
   };
 ```
 
-次にタスクの作成処理を追加します。成功時は一覧を取り直して入力画面を閉じます。エラー時は通知関数を呼ぶだけなので、入力を残して作成結果を確かめられます。
-
 ```typescript
 // filepath: src/app/task/page.tsx（直前のブロックの続き）
   const createMutation =
@@ -2109,8 +1893,6 @@ function TaskPageContent() {
       ),
     });
 ```
-
-次にタスクの更新処理を追加します。成功時は一覧と開いている詳細を取り直して入力画面を閉じます。エラー時は共通の通知関数を呼び、入力を残して更新結果を確かめられます。
 
 ```typescript
 // filepath: src/app/task/page.tsx（直前のブロックの続き）
@@ -2130,7 +1912,6 @@ function TaskPageContent() {
       ),
     });
 ```
-作成と更新は共通の `notifyMutationError` で通知します。401は再ログインを案内し、応答の `data` が無い場合は結果不明として一覧を取り直します。競合などの応答が届いた場合はサーバーの理由を表示します。理由が空でも通知が空欄にならないように各操作の失敗文言を渡します。詳細を `selectedTask` があるときだけ取り直すのは開いていない画面のために通信を増やさないためです。
 
 **削除の通信**:
 
@@ -2149,8 +1930,6 @@ function TaskPageContent() {
       ),
     });
 ```
-
-削除が成功したら `setDeleteDialogOpen(false)` で確認画面を閉じ、対象IDを `null` へ戻します。入力用の `dialogOpen` とは別の state です。失敗時は確認画面を閉じません。`invalidate()` を忘れると DB からは消えているのにカードが残り、再読み込みするまで消えたことが分かりません。`onError` は削除の理由または結果不明の通知を表示します。
 
 **3つのハンドラー**:
 
@@ -2176,8 +1955,6 @@ function TaskPageContent() {
     setDeleteDialogOpen(true);
   };
 ```
-
-作成と編集の違いは`editingTask` に何を入れるかだけです。`undefined` を入れれば空のフォーム、変換したタスクを入れれば値の入ったフォームになります。`handleDelete` が削除そのものを実行しないのは実行の合図を確認ボタン側へ預けるためです。押し間違いは確認画面で止まります。
 
 **送信ハンドラーの更新分岐**:
 
@@ -2209,8 +1986,6 @@ function TaskPageContent() {
       }
 ```
 
-空の値を `null` にそろえているのは更新のスキーマで `.nullable()` にした項目へ「空にする」と伝えるためです。空文字のまま送ると説明を空文字という内容へ書き換える意味になります。`expectedUpdatedAt` をそのまま渡しているので編集を始めた時点から内容が変わっていればサーバーが競合として止めます。
-
 **送信ハンドラーの作成分岐**:
 
 ```typescript
@@ -2236,8 +2011,6 @@ function TaskPageContent() {
     };
 ```
 
-`data.id` が無いときだけこの行に届くのでここから下は新規作成の道です。空の値に `null` ではなく `undefined` を使うのは作成がまだ存在しない行を作る手続きで、「この項目を空にする」という指示が要らないからです。先頭の確認はログイン情報を読み込めていないうちの送信を止める門番です。
-
 **カードのハンドラー**:
 
 ```typescript
@@ -2261,8 +2034,6 @@ function TaskPageContent() {
     );
   }
 ```
-
-閉じる側で `selectedTask` を `null` へ戻すのは次に別のカードを押したとき前のタスクが一瞬見えるのを防ぐためです。`tasksLoading` の早期 return を置くのは読み込み中の `tasks` が `undefined` で、この後の `tasks.map(...)` が落ちるためです。
 
 **見出しとフィルター**:
 
@@ -2294,8 +2065,6 @@ function TaskPageContent() {
               </SelectTrigger>
 ```
 
-`SelectTrigger` に `aria-label` を付けているのはこの絞り込みに画面上の見出しが無いためです。`placeholder` は値を選んだ時点で消えるので読み上げソフトを使う人には選んだ値だけが読まれます。
-
 **プロジェクトの絞り込み**:
 
 ```typescript
@@ -2315,8 +2084,6 @@ function TaskPageContent() {
           </div>
 ```
 
-先頭の「すべてのプロジェクト」だけ手で書いているのはこの値が `projects` の中に無いからです。`projects?.` の `?.` はまだ取得できていない `undefined` の状態で `.map()` を呼んで落ちるのを防ぐ書き方です。
-
 **ステータスの絞り込み**:
 
 ```typescript
@@ -2334,8 +2101,6 @@ function TaskPageContent() {
                   "すべてのステータス" />
               </SelectTrigger>
 ```
-
-`onValueChange` が受け取る値は shadcn/ui の都合でただの `string` です。`isTaskStatus(value)` を通してから代入するのは確かめずに `as TaskStatus` と書けば想定外の文字列がそのままサーバーへ飛ぶからです。
 
 **ステータスの選択肢**:
 
@@ -2358,8 +2123,6 @@ function TaskPageContent() {
           </div>
         </div>
 ```
-
-選択肢を定数から作るのでステータスが増えたときに直す場所は `status.ts` の1か所で済みます。末尾の `</div>` が2つ続くのは内側が幅を決める枠、外側が2つの絞り込みを横に並べる枠だからです。
 
 **カードの一覧**:
 
@@ -2389,8 +2152,6 @@ function TaskPageContent() {
             ))
 ```
 
-`onEdit` と `onDelete` に今日の関数を渡したのでカード内のボタンが押されると `task.id` を受け取って呼ばれます。ボタンの見た目は `TaskCard`、実際の処理は親ページ、と役割が分かれます。`canEdit` と `canDelete` を渡し忘れると既定の `true` が使われ、閲覧者にも両方のボタンを見せてしまいます。
-
 **空のときの表示**:
 
 ```typescript
@@ -2411,8 +2172,6 @@ function TaskPageContent() {
         </div>
 ```
 
-`col-span-full` はグリッドの全列にまたがって表示するクラスです。外すとメッセージが1列分の幅へ押し込まれ、4列表示のときに左端へ寄って見えます。今日は削除も作ったので最後の1件を消したあとにこの表示へ切り替わります。
-
 **3つのダイアログ**:
 
 ```typescript
@@ -2432,8 +2191,6 @@ function TaskPageContent() {
           projects={projects ?? []}
         />
 ```
-
-2つとも並べて置いてあるのはどちらも画面の最前面へ重なる部品で、カードの並びに影響されないためです。`projects ?? []` はまだ取得できていない `undefined` を空の配列として渡す書き方で、ダイアログ側の `projects.map()` が落ちません。
 
 **削除の確認ダイアログ**:
 
@@ -2458,8 +2215,6 @@ function TaskPageContent() {
 }
 ```
 
-`isPending={deleteMutation.isPending}` を渡すと通信の最中は確認ボタンが押せなくなります。これが無いと待ちきれずに2回押した人が同じ削除を2回送ります。`onConfirm` の中で `deleteTargetId` を確かめているのは対象が決まっていない状態で通信を始めないためです。
-
 **ページ本体**:
 
 ```typescript
@@ -2475,10 +2230,6 @@ export default function TaskPage() {
 }
 ```
 
-`src/app/task/page.tsx` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
-
-`export default` を付けた関数がそのファイルのページ本体です。`TaskPageContent` をそのまま default にせず `Suspense` で包むのは中で `useSearchParams` を使っているからです。境界の外に置くとビルド時にエラーで止まります。
-
 ## 今日のまとめ
 
 - [ ] TaskDialog を編集モードで再利用できた
@@ -2488,13 +2239,12 @@ export default function TaskPage() {
 - [ ] `DeleteConfirmDialog` で確認ダイアログを表示できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 編集が反映されない | invalidate忘れ | `onSuccess` に追加 |
-| 日付がずれる | date-only変換ミス | `dateOnlyToUtcStartIso()` で UTC（協定世界時、タイムゾーンの基準）の開始時刻にそろえる |
-| 削除が即実行される | 確認ダイアログ未実装 | `DeleteConfirmDialog` を配置 |
-| 前回の値が残る | フォーム同期不足 | `defaultValues` と `useEffect(reset(...))` を確認 |
+| 編集しても一覧や詳細が古いまま | `updateMutation` の `onSuccess` で `invalidate` を呼んでいない | 画面で編集後に値が変わらないのを確認する。`src/app/task/page.tsx` の `onSuccess` に `void utils.task.getAll.invalidate()` を足す |
+| 締切日が1日ずれて表示される | 日付だけの値をローカル時刻のまま送っている | エディタで `src/component/task/task-dialog.tsx` の締切の変換を見る。`dateOnlyToUtcStartIso()` で UTC の開始時刻にそろえる |
+| 削除ボタンで確認なしに消えてしまう | 確認ダイアログを配置していない | 画面で削除がそのまま走るのを確認する。`src/app/task/page.tsx` の JSX に `DeleteConfirmDialog` を足して `deleteDialogOpen` で開く |
+| 編集を開くと前回の値が残る | フォームの同期が足りていない | エディタで `src/component/task/task-dialog.tsx` を見る。`useEffect` の中で `reset(...)` が初期データに追従する形か確認する |
 
 ## 今日学んだ用語
 

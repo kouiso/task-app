@@ -75,6 +75,49 @@ def find_sample_with_real_path(text: str) -> list[tuple[int, str]]:
     return hits
 
 
+SAMPLE_LANG = {"typescript", "tsx", "ts", "javascript", "jsx", "js"}
+
+
+def find_unmarked_sample(text: str) -> list[tuple[int, str]]:
+    """Before/After 見出しの下のコードで、1行目に目印の無いブロックを返す。
+
+    読み比べ用のコードは実ファイルを持たないので、1行目は
+    `// filepath: 読み比べ用サンプル（実ファイルには対応しません）` と名乗る。
+    目印の無いコードは写経するコードと取り違えやすい。
+    見出しのすぐ下の1つ目が「続き」と名乗る形も間違いなので止める。
+
+    見出しの判定は find_sample_with_real_path() と同じくフェンスの外だけで行う。
+    言語はフェンスの開き行の名前で絞る。bash のブロックは対象にしない。
+    """
+    hits: list[tuple[int, str]] = []
+    in_sample = False
+    block_index = 0
+    pending_first = False
+    for i, line, state, fence in fence_states(text):
+        if state == "outside":
+            if line.startswith("#"):
+                in_sample = ("Before" in line) or ("After" in line)
+                block_index = 0
+            continue
+        if state == "open":
+            pending_first = in_sample and fence.lang in SAMPLE_LANG
+            if pending_first:
+                block_index += 1
+            continue
+        if state != "inside" or not pending_first:
+            continue
+        if not line.strip():
+            continue
+        pending_first = False
+        fp = FILEPATH.match(line)
+        value = filepath_value(fp) if fp else ""
+        if not value.startswith("読み比べ用サンプル"):
+            hits.append((i, line.strip()[:40]))
+        elif block_index == 1 and "続き" in value:
+            hits.append((i, value))
+    return hits
+
+
 def find_missing(text: str, root: Path) -> list[tuple[int, str]]:
     """完成版に存在しないファイルを書き込み先として挙げている行を返す。
 
@@ -120,6 +163,7 @@ def main(argv: list[str]) -> int:
     findings: list[tuple[str, int, str]] = []
     missing: list[tuple[str, int, str]] = []
     samples: list[tuple[str, int, str]] = []
+    unmarked: list[tuple[str, int, str]] = []
     for path in targets:
         text = path.read_text(encoding="utf-8")
         for line, value in find(text):
@@ -128,6 +172,8 @@ def main(argv: list[str]) -> int:
             missing.append((path.name, line, value))
         for line, value in find_sample_with_real_path(text):
             samples.append((path.name, line, value))
+        for line, value in find_unmarked_sample(text):
+            unmarked.append((path.name, line, value))
 
     status = 0
     if findings:
@@ -147,6 +193,12 @@ def main(argv: list[str]) -> int:
         for name, line, value in samples:
             print(f"  {name}:{line} filepath: {value}")
         print("  読み比べ用サンプルである旨を書いてください。")
+        status = 1
+    if unmarked:
+        print(f"❌ 読み比べ用の節のコードの1行目に目印が無い {len(unmarked)} 件")
+        for name, line, value in unmarked:
+            print(f"  {name}:{line} {value}")
+        print("  1行目に `// filepath: 読み比べ用サンプル（実ファイルには対応しません）` を書いてください。")
         status = 1
     if status:
         return status

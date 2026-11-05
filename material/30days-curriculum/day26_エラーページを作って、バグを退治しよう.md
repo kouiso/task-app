@@ -1439,10 +1439,6 @@ export default function ErrorPage({
   }, [error]);
 ```
 
-Step 1 では `import { Button }` と `from '@/component/ui/button';` を2行に分けて載せましたがここでは1行になっています。`npm run fix` を実行すると Biome が短い import を1行にまとめるためで、どちらで書いても動きは変わりません。手元が2行のままでも直す必要はありません。
-
-引数の型を `{ error: ...; reset: ... }` と波括弧の中に直接書いているのはこの形をこのファイル以外で使わないからです。`interface ErrorPageProps` として名前を付けても動きますが名前が増えるぶん読む側は「どこか別の場所でも使うのか」と探すことになります。1か所でしか使わない形はその場に書いておくほうが読み手の手間が減ります。
-
 **フォールバック UI**:
 
 ```typescript
@@ -1462,10 +1458,6 @@ Step 1 では `import { Button }` と `from '@/component/ui/button';` を2行に
 }
 ```
 
-`error.tsx` はエラーが起きたページの内容を置き換えます。この教材の `layout.tsx` に `<h1>` はありません。ここでは既存のエラー画面と同じ `<h2>` を使います。見出しの階層を決めるときは残るレイアウトを確認してください。
-
-`error` の中身を画面に出していない点も、そのままにしておいてください。本番ではテーブル名やファイルのパスがエラーの文言に混じることがあり、それをそのまま出すとアプリの内部構造を訪問者全員へ見せることになります。読者が中身を確かめる先は`console.error(error)` が書き込んだ Console のほうです。
-
 ### `src/app/not-found.tsx`
 
 **404 の見出しと本文**:
@@ -1482,10 +1474,6 @@ export default function NotFound() {
       <p className="text-xl text-muted-foreground">ページが見つかりません</p>
 ```
 
-こちらのファイルには `'use client'` がありません。`error.tsx` に必要だったのは `reset` と `useEffect` を使うためで、この画面はどちらも使わないからです。書き足しても動きますがその1行があるとブラウザへ送る JavaScript が増えます。要らないなら書かないほうが軽くなります。
-
-`px-4` を付けているのはスマートフォンの幅で文字が画面の端に貼り付くのを防ぐためです。この画面は中央に置いた文字しか無いので余白が無いと窮屈に見えます。
-
 **戻り道のリンク**:
 
 ```tsx
@@ -1501,11 +1489,6 @@ export default function NotFound() {
   );
 }
 ```
-
-見た目はボタンですが中身は `<Link>` です。押したときに起きるのは画面の移動だけなのでリンクで書くのが本来の形になります。`<Button onClick={...}>` にすると右クリックで新しいタブに開く操作や、キーボードでリンクだけを拾う読み上げソフトの動きが使えなくなります。
-
-`href` を `/dashboard` にしてあるのは、このアプリの入口へ戻すためです。未ログインならログイン画面へ移り、ログイン後にダッシュボードを開けます。存在しないページからそのアプリで最初に見るべき画面へ1回で戻せます。`bg-primary` などの色名を直接の色コードで書いていない点も見ておいてください。これは Day 01 で `@theme inline` に登録した配色の名前で、テーマを変えるとこのボタンの色も一緒に変わります。
-
 
 ## 通信エラー対応後の完成コード
 
@@ -1725,10 +1708,30 @@ export default function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 xxl:grid-cols-5">
           {[
             { label: 'プロジェクト', value: totalProjects, color: '#3b82f6', icon: FolderKanban },
-            { label: '未対応タスク', value: todoTasks, color: '#64748b', icon: Circle },
-            { label: '完了タスク', value: completedTasks, color: '#34d399', icon: CheckCircle2 },
-            { label: '進行中タスク', value: inProgressTasks, color: '#60a5fa', icon: Timer },
-            { label: 'レビュー中タスク', value: inReviewTasks, color: '#fbbf24', icon: Eye },
+            {
+              label: '未対応タスク',
+              value: todoTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.TODO],
+              icon: Circle,
+            },
+            {
+              label: '完了タスク',
+              value: completedTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.DONE],
+              icon: CheckCircle2,
+            },
+            {
+              label: '進行中タスク',
+              value: inProgressTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_PROGRESS],
+              icon: Timer,
+            },
+            {
+              label: 'レビュー中タスク',
+              value: inReviewTasks,
+              color: TASK_STATUS_COLORS[TASK_STATUS.IN_REVIEW],
+              icon: Eye,
+            },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -1900,7 +1903,7 @@ export default function DashboardPage() {
 }
 ```
 
-取得済みデータの有無とステータスを別々に判定するため、初回500、再取得500、401、403で決めた表示を保てます。再試行ボタンはそのページで使う取得処理を呼び直します。
+取得済みデータの有無とステータスを別々に判定するため、初回500、再取得500、401、403で決めた表示を保てます。再試行ボタンはそのページで使う取得処理を呼び直します。統計カードの色は状態の小さな丸と同じ `TASK_STATUS_COLORS` から引いています。同じ状態を2種類の色で表さないようにするためです。
 
 ### `src/component/task/task-dialog.tsx`（保存中の入力を保持する）
 
@@ -3183,13 +3186,12 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
 - [ ] `npm run lint` で `src` 以下と設定ファイルをチェックした
 
 ## つまずきポイント
-
 | エラー/問題 | 原因 | 解決方法 |
 |------------|------|---------|
-| `Cannot read properties of null` | Optional Chainingなし | `?.`を追加する |
-| Networkタブでリクエストが止まらない | useEffect依存配列にオブジェクト | プリミティブ値に分解する |
-| Biome lintのエラーが消えない | 自動修正できないルール | 手動でコードを修正する |
-| `npm run dev` のターミナルに `error.tsx must be a Client Component` と出てログイン画面も開けない | `error.tsx` の先頭に `'use client'` が無い | ファイルの先頭（import より前）に `'use client';` を書く |
+| `TypeError: Cannot read properties of null (reading 'name')` | Optional Chaining なしで null のプロパティを読んでいる | Console タブのエラーの右にあるファイル名と行番号を開く。その行で `?.` を付けて null を許容する |
+| 同じリクエストが無限に流れ続ける | `useEffect` の依存配列にオブジェクトを入れている | Network タブで同じリクエストが連発されるのを見る。依存配列をプリミティブ値に分解する |
+| `lint/suspicious/noConsole` | `console.` が残っていて自動修正で消えないルールに引っかかっている | `npm run lint` の出力でファイル名と行番号を見る。該当の `console.` の行を手で消す |
+| `npm run dev` のターミナルに `error.tsx must be a Client Component` と出てログイン画面も開けない | `error.tsx` の先頭に `'use client'` が無い | `npm run dev` のターミナルにこの文が出る。`error.tsx` の先頭（import より前）に `'use client';` を書く |
 
 ## 今日学んだ用語
 

@@ -49,7 +49,7 @@ flowchart TD
     A --> C["/report/weekly への<br/>リンク"]
     C --> D[週次レポートページ]
     D --> E[サマリーカード 3枚]
-    D --> F[週別完了タスク折れ線グラフ]
+    D --> F["週別完了タスク<br/>折れ線グラフ"]
     D --> G[優先度別棒グラフ]
     D --> H[完了タスクの<br/>優先度別<br/>積み上げ棒グラフ]
 
@@ -699,7 +699,7 @@ export default function WeeklyReportPage() {
 - `return` の一番外側が `<AppLayout>` になっている
 - 関数を閉じる `}` まで書けている
 
-![読み込み中の週次レポート。画面の中央に丸いスピナーだけが出ている](./screenshots/day23/report-weekly-loading.png)
+![読み込み中の週次レポート。白い画面の上の方に丸いスピナーだけが出ている](./screenshots/day23/report-weekly-loading.png)
 
 週次ページを直接 URL 入力しなくても開けるよう、
 `src/app/report/page.tsx` のヘッダーへリンクを
@@ -1075,8 +1075,7 @@ npm run dev
 
 ### Pro パターンで書こう（週次レポートのデータ取得は Prisma の select でまとめる）
 
-`select` をネストするとタスクとプロジェクトを1回のPrisma呼び出しで取得でき、N+1問題（一覧を1回取得したあと、要素ごとに追加のクエリを発行してしまう問題）を回避できます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+`select` の話題の前に、取り方そのものを見直します。週ごとに `prisma.task.findMany` を呼ぶと週の数だけ問い合わせが増えます。期間全体を1回で取って、週への仕分けはこのあとの `filter` に任せると問い合わせは1回で済みます。Step 0-4 の `getWeeklyReport` と同じ考え方です。なぜ期間全体を1回で取るのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
@@ -1090,151 +1089,74 @@ type WeeklyReportTask = {
   completedAt: Date | null;
   status: string;
   priority: string;
-  project: {
-    id: string;
-    name: string;
-  } | null;
 };
 ```
 
-取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。この関数は、対象ユーザーが現在も参加しているプロジェクトの完了タスクを取得します。
+取る列は Step 0-4 と同じ `id`・`completedAt`・`status`・`priority` の4つです。プロジェクトの列は取りません。取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-export async function fetchWeeklyReportTasks(
-  targetUserId: string,
-  startDate: Date,
-  endDate: Date,
-): Promise<WeeklyReportTask[]> {
-  const tasks = await prisma.task.findMany({
+// 週ごとに1回ずつ問い合わせる。4週なら4回になる
+const weeks = [week1, week2, week3, week4];
+for (const week of weeks) {
+  const tasks: WeeklyReportTask[] = await prisma.task.findMany({
     where: {
       assigneeId: targetUserId,
       status: TASK_STATUS.DONE,
-      project: { members: { some: { userId: targetUserId } } },
-      completedAt: { gte: startDate, lt: endDate },
+      completedAt: { gte: week.start, lt: week.end },
     },
-```
-
-> `gte`/`lt`（以上／未満のPrisma条件）で、`completedAt` が指定した期間内のタスクだけを絞り込みます。終了側を `lt`（未満）にするのは`endDate` ちょうどの瞬間を次の週に含めるためです。週の境界を「開始以上・終了未満」でそろえると同じタスクが2つの週に二重で数えられません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    select: {
-      id: true,
-      completedAt: true,
-      status: true,
-      priority: true,
-      projectId: true,
-    },
+    select: { id: true, completedAt: true, status: true, priority: true },
   });
-
-  return await Promise.all(
-    tasks.map(async (task) => {
-      const project = await prisma.project.findUnique({
-        where: { id: task.projectId },
-        select: {
-          id: true,
-          name: true,
-        },
-      });
-
-      return {
-        id: task.id,
-        completedAt: task.completedAt,
-        status: task.status,
-        priority: task.priority,
-```
-
-分かれ道は `select` に `projectId` しか入れていない点です。プロジェクト名が手元に無いのでそのあとの `tasks.map` で1件ずつ `prisma.project.findUnique` を呼び直すしかなくなります。タスクが 30 件あれば最初の1回に加えて問い合わせが 30 回増えます。`Promise.all` で同時に走らせても回数そのものは減りません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-        project,
-      };
-    }),
-  );
+  week.tasks = tasks;
 }
 ```
 
 **このコードの問題点**:
 
-- タスクが 30 件あれば最初の取得 1 回に加えてプロジェクト取得が 30 回走る
-- `Promise.all` を使っていてもDB への問い合わせ回数が増える構造は変わらない
-- 週次レポートに担当者やプロジェクト情報を増やすたび、同じ N+1 が別の relation でも起きやすい
+- 週の数だけ問い合わせが増える。4週なら4回、1年分なら52回になる
+- 週ごとの問い合わせが終わるまで、レポート全体を組み立てられない
 
 #### After（プロが書くコード）
 
+型と import は Before と同じです。
+
 ```typescript
 // filepath: 読み比べ用サンプル（実ファイルには対応しません）
-import { TASK_STATUS } from '@/lib/constant/status';
-import { prisma } from '@/lib/prisma';
+// 期間全体を1回で取る
+const tasks: WeeklyReportTask[] = await prisma.task.findMany({
+  where: {
+    assigneeId: targetUserId,
+    status: TASK_STATUS.DONE,
+    completedAt: { gte: rangeStart, lt: rangeEnd },
+  },
+  select: {
+    id: true,
+    completedAt: true,
+    status: true,
+    priority: true,
+  },
+});
 
-type WeeklyReportTask = {
-  id: string;
-  completedAt: Date | null;
-  status: string;
-  priority: string;
-  project: {
-    id: string;
-    name: string;
-  } | null;
-};
-```
-
-取得条件は前後で共通です。対象ユーザーの認可は呼び出し元が担当します。この関数は、対象ユーザーが現在も参加しているプロジェクトの完了タスクを取得します。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-export async function fetchWeeklyReportTasks(
-  targetUserId: string,
-  startDate: Date,
-  endDate: Date,
-): Promise<WeeklyReportTask[]> {
-  return await prisma.task.findMany({
-    where: {
-      assigneeId: targetUserId,
-      status: TASK_STATUS.DONE,
-      project: { members: { some: { userId: targetUserId } } },
-      completedAt: { gte: startDate, lt: endDate },
-    },
-```
-
-先頭が `return await prisma.task.findMany({` になっているのが Before との違いです。Before はいったん `const tasks` で受け取り、そのあと加工していました。ただしN+1 を消しているのは `return` の位置ではありません。`const` で受けてから返す形でも、その間に問い合わせを足せば N+1 は起きます。効いているのは次のコードブロックの `select` に `project` を入れ子で書いて関連するプロジェクト名も取得する点です。内部で発行されるSQLが1本になるとは限りません。`where` の中身は Before と変えていません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    select: {
-      id: true,
-      completedAt: true,
-      status: true,
-      priority: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
-}
+// 週への仕分けはこのあとの filter に任せる
+const weeklyTasks = weeks.map((week) =>
+  tasks.filter(
+    (task) =>
+      task.completedAt !== null &&
+      task.completedAt >= week.start &&
+      task.completedAt < week.end,
+  ),
+);
 ```
 
 **このコードの強み**:
 
-- タスクとプロジェクト情報を Prisma にまとめて取得させるので問い合わせ回数が読みやすい
-- `projectId` を手で持ち回らず、戻り値の形が「画面で使うデータ」に近くなる
-- 担当者や関連情報を足すときも `select` / `include` の中に集約でき、取得ロジックが散らばりにくい
+- 問い合わせは週の数に関わらず1回。対象の週を増やしても遅くならない
+- 週への仕分けはメモリ上の `filter` なので、期間の切り方を変えても問い合わせ側はそのまま使える
 
 #### 覚えておきたいエッセンス
 
-一覧やレポートで relation を使うなら1 件ずつ取得する前に
-Prisma の `select` / `include` でまとめて取れないかを考えます。
+集計対象が「期間を区切った一覧」なら、区切りごとに問い合わせるのではなく
+期間全体を1回で取ってメモリ上で仕分ける形を考えます。
 
 ## 完成コード全体
 
@@ -1262,8 +1184,6 @@ import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getUserProjectIds } from './_helpers/permission';
 ```
-
-Day 21 の時点では4つの import だけでした。今日足したのは `TRPCError`・`z`・`TASK_PRIORITY`・`USER_ROLE` の4つで、どれも `getWeeklyReport` だけが使います。使う予定の無い import を先に書かないのはBiome が未使用の名前をエラーとして報告するからです。実際に使う日まで待って足せば警告を抱えたまま次の日へ進まずに済みます。
 
 **プロジェクトが無いときの戻り値**:
 
@@ -1293,8 +1213,6 @@ export const reportRouter = createTRPCRouter({
     }
 ```
 
-参加中のプロジェクトが1件も無い人にはこの先の集計を走らせる意味がありません。ここで 0 と空配列を返しておくと画面側は「データが無い場合」の分岐を書かずに済みます。返す形をあとの `return` とそろえてあるのが要点で、片方だけ項目を足すとプロジェクトが無い人の画面でだけ値が欠けます。
-
 **集計範囲を決める2つの条件**:
 
 ```typescript
@@ -1314,8 +1232,6 @@ export const reportRouter = createTRPCRouter({
       NOT: { status: TASK_STATUS.CANCELLED },
     } as const;
 ```
-
-条件を変数にしておくとこのあとの12本の問い合わせで同じ絞り込みを使い回せます。1本ずつ条件を書き写す形にするとあとで除外の決まりを変えたときに直し漏れが出てカードの合計と表の内訳が合わなくなります。`as const` を付けているのはこの2つを書き換えないと決めた印です。
 
 **Promise.all の受け取り側**:
 
@@ -1337,8 +1253,6 @@ export const reportRouter = createTRPCRouter({
       projectDoneGroups,
     ] = await Promise.all([
 ```
-
-左辺の12個の名前はこのあと並べる問い合わせと同じ順番で受け取ります。件数どうしを入れ替えても型は合ってしまうので間違えてもエラーは出ません。画面には形だけ正しい別の数字が並びます。集計を足すときは左辺と問い合わせの両方の末尾へ足してください。
 
 **問い合わせの前半**:
 
@@ -1365,8 +1279,6 @@ export const reportRouter = createTRPCRouter({
       }),
 ```
 
-総タスク数だけ `activeTasksFilter` を使い、ステータス別の件数は `projectScope` を使います。母数からは中止したタスクを外し、内訳では実際のステータスをそのまま数える分担です。`select` で `id` と `name` だけを取るのは画面で使う項目がこの2つに限られるからです。
-
 **問い合わせの中盤**:
 
 ```typescript
@@ -1389,8 +1301,6 @@ export const reportRouter = createTRPCRouter({
         _sum: { timeSpentMinutes: true },
       }),
 ```
-
-`aggregate` は合計や平均をデータベース側で出す関数です。全タスクを取り出してから足し算する書き方でも答えは同じですがその場合は件数ぶんのデータがサーバーのメモリへ載ります。合計だけが欲しいので数える仕事はデータベースに任せます。
 
 **直近タスクとステータス別集計**:
 
@@ -1420,8 +1330,6 @@ export const reportRouter = createTRPCRouter({
       }),
 ```
 
-`groupBy` は「同じ値ごとにまとめて数える」関数で、ステータス別と優先度別の件数をここで作ります。Day 22 の円グラフが受け取っているのはこの2本の結果です。`take: 5` を付けた `findMany` だけが実際の行を返しますがそれも直近5件に限っているので返るデータ量は件数が増えても変わりません。
-
 **プロジェクト別集計と問い合わせの締め**:
 
 ```typescript
@@ -1443,8 +1351,6 @@ export const reportRouter = createTRPCRouter({
       }),
     ]);
 ```
-
-プロジェクト別の集計を2本に分けているのは絞り込みの条件が違うからです。1本目は母数と作業時間、2本目は完了数だけを数えます。1本にまとめて完了かどうかも軸に加えると完了が0件のプロジェクトの行が結果から消え、あとで組み立てるときに扱いが増えます。
 
 **表示用の値と Map の組み立て**:
 
@@ -1468,8 +1374,6 @@ export const reportRouter = createTRPCRouter({
       ]),
     );
 ```
-
-平均と完了率で `totalTasks > 0` を先に見ているのは0 で割った答えが `NaN` になるからです。画面には数字ではなく「NaN%」という文字が出ます。`Map` に変えているのは次のブロックでプロジェクト1件ずつに集計を引き当てるためです。配列のまま毎回 `find` を回すとプロジェクトが増えるほど探す回数が掛け算で増えます。
 
 **getOverview の戻り値の前半**:
 
@@ -1497,8 +1401,6 @@ export const reportRouter = createTRPCRouter({
       })),
 ```
 
-`groupBy` の結果は `_count._all` という深い形をしています。それをそのまま返すと画面側が Prisma の都合に合わせて書かれてしまいます。ここで `{ key, value }` へ並べ替えておくとDay 22 の円グラフは受け取った配列に `name` を足すだけで済みます。
-
 **projectStats の組み立て**:
 
 ```typescript
@@ -1525,8 +1427,6 @@ export const reportRouter = createTRPCRouter({
   }),
 ```
 
-起点をプロジェクト一覧にしているのでタスクが1件も無いプロジェクトの行が残ります。集計結果の側から作るとその行は結果に現れず、作ったばかりのプロジェクトが表から消えます。`?? { totalTasks: 0, totalTimeSpent: 0 }` はそのタスクが無いプロジェクトのための受け皿です。
-
 **getWeeklyReport の入力と認可**:
 
 ```typescript
@@ -1550,8 +1450,6 @@ export const reportRouter = createTRPCRouter({
       }
 ```
 
-入力の範囲をここで決めてしまうと画面側は値の確かめ方を持たずに済みます。`.min(1).max(12)` を通らない値は tRPC が先に弾き、データベースまで届きません。権限の確認も入口に置きます。取得したあとで確かめる形にすると返さないと決めたデータを一度は読み出すことになります。
-
 **集計期間の決め方**:
 
 ```typescript
@@ -1572,8 +1470,6 @@ export const reportRouter = createTRPCRouter({
       const startDate = new Date(rangeEnd);
       startDate.setUTCDate(startDate.getUTCDate() - input.weeks * 7);
 ```
-
-上端を明日の 00:00 UTC にそろえ、そこから週数ぶん遡ります。これで各週を UTC の日付境界で区切れます。取得するのは現在までのタスクなので最後の週には今日の途中までが入ります。上端を今にすると下端も同じ時刻までずれ、4週間なら直近28日間の集計になります。
 
 **絞り込み条件と1回の取得**:
 
@@ -1597,8 +1493,6 @@ export const reportRouter = createTRPCRouter({
         },
       });
 ```
-
-期間全体を1回で取り、週への仕分けはこのあとの `filter` に任せます。週ごとに問い合わせる書き方だと12週間を選んだときに12往復します。読み込む行数は変わらないのに往復の回数だけが週数に比例して増えます。`where` を1か所にまとめてあるので週ごとの絞り込みは日付の比較だけで済みます。
 
 **週ごとのバケットとステータス集計**:
 
@@ -1627,8 +1521,6 @@ export const reportRouter = createTRPCRouter({
           ),
 ```
 
-終わりを `< weekEnd` にしてあるので境界ちょうどに完了したタスクが2つの週で二重に数えられません。`Array.from` で先に週数ぶんの箱を作るのは完了が0件の週も配列へ残すためです。実際にあった週だけを作る書き方にするとグラフの横軸から静かな週が抜け落ち、推移が実際より詰まって見えます。
-
 **優先度集計と getWeeklyReport の戻り値**:
 
 ```typescript
@@ -1653,8 +1545,6 @@ export const reportRouter = createTRPCRouter({
     }),
 });
 ```
-
-完成版の `src/server/api/routers/report.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1941,8 +1831,6 @@ export const reportRouter = createTRPCRouter({
 });
 ```
 
-`Object.values(TASK_STATUS)` と `Object.values(TASK_PRIORITY)` を回しているのであとで種類を1つ増やしてもこの集計は定数を直すだけで追従します。ここで `'DONE'` などを直に並べると増えた種類がグラフから静かに抜けます。最後の `});` で `reportRouter` 全体が閉じ、手続きは `getOverview` と `getWeeklyReport` の2本立てになります。
-
 ### `src/app/report/weekly/page.tsx`
 
 **日付とページ枠の取り込み**:
@@ -1962,8 +1850,6 @@ import {
 import { PageLoadingSpinner }
   from '@/component/ui/loading-spinner';
 ```
-
-先頭の `'use client'` が無いと`useState` を書いた行でフックはサーバー側で使えないというエラーになります。`formatDateOnly` は配布済みの `src/lib/date.ts` にある関数です。UTC の日時文字列から日付部分を取り出すのでブラウザのタイムゾーンが変わっても集計期間の日付を保てます。
 
 **選択欄とグラフ部品の取り込み**:
 
@@ -1989,8 +1875,6 @@ import { api } from '@/trpc/react';
 const CHART_PRIMARY_COLOR = '#8884d8';
 ```
 
-Recharts から取り込む10個のうち、`CartesianGrid`・`XAxis`・`YAxis`・`LineChart`・`Line`・`BarChart`・`Bar` は今日が初登場です。Day 22 は円グラフだけだったので、軸・折れ線・棒の部品は要りませんでした。優先度の定数を色つきで取り込むのはDay 22 の円グラフと同じ色で棒を塗るためです。`CHART_PRIMARY_COLOR` だけは対応表を持たない折れ線1本ぶんの色なのでこの画面の定数として1か所に置きます。
-
 **関数の入口とデータ取得**:
 
 ```typescript
@@ -2010,8 +1894,6 @@ export default function WeeklyReportPage() {
     return <PageLoadingSpinner />;
   }
 ```
-
-`weeks` を文字列で持つのは`Select` が文字列でしか値をやり取りしないからです。サーバー側の `weeks` は数値なので`useQuery` へ渡すところで `Number.parseInt` を挟みます。`weeks` が変わると `useQuery` は新しい引数として扱い、自動でもう一度取りに行きます。取得の指示をどこにも書かずに済むのはこの仕組みのおかげです。
 
 **グラフへ渡す2つの配列**:
 
@@ -2038,8 +1920,6 @@ export default function WeeklyReportPage() {
   }));
 ```
 
-Recharts は「1週分が1オブジェクト、系列名がそのキー」という形の配列を求めます。サーバーが返す `byPriority` は入れ物が1段深いのでここで平らな形へ組み替えます。2つの配列で `name` というキーをそろえてあるのは3枚のグラフが同じ `XAxis dataKey="name"` を使えるようにするためです。
-
 **見出しの行**:
 
 ```typescript
@@ -2054,8 +1934,6 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
             週次レポート
           </h1>
 ```
-
-見出しの行を `flex` にして `justify-between` を付けると中の要素が左端と右端に分かれます。だから見出しの次に置く週数の選択欄が自動で右端へ寄ります。この指定が無いと選択欄は見出しの真下へ回り込み、縦に2行ぶんの場所を取ります。
 
 **週数の選択欄**:
 
@@ -2085,8 +1963,6 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
         </div>
 ```
 
-`onValueChange` に `setWeeks` をそのまま渡しているので選んだ値が状態へ入り、`useQuery` の引数が変わって取り直しが始まります。選択肢を4・8・12の3つに絞ってあるのはサーバー側の `.min(1).max(12)` の範囲に収めるためです。自由に数字を入れる欄にすると13 を入れた読者が入力エラーだけを受け取ります。
-
 **完了タスク合計のカード**:
 
 ```typescript
@@ -2106,8 +1982,6 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
             </CardContent>
           </Card>
 ```
-
-`?? 0` は数字の場所が空欄になるのを防ぐだけの守りです。取得が失敗したときもここは 0 と表示されるので「完了0件」との区別は付きません。区別を付けたい場合は `useQuery` から `error` も受け取り、失敗したときだけ別の文言を出す形にします。
 
 **週平均のカード**:
 
@@ -2132,8 +2006,6 @@ Recharts は「1週分が1オブジェクト、系列名がそのキー」とい
           </Card>
 ```
 
-API に渡す週数と平均の分母は同じ `weeks` から作ります。`Math.round` は計算結果を整数に丸めるための関数です。今日の途中までの件数を含むため週平均もこの時点での値です。
-
 **対象期間のカード**:
 
 ```typescript
@@ -2154,8 +2026,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
           </Card>
         </div>
 ```
-
-2つの日付がそろっているときだけ期間を組み立て片方でも無ければ `'-'` を出します。開始日と終了日がそろうまで期間の表示を待つためです。このカードだけ `text-lg` にしてあるのは日付2つを並べた文字列が `text-3xl` では折り返すからです。
 
 **週別完了タスク数の折れ線グラフ**:
 
@@ -2186,8 +2056,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
           </Card>
 ```
 
-このカードだけ `lg:col-span-2` で2列ぶんの幅を取っています。折れ線で見せたいのは件数そのものではなく増減の向きなので横に長いほうが向きを読み取りやすくなります。`chartData ?? []` の `?? []` は`chartData` が `undefined` のときに `LineChart` へ何も渡らない状態を避けるための既定値です。
-
 **高・緊急の完了タスク数の棒グラフ**:
 
 ```typescript
@@ -2215,8 +2083,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
           </Card>
 ```
 
-`Bar` が2本だけなのは`chartData` に `urgent` と `high` しか入れていないからです。週次レポートで確かめたいのは急ぎの仕事の片づき方なので低と中の件数は落としてあります。4段階すべての内訳は次の積み上げ棒グラフで見られます。`fill` を定数から引くのは色を1か所で管理するためです。
-
 **完了タスクの優先度別内訳の枠**:
 
 ```typescript
@@ -2234,8 +2100,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
                     <XAxis dataKey="name" />
                     <YAxis /><Tooltip /><Legend />
 ```
-
-外側の作りは優先度グラフとそろえ、`data` だけを `priorityData` に変えます。2つの配列はどちらも週ラベルを `name` へ入れてあります。だから `XAxis` の指定は書き換えずに済みます。`h-[300px]` は3枚とも同じ値です。3枚を横へ並べても高さがそろいます。
 
 **完了タスクの優先度別内訳の積み上げと閉じタグ**:
 
@@ -2261,8 +2125,6 @@ API に渡す週数と平均の分母は同じ `weeks` から作ります。`Mat
   );
 }
 ```
-
-完成版の `src/app/report/weekly/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2484,13 +2346,8 @@ export default function WeeklyReportPage() {
 }
 ```
 
-4本の `Bar` に同じ `stackId` を付けると横に並ばず1本の棒として積み上がります。週ごとの合計と内訳を同時に読ませたいので並べるのではなく積みます。`stackId` を1つでも書き忘れるとその系列だけが隣に独立した棒として立ちます。最後の閉じタグは `BarChart` から `AppLayout` まで開いた順の逆にたどります。
-
-> **完成形の参考コード**: 完成版には `src/app/report/weekly/page.tsx` があります。ただし今日書いたコードと1文字まで同じではありません。違いは3つです。1つ目は完成版が週数をURLのパラメータにも置いていて、更新や共有で同じ期間が開ける点です。2つ目は通信に失敗したときの案内とやり直しのボタンを持っている点です。3つ目は `src/lib/report-path.ts` を使ったCSV出力のボタンがある点です。グラフの組み立て方は今日書いたコードのほうを正としてください（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/app/report/page.tsx`
-
-このファイルで今日書き換えたのは先頭の import 2行と見出しの行だけです。ただし見出しの行はタグの入れ子が1段深くなるため貼る場所を間違えると統計カードまで巻き込みます。以下は Day 22 の終わりの状態にリンクを足した全文で、ブロックの区切りは Day 22 の「完成コード全体」とそろえてあります。2つを並べるとどこが増えたかを行単位で見比べられます。
 
 **画面部品の取り込み**:
 
@@ -2517,8 +2374,6 @@ import {
 } from '@/component/ui/table';
 ```
 
-今日足したのは `ArrowRight` と `Link` の2行です。`recharts` より前に並ぶのはBiome が外部ライブラリをアルファベット順に置く決まりだからです。手元で末尾に足していても `npm run fix` でここへ移るので差分を見て驚かないでください。
-
 **色とラベルの定数**:
 
 ```typescript
@@ -2539,8 +2394,6 @@ import { api } from '@/trpc/react';
 const CHART_FALLBACK_COLOR = '#9e9e9e';
 ```
 
-ここは Day 22 のままです。週次ページも同じ定数から色を引くので2つの画面で同じステータスが同じ色になります。片方の画面だけ色を直に書くと行き来したときに同じ「完了」が違う色で出て読者は別のものを見ていると受け取ります。
-
 **取得と表示用の値づくり**:
 
 ```typescript
@@ -2560,8 +2413,6 @@ export default function ReportPage() {
     ((overview?.averageTimePerTask ?? 0) / 60)
       .toFixed(1);
 ```
-
-呼んでいるのは `getOverview` だけで、今日足した `getWeeklyReport` はこのページから呼びません。1つの画面に両方の集計を載せると週次のためだけに待ち時間が伸びます。見たい人だけがリンクをたどる形にしてレポート画面の表示は Day 22 と同じ速さのまま保ちます。
 
 **円グラフへ渡す2つの配列**:
 
@@ -2588,8 +2439,6 @@ export default function ReportPage() {
     return <PageLoadingSpinner />;
   }
 ```
-
-この2つも Day 22 のままです。週次ページの `chartData` とは形が違います。こちらは1件が1つのステータス、あちらは1件が1週を表します。2つの画面では配列の1件が表す対象も違います。その違いを頭に入れておくとグラフが空のときにどちらの組み替えを見ればよいか迷いません。
 
 **見出しとリンクの行**:
 
@@ -2621,8 +2470,6 @@ export default function ReportPage() {
         </div>
 ```
 
-今日の変更はここだけです。Day 22 では見出しと説明文を包む `div` が1つでしたがリンクを右へ置くために外側の `div` を1つ増やし、見出しの組と `Link` を横に並べています。狭い画面では `flex-col` で縦積みになり、`sm` 以上で横並びに切り替わります。リンクを見出しの組の中へ入れてしまうと説明文の下に潜って気づかれません。
-
 **統計カードの前半**:
 
 ```typescript
@@ -2650,8 +2497,6 @@ export default function ReportPage() {
           </Card>
 ```
 
-このグリッドは前のブロックで閉じた見出しの `div` の外側に並びます。リンクを足すときに閉じタグを1つ落とすとカードのグリッドが見出しの `div` の中へ入り、右端のリンクの隣に4枚のカードが押し込まれます。カードが急に細くなったときは見出しの `</div>` の位置を確かめてください。
-
 **統計カードの後半**:
 
 ```typescript
@@ -2677,8 +2522,6 @@ export default function ReportPage() {
           </Card>
         </div>
 ```
-
-作業時間の2枚が持っている値は期間で切らない全部の合計です。週次ページの「完了タスク合計」とは数え方が違います。2つの画面で数字が食い違うのは正しい状態です。同じ数を並べたい場合は2つの画面を同じ期間で切る必要があります。
 
 **ステータス円グラフの枠**:
 
@@ -2707,8 +2550,6 @@ export default function ReportPage() {
                     >
 ```
 
-`h-[300px]` の `div` が高さの基準になる形は週次ページの3枚のグラフと同じです。高さの数字までそろえてあるので2つの画面を行き来してもグラフの大きさが変わりません。この基準の `div` を外すと `height="100%"` が 0 と計算され、扇は1枚も描かれません。
-
 **ステータス円グラフの色付け**:
 
 ```typescript
@@ -2733,8 +2574,6 @@ export default function ReportPage() {
             </CardContent>
           </Card>
 ```
-
-型ガードを挟んでから対応表を引く形は週次ページの `fill={TASK_PRIORITY_COLORS.HIGH}` とは書き方が違います。あちらは書く時点で優先度が決まっているので確認が要りません。こちらはサーバーから届いた文字列で引くためその文字列が対応表のキーだと確かめる手順が入ります。
 
 **優先度円グラフの枠**:
 
@@ -2761,8 +2600,6 @@ export default function ReportPage() {
                     >
 ```
 
-この円グラフは優先度4段階すべてを扇にします。週次ページの棒グラフが緊急と高の2本だけなのはあちらが急ぎの仕事の推移を見る画面だからです。全体の割合はこちら、週ごとの推移はあちらと役割を分けてあるのでどちらかへ寄せる必要はありません。
-
 **優先度円グラフの色付け**:
 
 ```typescript
@@ -2788,8 +2625,6 @@ export default function ReportPage() {
           </Card>
         </div>
 ```
-
-末尾の `</div>` でグラフ用のグリッドが閉じます。ここを閉じ忘れると次のプロジェクト統計テーブルがグリッドの2列目に入り、円グラフの隣に半分の幅で置かれます。表の列が窮屈になったときはこの行の有無を先に確かめてください。
 
 **プロジェクト統計テーブルの見出し**:
 
@@ -2818,8 +2653,6 @@ export default function ReportPage() {
               </TableHeader>
 ```
 
-Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちらは読み比べ用なので貼ると同じ表が2つ並びます。表が二重になったときはこちらの1組だけを残してください。
-
 **プロジェクト統計テーブルの行**:
 
 ```typescript
@@ -2844,8 +2677,6 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
               </TableBody>
 ```
 
-`projectStats` は `getOverview` が組み立てた配列で、Step 1 で確かめたとおり画面側では数え直しません。`toFixed(1)` は表示のときだけ小数を1桁へ丸める処理です。サーバーが返す `71.42857142857143` をそのまま出すと列の幅が行ごとに変わって表が読みにくくなります。
-
 **ファイル末尾の閉じタグ**:
 
 ```typescript
@@ -2859,8 +2690,6 @@ Step 2 で読んだ見出しの定義はこの5列と同じ形です。あちら
   );
 }
 ```
-
-完成版の `src/app/report/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -3125,8 +2954,6 @@ export default function ReportPage() {
 }
 ```
 
-開いたタグを内側から順に閉じてファイルが終わります。今日の作業でリンクを足した位置はこの上のほうなので末尾の並びは Day 22 と変わりません。画面が真っ白になったときは増やした見出しの `div` の閉じタグが足りているかを先に数えてください。
-
 ## 今日のまとめ
 
 - [ ] プロジェクト別統計を計算できた
@@ -3137,13 +2964,12 @@ export default function ReportPage() {
 - [ ] 棒グラフで完了タスクの優先度別分布を表示した
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| テーブルが空 | タスクやプロジェクトが0件、または `getOverview` の取得エラー | データを追加し、開発者ツールの Network タブでエラー有無を確認 |
+| テーブルが空 | 対象プロジェクトがないか、`getOverview` の取得に失敗している | Network タブで `report.getOverview` の応答を見る。`error` ならサーバーのログを、200 で `projectStats` が空なら所属プロジェクトとアーカイブ状態を確認する |
 | 進捗率が NaN | 集計コードの写し間違いで `totalTasks > 0` の確認が抜けた | 完成コードの `totalTasks > 0 ? ... : 0` と照合 |
 | 週次データが空 | 初期データの完了タスクは2025年の日付で、しかも担当者が別のユーザー | 自分が担当のタスクを1件「完了」にしてから読み込み直す |
-| 型エラーが出る | weeks が string | Number.parseInt で変換 |
+| `Type 'string' is not assignable to type 'number'.` | `weeks` に文字列を渡している | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/report/page.tsx` の `weeks` に渡す値を `Number.parseInt` で数値に直す |
 | グラフが表示されない | recharts 未インストール | Day 01 の `scripts/scaffold-from-scratch.sh` が入れています。`npm list recharts` で `(empty)` と出たら `npm install recharts` で入れる（Day 22 Step 1 と同じ手順） |
 
 ## 今日学んだ用語

@@ -32,6 +32,7 @@ required_entries=(
   "task-app/doc/SUPPORTED_ENVIRONMENTS.md"
   "task-app/scripts/scaffold-from-scratch.sh"
   "task-app/scripts/verify-scaffold-database.cjs"
+  "task-app/patches/next+15.5.24.patch"
 )
 
 for entry in "${required_entries[@]}"; do

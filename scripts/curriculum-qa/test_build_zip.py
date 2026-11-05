@@ -24,6 +24,7 @@ REQUIRED_FILES = (
     "doc/SUPPORTED_ENVIRONMENTS.md",
     "scripts/scaffold-from-scratch.sh",
     "scripts/verify-scaffold-database.cjs",
+    "patches/next+15.5.24.patch",
 )
 SUPPORT_DIRECTORIES = (
     "_app-api-trpc",

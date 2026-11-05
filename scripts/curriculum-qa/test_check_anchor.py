@@ -15,6 +15,7 @@ from check_anchor import (  # noqa: E402
     find,
     find_missing,
     find_sample_with_real_path,
+    find_unmarked_sample,
 )
 
 # Before/After の節にあるコードは写経の対象ではない。実ファイル名を名乗らせない。
@@ -51,6 +52,39 @@ SAMPLE_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
             "````md\n```\nx\n```\n// filepath: src/app/page.tsx\n````\n"
         ),
         [(7, "src/app/page.tsx")],
+    ),
+]
+
+# Before/After の節のコードは1行目に目印が要る。無いものは写経対象と取り違える。
+UNMARKED_CASES: list[tuple[str, str, list[tuple[int, str]]]] = [
+    (
+        "目印の無いブロックは拾う",
+        "#### Before（改善前のコード）\n\n```typescript\ntype A = { x: number };\n```",
+        [(4, "type A = { x: number };")],
+    ),
+    (
+        "見出しのすぐ下が「続き」なら拾う",
+        "#### After（プロが書くコード）\n\n```tsx\n// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）\n```",
+        [(4, "読み比べ用サンプル（続き・実ファイルには対応しません）")],
+    ),
+    (
+        "1つ目に目印、2つ目に続きなら通す",
+        (
+            "#### Before（改善前のコード）\n\n"
+            "```tsx\n// filepath: 読み比べ用サンプル（実ファイルには対応しません）\n```\n\n"
+            "```tsx\n// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）\n```"
+        ),
+        [],
+    ),
+    (
+        "先頭が空行でもその次の非空行を見る",
+        "#### Before（改善前のコード）\n\n```tsx\n\nconst value = 1;\n```",
+        [(5, "const value = 1;")],
+    ),
+    (
+        "写経の節のブロックは対象外",
+        "### Step 1: 書く\n\n```tsx\ntype A = { x: number };\n```",
+        [],
     ),
 ]
 
@@ -156,7 +190,12 @@ def main() -> int:
         if got != expected:
             failed += 1
             print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
-    total = len(CASES) + len(MISSING_CASES) + len(SAMPLE_CASES)
+    for name, text, expected in UNMARKED_CASES:
+        got = find_unmarked_sample(text)
+        if got != expected:
+            failed += 1
+            print(f"  ❌ {name}: 期待 {expected} / 実際 {got}")
+    total = len(CASES) + len(MISSING_CASES) + len(SAMPLE_CASES) + len(UNMARKED_CASES)
     if failed:
         print(f"❌ check_anchor 自己テスト {failed}/{total} 失敗")
         return 1

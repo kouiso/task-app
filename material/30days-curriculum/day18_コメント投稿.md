@@ -148,7 +148,7 @@ const commentCreateSchema = z.object({
 先に確かめます。
 
 ```typescript
-// filepath: src/server/api/routers/comment.ts
+// filepath: src/server/api/routers/comment.ts（続き）
 const findTaskAndAssertMembership = async (
   taskId: string,
   userId: string,
@@ -221,7 +221,7 @@ Day 19 の update/delete でも同じ形が増えて読みづらくなります�
 Day 18 の完成形は `getByTaskId` と `create` の2つです。
 
 ```typescript
-// filepath: src/server/api/routers/comment.ts
+// filepath: src/server/api/routers/comment.ts（続き）
 export const commentRouter = createTRPCRouter({
   getByTaskId: protectedProcedure
     .input(z.object({ taskId: z.string().cuid() }))
@@ -1138,8 +1138,6 @@ const commentCreateSchema = z.object({
 });
 ```
 
-スキーマをファイルの先頭側へ置いてあるのはこの形が `create` の入口を決めているからです。`trim()`を先に、`min(1)`を後ろに書く順番が要点です。逆にすると空白だけの本文が長さの検査を通り抜けます。`PermissionKey` を `import type` で取り込んでいるのはこの名前を型としてしか使わないためです。型だけの取り込みは完成したアプリの中身から消えます。
-
 **タスクと自分のメンバー行の取得**:
 
 ```typescript
@@ -1162,8 +1160,6 @@ const findTaskAndAssertMembership = async (
   });
 ```
 
-`permission` に `?` が付いているのでこの引数は省略できます。省略した呼び出しは「メンバーであればよい」、`'canEdit'` を渡した呼び出しは「編集できる役割であること」を求めます。1つの関数で2種類の厳しさを表せるため読む側と書く側の手続きで別々の関数を用意せずに済みます。`members: { where: { userId } }` でログイン中の本人の行だけへ絞っているので判定に使う材料はこの1回の問い合わせで揃います。
-
 **存在確認と権限確認**:
 
 ```typescript
@@ -1181,8 +1177,6 @@ const findTaskAndAssertMembership = async (
   return task;
 };
 ```
-
-順番が決まっています。先に `task` が `null` かどうかを見るのは次の行で `task.project` を読むためです。`null` のまま進むと実行時エラーになり、読者には英語のエラーだけが残ります。存在確認を通ったあとに権限を確かめ、最後に `task` を返します。呼び出し側はこの1行を書くだけで、存在と権限の両方を通過したタスクを受け取れます。
 
 **getByTaskId によるコメント一覧**:
 
@@ -1207,8 +1201,6 @@ export const commentRouter = createTRPCRouter({
     }),
 ```
 
-`await` を付けた権限確認がデータを取る行より上に置いてあります。この上下関係が守りの本体です。下に置くと権限の無い人にもコメント本文がいったん読み込まれます。`include` の `user` に `USER_SELECT` を挟むのはパスワードのように返してはいけない列を毎回書かずに外すためです。返す列の決まりを1か所へ集めておくとあとで列が増えたときの直し漏れが起きません。
-
 **create によるコメントの保存**:
 
 ```typescript
@@ -1232,8 +1224,6 @@ export const commentRouter = createTRPCRouter({
   }),
 });
 ```
-
-完成版の `src/server/api/routers/comment.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1316,8 +1306,6 @@ export const commentRouter = createTRPCRouter({
 });
 ```
 
-`userId` に入れているのは `ctx.session.userId` で、`input` からは取りません。入力スキーマに `userId` が無いためブラウザ側から投稿者を指定する手段そのものがありません。なりすまし投稿を防ぐいちばん確実な方法はclient に選ばせないことです。第3引数の `'canEdit'` が `getByTaskId` との違いで、読むだけなら参加者全員、書き込みは編集権限を持つ役割だけに絞れます。
-
 ### `src/server/api/root.ts`
 
 **登録済みの router 一覧**:
@@ -1345,8 +1333,6 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-`comment: commentRouter` の左側が画面側で書く `api.comment` の綴りを決めています。import だけ書いて登録を忘れるとファイルは存在するのに `api.comment` が型エラーになります。エラーはコメント画面側に出ますが原因はこのファイルです。赤い波線を見たらまず `appRouter` の中に名前が並んでいるかを確かめてください。
-
 ### `src/component/task/task-detail-dialog.tsx`
 
 **ブラウザ側で動かす宣言と外部ライブラリ**:
@@ -1362,8 +1348,6 @@ import { ja } from 'date-fns/locale';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 ```
-
-`'use client'` が無いとこの部品はサーバー側だけで動く扱いになります。`useForm` を書いた時点でエラーになるため1行目は消せません。`date-fns` から `format` と `ja` を分けて取り込んでいるのは日本語の表記ルールだけを持ってくるためです。他の言語のデータまで配信せずに済みます。
 
 **プロジェクト内の部品の取り込み**:
 
@@ -1390,8 +1374,6 @@ import { api } from '@/trpc/react';
 import { StatusBadge } from './status-badge';
 ```
 
-`Dialog` から始まる6つはDay 13 で配布された時点から使われていた部品です。`Avatar` と `Badge` は配布済みです。今日追加した `Textarea` はコメントの入力に使います。並び順が手元と違っていても `npm run fix` が並べ替えます。
-
 **props の型とコメント用スキーマ**:
 
 ```typescript
@@ -1409,8 +1391,6 @@ const commentSchema = z.object({
 });
 type CommentFormValues = z.infer<typeof commentSchema>;
 ```
-
-`canEditProject` を props で受け取るのはコメントを投稿できる役割かどうかの基準を、Day 13 の一覧カードと1つに保つためです。`taskId` の型が `string | null` なのはどのタスクも開いていない状態を表すためです。この `null` があるおかげで、問い合わせを止める判断と送信を止める判断の両方を同じ値でできます。`commentSchema` にはサーバー側と違って `taskId` が入っていません。入力欄に打ち込む値ではなく、開いているダイアログが持っている値だからです。
 
 **フォームとタスク詳細の取得**:
 
@@ -1436,15 +1416,11 @@ export function TaskDetailDialog({
   );
 ```
 
-`defaultValues` を書いておくと `content` は最初から空文字になります。省くと `undefined` から始まり、投稿ボタンの有効と無効を切り替える `watch('content').trim()` がその場でエラーになります。`enabled: !!taskId` はダイアログを開く前に問い合わせが走らないよう止めるスイッチです。`{ id: taskId ?? '' }` の空文字は型をそろえるための保険で、この `enabled` があるためサーバーへは届きません。
-
 ```typescript
 // filepath: src/component/task/task-detail-dialog.tsx（同じファイルの続き）
 const canEditComments = !!taskDetail &&
   canEditProject(taskDetail.projectId);
 ```
-
-タスクの取得前は `false` になります。表示と送信の両方でこの値を使い、閲覧者には投稿させないようにします。
 
 **投稿の mutation と送信ハンドラー**:
 
@@ -1469,8 +1445,6 @@ const canEditComments = !!taskDetail &&
   };
 ```
 
-`onSuccess` はサーバーが成功を返したときだけ動きます。投稿に失敗したのに入力欄だけ空になる事故を、この置き場所が防いでいます。`handleCommentSubmit` に空文字の判定が無いのは`handleSubmit` が zod の検査に落ちた入力をここまで通さないからです。残っている `if (!taskId || !canEditComments) return;` が見ているのは入力値ではなく画面の状態で、タスクが未選択の場合や、編集権限を失った場合の送信を止めます。
-
 **ダイアログの外枠と見出し**:
 
 ```typescript
@@ -1489,8 +1463,6 @@ const canEditComments = !!taskDetail &&
           </DialogDescription>
         </DialogHeader>
 ```
-
-`taskDetail?.title` に `?.` が付いているのはデータが届く前の一瞬もこの見出しが描かれるためです。届く前は `undefined` になり、`||` の右側にある「タスク詳細」が表示されます。`onOpenChange` に `!isOpen &&` を挟んでいるのは閉じる向きの変化だけを拾うためです。開く向きは親が `open` で決めるのでここで反応させると二重に切り替わります。
 
 **説明とタスク情報の前半**:
 
@@ -1520,8 +1492,6 @@ const canEditComments = !!taskDetail &&
               </div>
 ```
 
-`{taskDetail && (` で全体を包んでいるおかげで、この中では `?.` を使わずに `taskDetail.status` と書けます。データが届くまでこの中身は1行も描かれないためです。`whitespace-pre-wrap` は説明文に入れた改行をそのまま表示させる指定です。これが無いと複数行で書いた説明が1行につながって読めなくなります。
-
 **担当者の表示**:
 
 ```typescript
@@ -1547,8 +1517,6 @@ const canEditComments = !!taskDetail &&
               </div>
 ```
 
-担当者は未割当のこともあるため`assignee` そのものに `?.` が付いています。頭文字と表示名で `||` のたどる順番をそろえてあるのでアイコンの文字と名前が別人になることはありません。`alt=""` は読み上げ不要の指定で、隣に名前が文字で出ているため画像まで読み上げると同じ名前を二度聞くことになります。
-
 **期限とコメント欄の見出し**:
 
 ```typescript
@@ -1571,8 +1539,6 @@ const canEditComments = !!taskDetail &&
               </div>
 ```
 
-件数を見出しへ出しておくとコメント欄を下までたどらなくてもやりとりの有無が分かります。1件も無いタスクと20件たまったタスクを一目で見分けられます。`Separator` は情報の区切り線で、タスクの属性とコメントという性質の違う塊を視覚的に分けます。
-
 **コメント一覧の枠と0件の案内**:
 
 ```typescript
@@ -1585,8 +1551,6 @@ const canEditComments = !!taskDetail &&
                   </p>
                 )}
 ```
-
-`max-h-[200px]` と `overflow-y-auto` を組にしてあるのはコメントが増えてもダイアログの高さが伸び続けないようにするためです。これが無いと20件たまったタスクでは投稿フォームが画面の外へ押し出されます。空の状態に言葉を置く理由は何も無い画面が読者にとって壊れた画面と見分けられないからです。
 
 **1件ごとのアバター**:
 
@@ -1602,8 +1566,6 @@ const canEditComments = !!taskDetail &&
                       </AvatarFallback>
                     </Avatar>
 ```
-
-`key={comment.id}` は「この項目は前回のどれか」をReactに伝える目印です。配列の番号をkeyにすると、先頭に新しいコメントが入ったときに同じ番号が別のコメントを指すようになります。Reactは同じkeyなら前の状態を引き継ぐので、入力途中の内容が別のコメントの行へ移ることがあります。追加や並べ替えがあっても変わらないコメントIDをkeyに使うと、この取り違えが起きません。
 
 <!-- figure-caption: key の選び方で下書きが付く行が変わる -->
 ```mermaid
@@ -1625,8 +1587,6 @@ flowchart TB
     BEFORE --> IDX
     BEFORE --> IDK
 ```
-
-`AvatarFallback` を必ず置いてあるのは投稿者が全員アバター画像を登録しているとは限らないからです。
 
 **名前と日時と本文**:
 
@@ -1650,8 +1610,6 @@ flowchart TB
                 ))}
               </div>
 ```
-
-`flex-1` はアイコンの右側の残り幅をすべて使う指定、`justify-between` は名前を左端へ日時を右端へ寄せる指定です。日時を `text-xs` で小さく薄くしてあるのは読者に追ってほしい主役が本文だからです。`))}` は `.map` の閉じです。`(` で始めた書き方を `)` で閉じ、`{` で開いた埋め込みを `}` で閉じています。
 
 **コメント投稿フォーム**:
 
@@ -1680,8 +1638,6 @@ flowchart TB
               )}
 ```
 
-`aria-label` を付けている理由は`placeholder` が1文字打つと消えるためです。消えたあとは何を書く欄なのか確かめる手段がなくなります。`disabled` の条件を2つ並べているのは空欄での送信と、送信中の二重投稿を同じ1か所で止めるためです。フォーム全体を `canEditComments` で囲ってあるのにも理由があります。閲覧者が押してもその操作は必ずサーバーに弾かれます。弾かれると分かっている操作ははじめから画面へ出しません。
-
 **末尾の閉じるボタン**:
 
 ```typescript
@@ -1699,8 +1655,6 @@ flowchart TB
   );
 }
 ```
-
-完成版の `src/component/task/task-detail-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1920,8 +1874,6 @@ const canEditComments = !!taskDetail &&
 }
 ```
 
-`DialogFooter` を `{taskDetail && (` の外側へ置いてあるのが要点です。中へ入れるとデータが届くまで閉じるボタンが描かれません。通信が遅い環境や失敗したときに読者はダイアログから抜け出せなくなります。
-
 ## 今日のまとめ
 
 - [ ] タスク詳細にコメント一覧を表示できた
@@ -1930,13 +1882,15 @@ const canEditComments = !!taskDetail &&
 - [ ] 空コメントのバリデーションを確認できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| コメントが表示されない | comments が include されてない | getById の include 確認 |
-| 投稿後に更新されない | invalidate 忘れ | onSuccess に追加 |
-| 投稿できない | taskId が未設定 | タスクを開いてから投稿 |
-| 空白で投稿される | trim() チェック漏れ | disabled 条件を追加 |
+| コメントが表示されない | `task.getById` の `include` に `comments` が無い | Network タブで `task.getById` の応答に `comments` 配列があるか見る。無ければ `src/server/api/routers/task.ts` の `getById` の `include` を確認する |
+| 投稿しても一覧に出ない | `createMutation` の `onSuccess` で `invalidate` を呼んでいない | 画面で投稿直後にコメントが増えないのを確認する。`src/component/task/task-detail-dialog.tsx` の `onSuccess` に `utils.task.getById.invalidate()` を足す |
+| 投稿ボタンを押しても送れない | `taskId` が未設定 | エディタで `src/component/task/task-detail-dialog.tsx` の `create` に渡す `taskId` が空でないか確認する |
+| 空白だけで投稿できてしまう | `trim()` のチェックが無い | エディタで `src/component/task/task-detail-dialog.tsx` の送信ボタンの `disabled` を見る。`!content.trim()` を条件に足す |
+| `この操作を実行する権限がありません` | 閲覧者ロールのメンバーがコメントを送っている | 画面のトーストにこの文が出る。`src/server/api/routers/comment.ts` の `assertMemberPermission` が閲覧者を弾くので、投稿者のロールをメンバー以上にする |
+| `NOT_FOUND` | 存在しない ID に対してコメント API を呼んでいる | Network タブで応答の `code` が `NOT_FOUND` か見る。開いているタスクの ID を `taskId` に渡せているか確認する |
+| `Property 'comment' does not exist on type` | `src/server/api/root.ts` に `commentRouter` を登録していない | `npx tsc --noEmit` の出力で `api.comment` の型エラーを見る。`src/server/api/root.ts` の `appRouter` に `comment: commentRouter` を足す |
 
 ## 今日学んだ用語
 

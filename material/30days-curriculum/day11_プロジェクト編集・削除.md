@@ -908,7 +908,7 @@ Step 3 で書いた分岐は `initialData` がそろったここで初めて `up
 
 ```mermaid
 flowchart TD
-    A[詳細画面のアーカイブボタン] --> B{現在の状態}
+    A[詳細画面の<br/>アーカイブボタン] --> B{現在の状態}
     B -->|isArchived = false| C[archiveMutation.mutate]
     B -->|isArchived = true| D[unarchiveMutation.mutate]
     C --> E[setArchiveStatus:<br/>isArchived=true]
@@ -1523,6 +1523,7 @@ Day 11 終了時点の `src/app/project/page.tsx` は編集・削除・アーカ
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type ProjectFromApi = {
   id: string;
   name: string;
@@ -1640,42 +1641,10 @@ console.log(
 
 ### After（プロが書くコード）
 
-```typescript
-type ProjectFromApi = {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  owner: {
-    name: string | null;
-    email: string;
-  } | null;
-};
-
-type ProjectEditFormData = {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  ownerLabel: string;
-  startDate?: string;
-  endDate?: string;
-};
-
-function toDateInputValue(value: Date): string {
-```
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-型の宣言は Before から1文字も変えていません。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
+型の宣言は Before から1文字も変えていません。`toDateInputValue` も同じです。書き換えるのは型ではなく値を詰め替える手続きの側です。入り口と出口をそろえてあるので途中の書き方だけを読み比べられます。
 
 ```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-  return value.toISOString().slice(0, 10);
-}
-
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 export function buildProjectEditForm(
   project: ProjectFromApi | null | undefined,
 ): ProjectEditFormData | undefined {
@@ -1697,30 +1666,14 @@ export function buildProjectEditForm(
     color: project.color ?? '#3b82f6',
     ownerLabel: project.owner?.name ?? project.owner?.email ?? '担当者未設定',
     ...(startDate ? { startDate } : {}),
+    ...(endDate ? { endDate } : {}),
+  };
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-    ...(endDate ? { endDate } : {}),
-  };
-}
-
-console.log(
-  buildProjectEditForm({
-    id: 'project_001',
-    name: '教材制作',
-    description: null,
-    color: null,
-    startDate: new Date('2026-05-01T00:00:00.000Z'),
-    endDate: null,
-    owner: { name: null, email: 'owner@example.com' },
-  }),
-);
-```
+日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。呼び出し側の `console.log` も Before と同じです。
 
 **このコードの強み**:
 
@@ -1763,8 +1716,6 @@ import { assertMemberPermission } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 ```
 
-今日足したのは最後から2行目の `assertMemberPermission` だけです。権限の判定をこのファイルへ書かず外から取り込んでいるのは同じ判定を `update` と `setArchiveStatus` の2か所から呼ぶからです。判定の中身を直したいときに直す場所が1つで済みます。
-
 **作成用スキーマ**:
 
 ```typescript
@@ -1781,8 +1732,6 @@ const projectCreateSchema = z.object({
   endDate: z.string().datetime().optional(),
 });
 ```
-
-これは Day 10 で書いたスキーマで今日は手を入れていません。載せてあるのは次の更新用スキーマと並べて読むためです。作成では `name` に `.min(1, ...)` が付いていて名前の無いプロジェクトを作れません。
 
 **更新用スキーマ**:
 
@@ -1802,8 +1751,6 @@ const projectUpdateSchema = z.object({
   endDate: z.string().datetime().optional().nullable(),
 });
 ```
-
-`description` と日付の2つに `.nullable()` を足してあるのは「値を消す」という指示を受け取るためです。`.optional()` だけでは項目を送らないという選び方しかできません。項目そのものを送らないと Prisma は「この項目には何もしない」と読みます。すでに入っている説明文を空へ戻したいときに`null` を送れる形が必要です。
 
 **アーカイブ切り替えの共通関数**:
 
@@ -1825,8 +1772,6 @@ const setArchiveStatus = async (userId: string, projectId: string, isArchived: b
   });
 };
 ```
-
-`assertMemberPermission` は配列を受け取る形なので1件だけ引いた `userMember` を `[userMember]` に包んで渡します。見つからなかったときは空の配列を渡します。空の配列は「このプロジェクトのメンバーではない」を表すので権限の判定はそこで断ります。ルーターの外へ出してあるのは`archive` と `unarchive` の両方から呼ぶためです。
 
 **getAll の入口と権限チェック**:
 
@@ -1856,8 +1801,6 @@ export const projectRouter = createTRPCRouter({
       }
 ```
 
-Day 09 で書いた部分で今日は変更していません。今日の `update` や `delete` と読み比べれば守り方の違いが見えます。`getAll` は誰の一覧かを `ctx.session` と突き合わせるだけですが更新と削除は先にプロジェクトを1件引いてその中の自分のメンバー情報を見ます。読むだけの手続きと書き換える手続きで確かめる材料が違うためです。
-
 **getAll の検索条件**:
 
 ```typescript
@@ -1877,8 +1820,6 @@ Day 09 で書いた部分で今日は変更していません。今日の `updat
         where.isArchived = input.isArchived;
       }
 ```
-
-今日のアーカイブ機能が効くのはこの最後の3行があるからです。`archive` が `isArchived` を `true` に書き換えるとスイッチを切っている画面の `where.isArchived` は `false` なので、そのプロジェクトは一覧から外れます。アーカイブが「消えたように見えて残っている」のはこの条件のおかげです。
 
 **getAll が返すデータ**:
 
@@ -1907,8 +1848,6 @@ Day 09 で書いた部分で今日は変更していません。今日の `updat
     }),
 ```
 
-今日の Step 1 の `handleEdit` がサーバーを呼ばずに済むのはこの戻り値に名前・色・日付がそろっているからです。編集ボタンを押した時点で必要な値は手元にあるので探すのは配列の中だけです。取ってくる項目を絞りすぎると編集のたびに追加の通信が必要になります。
-
 **create の作成データ**:
 
 ```typescript
@@ -1928,8 +1867,6 @@ Day 09 で書いた部分で今日は変更していません。今日の `updat
       },
     };
 ```
-
-Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` を付けていたことが今日の `delete` につながります。作成者にオーナー権限が入っているので自分で作ったプロジェクトは自分で消せます。この1行が抜けたプロジェクトはあとから誰も削除できません。
 
 **create の保存と戻り値**:
 
@@ -1955,8 +1892,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
   }),
 ```
 
-説明文を値があるときだけ足す書き方も Day 10 のままです。今日の `update` ではこの判定が `if (data.description !== undefined)` という別の形になります。作成では「空欄なら入れない」で足りますが更新では「空欄にした」という指示そのものを届ける必要があるためです。
-
 **update の入口と存在チェック**:
 
 ```typescript
@@ -1981,8 +1916,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
       });
     }
 ```
-
-`members` を `where: { userId: ctx.session.userId }` で絞っているのは必要なのが自分の1件だけだからです。全メンバーを取ると100人のプロジェクトでは100行を運んで1行だけ使う形になります。存在しない `id` をここで止めておくとこの先の権限チェックは「プロジェクトは実在する」という前提で書けます。
 
 **update の権限チェックと更新データ**:
 
@@ -2013,8 +1946,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }
 ```
 
-判定を `!== undefined` にしてあるのは`null` を素通りさせるためです。`if (data.description)` と書くと `null` と空文字がどちらも偽として扱われて説明を消す指示が消えます。日付だけ `? ... : null` の三項演算子が入っているのは届く値が文字列なので `new Date(...)` へ通す必要があり、`null` はそのまま `null` として書き込むためです。
-
 **update の保存と戻り値**:
 
 ```typescript
@@ -2035,8 +1966,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     });
   }),
 ```
-
-`tasks` を取っていないのは更新の返り値を使う場面が一覧の再取得ではないからです。画面側は `onSuccess` で `invalidate()` を呼び、一覧を別の通信で取り直します。更新の返り値までタスク付きで運ぶと使われないデータを毎回送ることになります。
 
 **delete の入口と存在チェック**:
 
@@ -2063,8 +1992,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
       }
 ```
 
-入力が `id` の1項目だけなのでスキーマを外へ出さずその場に書いてあります。使う場所が1か所なら名前を付けて離れた場所へ置くより近くにあるほうが読みやすいためです。`.cuid()` を付けてあるので`id` の形をしていない文字列は手続きの中へ入る前に弾かれます。
-
 **delete の権限チェックと実行**:
 
 ```typescript
@@ -2087,8 +2014,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }),
 ```
 
-`!userMember` の判定を先に置いてあるのはメンバーではない相手が `project.members[0]` で `undefined` を受けるからです。この確認を飛ばして `userMember.role` を読むと権限の判定へ進む前に実行が止まります。戻り値を `{ success: true }` にしてあるのは消えたデータそのものを返せないためです。
-
 **archive と unarchive**:
 
 ```typescript
@@ -2107,11 +2032,7 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }),
 ```
 
-2つを1つの手続きにまとめず、名前を分けてあるのは画面側から見て何をするのかがはっきりするからです。`setArchive({ id, value: true })` の形にすると呼ぶ側が毎回 `true` か `false` を書くことになり、書き間違いが起きます。
-
 **getById**:
-
-取得条件、存在確認、閲覧権限の判定を1つの手続きへまとめます。次の2つのブロックを順に貼ってから保存してください。途中で保存すると閉じ括弧が合わずエラーになります。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts
@@ -2141,8 +2062,6 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
       });
 ```
 
-このブロックは直前のコードの続きです。閉じ括弧まで順に貼ると1つの処理になります。途中だけ保存すると括弧が合わずエラーになるため、続きも貼ってから保存してください。
-
 ```typescript
 // filepath: src/server/api/routers/project.ts（直前のブロックの続き）
 
@@ -2162,72 +2081,10 @@ Day 10 で書いた部分です。ここで `role: PROJECT_MEMBER_ROLE.OWNER` �
     }),
 });
 ```
-1件だけを取る読み取り専用の手続きなので `.query` を使います。見つからない `id` には `NOT_FOUND` を返し、メンバー以外が直指定しても `canView` の権限チェックで弾きます。最後の `});` で `projectRouter` 全体を閉じます。
 
 ### `src/lib/query-error.ts`
+このファイルの全文は Step 9 に順に載っています。
 
-表示と再試行の判断で使う共通関数です。Step 9 で掲載コードから作成した3ブロックを再掲します。作成した6つの関数を確認するための掲載なので書き換える必要はありません。
-
-```typescript
-// filepath: src/lib/query-error.ts
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return typeof value === 'object'
-    && value !== null;
-}
-
-export function httpStatusOf(
-  error: unknown,
-): number | null {
-  if (!isRecord(error)
-    || !isRecord(error['data'])) return null;
-  const status = error['data']['httpStatus'];
-  return typeof status === 'number'
-    ? status
-    : null;
-}
-```
-
-`unknown` のまま `error.data` を読むと型エラーになるため、`isRecord` を通してから段階的に調べます。状態番号が無い通信失敗では `null` を返します。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function isAuthError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 401;
-}
-
-export function isForbiddenError(
-  error: unknown,
-): boolean {
-  return httpStatusOf(error) === 403;
-}
-
-export function isUnknownResult(
-  error: unknown,
-): boolean {
-  return isRecord(error)
-    && error['data'] == null;
-}
-```
-
-401と403を分けると、再ログインと一覧へ戻る操作を選べます。`isUnknownResult` は後の日に更新結果が分からない通信失敗を扱うときにも使います。
-
-```typescript
-// filepath: src/lib/query-error.ts（同じファイルの続き）
-export function shouldRetryQuery(
-  failureCount: number,
-  error: unknown,
-): boolean {
-  return !isAuthError(error)
-    && !isForbiddenError(error)
-    && failureCount < 3;
-}
-```
-
-認証と権限のエラーは同じ要求を送っても解決しません。通信失敗だけを最大3回まで試す条件として各クエリから共通利用します。
 
 ### `src/app/project/page.tsx`
 
@@ -2258,8 +2115,6 @@ import {
   '@/component/project/project-dialog';
 ```
 
-今日足したのは `useRouter`、`useSearchParams`、`ProjectDetailView` の3つです。`useRouter` と `useSearchParams` を `next/navigation` から取っているのはURL を読む側と書き換える側で担当が分かれているためです。読むのが `useSearchParams`、書き換えるのが `useRouter` です。
-
 **UI部品と定数の import**:
 
 ```typescript
@@ -2283,10 +2138,6 @@ import {
 } from '@/lib/date';
 ```
 
-画面部品と日付変換を先に読み込みます。保存用と表示用の変換を両方そろえ、編集で日付が空になる状態を防ぎます。
-
-エラー種別の判定と再試行条件も同じ import 群へ続けます。認証・権限・存在しないIDを通信失敗と分けるためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
 import {
@@ -2303,8 +2154,6 @@ const shouldRetryProjectQuery = (
 ) => httpStatusOf(error) !== 404
   && shouldRetryQuery(failureCount, error);
 ```
-
-`@/lib/date` から2つ取り込んでいるのは日付を運ぶ向きが今日から2方向になったからです。`dateOnlyFromValue` は保存済みの値を入力欄が読める形へ戻す向き、`dateOnlyToUtcStartIso` は入力欄の値を保存できる形へ送る向きです。片方だけだと編集ダイアログの日付欄が空のまま開きます。
 
 **画面が覚えておく値**:
 
@@ -2326,8 +2175,6 @@ function ProjectPageContent() {
     );
 ```
 
-削除の状態を `deleteDialogOpen` と `deleteTargetId` の2つに分けてあるのは確認ダイアログを開くこととどれを消すかを覚えることが別の話だからです。1つにまとめて `deleteTargetId` の有無で開閉を決めると削除が終わって `null` へ戻した瞬間にダイアログが消え、処理中の表示を出せません。
-
 **URL の値と選択状態の対応**:
 
 ```typescript
@@ -2340,8 +2187,6 @@ function ProjectPageContent() {
 
   const selectedProject = projectIdParam;
 ```
-
-`selectedProject` は `projectIdParam` の別名です。URL が変わった描画で値も同時に変わるため、同期処理は要りません。
 
 **一覧・詳細・ログインユーザーの取得**
 
@@ -2361,8 +2206,6 @@ function ProjectPageContent() {
   );
 ```
 
-ログイン情報の取得状態も表示判定に含めます。本人の確認が終わる前に詳細や操作ボタンを描かず、認証失敗時のデータ露出を防ぐためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const {
@@ -2380,10 +2223,6 @@ function ProjectPageContent() {
     },
   );
 ```
-
-一覧の取得状態をデータと分けて受け取ります。0件と通信待ちを区別し、失敗時には空の一覧ではなく再読み込みの入口を示すためです。
-
-詳細の `getById` は後ろの「詳細画面のハンドラーとクエリ」にあります。一覧と詳細のうち、いま表示する側だけを取得します。`currentUser` はどちらの画面でも必要です。
 
 **作成と更新の mutation**:
 
@@ -2408,8 +2247,6 @@ function ProjectPageContent() {
     });
 ```
 
-`createMutation` との違いは `getById` の取り直しです。Step 9 で出す詳細画面が更新結果で描かれるため、一覧（`getAll`）だけ取り直すと開いている詳細に古い名前が残ります。1つの mutation にまとめられないのは呼ぶサーバー側の手続きが別で送る項目の形も違うためです。
-
 **削除とアーカイブの mutation**:
 
 ```typescript
@@ -2425,8 +2262,6 @@ function ProjectPageContent() {
       },
     });
 ```
-
-削除は成功したら一覧を取り直して一覧の URL へ戻ります。取り直した一覧には消したプロジェクトのカードがもう出ません。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2449,10 +2284,6 @@ function ProjectPageContent() {
     });
 ```
 
-3つの mutation が `setDialogOpen(false)` ではなく `router.push('/project')` を呼ぶのは操作の起点が詳細画面だからです。削除とアーカイブは対象のプロジェクトを開いた状態から実行します。`?projectId=...` を付けたまま残るともう見られないプロジェクトの詳細を開こうとします。一覧の URL へ戻せばその状態を作らずに済みます。
-
-この3つのうちアーカイブの2つだけ `getById` も取り直すのは一覧へ戻ったあとに同じプロジェクトを開き直せるからです。詳細のキャッシュに古い `isArchived` が残っているとすぐに開き直したときのボタンが操作前のままになります。`getById` を取り直さなければアーカイブした直後は「アーカイブ解除」が出ず、解除した直後は「アーカイブ解除」が残ります。
-
 **詳細画面のハンドラーとクエリ**:
 
 ```typescript
@@ -2469,10 +2300,6 @@ function ProjectPageContent() {
     router.push('/project');
   };
 ```
-
-カードから詳細へ進む操作と一覧へ戻る操作をURLの変更にそろえます。表示対象を別の state に複製せず、ブラウザの戻る操作とも食い違わないようにするためです。
-
-URLを変えるハンドラーと取得処理を分けると、どの操作が通信を始めるかを追いやすくなります。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2492,10 +2319,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
   );
 ```
 
-詳細のデータ・待機・失敗・再取得を別々に受け取ります。まだ応答が無い状態を「見つかりません」と誤って扱わないためです。
-
-`handleProjectClick` は一覧のカードから詳細URLへ進む入口、`handleDetailClose` はその逆です。`projectDetail` のクエリは `enabled` で未選択時の通信を止めています。
-
 **編集開始のハンドラー**:
 
 ```typescript
@@ -2513,8 +2336,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
       ? dateOnlyFromValue(project.endDate)
       : undefined;
 ```
-
-`handleEdit` が `find` で手元の配列を探しているので押した瞬間の通信は起きません。Day 09 で置いた受け皿と同じ場所にあり、中身だけが入れ替わっています。
 
 **編集ダイアログへ渡す値の組み立て**:
 
@@ -2538,8 +2359,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
   };
 ```
 
-`description` に `|| ''` を付けているのはデータベースの `null` をそのまま入力欄へ渡せないからです。日付の2つを条件付きスプレッドで足しているのは`editingProject` へ入れる値を「値があるか、項目が無いか」のどちらかにそろえるためです。`handleDelete` が state を置くだけなのは実際の削除を確認ダイアログの `onConfirm` に任せるからです。
-
 **新規作成のハンドラー**:
 
 ```typescript
@@ -2550,8 +2369,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
     setDialogOpen(true);
   };
 ```
-
-`handleCreate` の1行目で `setEditingProject(undefined)` を呼んでいるのは直前に編集を開いていた場合の値を捨てるためです。この1行が無いと編集ダイアログを閉じたあとに「新規プロジェクト」を押したとき前のプロジェクトの名前が入ったまま開きます。
 
 **送信ハンドラーの更新側**:
 
@@ -2581,8 +2398,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
       });
 ```
 
-分岐の目印を `data.id` にしてあるのは保存済みのデータだけが ID を持つからです。ダイアログの側は自分が作成なのか編集なのかを知らず、預かった値をそのまま返してきます。空欄に `null` を送っているので説明や日付を消す操作もサーバーへ届きます。
-
 **送信ハンドラーの新規作成側**:
 
 ```typescript
@@ -2609,8 +2424,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
   };
 ```
 
-こちらが `undefined` を渡しているのは作成用スキーマの日付に `.nullable()` を付けていないからです。`null` を送ると検証で落ちて作成そのものが断られます。同じ「空」を表す値でも、手続きごとに受け取れる形が違います。
-
 **アーカイブのハンドラー**
 
 ```typescript
@@ -2620,8 +2433,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
     mutation.mutate({ id: projectId });
   };
 ```
-
-現在のアーカイブ状態で呼ぶ mutation を切り替えます。成功後の一覧更新と移動は各 mutation に任せ、ハンドラーでは送信先の選択だけを担当します。
 
 **表示に必要な取得状態**
 
@@ -2646,8 +2457,6 @@ URLを変えるハンドラーと取得処理を分けると、どの操作が�
     && httpStatusOf(projectDetailQueryError) === 404;
 ```
 
-URLに詳細IDがあるかで対象の問い合わせを選びます。401・403・404を先に判定し、保護されたキャッシュや誤った内容を表示しないためです。
-
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
   const hasFetchError = viewingDetail
@@ -2667,8 +2476,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
       ? projectDetailFetching
       : projectsFetching);
 ```
-
-エラーの有無と利用できるデータの有無を別々に判定します。初回失敗ではエラー画面を出し、再取得失敗では既存データを残すためです。
 
 ```typescript
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2690,10 +2497,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     );
   }
 ```
-
-`viewingDetail` によって一覧と詳細のどちらを判定対象にするかを切り替えます。詳細取得中は `ProjectDetailView` へ進まないため、「見つかりません」という誤表示は出ません。
-
-エラー表示は見出し・説明・移動先を組み合わせた分岐です。次の2つのブロックを順に貼ります。途中では括弧が閉じないので、2つ目の末尾まで貼ってから保存してください。
 
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2722,8 +2525,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
           </p>
 ```
 
-このブロックは直前のコードの続きです。閉じ括弧まで順に貼ると1つの処理になります。途中だけ保存すると括弧が合わずエラーになるため、続きも貼ってから保存してください。
-
 ```tsx
           {/* filepath: src/app/project/page.tsx（直前のブロックの続き） */}
           <Button type="button"
@@ -2751,7 +2552,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     );
   }
 ```
-401・403・404では取得済みデータも隠します。初回の通信失敗には再読み込みを出します。権限が確かめられない画面に前回の一覧を残すと、見てはいけない人の画面に古いデータが出続けます。通信失敗はデータを失っていないので、画面ごと消さず取り直す手段を置きます。
 
 ```tsx
 // filepath: src/app/project/page.tsx（同じファイルの続き）
@@ -2775,8 +2575,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
     </div>
   ) : null;
 ```
-
-再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
 
 **詳細表示への分岐**:
 
@@ -2804,11 +2602,7 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
   }
 ```
 
-`viewingDetail` は `Boolean(selectedProject)` です。URL を直接開いた初回も詳細の読み込みとして扱います。この分岐を一覧の `return` より前へ置くため、詳細を出すときに一覧を組み立てません。
-
 **ページ見出しと操作エリア**:
-
-見出しの後ろへ操作ボタンを並べます。下のスイッチは Day 09 で配置した部品です。アーカイブ済みの項目も取り直せるように `showArchived` を取得条件へ渡しています。
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -2837,7 +2631,6 @@ URLに詳細IDがあるかで対象の問い合わせを選びます。401・403
               </Label>
             </div>
 ```
-Day 09 で作った部分です。今日は変更していません。このスイッチが今日から意味を持ちます。アーカイブしたプロジェクトを見たいときはここを入れて一覧を取り直します。スイッチを `showArchived` につないであるので切り替えるだけで `getAll` の条件が変わります。
 
 **新規作成ボタンとグリッドの開始**:
 
@@ -2869,8 +2662,6 @@ Day 09 で作った部分です。今日は変更していません。このス�
               }
 ```
 
-`handleCreate` の中身が今日変わったのでこのボタンの動きも変わります。押すと編集用の値を捨ててからダイアログを開くため必ず空のフォームが出ます。グリッドの中身は Day 09 のままで件数の数え方にも手を入れていません。
-
 **プロジェクトカードの描画**:
 
 ```typescript
@@ -2900,8 +2691,6 @@ Day 09 で作った部分です。今日は変更していません。このス�
             })
 ```
 
-`onEdit` と `onDelete` に渡す関数の中身が今日から本物になりました。Day 09 では `void projectId` と書いた受け皿だったので押しても何も起きませんでした。カードの側は渡された関数を呼ぶだけなのでこの部分のコードは1文字も変えずに動きが変わります。
-
 **空状態と2つのダイアログ**:
 
 ```typescript
@@ -2928,8 +2717,6 @@ Day 09 で作った部分です。今日は変更していません。このス�
       </div>
 ```
 
-`initialData={editingProject}` の1行が今日ダイアログへ足した唯一の変更です。`editingProject` が `undefined` なら空のフォーム、値が入っていれば埋まったフォームになります。ダイアログの中身を書き換えずに編集へ使い回せるのはDay 10 の時点で `initialData` を受け取れる形にしておいたからです。
-
 **削除確認ダイアログと閉じタグ**:
 
 ```typescript
@@ -2953,8 +2740,6 @@ Day 09 で作った部分です。今日は変更していません。このス�
 }
 ```
 
-`onConfirm` の中で `deleteTargetId` を確かめてから `mutate` を呼んでいるのは`id` の無いリクエストをサーバーへ送らないためです。`isPending` は処理中かどうかをボタンへ伝えます。成功時だけ親ページが確認画面を閉じます。失敗時は開いたままです。通信が途切れた場合は削除済みの可能性もあるので一覧を更新し、対象が消えたかを確認してください。
-
 **ページのエクスポート**:
 
 ```typescript
@@ -2969,8 +2754,6 @@ export default function ProjectPage() {
   );
 }
 ```
-
-`Suspense` で包む形は Day 09 から変わっていません。今日 `useSearchParams` を使ったのでこの包みがいっそう要ります。Next.js では、このフックを使う部分を `Suspense` の内側へ置きます。外へ出すとビルド時のエラーで処理が失敗します。
 
 ## 今日のまとめ
 
