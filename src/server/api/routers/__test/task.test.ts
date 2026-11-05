@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../../lib/prisma';
 import {
+  callWhileMemberIsRemoved,
   createAuthenticatedCaller,
   createTestCaller,
   createTestProject,
   createTestTask,
   createTestUser,
+  waitUntilSomeoneWaitsForLock,
 } from '../../../../test/helpers';
 import * as permission from '../_helpers/permission';
 
@@ -30,83 +32,6 @@ async function setup(role: MemberRole) {
   }
   const caller = await createAuthenticatedCaller(actor.id, actor.email, actor.role);
   return { actor, project, caller };
-}
-
-// 別のトランザクションのロックを待っている接続が現れるまで待つ。現れなければテストを失敗させる。
-// 固定時間の待ちでは遅い環境で順序が崩れるので、実際にロック待ちに入ったことを確かめる。
-async function waitUntilSomeoneWaitsForLock(): Promise<void> {
-  for (let i = 0; i < 250; i++) {
-    const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
-      SELECT count(*)::int AS n FROM pg_stat_activity
-      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
-    if ((waiting[0]?.n ?? 0) > 0) return;
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  throw new Error('ロック待ちに入った接続が見つかりませんでした');
-}
-
-// プロジェクト行のロックを別のトランザクションで握り、その間に呼び出しを走らせてから、
-// メンバーを削除してロックを離す。呼び出しが「確認 → ロック → 保存」のどこで割り込まれても、
-// 毎回同じ順序（呼び出しがロックを待つ間にメンバーが削除される）になる。
-async function callWhileMemberIsRemoved<T>(
-  projectId: string,
-  memberId: string,
-  call: () => Promise<T>,
-): Promise<{ ok: true; value: T } | { ok: false; error: unknown }> {
-  let release: () => void = () => {};
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let markLocked: () => void = () => {};
-  const locked = new Promise<void>((resolve) => {
-    markLocked = resolve;
-  });
-
-  let removerPid = 0;
-  const remover = prisma.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`;
-      const pid = await tx.$queryRaw<Array<{ pid: number }>>`SELECT pg_backend_pid() AS pid`;
-      removerPid = pid[0]?.pid ?? 0;
-      markLocked();
-      await released;
-      await tx.projectMember.delete({
-        where: { userId_projectId: { userId: memberId, projectId } },
-      });
-    },
-    // ポーリングの上限（約 3 秒）より長く保持できるよう、既定の 5 秒に頼らず明示する。
-    { timeout: 15_000 },
-  );
-
-  await locked;
-  const pending = call().then(
-    (value) => ({ ok: true as const, value }),
-    (error: unknown) => ({ ok: false as const, error }),
-  );
-
-  // 呼び出しが「このロックを持つ remover」に待たされるまで待つ。待たずに離すと、順序が毎回変わってしまう。
-  // 他のテストや別接続のロック待ちを数えないよう、remover の PID にブロックされた接続だけを見る。
-  let blocked = false;
-  for (let i = 0; i < 60; i++) {
-    const waiting = await prisma.$queryRaw<Array<{ n: number }>>`
-      SELECT count(*)::int AS n FROM pg_stat_activity
-      WHERE wait_event_type = 'Lock' AND ${removerPid}::int = ANY(pg_blocking_pids(pid))`;
-    if ((waiting[0]?.n ?? 0) > 0) {
-      blocked = true;
-      break;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  // 待ちに入らないまま離すと、修正前のコードでも通ってしまう。remover を必ず解放して終わらせてから失敗にする。
-  release();
-  await remover;
-  const result = await pending;
-  if (!blocked) {
-    throw new Error(
-      '呼び出しがプロジェクト行のロック待ちに入らなかったため、競合を再現できませんでした',
-    );
-  }
-  return result;
 }
 
 describe('taskRouter', () => {
@@ -829,6 +754,82 @@ describe('taskRouter', () => {
       await expect(caller.task.bulkComplete({ ids: [task.id, task.id] })).rejects.toThrow(
         'タスクIDを重複して指定できません',
       );
+    });
+  });
+
+  describe('単体操作の認可TOCTOU（#626）', () => {
+    // 認可を読んでからID指定で書き込む経路は、確認と書き込みの間にメンバー削除・
+    // 降格が挟まると認可外の行を更新できてしまう。削除系・時間追加はプロジェクト行を
+    // ロックして再確認、更新は書き込みの where にメンバー条件を含めて防ぐ。
+
+    it('delete: ロックを待つ間にメンバーが外れたら、タスクを削除しない', async () => {
+      const { actor, project, caller } = await setup('OWNER');
+      const task = await createTestTask(project.id, actor.id);
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.task.delete({ id: task.id }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      expect(await prisma.task.findUnique({ where: { id: task.id } })).not.toBeNull();
+    });
+
+    it('delete: 存在しないタスクは NOT_FOUND', async () => {
+      const { caller } = await setup('OWNER');
+      await expect(caller.task.delete({ id: NON_EXISTENT_ID })).rejects.toThrow(
+        'タスクが見つかりません',
+      );
+    });
+
+    it('addTime: ロックを待つ間にメンバーが外れたら、時間を加算しない', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id);
+
+      const result = await callWhileMemberIsRemoved(project.id, actor.id, () =>
+        caller.task.addTime({ id: task.id, minutesToAdd: 30 }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(String((result as { error: unknown }).error)).toContain(
+        'この操作を実行する権限がありません',
+      );
+      const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      expect(after.timeSpentMinutes).toBe(0);
+    });
+
+    it('addTime: 存在しないタスクは NOT_FOUND', async () => {
+      const { caller } = await setup('MEMBER');
+      await expect(caller.task.addTime({ id: NON_EXISTENT_ID, minutesToAdd: 30 })).rejects.toThrow(
+        'タスクが見つかりません',
+      );
+    });
+
+    it('update: 認可確認のあとにメンバーが外れたら、書き込みの条件判定で拒否する', async () => {
+      const { actor, project, caller } = await setup('MEMBER');
+      const task = await createTestTask(project.id, actor.id);
+
+      const originalFindTask = permission.findTaskWithPermission;
+      const spy = vi.spyOn(permission, 'findTaskWithPermission');
+      spy.mockImplementationOnce(async (...args) => {
+        const snapshot = await originalFindTask(...args);
+        // 確認が通った直後にメンバーが外れた状態を作る
+        await prisma.projectMember.delete({
+          where: { userId_projectId: { userId: actor.id, projectId: project.id } },
+        });
+        return snapshot;
+      });
+      try {
+        await expect(caller.task.update({ id: task.id, title: '書き換え' })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+        expect(after.title).not.toBe('書き換え');
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 
