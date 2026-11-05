@@ -14,6 +14,17 @@
       },
       "ja-no-weak-phrase": false
     },
-    "@textlint-ja/preset-ai-writing": true
+    "@textlint-ja/preset-ai-writing": true,
+    "ja-space-around-code": { "before": true, "after": true },
+    "ja-space-between-half-and-full-width": {
+      "space": ["alphabets"],
+      "lintStyledNode": true,
+      "allows": [
+        "Webサイトリニューアル",
+        "API仕様書作成",
+        "こんにちは、Taroさん",
+        "tRPC APIにデータ送信"
+      ]
+    }
   }
 }

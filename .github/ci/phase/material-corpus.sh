@@ -19,6 +19,7 @@ zipref_status=0
 unusedimg_status=0
 jsxmarker_status=0
 jalinebreak_status=0
+jalatinspace_status=0
 salepkg_status=0
 setext_status=0
 quiz_status=0
@@ -106,6 +107,12 @@ echo "::endgroup::"
 echo "::group::check_ja_line_break.py — 日本語の文が JSX の中で途中改行されていないか"
 python3 scripts/curriculum-qa/check_ja_line_break.py material/30days-curriculum || jalinebreak_status=$?
 echo "::endgroup::"
+echo "::group::test_check_ja_latin_space.py — 和文と英字の空白の検査そのものの退行テスト"
+python3 scripts/curriculum-qa/test_check_ja_latin_space.py || jalatinspace_status=$?
+echo "::endgroup::"
+echo "::group::check_ja_latin_space.py — 番号と「ー」の後ろで和文と英字がくっついていないか"
+python3 scripts/curriculum-qa/check_ja_latin_space.py material/30days-curriculum || jalatinspace_status=$?
+echo "::endgroup::"
 echo "::group::test_check_setext_heading.py — 区切り線検査そのものの退行テスト"
 python3 scripts/curriculum-qa/test_check_setext_heading.py || setext_status=$?
 echo "::endgroup::"
@@ -148,7 +155,7 @@ echo "::endgroup::"
 echo "::group::check_crossref.py — 前の日を指す参照の先が実在するか"
 python3 scripts/curriculum-qa/check_crossref.py material/30days-curriculum || crossref_status=$?
 echo "::endgroup::"
-if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ] || [ "$tagbal_status" -ne 0 ] || [ "$unclosedscreen_status" -ne 0 ] || [ "$falsesuccess_status" -ne 0 ] || [ "$zipref_status" -ne 0 ] || [ "$unusedimg_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ] || [ "$jsxmarker_status" -ne 0 ] || [ "$jalinebreak_status" -ne 0 ] || [ "$setext_status" -ne 0 ] || [ "$quiz_status" -ne 0 ] || [ "$scaffoldsync_status" -ne 0 ] || [ "$versplit_status" -ne 0 ] || [ "$fencedup_status" -ne 0 ]; then
-  echo "::error::Gate 4 失敗 (test_sale_package.py=$salepkg_status / check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status / check_tag_balance.py=$tagbal_status / check_unclosed_screen.py=$unclosedscreen_status / check_false_success.py=$falsesuccess_status / check_zip_reference.py=$zipref_status / check_unused_image.py=$unusedimg_status / check_jsx_marker.py=$jsxmarker_status / check_ja_line_break.py=$jalinebreak_status / check_setext_heading.py=$setext_status / check_quiz.py=$quiz_status / check_scaffold_src_sync.py=$scaffoldsync_status / check_version_split.py=$versplit_status / check_complete_section_fences.py=$fencedup_status)"
+if [ "$terms_status" -ne 0 ] || [ "$crossref_status" -ne 0 ] || [ "$selftest_status" -ne 0 ] || [ "$why_status" -ne 0 ] || [ "$variants_status" -ne 0 ] || [ "$steptime_status" -ne 0 ] || [ "$anchor_status" -ne 0 ] || [ "$procorder_status" -ne 0 ] || [ "$stepref_status" -ne 0 ] || [ "$scan_status" -ne 0 ] || [ "$tagbal_status" -ne 0 ] || [ "$unclosedscreen_status" -ne 0 ] || [ "$falsesuccess_status" -ne 0 ] || [ "$zipref_status" -ne 0 ] || [ "$unusedimg_status" -ne 0 ] || [ "$salepkg_status" -ne 0 ] || [ "$jsxmarker_status" -ne 0 ] || [ "$jalinebreak_status" -ne 0 ] || [ "$jalatinspace_status" -ne 0 ] || [ "$setext_status" -ne 0 ] || [ "$quiz_status" -ne 0 ] || [ "$scaffoldsync_status" -ne 0 ] || [ "$versplit_status" -ne 0 ] || [ "$fencedup_status" -ne 0 ]; then
+  echo "::error::Gate 4 失敗 (test_sale_package.py=$salepkg_status / check_terms.py=$terms_status / check_crossref.py=$crossref_status / test_check_crossref.py=$selftest_status / check_why.py=$why_status / check_variants.py=$variants_status / check_step_time.py=$steptime_status / check_anchor.py=$anchor_status / check_procedure_order.py=$procorder_status / check_step_ref.py=$stepref_status / test_markdown_scan.py=$scan_status / check_tag_balance.py=$tagbal_status / check_unclosed_screen.py=$unclosedscreen_status / check_false_success.py=$falsesuccess_status / check_zip_reference.py=$zipref_status / check_unused_image.py=$unusedimg_status / check_jsx_marker.py=$jsxmarker_status / check_ja_line_break.py=$jalinebreak_status / check_ja_latin_space.py=$jalatinspace_status / check_setext_heading.py=$setext_status / check_quiz.py=$quiz_status / check_scaffold_src_sync.py=$scaffoldsync_status / check_version_split.py=$versplit_status / check_complete_section_fences.py=$fencedup_status)"
   exit 1
 fi

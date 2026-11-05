@@ -2,7 +2,7 @@
 
 ## 前回の振り返り
 
-Day 27 では`/project?projectId=...` で
+Day 27 では `/project?projectId=...` で
 一覧と詳細を切り替え、`isArchived` フラグによる
 アーカイブ機能を確認しました。
 
@@ -18,7 +18,7 @@ Day 27 では`/project?projectId=...` で
 
 ![2件のタスクを選び、見出しの右に「完了にする」「削除」「ステータス変更」が並んだ画面](./screenshots/day28/bulk-operations-complete.png)
 
-> **今日のゴールライン**: Setで選択中タスクを管理し、完了・削除・ステータス変更をまとめて動かせれば大丈夫です。
+> **今日のゴールライン**: Set で選択中タスクを管理し、完了・削除・ステータス変更をまとめて動かせれば大丈夫です。
 
 ---
 
@@ -69,7 +69,7 @@ flowchart TD
     L --> M[selectedTasks を空に<br/>戻す]
 ```
 
-この図で目を留めてほしいのはG・H・J の3本が K に合流するところです。どの操作も、トランザクションで選択したタスクを処理し、一覧を取り直して選択を空に戻します。更新には `updateMany`、削除には `deleteMany` を使います。ステータスを完了へ変える処理は、すでに完了したタスクの日時を保つため、対象を分けて2回更新します。だから Step 6 以降で操作を増やすときに新しく考えるのは呼ぶ API の名前だけになります。
+この図で目を留めてほしいのは G・H・J の3本が K に合流するところです。どの操作も、トランザクションで選択したタスクを処理し、一覧を取り直して選択を空に戻します。更新には `updateMany`、削除には `deleteMany` を使います。ステータスを完了へ変える処理は、すでに完了したタスクの日時を保つため、対象を分けて2回更新します。だから Step 6 以降で操作を増やすときに新しく考えるのは呼ぶ API の名前だけになります。
 
 逆に L と M を落とすと何が起きるかも押さえてください。削除したはずのタスクが画面に残り、チェックも入ったままになります。サーバー側は正しく変わっているのに画面だけが古い、という一番気付きにくいずれ方です。
 
@@ -144,7 +144,7 @@ import {
 } from './_helpers/permission';
 ```
 
-`findTasksWithPermission`（複数形）はid の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので新しく行を増やさず同じ import 文の中に並べます。
+`findTasksWithPermission`（複数形）は id の配列を受け取り、その全部のタスクを権限つきで取ってくるヘルパーです。Day 15 で使った `findTaskWithPermission`（単数形）の複数版と考えてください。名前が `s` の1文字だけ違うので取り違えに注意します。`assertMemberPermission` などは前の Day で足したものなので新しく行を増やさず同じ import 文の中に並べます。
 
 Day 13 で書いた `import { Prisma } from '@prisma/client';` は次の行へ置き換えます。`ProjectMemberRole` は書き込み直前にも権限を確認するために使います。
 
@@ -154,7 +154,7 @@ import { Prisma, ProjectMemberRole } from '@prisma/client';
 import { hasPermission, type PermissionKey } from '@/lib/constant/roles';
 ```
 
-`ProjectMemberRole` はPrisma がスキーマの enum（決まった値だけを許す型）から自動で作ってくれる型です。`'OWNER'` のような文字列を自分で打ち込まずに済むので綴り違いが型エラーとして先に見つかります。`hasPermission` はロールと権限名を受け取って可否を返す関数、`PermissionKey` は `'canEdit'` のような権限名だけを許す型です。
+`ProjectMemberRole` は Prisma がスキーマの enum（決まった値だけを許す型）から自動で作ってくれる型です。`'OWNER'` のような文字列を自分で打ち込まずに済むので綴り違いが型エラーとして先に見つかります。`hasPermission` はロールと権限名を受け取って可否を返す関数、`PermissionKey` は `'canEdit'` のような権限名だけを許す型です。
 
 この3つがそろうと次の 0-2 で「編集できるロールはどれか」を権限マップから計算できます。ここを `['OWNER', 'ADMIN']` と手書きしてしまうとあとで権限の決まりを直したときに一括操作だけが古い判定のまま取り残されます。
 
@@ -205,7 +205,7 @@ const buildBulkPermissionWhere = (
 });
 ```
 
-この関数が返すのは`updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`id: { in: ids }` で対象のタスクを選び、`project.members.some` で「そのプロジェクトに、必要なロールを持った自分が入っていること」も同時に要求します。
+この関数が返すのは `updateMany` や `deleteMany` の `where` にそのまま渡せる条件です。`id: { in: ids }` で対象のタスクを選び、`project.members.some` で「そのプロジェクトに、必要なロールを持った自分が入っていること」も同時に要求します。
 
 2つの条件を1つの `where` にまとめるのが肝心なところです。id だけで絞ると他人のプロジェクトのタスク id を混ぜて送りつけられたときそのまま書き換わってしまいます。条件をこの関数1か所に置いておけばこれから書く3つの手続きが同じ守り方を共有できます。
 
@@ -569,7 +569,7 @@ Day 14 の `assertTaskAssigneeBelongsToProject` は `findUnique` で1人ずつ�
 | 削除 | `arr.filter(x => x !== id)` | `set.delete(id)` |
 | 含まれるか確認 | `arr.includes(id)` | `set.has(id)` |
 
-選択状態は `useState` で管理します。既存のReactのimportに `useState` と `useMemo` が含まれることを確認してください。次のstateは `TaskPageContent` の中にある `filterStatus` のstate宣言の直後へ追加します。
+選択状態は `useState` で管理します。既存の React の import に `useState` と `useMemo` が含まれることを確認してください。次の state は `TaskPageContent` の中にある `filterStatus` の state 宣言の直後へ追加します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -582,9 +582,9 @@ const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
 
 `useState<Set<string>>(new Set())` の型注釈はこの箱にはタスク id の文字列しか入らないと宣言する意味です。空の `new Set()` から始めるので画面を開いた直後は1件も選ばれていない状態になります。
 
-`bulkDeleteDialogOpen` を同じ場所で作っておくのはStep 7 の削除確認ダイアログが開いているかどうかを覚える役目があるからです。削除だけは押し間違いを取り消せません。だから選択の中身とは別に「いま確認中かどうか」を覚えさせて選択と実行のあいだにワンクッションを置きます。
+`bulkDeleteDialogOpen` を同じ場所で作っておくのは Step 7 の削除確認ダイアログが開いているかどうかを覚える役目があるからです。削除だけは押し間違いを取り消せません。だから選択の中身とは別に「いま確認中かどうか」を覚えさせて選択と実行のあいだにワンクッションを置きます。
 
-次の `handleTaskSelect` は先ほど追加した `bulkDeleteDialogOpen` のstate宣言の直後へ置きます。クリック時に選択を変える関数なので `return` の中の画面表示へは貼りません。
+次の `handleTaskSelect` は先ほど追加した `bulkDeleteDialogOpen` の state 宣言の直後へ置きます。クリック時に選択を変える関数なので `return` の中の画面表示へは貼りません。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -622,7 +622,7 @@ const selectedTaskList = useMemo(
 
 `selectableTasks` は編集か削除のどちらかができるタスクだけを残した一覧です。閲覧しかできないプロジェクトのタスクをここで外しておくとこのあと作る全選択がそれらを拾わなくなります。
 
-`selectedTaskList` のほうは`selectedTasks` に id が残っていてなおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが`Set` の中の id は消えません。ここで一覧と突き合わせておかないと目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは`tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
+`selectedTaskList` のほうは `selectedTasks` に id が残っていてなおかつ今の一覧にも並んでいるタスクだけを取り出します。フィルターを切り替えると画面から消えるタスクがありますが `Set` の中の id は消えません。ここで一覧と突き合わせておかないと目に見えていないタスクまで一括操作の巻き添えになります。`useMemo` で包んだのは `tasks` か `selectedTasks` が変わったときだけ計算し直せば足りるからです。
 
 ```mermaid
 flowchart TB
@@ -651,9 +651,9 @@ const canDeleteSelected =
 
 `every`（配列の全要素が条件を満たしたときだけ `true` を返すメソッド）を使うのは権限のないタスクが1件でも混ざったら操作そのものを止めたいからです。選択は複数のプロジェクトをまたげるので「編集はできるが削除はできない」タスクが1件だけ紛れ込む場面は実際に起きます。ここを `some` にすると権限のあるタスクが1件でもあればボタンが出てしまい、押した先でサーバーに断られます。
 
-ただしこの2つの変数が守っているのはボタンを出すかどうかまでです。Step 0 で書いた通り、サーバー側は `findTasksWithPermission` と `assertMemberPermission` でもう一度権限を確かめ、書き込み時の `where` でも現在のロールを見ます。件数が入力とずれれば`$transaction` が書き込み全体をまとめて取り消します。
+ただしこの2つの変数が守っているのはボタンを出すかどうかまでです。Step 0 で書いた通り、サーバー側は `findTasksWithPermission` と `assertMemberPermission` でもう一度権限を確かめ、書き込み時の `where` でも現在のロールを見ます。件数が入力とずれれば `$transaction` が書き込み全体をまとめて取り消します。
 
-画面の判定だけを門番にはできません。ブラウザから送る中身は手元で書き換えられるのでid の配列を直接投げつけられたら `canDeleteSelected` は一度も評価されません。画面側の条件は誤操作を減らすための入口で、最後に本当に守っているのはサーバー側です。
+画面の判定だけを門番にはできません。ブラウザから送る中身は手元で書き換えられるので id の配列を直接投げつけられたら `canDeleteSelected` は一度も評価されません。画面側の条件は誤操作を減らすための入口で、最後に本当に守っているのはサーバー側です。
 
 次の `handleSelectAll` は `canDeleteSelected` の宣言の直後へ追加します。全選択と全解除を1つの関数で処理します。先に求めた `selectableTasks` だけを使うため閲覧専用タスクは選ばれません。
 
@@ -687,14 +687,14 @@ Set に詰め、`false` なら空の Set で上書きします。
 
 チェックボックスはカードの左側に配置します。
 
-まずファイル先頭のimport欄へ `Checkbox` を追加します。次のimportをタスク一覧のタグの中へ貼ると構文エラーになります。部品を取り込む行と画面へ置く行を分けて保存します。
+まずファイル先頭の import 欄へ `Checkbox` を追加します。次の import をタスク一覧のタグの中へ貼ると構文エラーになります。部品を取り込む行と画面へ置く行を分けて保存します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
 import { Checkbox } from '@/component/ui/checkbox';
 ```
 
-`Checkbox` の `onCheckedChange` から Step 1の関数へタスクIDを渡します。既存のタスク一覧のgridを次のブロックと続く閉じタグまでの3ブロックで置き換えます。import欄はそのまま残します。
+`Checkbox` の `onCheckedChange` から Step 1 の関数へタスク ID を渡します。既存のタスク一覧の grid を次のブロックと続く閉じタグまでの3ブロックで置き換えます。import 欄はそのまま残します。
 
 ```tsx
 {/* filepath: src/app/task/page.tsx */}
@@ -747,7 +747,7 @@ import { Checkbox } from '@/component/ui/checkbox';
         </div>
 ```
 
-ここで `TaskCard` に渡している props はDay 13〜16 で1つずつ増やしてきたものをそのまま並べただけです。今日の一括操作のために新しく足した props は1つもありません。チェックボックスをカードの外側へ置く形にしたのでカード本体は一行も書き換えずに済んでいます。
+ここで `TaskCard` に渡している props は Day 13〜16 で1つずつ増やしてきたものをそのまま並べただけです。今日の一括操作のために新しく足した props は1つもありません。チェックボックスをカードの外側へ置く形にしたのでカード本体は一行も書き換えずに済んでいます。
 
 `canEdit` と `canDelete` はカードの中にある編集ボタンと削除ボタンを出し分けるための値です。1つ前のブロックでチェックボックスを出す条件に使ったのと同じ `taskCanEdit` / `taskCanDelete` を渡しています。同じ値を使い回すのでカードの中と外で操作できる範囲が食い違いません。
 
@@ -808,7 +808,7 @@ import { Checkbox } from '@/component/ui/checkbox';
 
 いきなり 3 状態（未チェック・部分チェック・全チェック）を作ると複雑なのでまずは **2 状態（全選択 / 全解除）** だけで動くものを作ります。
 
-次の `isAllSelected` は Step 1の `handleSelectAll` が終わる `};` の直後へ置きます。選択できるタスクのうち `selectedTasks` に id が入っている件数を数えます。state の近くに貼ると `selectableTasks` を宣言より前に読んでしまい、画面が表示されなくなります。
+次の `isAllSelected` は Step 1 の `handleSelectAll` が終わる `};` の直後へ置きます。選択できるタスクのうち `selectedTasks` に id が入っている件数を数えます。state の近くに貼ると `selectableTasks` を宣言より前に読んでしまい、画面が表示されなくなります。
 
 ```typescript
 // filepath: src/app/task/page.tsx（handleSelectAll の直後に追加）
@@ -821,14 +821,14 @@ const isAllSelected =
 
 `isAllSelected` は選択できるタスクが存在してそのすべての id が `selectedTasks` に入っているかを判定する `boolean` です。選択後に権限を失ったタスクの id が残っていても件数に含めません。
 
-まずファイル先頭のimport欄へ次の1行を追加します。`Label` はチェックボックスの説明と入力を結び付ける部品です。importは `TaskPageContent` の関数や `return` の中へ入れません。
+まずファイル先頭の import 欄へ次の1行を追加します。`Label` はチェックボックスの説明と入力を結び付ける部品です。import は `TaskPageContent` の関数や `return` の中へ入れません。
 
 ```typescript
 // filepath: src/app/task/page.tsx
 import { Label } from '@/component/ui/label';
 ```
 
-`htmlFor="select-all"` とチェックボックスの `id` をそろえると説明文をクリックしても選択を切り替えられます。続けて `return` の中で2つのSelectを囲むdivを探します。`className` が `flex gap-2 w-full` で始まる要素です。その中の最初の `className="w-[200px]"` を持つdivの直前へ次の画面表示だけを追加します。
+`htmlFor="select-all"` とチェックボックスの `id` をそろえると説明文をクリックしても選択を切り替えられます。続けて `return` の中で2つの Select を囲む div を探します。`className` が `flex gap-2 w-full` で始まる要素です。その中の最初の `className="w-[200px]"` を持つ div の直前へ次の画面表示だけを追加します。
 
 ```tsx
 {/* filepath: src/app/task/page.tsx */}
@@ -895,7 +895,7 @@ const selectAllState =
 - 選択が0件か
 - 選択の数が操作できるタスクの数と一致するか
 
-この順に絞り込むと`false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。Step 3 の `selectedSelectableCount` は残して使います。権限を失ったタスクが選択に残っていても全選択の表示には数えません。
+この順に絞り込むと `false`・`true`・`'indeterminate'` のどれか1つに必ず決まります。Step 3 の `selectedSelectableCount` は残して使います。権限を失ったタスクが選択に残っていても全選択の表示には数えません。
 
 分母を `tasks` ではなく `selectableTasks` にしているところが大事な点です。閲覧専用のタスクまで分母に入れると選べるものを全部選んでも数が足りず、チェックボックスがいつまでも部分選択のままになります。読者から見ると「全部選んだのに全チェックにならない」という不可解な動きです。
 
@@ -1040,7 +1040,7 @@ const handleBulkComplete = () => {
 };
 ```
 
-`useMutation` の形はDay 10 で新規プロジェクトを保存したときと変わりません。違うのは送るのが1件の id ではなく id の配列になった点だけです。Step 0 の `bulkComplete` が配列を受け取る作りになっているので画面側は `map` で id を並べて渡すだけで済みます。
+`useMutation` の形は Day 10 で新規プロジェクトを保存したときと変わりません。違うのは送るのが1件の id ではなく id の配列になった点だけです。Step 0 の `bulkComplete` が配列を受け取る作りになっているので画面側は `map` で id を並べて渡すだけで済みます。
 
 `onSuccess` に2つの後始末を書いているのは書き込みが本当に成功したという知らせをここでしか受け取れないからです。どちらか片方でも抜けると画面と DB の中身がずれたまま残ります。`handleBulkComplete` が確かめるのは `selectedTaskList` が空でないことだけです。権限はボタンを `canCompleteSelected` で出し分けて絞り、最後は Step 0 のサーバー側が確かめます。
 
@@ -1185,7 +1185,7 @@ Day 15 で置いた1件削除用の `DeleteConfirmDialog` はそのまま残し�
 |-----------|---------------|------|
 | 完了にする | 不要 | 元に戻せる（ステータス変更で戻せる） |
 | ステータス変更 | 不要 | 元に戻せる |
-| 削除 | **必要** | 元に戻せない（DBから消える） |
+| 削除 | **必要** | 元に戻せない（DB から消える） |
 
 **確認ポイント**:
 - 「削除」ボタンをクリックすると確認ダイアログが開く
@@ -1242,7 +1242,7 @@ const handleBulkUpdateStatus = (status: TaskStatus) => {
 };
 ```
 
-`bulkComplete` との違いは`mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので両者の中身はほとんど重なります。
+`bulkComplete` との違いは `mutate` に `status` を一緒に渡すところだけです。完了は「行き先が `DONE` に決まったステータス変更」なので両者の中身はほとんど重なります。
 
 ボタンを出す判定に `canCompleteSelected` を使い回しているのには理由があります。ステータスを変える操作は削除ではなく編集にあたるため必要な権限は `'canEdit'` です。Step 0 の `bulkUpdateStatus` も `assertMemberPermission(task.project.members, 'canEdit')` で同じ権限を確かめていました。ここで画面側だけ削除権限に変えるとボタンは出るのにサーバーが断る、という食い違いが生まれます。
 
@@ -1305,7 +1305,7 @@ export function isTaskStatus(
 | `Select` | フォーム内の入力欄（選択後に値を保持したい） |
 | `DropdownMenu` | 操作のトリガー（選択後に値は保持しない） |
 
-ステータス変更は「選択 → 即実行」の操作なので`DropdownMenu` が適しています。`Select` を使うと「選択した値を保持する」機能が邪魔になります。
+ステータス変更は「選択 → 即実行」の操作なので `DropdownMenu` が適しています。`Select` を使うと「選択した値を保持する」機能が邪魔になります。
 
 **確認ポイント**:
 - 「ステータス変更」をクリックするとドロップダウンが開く
@@ -2533,7 +2533,7 @@ export default function TaskPage() {
 | `isTaskStatus` | 文字列が `TaskStatus` かを実行時に確かめる型ガード |
 | `completedAt` | 完了した日時。完了操作で `status` と一緒に記録する |
 | `DropdownMenu` | 選んだ瞬間に処理を走らせる操作用の部品。`Select` は入力欄なので用途が違う |
-| `selectedTaskList.map(task => task.id)` | 表示中の選択タスクから、APIへ渡すID配列を作る |
+| `selectedTaskList.map(task => task.id)` | 表示中の選択タスクから、API へ渡す ID 配列を作る |
 | `invalidate()` | tRPC のキャッシュを捨てて取り直させる。一括操作のあとの画面更新に使う |
 
 ---
