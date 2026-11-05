@@ -90,6 +90,7 @@ export const authRouter = createTRPCRouter({
         id: user.id,
         email: user.email,
         role: user.role,
+        sessionVersion: user.sessionVersion,
       };
 
       // セッション発行の前に成功記録を確定させる。
@@ -142,6 +143,7 @@ export const authRouter = createTRPCRouter({
         id: user.id,
         email: user.email,
         role: user.role,
+        sessionVersion: user.sessionVersion,
       };
 
       await createSession(sessionUser);
@@ -161,7 +163,16 @@ export const authRouter = createTRPCRouter({
     }
   }),
 
-  logout: publicProcedure.mutation(async () => {
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    // JWTはCookieを消しても持ち出し済みのトークンは生きたままなので、
+    // sessionVersionを繰り上げて全端末のセッションを一括失効させる。
+    // ユーザーが既に削除済みでもログアウト自体は成功させたいためupdateManyを使う
+    if (ctx.session?.userId) {
+      await prisma.user.updateMany({
+        where: { id: ctx.session.userId },
+        data: { sessionVersion: { increment: 1 } },
+      });
+    }
     await deleteSession();
     return { success: true };
   }),
@@ -173,15 +184,25 @@ export const authRouter = createTRPCRouter({
 
     const user = await prisma.user.findUnique({
       where: { id: ctx.session.userId },
-      select: USER_DETAIL_SELECT,
+      select: {
+        ...USER_DETAIL_SELECT,
+        sessionVersion: true,
+      },
     });
 
     if (!user?.isActive) {
       return null;
     }
 
+    // sessionVersionが繰り上がった後に残った旧トークンは未ログイン扱いにする。
+    // 版番号は内部管理用のためレスポンスからは外す
+    const { sessionVersion, ...userDetail } = user;
+    if (sessionVersion !== ctx.session.sv) {
+      return null;
+    }
+
     return {
-      user,
+      user: userDetail,
     };
   }),
 

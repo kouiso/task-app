@@ -20,6 +20,8 @@ model User {
   password      String?
   role          UserRole  @default(USER)
   isActive      Boolean   @default(true) @map("is_active")
+  // JWTはステートレスで個別失効できないため、発行時の版番号と照合して旧トークンをまとめて拒否する
+  sessionVersion Int      @default(0) @map("session_version")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

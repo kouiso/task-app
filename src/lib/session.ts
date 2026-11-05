@@ -14,6 +14,9 @@ export interface SessionPayload {
   userId: string;
   email: string;
   role: UserRole;
+  // JWTはステートレスで個別失効できないため、発行時点のUser.sessionVersionを埋め込み、
+  // パスワード変更・ログアウト・無効化で繰り上がったDB側の値と照合して旧トークンを拒否する
+  sv: number;
   exp: number;
 }
 
@@ -21,6 +24,7 @@ export interface SessionUser {
   id: string;
   email: string;
   role: UserRole;
+  sessionVersion: number;
 }
 
 const COOKIE_NAME = 'session';
@@ -34,6 +38,8 @@ function isSessionPayload(payload: JWTPayload): payload is JWTPayload & SessionP
     typeof payload['userId'] === 'string' &&
     typeof payload['email'] === 'string' &&
     typeof payload['role'] === 'string' &&
+    // svを持たない旧形式トークンはここで弾かれ、期限切れと同じく未ログイン扱いになる
+    typeof payload['sv'] === 'number' &&
     typeof payload['exp'] === 'number'
   );
 }
@@ -44,6 +50,7 @@ export async function signSessionToken(payload: SessionPayload): Promise<string>
     userId: payload.userId,
     email: payload.email,
     role: payload.role,
+    sv: payload.sv,
     exp: payload.exp,
   };
 
@@ -78,6 +85,7 @@ export async function createSession(user: SessionUser): Promise<string> {
     userId: user.id,
     email: user.email,
     role: user.role,
+    sv: user.sessionVersion,
     exp: expiresAt,
   };
 
@@ -122,5 +130,6 @@ export async function verifySession(): Promise<SessionUser | null> {
     id: session.userId,
     email: session.email,
     role: session.role,
+    sessionVersion: session.sv,
   };
 }

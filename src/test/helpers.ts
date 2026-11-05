@@ -126,12 +126,14 @@ export function createMockSession(
   userId: string,
   email: string,
   role: SessionPayload['role'],
+  sv = 0,
 ): SessionPayload {
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
   return {
     userId,
     email,
     role,
+    sv,
     exp: expiresAt,
   };
 }
@@ -152,8 +154,9 @@ export async function createAuthenticatedCaller(
   userId: string,
   email: string,
   role: SessionPayload['role'],
+  sv = 0,
 ) {
-  const session = createMockSession(userId, email, role);
+  const session = createMockSession(userId, email, role, sv);
   return await createTestCaller(session);
 }
 
