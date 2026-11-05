@@ -1,0 +1,97 @@
+name: Writing Style Check
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  pull_request:
+    types: [opened, edited, reopened, ready_for_review]
+
+# 同じ issue/PR の連続編集は最新だけ残す。コメントの二重投稿・更新競合を避けるため
+# 番号単位で直列化する
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-required-sections:
+    name: Check required sections
+    # 対象外: ボット作成PR、機械自動issue（アラート系ラベル）、draft PR
+    if: >-
+      ${{ (github.event_name == 'pull_request'
+            && github.event.pull_request.user.type != 'Bot'
+            && github.event.pull_request.draft == false)
+          || (github.event_name == 'issues'
+            && github.event.issue.user.type != 'Bot'
+            && !contains(github.event.issue.labels.*.name, 'dependabot')
+            && !contains(github.event.issue.labels.*.name, 'dependencies')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # PRのコードを実行しない作りにするため、スクリプトは同一リポのPRならhead、
+      # forkや本文イベントならデフォルトブランチのものを使う
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.sha || github.event.repository.default_branch }}
+      - name: Run writing-style check
+        env:
+          CHECK_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || github.event.issue.body || '' }}
+        run: >-
+          node .github/ci/check-writing.mjs
+          --kind "${{ github.event_name == 'pull_request' && 'pr' || 'issue' }}"
+          --result "$RUNNER_TEMP/writing-result.json"
+      - name: Upsert marker comment
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { pathToFileURL } = require('node:url');
+            const resultPath = `${process.env.RUNNER_TEMP}/writing-result.json`;
+            if (!fs.existsSync(resultPath)) {
+              core.setFailed('writing check did not produce a result file');
+              return;
+            }
+            const mod = await import(
+              pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.github/ci/check-writing.mjs`).href
+            );
+            const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+            const number = context.payload.issue?.number ?? context.payload.pull_request.number;
+            const body = mod.buildComment(result);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(mod.COMMENT_MARKER));
+            try {
+              if (existing) {
+                if (existing.body !== body) {
+                  await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existing.id,
+                    body,
+                  });
+                }
+              } else if (!result.ok) {
+                // 緑のときはコメントを増やさない。不足があるときだけ1つ作る
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: number,
+                  body,
+                });
+              }
+            } catch (error) {
+              // fork からのPRはトークンが読み取り専用でコメントできない。検査の成否はそのまま残す
+              core.warning(`comment upsert failed: ${error.message}`);
+            }
+            if (!result.ok) {
+              core.setFailed('書き方チェック: 必須項目が不足しています（コメントを参照）');
+            }
