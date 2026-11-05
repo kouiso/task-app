@@ -458,7 +458,7 @@ if (viewingDetail) {
 ```
 
 
-この分岐で `return` すると、下にある一覧の JSX には進みません。`viewingDetail` は URL に詳細IDがあるかを表し、直接開いた初回から読み込み分岐へ入ります。`ProjectDetailView` はデータを自分で取得しないため、取得済みデータと操作用の props を親から渡します。
+この分岐で `return` すると、下にある一覧の JSX には進みません。`viewingDetail` は URL に詳細 ID があるかを表し、直接開いた初回から読み込み分岐へ入ります。`ProjectDetailView` はデータを自分で取得しないため、取得済みデータと操作用の props を親から渡します。
 
 **確認ポイント**
 
@@ -492,7 +492,7 @@ type ProjectDetail = RouterOutputs['project']['getById'];
 
 `AppRouter` の取り込みで `import type` を付けているのはサーバー側のファイルを動くコードとしてブラウザへ持ち込まないためです。型として使うだけならここで線を引いておけば安全です。
 
-ここで `ProjectDetail` の中身を自分で書き並べないのが肝心なところです。`inferRouterOutputs` はサーバー側の手続きが実際に返す形をそのまま取り出して型にしてくれます。Day 09 の `getAll` でメンバーとタスクを `include` して返したように`getById` も関連データを一緒に返します。その入れ子の形まで自動で付いてくるので`{ id: string; name: string; ... }` と手で書く必要はありません。手書きにするとあとで `include` を1つ増やしたときに画面側の型だけが古いまま取り残されます。
+ここで `ProjectDetail` の中身を自分で書き並べないのが肝心なところです。`inferRouterOutputs` はサーバー側の手続きが実際に返す形をそのまま取り出して型にしてくれます。Day 09 の `getAll` でメンバーとタスクを `include` して返したように `getById` も関連データを一緒に返します。その入れ子の形まで自動で付いてくるので `{ id: string; name: string; ... }` と手で書く必要はありません。手書きにするとあとで `include` を1つ増やしたときに画面側の型だけが古いまま取り残されます。
 
 Props は次の形です。
 

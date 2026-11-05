@@ -2069,7 +2069,7 @@ npm run dev
 
 ### Pro パターンで書こう（プロフィール表示のデータアクセスは Optional chaining でそろえる）
 
-`?.` と `??` でアクセスの形をそろえるとnull チェックの繰り返しが減り、表示ロジックが読みやすくなります。
+`?.` と `??` でアクセスの形をそろえると null チェックの繰り返しが減り、表示ロジックが読みやすくなります。
 なぜ `?.` と `??` でそろえるのかを **Before/After** で見比べてみましょう。
 
 `inferRouterOutputs`（インファー・ルーター・アウトプット）は tRPC の戻り値から型を取り出す型です。`AppRouter` はアプリの手続き全体の型です。ここでは `getCurrentUser` が返すユーザーの型を使います。この手続きの成功時の戻り値は必ずユーザーです。読み込み前の `useQuery` のデータには `undefined` があるためサンプルではユーザー全体が未取得の場合も扱います。`NonNullable`（ノン・ナラブル）は null と undefined を型から除く型です。日付の helper には取得済みの日時だけを渡します。
@@ -2133,7 +2133,7 @@ export function buildProfileViewModel(currentUser: CurrentUser) {
 }
 ```
 
-同じ2項目が1行ずつになりました。`currentUser?.avatar ?? ''` は`currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
+同じ2項目が1行ずつになりました。`currentUser?.avatar ?? ''` は `currentUser` があれば `avatar` を見て無ければ空文字にする、という判断を左から右へ読める形にしたものです。`initial` の行も、上で3段に重ねた `if` と結果は変わりません。
 
 **このコードの強み**:
 
@@ -3815,7 +3815,7 @@ export default function ProfileEditPage() {
               </div>
 ```
 
-**アバターURLの入力欄**:
+**アバターURL の入力欄**:
 
 ```typescript
               {/* filepath: src/app/profile/edit/page.tsx */}

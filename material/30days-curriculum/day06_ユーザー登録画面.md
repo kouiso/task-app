@@ -873,7 +873,7 @@ export function buildRegisterMessage(result: RegisterResult): string {
 // ...Before と同じ（`registerUser` の呼び出しと結果の表示）...
 ```
 
-`buildRegisterMessage` の `if (!result.ok)` を書いた次の行ではTypeScript が `result` を失敗側の形だと決めてくれます。だから `result.error` はそのまま読め、そこで `result.user` と書けば即座に赤線が出ます。分岐を1本書いた瞬間に、その先で読める項目まで決まります。Before 側で必要だった `typeof` の確認はもう出てきません。`registerUser` の呼び出しと結果の表示は Before と同じです。
+`buildRegisterMessage` の `if (!result.ok)` を書いた次の行では TypeScript が `result` を失敗側の形だと決めてくれます。だから `result.error` はそのまま読め、そこで `result.user` と書けば即座に赤線が出ます。分岐を1本書いた瞬間に、その先で読める項目まで決まります。Before 側で必要だった `typeof` の確認はもう出てきません。`registerUser` の呼び出しと結果の表示は Before と同じです。
 
 呼び出す側は `registerUser` の中身を読まなくても `ok` を1つ見れば次にどの項目を読めばよいか決まります。今日の `registerMutation` が `onSuccess` と `onError` で処理を分けているのも、同じ考え方です。成功と失敗を1つの入れ物に混ぜず、初めから別の道に分けておきます。
 

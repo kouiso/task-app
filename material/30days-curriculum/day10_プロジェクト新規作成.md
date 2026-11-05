@@ -749,9 +749,9 @@ const createMutation =
   });
 ```
 
-この `Suspense` は Day 09 から残している囲みです。いまの `ProjectPageContent` は処理を中断して待つコンポーネントではないため`fallback` は表示されません。データの取得待ちは本体の `projectsLoading` の分岐が担当します。
+この `Suspense` は Day 09 から残している囲みです。いまの `ProjectPageContent` は処理を中断して待つコンポーネントではないため `fallback` は表示されません。データの取得待ちは本体の `projectsLoading` の分岐が担当します。
 
-`api.useUtils()` はtRPC が裏で抱えているキャッシュ（一度取ったデータの控え）に触るための取っ手です。`useMutation` は Day 09 の `useQuery` と対をなす道具です。違うのは走り出すきっかけです。`useQuery` はページを開いた時点で取得が始まりますが`useMutation` は `mutate` を呼ぶまで動きません。作成や更新は読者がボタンを押して初めて起こることなのでこの差がそのまま使い分けになります。
+`api.useUtils()` は tRPC が裏で抱えているキャッシュ（一度取ったデータの控え）に触るための取っ手です。`useMutation` は Day 09 の `useQuery` と対をなす道具です。違うのは走り出すきっかけです。`useQuery` はページを開いた時点で取得が始まりますが `useMutation` は `mutate` を呼ぶまで動きません。作成や更新は読者がボタンを押して初めて起こることなのでこの差がそのまま使い分けになります。
 
 `onSuccess` はサーバーが成功を返したあとだけ通る場所です。名前が空だったりログインが切れていたりして `create` が失敗すればここは呼ばれません。だから「保存できていないのにダイアログだけ閉じる」という食い違いが起きません。閉じる処理をこの中に置いているのはそれを保証するためです。
 
@@ -1305,7 +1305,7 @@ export interface ProjectFormData {
 }
 ```
 
-**zodスキーマと型**:
+**zod スキーマと型**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -1780,7 +1780,7 @@ import {
   '@/component/project/project-dialog';
 ```
 
-**UI部品と定数の import**:
+**UI 部品と定数の import**:
 
 ```typescript
 // filepath: src/app/project/page.tsx

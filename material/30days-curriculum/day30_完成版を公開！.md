@@ -748,7 +748,7 @@ find src \( -name "*.ts" -o -name "*.tsx" \) \
 
 この画面は説明のための例で、完成版には含まれません。
 
-静的な表示部分を Server Component にまとめるとJS バンドルサイズを小さくでき、初期表示も速くなります。
+静的な表示部分を Server Component にまとめると JS バンドルサイズを小さくでき、初期表示も速くなります。
 なぜ静的な表示部分を Server Component にまとめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）

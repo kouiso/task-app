@@ -2005,7 +2005,7 @@ import { Alert, AlertDescription, AlertTitle }
 
 ### Pro パターンで書こう（ユーザー編集フォームは zod で境界バリデーションする）
 
-入力境界に zod を置くと`role` などのフィールドに不正値が混入したときに実行時エラーとして検出できます。
+入力境界に zod を置くと `role` などのフィールドに不正値が混入したときに実行時エラーとして検出できます。
 なぜ `as` で済ませず zod で確かめるのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
@@ -4152,7 +4152,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
 
 ```
 
-**メールアドレスとアバターURLの入力欄**:
+**メールアドレスとアバターURL の入力欄**:
 
 ```tsx
               {/* filepath: src/app/user/[id]/edit/user-edit-client.tsx（同じファイルの続き） */}

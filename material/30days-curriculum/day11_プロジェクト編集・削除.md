@@ -1673,7 +1673,7 @@ export function buildProjectEditForm(
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-日付を条件付きスプレッドで足すのはStep 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので`startDate?` は「未設定」のまま残ります。呼び出し側の `console.log` も Before と同じです。
+日付を条件付きスプレッドで足すのは Step 1 の `handleEdit` と同じ考え方です。`undefined` を代入せずプロパティごと省くので `startDate?` は「未設定」のまま残ります。呼び出し側の `console.log` も Before と同じです。
 
 **このコードの強み**:
 
@@ -2115,7 +2115,7 @@ import {
   '@/component/project/project-dialog';
 ```
 
-**UI部品と定数の import**:
+**UI 部品と定数の import**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
