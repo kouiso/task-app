@@ -2408,6 +2408,10 @@ Day 28 ではタスクの一括操作を実装します。複数選択したタ�
 
 Day 27 全 Step 完了後の状態は完成版の `src/app/project/page.tsx` と同じです。ただし `selectedProject` の宣言は完成版が `router` の前に置いています。読み取る順番が違うだけで動きは同じです。手元のコードが各 Step の確認ポイントを満たしているかを見てください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
 
+### `src/server/api/routers/project.ts`
+
+完成版の `src/server/api/routers/project.ts` にはセキュリティ上の堅牢化が入っています。`update`・`delete`・`archive`・`unarchive`・`addMember` が Day 12 の `removeMember` や `updateMemberRole` と同じ形になります。プロジェクトの行をロックするトランザクションの中で権限を確かめ直してから書き込みます。本書では各手続きの役割に絞って教えるためロックを挟まない版を正とします。自分の本番アプリへ移すときは完成版の書き方を参考にしてください（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+
 ---
 
 ## 次に読むもの

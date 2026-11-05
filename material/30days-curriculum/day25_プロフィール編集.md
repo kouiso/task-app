@@ -3195,6 +3195,8 @@ export function AppLayout({
 }
 ```
 
+> **完成形の参考コード**: 完成版の `src/component/layout/app-layout.tsx` は組み立て自体が違います。完成版ではスマートフォン用のメニューに `Sheet`（画面の端から重なって出るパネル）を使い、ユーザー画像に `Avatar` を使い、どの画面からでも検索で飛べる `QuickSearch` も入っています。本書では Day 08 の簡易サイドバーへ機能を積み上げる順で教えるため、これらの部品を使わない版を正とします（販売用 ZIP に完成版の `src/` は入っていません。教材内のコードと確認ポイントが正本です）。
+
 ### `src/app/profile/change-password/page.tsx`
 
 **外部ライブラリの import**:
