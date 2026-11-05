@@ -849,7 +849,11 @@ const form = useForm<SearchFormValues>({
     status: isTaskStatus(initialStatus)
       ? initialStatus : 'all',
 ```
-初期値を URL から読んでいるところが今日いちばん大事な設計です。`searchParams.get('keyword')` は `/search?keyword=修正` という URL で開かれたときに「修正」を返します。パラメータが無ければ `null` なので `?? ''` で空文字に置き換えます。条件を `useState` の初期値として書いてしまうと共有された URL で開いても入力欄は空のままになり、URL と画面が食い違います。
+
+`initialStatus` をいったん変数に取り出しているのは`isTaskStatus()` の判定と代入で同じ値を2回読まないためです。
+
+`defaultValues` を URL から組み立てているのがこの画面の性格を決めています。検索条件を含んだリンクを開いた人が同じ条件を復元できます。結果はその人の権限と保存済みデータによって変わります。ここを固定値にするとリンクを共有しても相手には空のフォームが出ます。
+初期値をURLから読んでいるところが今日いちばん大事な設計です。`searchParams.get('keyword')` は`/search?keyword=修正` というURLで開かれたときに「修正」を返します。パラメータが無ければ `null` なので`?? ''` で空文字に置き換えます。条件を `useState` の初期値として書いてしまうと共有されたURLで開いても入力欄は空のままになり、URLと画面が食い違います。
 
 `status` だけ `isTaskStatus` を通してから入れているのは URL が誰でも手で書き換えられるからです。`?status=ABC` のような値をそのままフォームへ入れると Select に無い値が選ばれた状態になり、表示が空欄のまま固まります。
 
@@ -990,6 +994,8 @@ Step 2 の `{/* Step 4-5: フィルターフォーム */}` を以下のコード
       </div>
 ```
 `{...form.register('keyword')}` はこの入力欄をフォームの `keyword` へ結び付ける書き方です。Day 14 と同じで、入力された値の保持も変更の受け取りも react-hook-form の側が引き受けます。`onKeyDown` を別に足したのは Enter を押したときにボタンと同じ `handleSearch` を呼びたいからです。この行が無いとキーワードを打って Enter を押しても何も起きず、読者は「検索が壊れている」と感じます。
+
+`CardContent` の `pt-6 sm:pt-6` は上の余白を足す指定です。この部品には最初から `sm:pt-0` が入っていて `pt-6` だけを書くと幅が640px以上の画面ではその `sm:pt-0` が勝って余白が消えます。`sm:` 付きでも指定してどの幅でも余白を残します。
 
 ここで呼んでいる `handleSearch` はあとの Step 6 で定義します。
 定義するまでこの画面は表示できないので Enter キーの動きを確かめるのは Step 6 のあとです。
@@ -1714,6 +1720,8 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 **確認ポイント**:
 - セクション見出しに件数が表示される
 
+検索結果でも `TaskCard` をそのまま使い回します。タスク一覧と別のカードを作ると片方だけ表示が古いままになるためです。権限と作業時間の props もここで一度に渡します。次の2ブロックを上から続けて書いてください。
+
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
 {/* タスクカード一覧 */}
@@ -1731,32 +1739,12 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
               priority={task.priority}
               dueDate={task.dueDate}
               assignee={task.assignee}
-              onEdit={handleTaskEdit}
-              onDelete={handleTaskDelete}
-              onClick={
-                handleTaskClick} />
-          ))}
-        </div>
-      </div>
-    )}
 ```
-検索結果でも `TaskCard` をそのまま使い回しているのはタスク一覧と見た目をそろえるためです。カードを別々に作ると片方だけ表示が古いまま取り残されます。
 
-TaskCard に権限フラグと作業時間を渡します。上のブロックの `{searchResults.tasks` から `))}` までを次のブロックで**置き換えて**ください。`.map` の中の `<TaskCard>` に渡す props が4つ増えます。
+ここまででカードの基本情報を渡しました。続けて作業時間・操作ハンドラー・権限を渡して map と外側のタグを閉じます。まだ開きタグが閉じていないため2ブロックをつなげ終えてから保存してください。
 
 ```typescript
 {/* filepath: src/app/search/page.tsx */}
-          {searchResults.tasks
-            .map((task) => (
-            <TaskCard key={task.id}
-              id={task.id}
-              title={task.title}
-              description={
-                task.description}
-              status={task.status}
-              priority={task.priority}
-              dueDate={task.dueDate}
-              assignee={task.assignee}
               timeSpentMinutes={
                 task.timeSpentMinutes}
               onEdit={handleTaskEdit}
@@ -1770,8 +1758,12 @@ TaskCard に権限フラグと作業時間を渡します。上のブロック�
               canDelete={canDeleteProject(
                 task.projectId)} />
           ))}
+        </div>
+      </div>
+    )}
 ```
-> `canEdit` / `canDelete` を渡さないと TaskCard 側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため `task.projectId` ごとに個別に権限を判定します。
+
+> `canEdit` / `canDelete` を渡さないとTaskCard側のデフォルト値（`true`）が使われ、閲覧者（VIEWER）にも編集・削除ボタンが見えてしまいます。検索結果は複数プロジェクトのタスクが混ざるため`task.projectId` ごとに個別に権限を判定します。
 
 `timeSpentMinutes` と `onTimeLogSuccess` は Day 16 で `TaskCard` に足した2つです。前者を渡さないと既定値の 0 が使われ、すでに時間を記録したタスクでも `0m` と出ます。後者を渡さないとこの画面から時間を記録しても検索結果に古いという印が付きません。合計は前の数字のまま止まります。
 
@@ -2098,9 +2090,6 @@ const SEARCH_PROJECT_LIMIT = 20;
 const QUICK_SEARCH_TASK_LIMIT = 20;
 const QUICK_SEARCH_PROJECT_LIMIT = 10;
 ```
-Day 14 で書いた import に、今日の3行が混ざった状態です。並び順が入れ替わって見えるのは `npm run fix` を実行すると Biome がアルファベット順に整えるからです。手で並べ直す必要はありません。
-
-件数の上限を4つとも定数にしてあるのはあとで数を変えたくなったときに触る場所を1か所にするためです。`take: 100` と直接書くと値の意味が読む人に伝わらず、増やすときに書き換え漏れが起きます。
 
 **検索条件の入力スキーマ**:
 
@@ -2123,9 +2112,6 @@ const searchInputSchema = z.object({
   dateTo: z.string().datetime().optional(),
 });
 ```
-`status` と `priority` だけ `z.union()` になっています。画面から `'all'` という「絞り込まない」を表す値も届くからです。`taskStatusSchema` だけでは `'all'` が弾かれ、初期状態の検索が通りません。`.default('all')` を付けてあるので画面が値を送らなかった場合もサーバー側で `'all'` として扱われます。
-
-`projectId` と `assignedTo` に `.cuid()` を付けています。id の形をしていない文字列をデータベースまで運ばないためです。入口で止めれば無駄な問い合わせが減ります。
 
 **簡易検索の入力と条件の型**:
 
@@ -2142,9 +2128,6 @@ type FilterConfig = {
   transform?: (value: string) => Prisma.TaskWhereInput[keyof Prisma.TaskWhereInput];
 };
 ```
-`quickSearchInputSchema` でキーワードを必須にしています。簡易検索が候補を出すための入口で、空欄で呼ばれる意味が無いからです。`.trim()` を先に置くと空白だけの入力も `.min(1)` で弾けます。
-
-`FilterConfig` の `key` を `keyof Prisma.TaskWhereInput` にしてあるので存在しない列名を書くと編集中に赤い波線が出ます。文字列のまま扱うと打ち間違いは動かしてみるまで分かりません。
 
 **条件を組み立てる部品**:
 
@@ -2166,9 +2149,6 @@ const buildKeywordFilter = (keyword: string, fields: string[]) =>
     [field]: { contains: keyword, mode: 'insensitive' satisfies Prisma.QueryMode },
   }));
 ```
-`buildDynamicWhere` が `undefined` と `'all'` の2つを飛ばしているのはどちらも「この条件では絞らない」という意味だからです。`'all'` をそのまま条件へ入れると `status` が `'all'` という文字列のタスクを探すことになり、結果は必ず0件になります。
-
-`buildKeywordFilter` が配列を返します。呼ぶ側が `OR` へそのまま渡せる形にするためです。探す列だけを引数で変えられるのでタスクなら `title` と `description`、プロジェクトなら `name` と `description` を指定します。
 
 **期限の範囲を組み立てる部品**:
 
@@ -2186,7 +2166,6 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
   return Object.keys(dateFilter).length > 0 ? dateFilter : undefined;
 };
 ```
-日付を指定しなかった場合は `undefined` を返します。呼び出し側で日付条件を追加するか判断できるようにするためです。期限のないタスクも、他の条件に合えば検索対象になります。
 
 **search — 入口と条件の材料**:
 
@@ -2205,9 +2184,6 @@ export const searchRouter = createTRPCRouter({
       { key: 'assigneeId', value: input.assignedTo },
     ];
 ```
-`protectedProcedure` を使っているのでログインしていない相手はここへ届きません。`ctx.session.userId` は画面から送られた値ではなくサーバーが Cookie から取り出した値なので他人になりすまして検索する道が塞がっています。
-
-`assignedTo` という画面側の名前が `assigneeId` というデータベース側の列名へ入れ替わっているのはこの行です。画面の言葉とテーブルの言葉が違うとき対応表をこの1か所に集めておくと後で列名が変わっても直す場所が増えません。
 
 **search — 検索条件の組み立て**:
 
@@ -2226,7 +2202,6 @@ export const searchRouter = createTRPCRouter({
       andConditions.push({ dueDate: dueDateFilter });
     }
 ```
-検索結果に含めるのは、「このユーザーが閲覧できるタスク」と「検索条件に合うタスク」の両方を満たすものです。AND で結ぶ条件の並び順を変えてもこの条件は変わりません。
 
 <!-- figure-caption: 閲覧できて検索条件にも合うタスクだけを返す -->
 ```mermaid
@@ -2237,7 +2212,6 @@ flowchart LR
     B --> M
     M --> R["検索結果"]
 ```
-`projectId: { in: projectIds }` を必ず AND 条件へ含めるのは、画面から届く絞り込みにかかわらず自分が参加しているプロジェクトだけを対象にするためです。大事なのは、権限条件を省いたり検索条件と OR で結んだりしないことです。キーワードの OR は所属条件の内側ではなく、別の AND 要素として `{ OR: [...] }` の形で並べます（この次のコードで出てきます）。
 
 **search — キーワードとタスクの取得**:
 
@@ -2265,9 +2239,6 @@ flowchart LR
       take: SEARCH_TASK_LIMIT,
     });
 ```
-タイトルと説明のどちらかに一致させるためキーワード条件を `OR` で包みます。その条件と所属プロジェクトの条件を AND で組み合わせます。`OR` をトップレベルの `AND` と並べて書いても意味は変わりません。所属条件とキーワード条件を同じ OR の候補にするとどちらか一方だけで通るので危険です。
-
-`createdBy` と `assignee` に `USER_SELECT` を使っているのはユーザーの行をまるごと返さないためです。パスワードのハッシュを含む列が画面まで流れる事故を、この1つの定数で止めています。
 
 **search — プロジェクトの取得と戻り値**:
 
@@ -2284,7 +2255,6 @@ flowchart LR
             OR: buildKeywordFilter(keyword, ['name', 'description']),
           },
 ```
-キーワードが空のときにプロジェクト検索そのものを飛ばしています。条件がステータスや優先度だけの場合プロジェクト側に当てはめられる条件が無いからです。飛ばさずに呼ぶと参加している全プロジェクトが毎回返り、タスクの検索結果が押し流されます。
 
 ```typescript
 // filepath: src/server/api/routers/search.ts（同じファイルの続き）
@@ -2312,7 +2282,6 @@ flowchart LR
     };
   }),
 ```
-`totalCount` をサーバー側で足してから返しています。画面の見出しが「検索結果◯件」という1つの数字を必要とするからです。画面で `tasks.length + projects.length` を書いても同じ値になりますが数え方を変えたくなったときに直す場所が2か所へ分かれます。
 
 **quickSearch — タスク側**:
 
@@ -2340,7 +2309,6 @@ flowchart LR
         take: QUICK_SEARCH_TASK_LIMIT,
       }),
 ```
-`Promise.all` でタスクとプロジェクトを同時に取りに行っています。順番に `await` すると片方が終わるまでもう片方が始まりません。簡易検索は入力の途中で呼ばれる想定なので待ち時間の差がそのまま体感に出ます。
 
 **quickSearch — プロジェクト側と戻り値**:
 
@@ -2370,7 +2338,6 @@ flowchart LR
     };
   }),
 ```
-上限が `search` より小さい20件と10件になっているのは簡易検索が候補の一覧を出すためのものだからです。候補が100件並んでも読者は選べません。戻り値の形を `search` とそろえてあるので表示側の書き方を変えずに差し替えられます。
 
 **getUserProjects**:
 
@@ -2399,7 +2366,6 @@ flowchart LR
     return projects;
   }),
 ```
-並び順だけ `name: 'asc'` になっていて他の手続きの `updatedAt: 'desc'` と違います。この一覧は検索フォームの選択肢になるため毎回同じ位置で探せるほうが選びやすいからです。更新順にすると昨日と今日で同じプロジェクトが別の場所に現れます。
 
 **getProjectMembers — 検索条件**:
 
@@ -2420,7 +2386,6 @@ flowchart LR
         },
       },
 ```
-Day 14 で書いた手続きが位置だけ下がってここに来ています。中身は1文字も変えていません。今日追加した3つが上に入ったので `search.ts` の並びは `search → quickSearch → getUserProjects → getProjectMembers → getMembersByProject` になります。
 
 **getProjectMembers — 取得と戻り値**:
 
@@ -2443,7 +2408,6 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
     return projectMembers.map((member) => member.user);
   }),
 ```
-`distinct: ['userId']` は1人が複数のプロジェクトに入っている場合に同じ人が何度も返るのを防ぎます。担当者フィルターの選択肢に同じ名前が並ぶと読者はどちらを選べばよいか判断できません。
 
 **getMembersByProject — 所属の確認**:
 
@@ -2470,7 +2434,6 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
         });
       }
 ```
-`projectId` は画面から届く値なので書き換えれば他人のプロジェクトを指せます。取得の前に所属を確かめて `FORBIDDEN` で止めているのはその場合にメンバーの名前とメールアドレスが手に入るのを防ぐためです。
 
 **getMembersByProject — 取得と戻り値**:
 
@@ -2495,25 +2458,10 @@ Day 14 で書いた手続きが位置だけ下がってここに来ています�
     }),
 });
 ```
-`src/server/api/routers/search.ts` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
-
-最後の `});` で `searchRouter` が閉じます。ここまでで5つの手続きが1つのファイルに入りました。閉じ括弧の数が合わないときは5つそれぞれの末尾が `}),` で終わっているかを上から数えてください。
 
 ### `src/app/search/loading.tsx`
+このファイルの全文は Step 0 に順に載っています。
 
-**ページ移動中の仮表示**:
-
-```tsx
-// filepath: src/app/search/loading.tsx
-// 完成版: ページ移動中の仮表示
-import { PageSkeleton }
-  from '@/component/ui/page-skeleton';
-
-export default function Loading() {
-  return <PageSkeleton />;
-}
-```
-ファイル名が `loading.tsx` であることに意味があります。Next.js はページと同じフォルダにこの名前のファイルを見つけるとページの読み込み中に自動で表示します。自分で呼び出す行はどこにもありません。名前を `Loading.tsx` や `loader.tsx` にするとこの仕組みは動かず、画面は白いまま止まります。
 
 ### `src/app/search/page.tsx`
 
@@ -2538,7 +2486,6 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 ```
-1行目の `'use client'` がこのファイルをブラウザで動く部品にします。`useState` や `useSearchParams` はブラウザの状態を触るのでこの宣言が無いとサーバー側で実行されてエラーになります。ファイルの先頭に置く必要があり、import の下へ移すと効きません。
 
 **画面の部品の import**:
 
@@ -2569,7 +2516,6 @@ import {
 import { Separator }
   from '@/component/ui/separator';
 ```
-`TaskCard` と `DeleteConfirmDialog` を取り込んでいるのが今日の作業を短くしている部分です。カードの見た目と削除の確認画面はすでに作ってあるので検索結果の表示は「渡す値を決めるだけ」で終わります。`@/component/ui/...` が単数形になっている点はこれまでの Day と同じです。
 
 **定数と日付の道具の import**:
 
@@ -2598,9 +2544,6 @@ import {
 } from '@/lib/query-error';
 import { api } from '@/trpc/react';
 ```
-`isTaskStatus` と `isTaskPriority` は文字列がステータスや優先度として正しい値かを判定する関数です。Select から返る値は `string` として届くのでこの判定を通さないと `form.setValue` へ渡すときに型が合いません。`as` で押し込む書き方を避けるための道具です。
-
-`dateOnlyToUtcStartIso` と `dateOnlyToUtcEndIso` は `2026-07-28` のような日付だけの文字列を、その日の始まりと終わりの時刻へ変換します。サーバー側の `dateFrom` と `dateTo` が `datetime` を求めているのでこの変換が必要です。
 
 **ステータス・優先度の値とフォームのスキーマ**:
 
@@ -2631,9 +2574,6 @@ const searchFormSchema = z.object({
 type SearchFormValues =
   z.infer<typeof searchFormSchema>;
 ```
-`as const` で、選択肢の配列を要素数と順番が決まった読み取り専用の型にしています。`z.enum(['all', ...])` の先頭に `'all'` を入れるのは画面では「すべて」を選べる必要があるからです。サーバー側も `'all'` を受け付ける形になっています。
-
-このスキーマをコンポーネント関数の外に置いてあるのは画面が描き直されるたびに作り直さないためです。
 
 **URL の日付検査**:
 
@@ -2650,7 +2590,6 @@ const normalizeDate = (value: string): string => {
     ? value : '';
 };
 ```
-ID はサーバーと同じ `cuid()` で検査し、不正なら絞り込みなしの `all` に戻します。日付は形式と実在する日付の両方を検査します。`2026-02-30` は Date が3月へ補正するため変換後の日付とも比較します。不正な値は空文字に戻します。こうしておけば `?dateFrom=bad` を開いても検索前の日付変換で画面がエラーになりません。
 
 **関数の入口と useForm の初期値**:
 
@@ -2677,9 +2616,6 @@ function SearchPageContent() {
       status: isTaskStatus(initialStatus)
         ? initialStatus : 'all',
 ```
-`defaultValues` を URL から組み立てているのがこの画面の性格を決めています。検索条件を含んだリンクを開いた人が同じ条件を復元できます。結果はその人の権限と保存済みデータによって変わります。ここを固定値にするとリンクを共有しても相手には空のフォームが出ます。
-
-`initialStatus` をいったん変数に取り出しているのは `isTaskStatus()` の判定と代入で同じ値を2回読まないためです。
 
 **useForm の初期値の残り**:
 
@@ -2705,9 +2641,6 @@ function SearchPageContent() {
   const { data: users } =
     api.search.getProjectMembers.useQuery();
 ```
-`keyword` と日付の初期値が `''` で、`projectId` などが `'all'` になっている違いに注目してください。入力欄は空文字が「未入力」を表し、Select は `'all'` が「すべて」の選択肢を指します。ここを取り違えると Select が何も選ばれていない見た目になります。
-
-`form.watch()` は入力が変わるたびに新しい値を返します。この後の検索条件がすべて `formValues` を見ているので入力を変えた瞬間に条件が更新されます。
 
 **ロールの対応表**:
 
@@ -2736,9 +2669,6 @@ function SearchPageContent() {
     return map;
   }, [memberProjects, session?.user?.id]);
 ```
-`Map` に組み替えているのはカード1枚ごとに配列を探し直さないためです。検索結果が100件並ぶ場合配列の `find` を100回走らせるとそのたびに全プロジェクトを先頭から見ます。`Map` なら id を渡せば一発で引けます。
-
-`useMemo` で包んでいるのでこの組み替えは `memberProjects` かログインユーザーが変わったときだけ走ります。包まないとキーワードを1文字打つたびに作り直されます。
 
 **権限を判定する関数**:
 
@@ -2761,9 +2691,6 @@ function SearchPageContent() {
     [myRoleByProject],
   );
 ```
-ロールが引けなかったときに `false` を返しているのは判断できない相手へ編集ボタンを見せないためです。`true` を初期値にすると読み込みが終わる前の一瞬だけボタンが出て押せてしまいます。
-
-この2つが判定するのは見た目だけです。実際に編集や削除を止めているのはサーバー側で、画面の判定はボタンを出すか出さないかを決めているにすぎません。
 
 **handleSearch — URL へ載せる条件の一覧**:
 
@@ -2793,9 +2720,6 @@ function SearchPageContent() {
         value: values.dateTo },
     ];
 ```
-7つの条件を配列にしてあるので URL へ載せる処理は次のブロックの数行で終わります。`if` を7本並べる書き方でも動きますが条件を1つ増やすたびに `if` も1本増え、書き漏らしても動いてしまいます。
-
-`exclude: 'all'` が付いているのは `projectId` `status` `priority` `assignedTo` の4つで、どれも Select で選ぶ項目です。キーワードと日付の3つには付いていません。入力欄と日付は空文字が未入力を表すので除外する値を指定する必要がありません。
 
 **handleSearch — URL の組み立てと移動**:
 
@@ -2814,9 +2738,6 @@ function SearchPageContent() {
       `/search?${params.toString()}`);
   };
 ```
-`p.value &&` で空文字を落とし、`p.value !== p.exclude` で `'all'` を落としています。この2つを通した条件だけが URL に載るので絞り込んでいない項目はアドレス欄に現れません。全部載せる形にすると `?keyword=&status=all&priority=all` のような読みにくいリンクになります。
-
-`router.push` を使っているのでブラウザの戻るボタンで前の検索条件へ戻れます。`replace` にすると履歴が残らず、戻ると検索ページの外へ出ます。
 
 **handleClear**:
 
@@ -2836,9 +2757,6 @@ function SearchPageContent() {
     router.push('/search');
   };
 ```
-`form.reset()` に7項目すべてを渡しています。引数なしで呼ぶと `defaultValues` へ戻るため URL 付きで開いた画面ではクリアしたつもりの条件が復活します。ここで空の状態を明示的に書いておくとどの入り方をしても同じ結果になります。
-
-`router.push('/search')` で URL の条件も落としています。フォームだけ空にするとアドレス欄には古い条件が残り、再読み込みで戻ってきます。
 
 **URL からフォームへの復元・前半**:
 
@@ -2864,9 +2782,6 @@ function SearchPageContent() {
       { key: 'dateTo', empty: '', transform: normalizeDate },
     ];
 ```
-`empty` は「URL にその条件が無かったときに入れる値」です。`handleSearch` の `exclude` と対になっていて書き出すときに落とした値を、読み戻すときに補い直しています。
-
-`transform` はステータス・優先度・日付の検査に使います。URL は手で書き換えられるため不正な値は絞り込みなしへ戻してから `form.setValue` へ渡します。
 
 **URL からフォームへの復元・後半**:
 
@@ -2886,7 +2801,6 @@ function SearchPageContent() {
     }
   }, [searchParams, form]);
 ```
-依存配列に `searchParams` が入っているのでこの処理はアドレスが変わるたびに走ります。ブラウザの戻る・進むでもフォームの中身が追いつくのはこの1点のおかげです。ここを空配列にすると最初の1回しか動かず、戻ったときに画面とアドレスがずれます。
 
 **検索するかどうかの判定**:
 
@@ -2902,9 +2816,6 @@ function SearchPageContent() {
     || !!formValues.dateFrom
     || !!formValues.dateTo;
 ```
-7つのどれか1つでも条件が入っていれば `true` になります。この判定が無いと検索ページを開いた瞬間に条件ゼロで問い合わせが飛び、参加している全タスクが返ります。件数が増えたときに最も重くなるのがこの1回です。
-
-`!!` を付けているのは空文字と入力済みの文字列を真偽値へそろえるためです。
 
 **検索 API の呼び出し・前半**:
 
@@ -2933,9 +2844,6 @@ const {
           ? formValues.assignedTo
           : undefined,
 ```
-空文字や `'all'` を `undefined` へ置き換えてから渡しています。サーバー側の `searchInputSchema` は `.optional()` なので、`undefined` は「この条件は使わない」として扱われます。空文字をそのまま送ると `keyword` に空文字が入った検索として組み立てられます。
-
-`status` と `priority` だけ変換していないのはサーバー側がこの2つに限って `'all'` を受け付ける形になっているからです。
 
 **検索 API の呼び出し・後半**:
 
@@ -2960,9 +2868,6 @@ const {
     },
   );
 ```
-開始日に `Start`、終了日に `End` を使い分けているのが要点です。同じ日を両方に入れた場合開始はその日の 0 時、終了はその日の終わりになります。どちらも `Start` にすると0時ちょうどの期限だけが一致します。教材のフォームは期限を0時で保存しますが時刻を含むデータもその日全体で検索できるよう、終了には `End` を使います。
-
-`refetchOnWindowFocus: false` を付けているので他のタブから戻ってきただけでは問い合わせが飛びません。読んでいる最中に検索結果が勝手に入れ替わらないほうが追いやすいからです。`retry` は401と403を再試行せず、一時的な取得失敗だけを3回まで試します。
 
 **取得エラーの分類**:
 
@@ -2986,7 +2891,6 @@ const {
     void refetchSearch();
   };
 ```
-401と403では、キャッシュに以前の検索結果があっても表示しません。ログイン状態や権限が変わったあとに、保護された情報を画面へ残さないためです。500やネットワーク切断では以前の結果を残し、古い内容だと分かる警告を表示します。
 
 **画面の移動を扱う関数**:
 
@@ -3009,9 +2913,6 @@ const {
         `/project?projectId=${projectId}`);
     };
 ```
-3つとも URL を組み立てて移動するだけです。検索結果の中に詳細画面を作り込まずすでにあるページへ渡しているのでタスクの見せ方を直したいときに触る場所が1か所で済みます。
-
-`edit=true` が付いているかどうかで、移動先が詳細を開くか編集を開くかを決めます。この判定は移動先の `src/app/task/page.tsx` 側にあり、Step 8 で足したとおりです。
 
 **削除の状態と処理**:
 
@@ -3025,8 +2926,6 @@ const {
     }>({ open: false, taskId: null });
 
 ```
-
-次に削除エラーを通知する関数を追加します。401と結果不明を分けて利用者へ伝えます。結果不明の場合は検索結果を取り直すため、削除済みかを一覧で確認できます。
 
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
@@ -3050,8 +2949,6 @@ const {
 
 ```
 
-次に削除の通信処理を追加します。成功時に検索結果を取り直して確認画面を閉じます。エラー時は通知関数を呼ぶだけなので、確認画面を残して結果を確かめられます。
-
 ```typescript
 // filepath: src/app/search/page.tsx（同じファイルの続き）
   const deleteMutation =
@@ -3071,9 +2968,6 @@ const {
         { open: true, taskId });
     };
 ```
-`open` と `taskId` を1つの状態にまとめてあるので「開いているのに対象が空」という組み合わせが起きません。2つの `useState` に分けると片方だけ更新した瞬間にその状態が生まれます。
-
-削除が成功したら検索結果を取り直して確認画面を閉じ、対象 ID を `null` へ戻します。401と結果不明は `notifyDeleteError` で分けます。結果不明の場合は削除済みの可能性もあるため、検索結果を取り直して確認します。エラー時は確認画面を閉じません。
 
 **JSX — 画面の外枠と見出し**:
 
@@ -3091,9 +2985,6 @@ const {
           </p>
         </div>
 ```
-`<AppLayout>` で包んでいるので左のメニューとヘッダーをこのファイルへ書かずに済みます。Step 2 でメニューへ検索の項目を足したのはこの共通部分の側です。
-
-`space-y-6` は縦に並ぶ子要素の間隔をまとめて空けます。要素ごとに `margin` を書くと間隔が場所によってずれます。
 
 **JSX — キーワード入力**:
 
@@ -3123,9 +3014,6 @@ const {
                 </div>
               </div>
 ```
-虫めがねアイコンを入力欄の中へ重ねるために、外側の `<div>` に `relative`、アイコンに `absolute` を付けています。入力欄の `pl-8` は左に余白を作る指定で、これが無いと打った文字がアイコンの下へ隠れます。
-
-`onKeyDown` で Enter を拾っているので入力してすぐ検索できます。`isComposing` が真の間は、日本語入力の変換を確定する Enter なので検索しません。この行が無いとキーワードを打った読者はマウスでボタンを探すことになります。
 
 **JSX — プロジェクトの選択・前半**:
 
@@ -3147,9 +3035,6 @@ const {
                         placeholder="すべて" />
                     </SelectTrigger>
 ```
-`grid-cols-1` から `lg:grid-cols-3` まで3段の指定があるので画面幅に応じて1列・2列・3列へ切り替わります。スマートフォンで3列にすると Select の文字が読めない幅まで縮みます。
-
-`value` と `onValueChange` を組にしているのは shadcn/ui の Select が入力欄と違って `form.register()` を使えないからです。値の受け渡しを自分で書く必要があります。
 
 **JSX — プロジェクトの選択・後半**:
 
@@ -3169,9 +3054,6 @@ const {
                   </Select>
                 </div>
 ```
-`projects?.` の `?.` がまだ読み込みが終わっていない場合を受け止めています。`undefined` に `.map()` を呼ぶと画面が落ちるのでこの1文字が無いと初回の表示で赤いエラーになります。
-
-`value="all"` の選択肢を先頭に固定しているので絞り込みを外す操作が常に同じ位置にあります。
 
 **JSX — ステータスの選択**:
 
@@ -3202,9 +3084,6 @@ const {
                   </Select>
                 </div>
 ```
-`onValueChange` の中で `isTaskStatus(v) || v === 'all'` を確かめてから代入しています。Select が返す値の型は `string` なので判定を挟まないと `form.setValue('status', v)` で型が合いません。`as` で押し込む代わりに、判定で型を絞る書き方です。
-
-`Object.entries(TASK_STATUS_LABELS)` から選択肢を作っているのでステータスを増やしたときにこのファイルを触らずに済みます。値と表示名の対応は定数の側が持っています。
 
 **JSX — 優先度の選択**:
 
@@ -3235,7 +3114,6 @@ const {
                   </Select>
                 </div>
 ```
-判定に使う関数と定数がステータスの側と対になっています。`isTaskPriority` と `TASK_PRIORITY_LABELS`、`isTaskStatus` と `TASK_STATUS_LABELS` のように必ず同じ組で使います。片方だけ入れ替えると優先度の欄にステータスの選択肢が並びます。
 
 **JSX — 担当者の選択・前半**:
 
@@ -3255,7 +3133,6 @@ const {
                         placeholder="すべての担当者" />
                     </SelectTrigger>
 ```
-担当者には型を判定する処理がありません。値がユーザーの id という自由な文字列で、決まった候補の一覧が無いからです。正しい id かどうかはサーバー側の `.cuid()` が確かめます。
 
 **JSX — 担当者の選択・後半**:
 
@@ -3275,7 +3152,6 @@ const {
                   </Select>
                 </div>
 ```
-`user.name ?? user.email` と書いてあるのは名前を登録していない人がいるからです。`name` だけを表示するとその人の選択肢は空欄になり、選べる項目に見えません。
 
 **JSX — 期限の範囲**:
 
@@ -3296,9 +3172,6 @@ const {
                 </div>
               </div>
 ```
-日付だけは Select と違って `form.register()` が使えます。`type="date"` の入力欄はブラウザ標準の部品で、値が文字列として素直に届くからです。自分でカレンダーを作らずに済みます。
-
-最後の `</div>` がプロジェクトから始まった6つの並びを囲む枠を閉じています。
 
 **JSX — 検索とクリアのボタン**:
 
@@ -3321,9 +3194,6 @@ const {
           </CardContent>
         </Card>
 ```
-クリアを `variant="outline"` にして検索を既定の見た目にしてあります。押してほしいほうが目に留まる形です。2つとも同じ見た目にすると読者はどちらが主な操作か判断できません。
-
-`justify-end` で右へ寄せているのは入力欄を上から下へ読んだ視線の終わりにボタンが来るようにするためです。
 
 **JSX — 結果の見出しと件数**:
 
@@ -3351,7 +3221,6 @@ const {
             </Button>
           </div>
 ```
-401と403では以前の結果も隠し、現在の状態に合う操作だけを表示します。次は、一時的な失敗で以前の結果が残っている場合の警告です。
 
 ```typescript
         // filepath: src/app/search/page.tsx（同じファイルの続き）
@@ -3368,7 +3237,6 @@ const {
               </div>
             ) : null}
 ```
-警告は結果一覧の先頭へ置きます。カードを読む前に古い結果だと分かるためです。その直後へ、取得できた検索結果の件数を表示します。
 
 ```typescript
             {/* filepath: src/app/search/page.tsx（同じファイルの続き） */}
@@ -3391,7 +3259,6 @@ const {
                 </span>)}
             </h2>
 ```
-初回取得に失敗したときはエラー表示へ進みます。401ではログイン画面、403では条件のクリア、それ以外では再試行が次の操作です。以前の結果を持ったまま一時的な失敗が起きた場合は、結果を残して警告を表示します。認証・認可の拒否では以前の結果も隠すため、現在は見られない情報が残りません。
 
 **JSX — タスク結果の見出し**:
 
@@ -3412,9 +3279,6 @@ const {
                     className="flex-1" />
                 </div>
 ```
-件数が0のときは見出しごと出しません。「タスク (0)」という見出しだけが残ると読者は結果が隠れているのかと探します。
-
-`<Separator className="flex-1" />` は見出しの右側の余った幅を線で埋めます。`flex-1` が無いと線の幅が0になり、何も見えません。
 
 **JSX — タスクカードの一覧**:
 
@@ -3435,7 +3299,6 @@ const {
                       assignee={task.assignee}
                       timeSpentMinutes={task.timeSpentMinutes}
 ```
-ここまでがカードに映す値です。`key={task.id}` は React が並び替えを追うための目印で、配列の番号を使うと削除したあとにカードの中身が1つずれます。`timeSpentMinutes` は Day 16 で足した口で、渡さないと既定値の 0 が使われ、時間を記録済みのタスクでも `0m` と出ます。
 
 **JSX — タスクカードの操作と権限の props**:
 
@@ -3456,9 +3319,6 @@ const {
               </div>
             )}
 ```
-`canEdit` と `canDelete` に渡しているのが `task.projectId` である点を確かめてください。権限はタスクごとではなくプロジェクトごとに決まるのでここに `task.id` を渡すと対応表から何も引けず、すべてのボタンが消えます。
-
-`onTimeLogSuccess` で渡しているのは削除のときと同じ `utils.search.search.invalidate()` です。時間を記録すると DB の合計は増えますが画面が持っている検索結果は古いままです。ここで印を付けておくと取り直しが走り、カードの合計作業時間が新しい値に置き換わります。
 
 **JSX — プロジェクト結果の見出し**:
 
@@ -3480,7 +3340,6 @@ const {
                     className="flex-1" />
                 </div>
 ```
-タスクの側と作りをそろえてあります。見出しの形が揃っていると読者は2つの区切りを同じ種類のものとして読めます。片方だけ線を外したり文字の大きさを変えると上下の関係が別のものに見えます。
 
 **JSX — プロジェクトカードの一覧**:
 
@@ -3511,9 +3370,6 @@ const {
                     </Card>))}
                 </div></div>)}
 ```
-タスクは `TaskCard` を呼ぶのにプロジェクトはここで `<Card>` を組み立てています。プロジェクト用のカード部品を作っていないからです。同じ見た目を他の画面でも使いたくなった時点で、部品として切り出す判断になります。
-
-`cursor-pointer` を付けているのは押せることをマウスの形で伝えるためです。見た目が変わらないと読者はカードをクリックできると気づきません。`line-clamp-2` は説明文を2行で打ち切り、カードの高さをそろえます。
 
 **JSX — 0件と未入力の案内**:
 
@@ -3533,7 +3389,6 @@ const {
           </div>
         )}
 ```
-2つの案内文が別の場所にあります。伝えたい内容が違うからです。上は「探したが無かった」、下は「まだ探していない」です。同じ文言にすると読者は条件を入れたのに無視されたと受け取ります。
 
 **JSX — 削除の確認画面と閉じタグ**:
 
@@ -3559,9 +3414,6 @@ const {
   );
 }
 ```
-`onConfirm` の中で `if (deleteTaskConfirm.taskId)` を確かめています。対象が決まっていない状態で削除を送らないためです。この判定が無いと id が `null` のまま通信が飛びます。
-
-`isPending` を渡しているので通信中はボタンが押せません。渡さないと反応が無いと感じた読者が何度も押し、同じ削除が複数回送られます。閉じタグは `</div>`、`</AppLayout>`、`);`、`}` の順で、開いた順の逆になっています。
 
 **Suspense で包む形**:
 
@@ -3577,19 +3429,9 @@ export default function SearchPage() {
   );
 }
 ```
-`src/app/search/page.tsx` は上のブロックを順に貼ると1つのファイルになります。重複して貼らず、最後の閉じ括弧までそろっているか確認してください。
 
-`useSearchParams()` を使う部品は `<Suspense>` で包む必要があります。包まずにビルドすると Next.js が「この部品は事前に組み立てられない」というエラーを出して止まります。`fallback` は包まれた中身が用意できるまで表示する内容です。
-
-`SearchPageContent` を別の関数へ分けているのはこの決まりを守るためです。1つの関数に全部書くと包む相手がいなくなります。
-
-> **完成形の参考コード**: 完成版には `src/app/search/page.tsx` と `src/server/api/routers/search.ts` があります。ただし今日書いたコードと1文字まで同じではありません。画面側の違いは4つです。1つ目は完成版が検索ボタンを持たず、条件を変えた時点で検索が走る形になっている点です。2つ目はキーワードだけ 300 ミリ秒待ってから条件に渡す `debouncedKeyword` がある点です。3つ目は URL とフォームの行き来を `src/lib/search-filters.ts` の関数へ切り出している点です。4つ目は `TaskCard` に `timeSpentMinutes` と `onTimeLogSuccess` を渡していない点で、検索画面では時間記録の欄を出さない形になっています。ルーター側は今日のコードと同じ並びで、違いはありません。この4か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ### `src/component/layout/app-layout.tsx`
-
-Day 08 から書いた画面の外枠へ検索メニューを追加した版です。前の日のログアウト処理と共通部品も残しています。1つのファイルになるまで順に貼ってから保存してください。
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx
@@ -3619,8 +3461,6 @@ import {
   AlertDialogTitle,
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
   AlertDialogTrigger,
@@ -3648,8 +3488,6 @@ const menuItems: MenuItem[] = [
   },
   {
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
@@ -3679,8 +3517,6 @@ export function AppLayout({
   const pathname = usePathname();
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
   const router = useRouter();
@@ -3709,8 +3545,6 @@ export function AppLayout({
   if (!hasMounted || isLoading) {
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
     return (
@@ -3737,8 +3571,6 @@ export function AppLayout({
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
             {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
@@ -3768,8 +3600,6 @@ export function AppLayout({
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
               {session.user.name?.[0] || 'U'}
@@ -3797,8 +3627,6 @@ export function AppLayout({
                 ログアウト
               </Button>
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
@@ -3828,8 +3656,6 @@ export function AppLayout({
       <main className="flex-1 overflow-y-auto p-6">
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
         {children}
@@ -3838,13 +3664,8 @@ export function AppLayout({
   );
 }
 ```
-今日足したのは末尾の「検索」だけです。`path: '/search'` が `src/app/search/page.tsx` の置き場所と対応します。
 
 ### `src/app/task/page.tsx`
-
-Day 19 のタスク一覧へ編集リンクの処理を追加した版です。Day 14 と Day 15 の通信エラー通知と、削除成功時に確認画面を閉じる処理も残しています。1つのファイルになるまで順に貼ってから保存してください。
-
-完成版の `src/app/task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx
@@ -3874,8 +3695,6 @@ import { DeleteConfirmDialog } from
   '@/component/ui/delete-confirm-dialog';
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 import { PageLoadingSpinner }
@@ -3904,8 +3723,6 @@ import { api } from '@/trpc/react';
 function TaskPageContent() {
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
   const [filterProject, setFilterProject] =
@@ -3930,8 +3747,6 @@ function TaskPageContent() {
   const isEditLink =
     searchParams.get('edit') === 'true';
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -3961,8 +3776,6 @@ function TaskPageContent() {
   }, [utils.task.getAll]);
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
   const myRoleByProject = useMemo(() => {
@@ -3990,8 +3803,6 @@ function TaskPageContent() {
   );
 
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -4021,8 +3832,6 @@ function TaskPageContent() {
   const closeTaskDialog = () => {
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
     setDialogOpen(false);
@@ -4050,8 +3859,6 @@ function TaskPageContent() {
     if (isUnknownResult(error)) {
       toast.error(
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -4081,8 +3888,6 @@ function TaskPageContent() {
         utils.task.getAll.invalidate();
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
         if (selectedTask) {
@@ -4110,8 +3915,6 @@ function TaskPageContent() {
   const handleCreate = () => {
     setEditingTask(undefined);
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -4141,8 +3944,6 @@ function TaskPageContent() {
             data.description || null,
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
           status: data.status,
@@ -4170,8 +3971,6 @@ function TaskPageContent() {
         dueDate: data.dueDate
           ? dateOnlyToUtcStartIso(
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
@@ -4201,8 +4000,6 @@ function TaskPageContent() {
       </AppLayout>
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
     );
@@ -4230,8 +4027,6 @@ function TaskPageContent() {
                 <SelectValue placeholder=
                   "すべてのプロジェクト" />
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -4261,8 +4056,6 @@ function TaskPageContent() {
               </SelectTrigger>
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
               <SelectContent>
@@ -4284,8 +4077,6 @@ function TaskPageContent() {
           sm:grid-cols-2 lg:grid-cols-3
           xl:grid-cols-4">
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
           {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -4315,8 +4106,6 @@ function TaskPageContent() {
               text-muted-foreground">
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
               <p>タスクが見つかりません。</p>
@@ -4341,8 +4130,6 @@ function TaskPageContent() {
           projects={projects ?? []}
         />
 ```
-
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
 
 ```typescript
 {/* filepath: src/app/task/page.tsx（同じファイルの続き） */}
@@ -4372,13 +4159,10 @@ export default function TaskPage() {
   );
 ```
 
-次のブロックも同じファイルへ続けて貼ります。コードは同じファイルの続きです。最後のブロックまで貼ってから保存してください。型検査では括弧の対応と変数名を確認します。
-
 ```typescript
 // filepath: src/app/task/page.tsx（同じファイルの続き）
 }
 ```
-Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTaskDialog}` へ替えた箇所です。
 
 ## 今日のまとめ
 
@@ -4388,14 +4172,13 @@ Day 15 で書いた `onClose={() => setDialogOpen(false)}` を `onClose={closeTa
 - [ ] 検索結果を TaskCard で表示できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 毎回 API が呼ばれる | enabled 条件が不適切 | shouldSearch でガード |
-| URL が更新されない | router.push 忘れ | handleSearch に追加 |
-| 結果が0件表示 | projectId 初期値が間違い | `'all'` で初期化する |
-| Enter 検索が効かない | onKeyDown 未設定 | Enter で handleSearch |
-| フィルターがリセットされない | handleClear に項目漏れ | 全 state を'all'/''に |
+| 文字を打つたびに API が走る | `enabled` の条件が不適切 | Network タブで `search.search` が連続で呼ばれるのを見る。`src/app/search/page.tsx` の `useQuery` の `enabled` を `shouldSearch` でガードする |
+| 検索しても URL が変わらない | `router.push` を呼んでいない | 画面で検索後のアドレスバーを見る。`src/app/search/page.tsx` の `handleSearch` に `router.push` を足す |
+| 結果が0件のまま | `projectId` の初期値が間違っている | エディタで `src/app/search/page.tsx` の `projectId` の `useState` を見る。`'all'` で初期化する |
+| Enter を押しても検索が走らない | `onKeyDown` を設定していない | エディタで検索欄の `<Input>` を見る。Enter で `handleSearch` を呼ぶ `onKeyDown` を足す |
+| クリアしても条件が残る | `handleClear` で戻す項目が漏れている | 画面でクリア後の各欄を見る。`handleClear` で全 state を `'all'` か `''` に戻す |
 
 ## 今日学んだ用語
 

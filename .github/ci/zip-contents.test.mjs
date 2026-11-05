@@ -9,6 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -132,4 +133,97 @@ test('failed unzip cannot pass using its partial listing', () => {
   } finally {
     f.close();
   }
+});
+
+const require = createRequire(import.meta.url);
+
+async function loadGoogleFont(t, url, bytes) {
+  const cssFetcher = require('next/dist/compiled/@next/font/dist/google/fetch-css-from-google-fonts');
+  const fontFetcher = require('next/dist/compiled/@next/font/dist/google/fetch-font-file');
+  t.mock.method(
+    cssFetcher,
+    'fetchCSSFromGoogleFonts',
+    async () => `@font-face {\nfont-family: 'Inter';\nsrc: url(${url});\n}`,
+  );
+  t.mock.method(fontFetcher, 'fetchFontFile', async () => bytes);
+  const loaderPath = require.resolve('next/dist/compiled/@next/font/dist/google/loader');
+  delete require.cache[loaderPath];
+  const extensions = [];
+  const result = await require(loaderPath).default({
+    functionName: 'Inter',
+    data: [{ subsets: ['latin'] }],
+    isDev: false,
+    isServer: true,
+    emitFontFile(buffer, extension) {
+      assert.equal(buffer, bytes);
+      extensions.push(extension);
+      return `/media/font.${extension}`;
+    },
+  });
+  return { extensions, css: result.css };
+}
+
+for (const extension of ['woff2', 'woff', 'ttf', 'otf', 'eot']) {
+  test(`Google font URLs with a ${extension} suffix keep their format`, async (t) => {
+    const result = await loadGoogleFont(
+      t,
+      `https://fonts.gstatic.com/font.${extension}`,
+      Buffer.from('legacy'),
+    );
+    assert.deepEqual(result.extensions, [extension]);
+    assert.ok(result.css.includes(`/media/font.${extension}`));
+  });
+}
+
+for (const [signature, extension] of [
+  ['774f4632', 'woff2'],
+  ['774f4646', 'woff'],
+  ['00010000', 'ttf'],
+  ['74727565', 'ttf'],
+  ['4f54544f', 'otf'],
+]) {
+  test(`extensionless Google font URLs use the ${signature} binary signature`, async (t) => {
+    const result = await loadGoogleFont(
+      t,
+      'https://fonts.gstatic.com/l/font?kit=fixture',
+      Buffer.from(signature, 'hex'),
+    );
+    assert.deepEqual(result.extensions, [extension]);
+    assert.ok(result.css.includes(`/media/font.${extension}`));
+  });
+}
+
+test('font URL query strings do not hide an existing extension', async (t) => {
+  const result = await loadGoogleFont(
+    t,
+    'https://fonts.gstatic.com/font.eot?version=1#font',
+    Buffer.from('legacy'),
+  );
+  assert.deepEqual(result.extensions, ['eot']);
+});
+
+for (const bytes of [Buffer.from('<html>upstream error</html>'), Buffer.from([0])]) {
+  test(`extensionless non-font responses fail explicitly (${bytes.length} bytes)`, async (t) => {
+    await assert.rejects(loadGoogleFont(t, 'https://fonts.gstatic.com/l/font?kit=fixture', bytes), {
+      name: 'NextFontError',
+      message: /Unsupported font file format/,
+    });
+  });
+}
+
+test('sale ZIP and reader setup carry the same pinned Next font patch', () => {
+  const built = spawnSync('bash', ['scripts/build-zip.sh'], { encoding: 'utf8' });
+  assert.equal(built.status, 0, built.stdout + built.stderr);
+  const patch = 'patches/next+15.5.24.patch';
+  const extracted = spawnSync(
+    'unzip',
+    ['-p', 'task-app-curriculum-v1.1.zip', `task-app/${patch}`],
+    { encoding: 'utf8' },
+  );
+  assert.equal(extracted.status, 0, extracted.stderr);
+  assert.equal(extracted.stdout, readFileSync(patch, 'utf8'));
+  const scaffold = readFileSync('scripts/scaffold-from-scratch.sh', 'utf8');
+  assert.ok(scaffold.includes('patch-package@8.0.1'));
+  assert.ok(scaffold.includes('scripts.postinstall="prisma generate && npx patch-package"'));
+  assert.ok(scaffold.includes('npx patch-package'));
 });

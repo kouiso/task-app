@@ -398,7 +398,8 @@ async function settleDrawnFrames(page) {
 }
 
 async function shoot(page, job, shot) {
-  // 幅の指定がある1枚だけ窓を狭める。列数が幅で変わることを見せる回に要る。
+  // 幅の指定がある1枚だけ窓を狭める。列数が幅で変わることを見せる回と、
+  // 図の中の文字が紙で読める幅にそろえる回に要る。
   // 撮り終えたら宣言表の既定へ戻す。戻し忘れると、以降の1枚が黙って別の幅で撮れる。
   if (shot.viewport) {
     await page.setViewportSize(shot.viewport);

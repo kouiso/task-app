@@ -1274,20 +1274,11 @@ function WelcomeHero() {
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-After は `bg-card` や `text-muted-foreground` で色の役割を指定しています。実際の値は `globals.css` の変数で決まります。その変数を変えると参照している部品の色が変わります。名前から色の用途も確認できます。
+After は `bg-card` や `text-muted-foreground` で色の役割を指定しています。実際の値は `globals.css` の変数で決まります。その変数を変えると参照している部品の色が変わります。名前から色の用途も確認できます。2つ目のリンク以降と `HomePage` の宣言は Before と同じです。
 
 ```tsx
 {/* filepath: 読み比べ用サンプル（続き・実ファイルには対応しません） */}
-          次にやることを見る
-        </a>
-      </div>
-    </section>
-  );
-}
-
-export default function HomePage() {
-  return <WelcomeHero />;
-}
+{/* ...Before と同じ... */}
 ```
 
 **このコードの強み**:

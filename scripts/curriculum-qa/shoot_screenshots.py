@@ -365,7 +365,7 @@ READER_TASK: dict[str, Any] = {
     "assigneeEmail": None,
 }
 
-# Day 15 Step 11 の動作確認で優先度を1件上げる（`day15_...md:997-999`）。
+# Day 15 Step 9 の動作確認で優先度を1件上げる。
 # 消すのは Day 14 で自分が作ったものにする（`day15_...md` は対象を指定していないが、
 # `day11_...md:1101` が初期データを消すなと同じ理由で断っているのに揃える）。
 DAY15_TASKS = replace_one(SEED_TASKS, "api", priority="HIGH")
@@ -563,7 +563,8 @@ def validate_clip(raw: Any, where: str) -> Clip | None:
 def validate_viewport(raw: Any, where: str) -> dict[str, int] | None:
     """1枚だけ窓の大きさを変える指定を確かめる。
 
-    幅で列数が変わることを見せる回だけに使う。既定は宣言表の先頭の `viewport` で、
+    幅で列数が変わることを見せる回と、図の中の文字が紙で読める幅にそろえる回に使う。
+    既定は宣言表の先頭の `viewport` で、
     そこを動かすと全冊の画像がまとめて変わるので、1枚ぶんはここで受ける。
     """
     if raw is None:

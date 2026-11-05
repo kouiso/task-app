@@ -72,6 +72,11 @@ CASES: list[tuple[str, str, list[tuple[int, int]]]] = [
         "読み比べ用のコードです。\n\n### Step 2: 実装\n\n" + CODE,
         [(5, 0)],
     ),
+    (
+        "完成コードの節のブロックは対象外",
+        CODE + "\n## 完成コード全体\n\n### `src/a.ts`\n\n" + CODE + "\n## 今日のまとめ\n\n" + CODE,
+        [(1, 0), (15, 0)],
+    ),
 ]
 
 

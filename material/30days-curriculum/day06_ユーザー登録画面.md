@@ -522,7 +522,7 @@ const registerMutation =
     },
     onError: (error) => {
       setError(
-        error.message ?? 'ユーザー登録中にエラーが発生しました'
+        error.message || 'ユーザー登録中にエラーが発生しました'
       );
     },
   });
@@ -757,11 +757,12 @@ Step 4 から Step 6 で書いた検証はここで初めて動かせます。�
 ### Pro パターンで書こう（登録 API の結果は判別共用体で受け取る）
 
 成功と失敗の種類を判別共用体（成功・失敗を示す共通のキーで分岐できる型）で表すと分岐の読み間違いをコンパイルエラーとして検出できます。
-なぜ判別共用体で表すのかを、**Before/After** で見比べてみましょう。
+なぜ判別共用体で表すのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type RegisterInput = {
   name: string;
   email: string;
@@ -825,19 +826,10 @@ console.log(buildRegisterMessage(result));
 
 #### After（プロが書くコード）
 
+`RegisterInput` と `RegisteredUser` の型は Before と同じです。
+
 ```typescript
-type RegisterInput = {
-  name: string;
-  email: string;
-  password: string;
-};
-
-type RegisteredUser = {
-  id: string;
-  name: string;
-  email: string;
-};
-
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type RegisterResult =
   | { ok: true; user: RegisteredUser }
   | { ok: false; error: string };
@@ -878,22 +870,10 @@ export function buildRegisterMessage(result: RegisterResult): string {
   return `${result.user.name}さんの登録が完了しました`;
 }
 
-const result = registerUser({
-  name: 'Taro',
-  email: 'kouiso@example.com',
-  password: 'password123',
+// ...Before と同じ（`registerUser` の呼び出しと結果の表示）...
 ```
 
-`buildRegisterMessage` の `if (!result.ok)` を書いた次の行では TypeScript が `result` を失敗側の形だと決めてくれます。だから `result.error` はそのまま読め、そこで `result.user` と書けば即座に赤線が出ます。分岐を1本書いた瞬間に、その先で読める項目まで決まります。Before 側で必要だった `typeof` の確認はもう出てきません。
-
-**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-});
-
-console.log(buildRegisterMessage(result));
-```
+`buildRegisterMessage` の `if (!result.ok)` を書いた次の行ではTypeScript が `result` を失敗側の形だと決めてくれます。だから `result.error` はそのまま読め、そこで `result.user` と書けば即座に赤線が出ます。分岐を1本書いた瞬間に、その先で読める項目まで決まります。Before 側で必要だった `typeof` の確認はもう出てきません。`registerUser` の呼び出しと結果の表示は Before と同じです。
 
 呼び出す側は `registerUser` の中身を読まなくても `ok` を1つ見れば次にどの項目を読めばよいか決まります。今日の `registerMutation` が `onSuccess` と `onError` で処理を分けているのも、同じ考え方です。成功と失敗を1つの入れ物に混ぜず、初めから別の道に分けておきます。
 
@@ -1021,7 +1001,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });
@@ -1251,7 +1231,7 @@ export default function RegisterPage() {
       onError: (error) => {
         setError(
           error.message
-          ?? 'ユーザー登録中にエラーが発生しました'
+          || 'ユーザー登録中にエラーが発生しました'
         );
       },
     });

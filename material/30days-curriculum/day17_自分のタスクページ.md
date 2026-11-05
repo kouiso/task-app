@@ -1200,11 +1200,12 @@ npm run dev
 ### Pro パターンで書こう（自分のタスクをステータス別にまとめる）
 
 並び順の定義を1か所に集約すると順序を変更するときに修正箇所が1点に絞られます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ並び順の定義を1か所に集約するのかを **Before/After** で見比べてみましょう。
 
 #### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -1269,7 +1270,12 @@ function groupTasksByStatus(
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
   return groups;
 }
+```
 
+**読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。`switch` での仕分けはここまでで、次のブロックでは出来上がった `groups` から画面に並べるセクションを組み立てます。
+
+```typescript
+// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
 function buildStatusSections(tasks: MyTask[]) {
   const groups = groupTasksByStatus(tasks);
 
@@ -1291,16 +1297,12 @@ function buildStatusSections(tasks: MyTask[]) {
       tasks: groups.done,
     },
   ];
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
 3回目がこの戻り値の配列です。画面に出す並び順を決めているのはここだけです。`switch` の `case` を入れ替えても表示の順番は変わらず、この配列を入れ替えたときだけ変わります。同じ4つが3か所に散っているせいで、どこを直せば何が変わるのかが読み取りにくくなっています。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-}
-```
 
 **このコードの問題点**:
 
@@ -1310,19 +1312,10 @@ function buildStatusSections(tasks: MyTask[]) {
 
 #### After（プロが書くコード）
 
+import と `MyTask` の型は Before と同じです。
+
 ```typescript
-import {
-  TASK_STATUS,
-  TASK_STATUS_LABELS,
-  type TaskStatus,
-} from '@/lib/constant/status';
-
-type MyTask = {
-  id: string;
-  title: string;
-  status: TaskStatus;
-};
-
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 type StatusSection = {
   status: TaskStatus;
   title: string;
@@ -1343,7 +1336,6 @@ const MY_TASK_STATUS_ORDER: TaskStatus[] = [
 
 ```typescript
 // filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-
 function buildStatusSections(
   tasks: MyTask[],
 ): StatusSection[] {
@@ -1415,8 +1407,6 @@ import {
 } from '@/component/ui/tabs';
 ```
 
-`TaskCard` は scaffold が配布した部品（Day 13 で使ってから Day 16 で時間記録のボタンを足したもの）です。`TaskDialog` は Day 14 で作り Day 15 で編集に対応させた部品です。どちらもそのまま呼んでいます。`DeleteConfirmDialog` は scaffold で配布された共通部品です。マイタスク専用のカードや編集画面を新しく作らないのは入力欄を1つ足すたびに画面の数だけ直す作業が生まれるためです。並び順が手元と違っていても `npm run fix` が並べ替えます。
-
 **判定と変換のインポート**:
 
 ```typescript
@@ -1443,8 +1433,6 @@ import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 ```
 
-`isTaskStatus` と `isProjectMemberRole` は型ガードです。サーバーやタブから来た文字列を `as` で型へ押し込まず実行時に確かめてから使います。`localDateOnly` と `dateOnlyFromValue` は日付を `YYYY-MM-DD` へそろえる関数です。期限の比較が時刻の違いで狂わなくなります。
-
 **タブの定義**:
 
 ```typescript
@@ -1467,8 +1455,6 @@ const STATUS_TABS: {
   })),
 ];
 ```
-
-2つとも `MyTasksPage` の外に置きます。中に置くと画面が描き直されるたびに同じ配列を作り直すためです。`STATUS_TABS` を手で書き並べず `ACTIVE_STATUSES` から組み立てているので表示する日本語を変えたいときは `TASK_STATUS_LABELS` だけを直せば済みます。
 
 **グループ表示に渡す値の型**:
 
@@ -1495,8 +1481,6 @@ interface TaskGroupSectionProps {
   }>;
 ```
 
-`tasks` の中身を `api.task.getAll` が返す形にそろえてあります。ここが1項目でもずれると取得した配列をそのまま渡せず、詰め替える処理を書く必要が出ます。`projectId` を含めているのは次のブロックの権限判定がプロジェクト単位で行われるためです。
-
 **グループ表示が受け取る関数**:
 
 ```typescript
@@ -1509,8 +1493,6 @@ interface TaskGroupSectionProps {
   canDeleteProject: (projectId: string) => boolean;
 }
 ```
-
-権限を判定する関数を親から受け取る形にしてあります。`TaskGroupSection` の中でロールを調べる作りにすると判定が画面の中に2か所できて片方だけ直したときに食い違います。渡し忘れると `TaskCard` の既定値が使われ、閲覧者にも編集ボタンが出ます。
 
 **グループ表示の見出し**:
 
@@ -1534,8 +1516,6 @@ const TaskGroupSection = ({
         {title} ({tasks.length})
       </h2>
 ```
-
-`if (tasks.length === 0) return null;` がこの部品で一番効いている1行です。`null` を返すと見出しごと画面から消えるので呼び出す側は4つのグループをただ並べるだけで済みます。件数を見出しに添えているのは開かずに量を判断できるようにするためです。
 
 **グループ表示のカード生成**:
 
@@ -1564,8 +1544,6 @@ const TaskGroupSection = ({
         ))}
 ```
 
-`canEdit` と `canDelete` に、受け取った関数へ `task.projectId` を渡した結果を入れています。マイタスクには複数のプロジェクトのタスクが混ざるので判定は画面単位ではなくカード1枚ごとに行う必要があります。`timeSpentMinutes` を渡さないと記録済みのタスクでも `0m` と表示されます。
-
 **グループ表示の閉じタグ**:
 
 ```typescript
@@ -1576,8 +1554,6 @@ const TaskGroupSection = ({
   );
 };
 ```
-
-開いた順と逆に閉じます。`map` を `))}` で閉じ、グリッドと外枠の `</div>` を順に閉じ、`);` で `return` を閉じ、最後の `};` で `TaskGroupSection` そのものを閉じます。閉じる数が合わないとこの行より下すべてが構文エラーとして報告されます。
 
 **画面の状態**:
 
@@ -1598,8 +1574,6 @@ export default function MyTasksPage() {
   const [deleteTargetId, setDeleteTargetId] =
     useState<string | null>(null);
 ```
-
-6つの状態を先頭にまとめてあります。hooks は呼び出す順番が毎回同じでなければならないので `if` や `return` より前に置く必要があるからです。`dialogOpen` と `editingTask` を分けているのは1つにまとめると閉じる途中で中身が消え、ダイアログが一瞬空になるためです。
 
 **サーバーからの取得**:
 
@@ -1625,8 +1599,6 @@ export default function MyTasksPage() {
   const utils = api.useUtils();
 ```
 
-`'all'` を選んだ場合に項目ごと `undefined` へ変えるのが絞り込みを外す書き方です。`'all'` をそのまま送ると `status` は決まった値しか受け取らないため入力チェックで弾かれ、0件ではなくエラーが返ります。`enabled: !!currentUser` は自分の ID が届く前に他人のタスクまで取ってしまうのを防ぎます。
-
 **プロジェクトごとの自分のロール**:
 
 ```typescript
@@ -1649,8 +1621,6 @@ export default function MyTasksPage() {
     return map;
   }, [projects, currentUser?.id]);
 ```
-
-プロジェクト ID から自分のロールを引ける対応表を先に作っています。カードを描くたびに `projects` の配列を端から探すとタスクの件数だけ探し直しが起きるためです。`useMemo` の依存に挙げた2つが変わったときだけ作り直され、それ以外の描き直しでは前の対応表を使い回します。
 
 **編集と削除の可否**:
 
@@ -1676,8 +1646,6 @@ export default function MyTasksPage() {
   );
 ```
 
-ロールが引けなかったときに `false` を返すのが要点です。メンバーではないプロジェクトのタスクが混ざった場合に、判定が抜けて編集できてしまう事故を防げます。権限の中身は `hasPermission` が持っているのでこの画面はロールと操作名を渡すだけで済みます。
-
 **記録の成功と保存の通信**:
 
 ```typescript
@@ -1697,8 +1665,6 @@ export default function MyTasksPage() {
     });
 ```
 
-記録と編集は成功後に一覧を取り直します。サーバーで更新された値をもう一度取得し、画面に古いタスクを残さないためです。削除の通信は続きとして次のブロックへ置きます。
-
 ```typescript
 // filepath: src/app/my-task/page.tsx（同じファイルの続き）
 // 削除の通信
@@ -1715,8 +1681,6 @@ export default function MyTasksPage() {
       },
     });
 ```
-
-3つとも成功したら `invalidate` を呼びます。`invalidate` はキャッシュに古いという印を付けるだけで、表示中のクエリはその印を見て自分で取り直します。削除のあとに `setDeleteTargetId(null)` まで戻しているのは消した相手の ID を残したままだと次の削除で前の対象が使われる余地も残るためです。失敗時は `onError` が理由を表示するので、カードが残った理由も分かります。
 
 **編集と削除のハンドラー**:
 
@@ -1737,8 +1701,6 @@ export default function MyTasksPage() {
     setDeleteDialogOpen(true);
   };
 ```
-
-削除は押した時点では消さず、ID を控えてダイアログを開くだけにしています。取り消せない操作では対象を覚える処理と実行する処理を分けます。編集側の `taskToFormData` は `Date` 型の期限を入力欄が受け取れる形へ詰め替える関数で、Day 15 で使ったもの（scaffold が配布済みの `src/lib/task-form.ts`）を使い回しています。
 
 **保存の中身**:
 
@@ -1768,8 +1730,6 @@ export default function MyTasksPage() {
     }
   };
 ```
-
-`if (data.id)` で囲ってあるのはこの画面が編集だけを扱うためです。ID の無いデータは新規作成なのでここでは何もしません。`expectedUpdatedAt` を渡すと編集画面を開いてから保存するまでに他の人が同じタスクを更新していた場合サーバーが競合として知らせます。
 
 **期限別の振り分け**:
 
@@ -1801,8 +1761,6 @@ export default function MyTasksPage() {
     }
 ```
 
-先に期限なしを抜いてから3つに分けているので後の比較では `dueDate` が必ず存在します。日付を `YYYY-MM-DD` の文字列にそろえてあるため比較は文字列の大小で足ります。`new Date()` のまま比べると同じ日でも時刻が違えば別物として扱われ、今日が期限のタスクが1件も一致しません。`todayKey` はこの計算時点の日付です。依存配列が `[tasks]` なので、日付が変わっただけでは再計算されません。日をまたいだ場合はページを再読み込みしてください。
-
 **振り分けの結果とローディング**:
 
 ```typescript
@@ -1820,8 +1778,6 @@ export default function MyTasksPage() {
   }
 ```
 
-`return` を `useMemo` の中に置いたので4つの配列は `tasks` が変わったときだけ作り直されます。ローディングの分岐をここまで下げてあるのは hooks より前で処理を打ち切ると呼び出しの順番が変わり、React がエラーを出すからです。スピナーを `AppLayout` の中に置くとサイドバーを残したまま中身だけが差し替わります。
-
 **画面の外枠と見出し**:
 
 ```typescript
@@ -1834,8 +1790,6 @@ export default function MyTasksPage() {
           マイタスク
         </h1>
 ```
-
-`AppLayout` で包むとサイドバーとログイン確認が自動で付きます。Day 08 で作った枠をここでも使うのでこの画面には見出しから下だけを書けば済みます。`flex flex-col gap-6` は中に並べる要素の間隔をまとめて決めるための指定です。
 
 **ステータスタブ**:
 
@@ -1862,8 +1816,6 @@ export default function MyTasksPage() {
             </TabsList>
           </Tabs>
 ```
-
-`onValueChange` が渡してくるのは `string` なので `isTaskStatus(v)` を通してから `setActiveTab` に渡します。`as TaskStatus` で押し込むと想定外の文字列がそのまま state に入り、次の取得でサーバーから弾かれます。`sm:flex-row` があるので幅の狭い画面ではタブとドロップダウンが縦に並びます。
 
 **プロジェクトの絞り込み**:
 
@@ -1893,8 +1845,6 @@ export default function MyTasksPage() {
         </div>
 ```
 
-`value="all"` の項目を自分で先頭へ置いています。絞り込みを外す選択肢は取得したプロジェクトの一覧には含まれないためです。`onValueChange={setFilterProject}` と直に渡せるのは `filterProject` が文字列で、`'all'` とプロジェクト ID が同じ型に収まるからです。
-
 **期限が近い2グループ**:
 
 ```typescript
@@ -1923,8 +1873,6 @@ export default function MyTasksPage() {
         />
 ```
 
-色を渡しているのはこの2つだけです。4つ全部を目立たせるとどれから手を付ければよいか判断できなくなるためです。4つの配列は `[]` で初期化されるので、末尾の `?? []` を外しても型検査を通ります。ここでは値が無い場合にも空配列を渡す防御的な指定として残しています。
-
 **急がない2グループ**:
 
 ```typescript
@@ -1951,8 +1899,6 @@ export default function MyTasksPage() {
         />
 ```
 
-`titleClassName` を渡していないので見出しは通常の色になります。並べる順番を「期限切れ・今日・今後・期限なし」にしてあるのは画面を開いた人の目が最初に届く場所へ、いちばん急ぐタスクを置くためです。順番は呼び出す側が決めるので入れ替えたいときはこの4つの位置を動かします。
-
 **1件も無いときの案内**:
 
 ```typescript
@@ -1967,8 +1913,6 @@ export default function MyTasksPage() {
         )}
       </div>
 ```
-
-条件の先頭が `tasks &&` になっているのが要点です。`tasks` が `undefined` の間に件数を見るとまだ届いていないだけなのに0件の案内が出ます。4つのグループは空なら自分で消えるので全部が空のときだけこの案内が残ります。
 
 **2つのダイアログ**:
 
@@ -1999,8 +1943,6 @@ export default function MyTasksPage() {
   );
 }
 ```
-
-完成版の `src/app/my-task/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2424,8 +2366,6 @@ export default function MyTasksPage() {
 }
 ```
 
-2つとも、タスクを並べる `</div>` の外側に置いてあります。カードの並びの中に入れるとグリッドの1マスとして扱われて位置が崩れるためです。`isPending` を渡しているので削除の返事を待つ間は確認ボタンが押せなくなり、同じタスクを2回消しに行く事故を防げます。
-
 ## 今日のまとめ
 
 Day 17 おつかれさまでした。これで自分専用のタスクダッシュボードが完成しました。プロジェクトマネージャーが使うような機能を自分で作れるようになりました。
@@ -2438,14 +2378,16 @@ Day 17 おつかれさまでした。これで自分専用のタスクダッシ�
 - [ ] TaskDialog を使って編集・削除できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| 全タスクが表示される | `assigneeId` 未設定 | `currentUser?.id` を渡す |
-| タスクが表示されない | `enabled` 未設定 | `{ enabled: !!currentUser }` で制御 |
-| 今日のタスクが正しく判定されない | `Date` の時刻・タイムゾーンまで比較している | `dateOnlyFromValue()` / `localDateOnly()` で `YYYY-MM-DD` にそろえる |
-| 編集が動かない | Step 8 の仮 `handleEdit` が残っている | Step 9 の手順で本実装に置き換える |
-| 読み込み中に0件の案内が出る | `isCurrentUserLoading` または `isLoading` の判定漏れ | `isCurrentUserLoading \|\| isLoading` の両方を確認 |
+| 自分以外のタスクも一覧に出る | `assigneeId` に `currentUser?.id` を渡していない | 画面で他人名のタスクが混ざるのを確認する。`src/app/my-task/page.tsx` の `api.task.getAll.useQuery` の引数に `assigneeId: currentUser?.id` を足す |
+| ログイン済みなのにタスクが0件のまま | `currentUser` の取得前に `useQuery` が空で走っている | 画面でログイン直後に空になるのを確認する。`src/app/my-task/page.tsx` の `useQuery` に `{ enabled: !!currentUser }` を足す |
+| 今日のタスクが出ない、違う日が出る | `Date` の時刻・タイムゾーンまで比較している | エディタで `src/app/my-task/page.tsx` の今日判定を見る。`dateOnlyFromValue()` か `localDateOnly()` で `YYYY-MM-DD` にそろえる |
+| 編集ボタンを押しても編集画面が開かない | Step 8 の仮 `handleEdit` が残っている | エディタで `src/app/my-task/page.tsx` の `handleEdit` を探し、Step 9 の手順で本実装に置き換える |
+| `Block-scoped variable 'filterProject' used before its declaration.` | `filterProject` を `useState` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/my-task/page.tsx` で `filterProject` の `useState` をそれを使う `useQuery` より上に置く |
+| `Cannot access 'filterProject' before initialization` | 宣言より上での参照がブラウザに出た形 | Console タブにこの文が出てページが真っ白になる。`src/app/my-task/page.tsx` で `filterProject` の `useState` を先に置く |
+| `Block-scoped variable 'tasks' used before its declaration.` | `tasks` を `useQuery` の宣言より上で使っている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/my-task/page.tsx` で tasks の `useQuery` を `useMemo` より上に置く |
+| `Rendered fewer hooks than expected.` | hooks の呼び出しが条件分岐や早期 return の後に来ている | Console タブにこの文が出る。`src/app/my-task/page.tsx` で `useState` と `useQuery` を早期 return より上の同じ順番に戻す |
 
 ## 今日学んだ用語
 

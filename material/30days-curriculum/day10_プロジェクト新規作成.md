@@ -427,8 +427,6 @@ export function ProjectDialog({
 | `reset(...)` | ダイアログを開き直して `initialData` が変わったときフォームの値を同期 |
 | `buildProjectFormValues(...)` | 作成・編集どちらでも同じ形のフォーム初期値を作る関数 |
 
-> `defaultValues` はフォーム作成時の初期値です。ただし同じダイアログを別プロジェクトで開き直すと `initialData` が変わるため `useEffect` の中で `reset(...)` を呼んで再同期します。`useState` で入力値を1つずつ持つのではなく、react-hook-form にまとめて管理させるのがポイントです。`DEFAULT_PROJECT_COLOR` がカラーの初期値として使われている点にも注目してください。
-
 ---
 
 ### Step 4: 名前・説明の入力欄を作る（7分）
@@ -471,9 +469,11 @@ const handleFormSubmit =
 
 送信する側で `...(data.description && { ... })` と書いています。空欄の項目をそもそも送らないためです。Step 0 のサーバー側は送られてこなかった項目には何もしません。空文字を送るとそちらは「長さ0の説明がある」という値として保存されます。
 
+`&&` は値がある場合だけ項目を加える条件付きスプレッドです。`??` のように null や undefined を別の値で埋める用途とは異なります。
+
 **確認ポイント**:
 - `handleClose` でフォームのリセットとダイアログの閉じが両方行われる
-- `...(data.description && { description: data.description })` は「description が入力されている場合だけプロパティを含める」条件付きスプレッド。`&&` はこの場面で null/undefined を埋める働きとは違い、「真なら含める」という意味で使う。`??` とは用途が異なる
+- 送信データを読み、`description`・`startDate`・`endDate` の3項目に `&&` があることを確認した
 
 続いて JSX を返します。`handleFormSubmit` の後ろに続けて書きます。Dialog の中にフォームを配置します。
 
@@ -749,7 +749,9 @@ const createMutation =
   });
 ```
 
-`api.useUtils()` は tRPC が裏で抱えているキャッシュ（一度取ったデータの控え）に触るための取っ手です。`useMutation` は Day 09 の `useQuery` と対をなす道具です。違うのは走り出すきっかけです。`useQuery` はページを開いた時点で取得が始まりますが `useMutation` は `mutate` を呼ぶまで動きません。作成や更新は読者がボタンを押して初めて起こることなのでこの差がそのまま使い分けになります。
+この `Suspense` は Day 09 から残している囲みです。いまの `ProjectPageContent` は処理を中断して待つコンポーネントではないため`fallback` は表示されません。データの取得待ちは本体の `projectsLoading` の分岐が担当します。
+
+`api.useUtils()` はtRPC が裏で抱えているキャッシュ（一度取ったデータの控え）に触るための取っ手です。`useMutation` は Day 09 の `useQuery` と対をなす道具です。違うのは走り出すきっかけです。`useQuery` はページを開いた時点で取得が始まりますが`useMutation` は `mutate` を呼ぶまで動きません。作成や更新は読者がボタンを押して初めて起こることなのでこの差がそのまま使い分けになります。
 
 `onSuccess` はサーバーが成功を返したあとだけ通る場所です。名前が空だったりログインが切れていたりして `create` が失敗すればここは呼ばれません。だから「保存できていないのにダイアログだけ閉じる」という食い違いが起きません。閉じる処理をこの中に置いているのはそれを保証するためです。
 
@@ -874,11 +876,12 @@ npm run dev
 ### Pro パターンで書こう（作成後はリロードせず一覧キャッシュを更新する）
 
 一覧クエリを無効化して再取得するとフィルターやスクロール位置を維持したまま、現在のフィルターに合うデータを最新の状態に保てます。
-なぜ直前の1文の書き方をするのか、**Before/After** で見比べてみましょう。
+なぜ一覧クエリを無効化して取り直すのかを **Before/After** で見比べてみましょう。
 
 ### Before（改善前のコード）
 
 ```typescript
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 'use client';
 
 import { api } from '@/trpc/react';
@@ -934,19 +937,10 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
 ### After（プロが書くコード）
 
+`'use client'`、import、`ProjectFormData` の型は Before と同じです。
+
 ```typescript
-'use client';
-
-import { api } from '@/trpc/react';
-
-type ProjectFormData = {
-  name: string;
-  description?: string;
-  color: string;
-  startDate?: string;
-  endDate?: string;
-};
-
+// filepath: 読み比べ用サンプル（実ファイルには対応しません）
 export function useCreateProjectSubmit(onClose: () => void) {
   const utils = api.useUtils();
 
@@ -959,28 +953,17 @@ export function useCreateProjectSubmit(onClose: () => void) {
 
   const submitProject = (data: ProjectFormData) => {
     createMutation.mutate({
+      // ...Before と同じ...
+    });
+  };
+
+  // ...Before と同じ（`submitProject` と `isPending` の返却）...
+}
 ```
 
 **読み比べ用**: ここは写経しません。続けてコードを読み進めましょう。
 
-ここまでが After の前半です。Before との違いは `void utils.project.getAll.invalidate()` の1行に集まっています。`invalidate` は「この一覧の控えはもう古い」と印を付ける操作で、印の付いたクエリを今表示しているページだけが取り直します。ページそのものは生き残るのでスイッチとスクロール位置はそのまま残ります。頭の `void` は取り直しの完了を待たずに次の `onClose()` へ進むという意思表示です。ダイアログは先に閉じてよく、取り直した結果は届き次第あとから反映されます。アーカイブ表示が ON なら作成直後のプロジェクトは条件に合わないため並びません。後半は Before と同じ送信部分なので見比べる箇所はここまでです。
-
-```typescript
-// filepath: 読み比べ用サンプル（続き・実ファイルには対応しません）
-      name: data.name,
-      description: data.description,
-      color: data.color,
-      startDate: data.startDate,
-      endDate: data.endDate,
-    });
-  };
-
-  return {
-    submitProject,
-    isPending: createMutation.isPending,
-  };
-}
-```
+Before との違いは `void utils.project.getAll.invalidate()` の1行に集まっています。`invalidate` は「この一覧の控えはもう古い」と印を付ける操作で、印の付いたクエリを今表示しているページだけが取り直します。ページそのものは生き残るのでスイッチとスクロール位置はそのまま残ります。頭の `void` は取り直しの完了を待たずに次の `onClose()` へ進むという意思表示です。ダイアログは先に閉じてよく、取り直した結果は届き次第あとから反映されます。アーカイブ表示が ON なら作成直後のプロジェクトは条件に合わないため並びません。`submitProject` がサーバーへ送る中身は Before と同じです。
 
 **このコードの強み**:
 
@@ -1033,8 +1016,6 @@ const projectCreateSchema = z.object({
 });
 ```
 
-Step 0 では `PROJECT_MEMBER_ROLE` を別の行で取り込みましたがここでは Day 09 の `USER_ROLE` と1行にまとめてあります。`npm run fix` を実行すると Biome（このプロジェクトのコード整形ツール）が同じファイルからの取り込みを1行へ寄せるためです。手元が2行のままでも中身は変わりません。スキーマをルーターの外に置いてあるのは `create` の `.input(...)` から名前で参照するだけで足りるからです。
-
 **getAll の入口と権限チェック**:
 
 ```typescript
@@ -1063,8 +1044,6 @@ export const projectRouter = createTRPCRouter({
       }
 ```
 
-`where` を空のオブジェクトから始めているのは条件を後から足していく形にするためです。条件の有無で `findMany` の呼び出しを何通りも書き分けずに済みます。権限の確認を検索条件の組み立てより前に置いてあるのは弾く判断を先に済ませるためです。あとに回すと断るはずの相手のために検索条件を組み立てる無駄が生まれます。
-
 **getAll の検索条件**:
 
 ```typescript
@@ -1084,8 +1063,6 @@ export const projectRouter = createTRPCRouter({
         where.isArchived = input.isArchived;
       }
 ```
-
-`isArchived` の判定を `!== undefined` にしてあります。`false` が渡された場合と何も渡されなかった場合を分けるためです。`if (input?.isArchived)` と書くと `false` は偽として扱われて条件が足されません。その結果、アーカイブ済みを外したいのに全件が返ります。この一覧ページのスイッチは `false` を送る場面が普通にあるのでこの書き分けが効きます。
 
 **getAll が返すデータ**:
 
@@ -1114,8 +1091,6 @@ export const projectRouter = createTRPCRouter({
     }),
 ```
 
-`tasks` に `select` を付けて `id` と `status` だけに絞っています。画面で使うのは件数と完了数だけだからです。全項目を取ると本文や期日まで毎回運ぶことになります。ユーザー側を `USER_SELECT` に任せているのも同じ理由で、パスワードのように返してはいけない項目を毎回書き並べずに済みます。
-
 **create の作成データ**:
 
 ```typescript
@@ -1135,8 +1110,6 @@ export const projectRouter = createTRPCRouter({
       },
     };
 ```
-
-持ち主になる `userId` を `input` からではなく `ctx.session.userId` から取っている点がこの手続きの要です。画面から送られてきた値を持ち主にすると他人の ID を書いたリクエストで他人名義のプロジェクトを作れてしまいます。`ctx.session` はサーバーが Cookie から組み立てた情報なので画面側から書き換えられません。
 
 **create の保存と戻り値**:
 
@@ -1162,8 +1135,6 @@ export const projectRouter = createTRPCRouter({
   }),
 });
 ```
-
-完成版の `src/server/api/routers/project.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1280,8 +1251,6 @@ export const projectRouter = createTRPCRouter({
 });
 ```
 
-`include` の `members` は `getAll` と同じ形です。新規作成直後の `tasks` は空なので、`create` の返り値には含めていません。最後の `}),` が `create` を閉じ、`});` が `projectRouter` 全体を閉じます。この2行が1つでも欠けると英語のエラーで起動が止まります。
-
 ### `src/component/project/project-dialog.tsx`
 
 **import**:
@@ -1313,8 +1282,6 @@ import { DEFAULT_PROJECT_COLOR }
   from '@/lib/constant/project';
 ```
 
-先頭の `'use client'` が要るのはこのファイルが `useForm` と `useEffect` を使うからです。この宣言が無いとサーバー側で描こうとしてフックが使えないというエラーになります。`@/component/ui/...` が単数形である点は Step 1 の注意書きのとおりで、複数形で書くとファイルが見つからないという英語のエラーが起動時に出ます。
-
 **Props とフォームデータの型**:
 
 ```typescript
@@ -1338,9 +1305,7 @@ export interface ProjectFormData {
 }
 ```
 
-`ProjectFormData` にだけ `export` が付いています。この型を `page.tsx` が取り込むからです。`ProjectDialogProps` はこのファイルの中でしか使わないので外へ出していません。外へ出す範囲を絞っておくとあとから型を直すときに影響の届く先がファイルの中だけに収まります。
-
-**zod スキーマと型**:
+**zodスキーマと型**:
 
 ```typescript
 // filepath: src/component/project/project-dialog.tsx
@@ -1358,8 +1323,6 @@ const projectFormSchema = z.object({
 type ProjectFormValues =
   z.infer<typeof projectFormSchema>;
 ```
-
-`ProjectFormValues` を手で書かずに `z.infer` から起こしています。スキーマと型が食い違う余地を消すためです。手書きだとスキーマに項目を足したときに型の更新を忘れられます。`color` を `z.string()` だけにしてあるのは色コードの形を確かめる仕事をサーバー側の `.regex(...)` が持っているからです。
 
 **初期値を作る関数**:
 
@@ -1382,8 +1345,6 @@ function buildProjectFormValues(
   };
 }
 ```
-
-空文字を埋めています。入力欄の初期表示と react-hook-form が持つ値をそろえるためです。説明と日付は空欄から始め、値があるときだけ送信データへ加えます。カラーピッカーには空という表示がないため、色だけは `DEFAULT_PROJECT_COLOR` から始めます。
 
 **useForm の設定と reset**:
 
@@ -1414,8 +1375,6 @@ export function ProjectDialog({
   }, [initialData, open, reset]);
 ```
 
-`defaultValues` と `reset(...)` の両方に同じ関数を渡してあります。初期値の作り方を1か所に集めるためです。片方だけ書き換えると最初に開いたときと開き直したときで値が変わります。依存配列に `initialData` と `open` を並べてあるのはこの2つが変わった瞬間だけ入れ直したいからです。
-
 **閉じる処理と送信データの組み立て**:
 
 ```typescript
@@ -1445,8 +1404,6 @@ export function ProjectDialog({
     };
 ```
 
-`name` と `color` だけを条件なしで詰めています。この2つが必ず値を持つからです。`name` は zod が空を弾き、`color` は既定色が最初から入っています。残りの4項目は空欄のまま送られる場面があるので値があるときだけキーを足す形にしてあります。
-
 **ダイアログの外枠と見出し**:
 
 ```typescript
@@ -1471,8 +1428,6 @@ export function ProjectDialog({
           </DialogDescription>
         </DialogHeader>
 ```
-
-見出しの切り替えを `initialData?.id` で判定しています。`initialData` そのものの有無で見ると足りない場面があるからです。編集の入口を作る Day 11 では値の一部が欠けた `initialData` を渡すことも起こり得ます。ID が入っているかどうかで見れば保存済みのデータを開いたときだけ編集の文言になります。
 
 **プロジェクト名の入力欄**:
 
@@ -1501,8 +1456,6 @@ export function ProjectDialog({
               )}
             </div>
 ```
-
-`onSubmit` に `handleSubmit(handleFormSubmit)` を渡しています。検証を通った値だけを受け取るためです。`handleFormSubmit` を直接つなぐと名前が空でもサーバーへ飛びます。`aria-describedby` をエラーのあるときだけ付けているのは `id="name-error"` の要素がエラーの無いあいだは描かれないからです。存在しない相手を指したままにしません。
 
 **説明欄とカラー欄**:
 
@@ -1533,8 +1486,6 @@ export function ProjectDialog({
               </div>
 ```
 
-説明欄に赤字の表示を付けていません。この項目が任意だからです。検証で落ちる条件を持たないので `errors.description` に値の入る場面はありません。カラー欄と日付欄には共通の `Input` を使います。`Input` の `h-9` がどちらにも適用されるため枠の高さがそろいます。
-
 **開始日と終了日の欄**:
 
 ```typescript
@@ -1562,8 +1513,6 @@ export function ProjectDialog({
           </div>
 ```
 
-日付の2つを `type="date"` にしてあるのでフォームに入る値は `2026-04-01` のような日付だけの文字列です。時刻を持たないためそのまま `new Date(...)` へ渡すと読まれ方が場面によって変わります。この変換を画面側でやらず、`page.tsx` の `dateOnlyToUtcStartIso` に任せているのは変換の作法を1か所へ集めておくためです。末尾の `</div>` 2つで、3列の枠と入力欄全体の枠を順に閉じます。
-
 **足元のボタンと閉じタグ**:
 
 ```typescript
@@ -1586,8 +1535,6 @@ export function ProjectDialog({
   );
 }
 ```
-
-完成版の `src/component/project/project-dialog.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1811,8 +1758,6 @@ export function ProjectDialog({
 }
 ```
 
-キャンセルの `type="button"` は押しても送信を起こさないための指定です。`<form>` の中のボタンは指定しないかぎり送信ボタンとして扱われます。この1語を落とすと閉じたいだけなのに検証まで走ります。名前が空なら赤字も出ます。
-
 ### `src/app/project/page.tsx`
 
 **React と画面の部品の import**:
@@ -1835,9 +1780,7 @@ import {
   '@/component/project/project-dialog';
 ```
 
-`ProjectFormData` の前だけ `type` が付いているのはこれが型の情報しか持たないからです。`type` を付けておくとビルドの時点で取り込みごと消えます。並びがアルファベット順になっているのは Biome が並べ替えるためで、自分が書いた順番と違っていても手で直す必要はありません。
-
-**UI 部品と定数の import**:
+**UI部品と定数の import**:
 
 ```typescript
 // filepath: src/app/project/page.tsx
@@ -1856,8 +1799,6 @@ import { dateOnlyToUtcStartIso }
   from '@/lib/date';
 import { api } from '@/trpc/react';
 ```
-
-`TASK_STATUS` を取り込んでいます。完了件数を数えるときに `'DONE'` という文字列を直接書かないためです。定数にしておくと打ち間違いをエディタが赤い波線で教えてくれます。`dateOnlyToUtcStartIso` は Step 7 で使う日付の変換で、`api` はサーバー側のルーターへつながる入口です。
 
 **state とデータ取得**:
 
@@ -1880,8 +1821,6 @@ function ProjectPageContent() {
 
   const utils = api.useUtils();
 ```
-
-`useQuery` に `showArchived` をそのまま渡してあるのでスイッチを切り替えると tRPC が別の問い合わせとして扱って取り直します。取り直す関数を自分で呼ぶ形にすると呼び忘れた場所だけ古い一覧が残ります。`isLoading` を別に受け取っているのは返事が届く前の `undefined` と、届いたけれど0件だった場合を分けて扱うためです。
 
 **作成 mutation とボタンのハンドラー**:
 
@@ -1911,8 +1850,6 @@ function ProjectPageContent() {
   };
 ```
 
-ダイアログを閉じる処理を `onSuccess` の中に置いてあるのは保存が通ったときだけ閉じたいからです。`mutate` の直後に閉じるとサーバーが断った場合でも閉じてしまい、保存できていないのに終わったように見えます。`handleEdit` から下の3つは Day 09 で置いた受け皿で、中身は Day 11 で埋めます。
-
 **送信ハンドラーと読み込み中の表示**:
 
 ```typescript
@@ -1937,8 +1874,6 @@ function ProjectPageContent() {
   };
 ```
 
-日付が空のときに `undefined` を渡しています。Step 0 のサーバー側が「送られてこなかった項目には何もしない」と決めてあるからです。空文字を渡すと `z.string().datetime()` の検証に落ちて作成そのものが断られます。
-
 **読み込み中の表示**:
 
 ```typescript
@@ -1957,8 +1892,6 @@ function ProjectPageContent() {
   }
 ```
 
-この分岐をここへ置いてあります。`projects` がまだ `undefined` の状態で下の描画へ進ませないためです。スピナーも `AppLayout` で囲むのは読み込み中だけサイドバーとログイン確認が画面から消えないようにするためです。
-
 **最初の取得失敗を表示する部分**:
 
 ```typescript
@@ -1976,8 +1909,6 @@ function ProjectPageContent() {
     );
   }
 ```
-
-最初の取得に失敗した場合は、0件のメッセージを出さず取得失敗を表示します。認証・認可の失敗なら、前回の `projects` が残っていてもカードを表示しません。それ以外の再取得失敗では、取得済みのカードを表示し続けます。
 
 **ページ見出しと操作エリア**:
 
@@ -2009,8 +1940,6 @@ function ProjectPageContent() {
             </div>
 ```
 
-`justify-between` を使って見出しと操作エリアを両端へ寄せてあるのは画面幅が変わっても見出しが左、操作が右という位置関係を保つためです。`Switch` の `id` と `Label` の `htmlFor` をそろえてあるので文字をクリックしてもスイッチが切り替わります。
-
 **新規作成ボタンとグリッドの開始**:
 
 ```typescript
@@ -2032,8 +1961,6 @@ function ProjectPageContent() {
         )}
 ```
 
-再取得に失敗したあとも前回の一覧が残っているときだけ出る警告です。表示する権限が無くなった一覧を、過去のキャッシュから見せないためです。
-
 ```typescript
             {/* filepath: src/app/project/page.tsx（同じファイルの続き） */}
         <div className="grid gap-6
@@ -2052,8 +1979,6 @@ function ProjectPageContent() {
                   doneCount++;
               }
 ```
-
-`projects && projects.length > 0` と2つ並べてあるのは確かめたいことが2つあるからです。手前の `projects &&` が無いと中身の無い `undefined` から `length` を読みに行って画面が真っ白になります。件数の数え方は Day 09 のままです。キャンセルしたタスクを `continue` で飛ばすのは、消した予定を進捗の分母に入れると達成率が実際より低く出るためです。
 
 **プロジェクトカードの描画**:
 
@@ -2084,8 +2009,6 @@ function ProjectPageContent() {
             })
 ```
 
-`key` に `project.id` を渡しています。React がどのカードがどれかを追いかけられるようにするためです。並び順が変わったときに印が無いと React は中身を差し替える形で描き直します。ID を印にしておけば増えた1枚だけを足す形で済みます。
-
 **空状態とダイアログの配置**:
 
 ```typescript
@@ -2114,8 +2037,6 @@ function ProjectPageContent() {
 }
 ```
 
-空状態の入れ物に `col-span-full` を付けてあります。この要素がグリッドの中にいるからです。付けないと1列分の幅に押し込まれ、文字が縦に折り返します。`ProjectDialog` をグリッドの外へ出してあるのはダイアログが一覧の1枚として並ぶものではないためです。
-
 **ページのエクスポート**:
 
 ```typescript
@@ -2130,8 +2051,6 @@ export default function ProjectPage() {
   );
 }
 ```
-
-完成版の `src/app/project/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2355,12 +2274,6 @@ export default function ProjectPage() {
 }
 ```
 
-この `Suspense` は Day 09 から残している囲みです。いまの `ProjectPageContent` は処理を中断して待つコンポーネントではないため `fallback` は表示されません。データの取得待ちは本体の `projectsLoading` の分岐が担当します。
-
-完成コードを書き終えたらターミナルで `npm run type-check` を実行してください。
-型のエラーが出た場合は表示されたファイル名と行番号を確認して直します。
-画面の動作は本文の操作手順で別に確かめます。
-
 ## 今日のまとめ
 
 - [ ] Dialog コンポーネントでモーダルフォームを作れた
@@ -2370,14 +2283,13 @@ export default function ProjectPage() {
 - [ ] `invalidate()` でキャッシュを自動更新できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| ダイアログが開かない | `open` prop が渡されていない | `open={dialogOpen}` を確認 |
+| `Property 'open' is missing in type '{ onClose: () => void;` `onSubmit: (data: ProjectFormData) => void; }' but required in type 'ProjectDialogProps'.` | `<ProjectDialog>` に `open` を渡していない | `npx tsc --noEmit` の出力でファイル名と行番号を見る。`src/app/project/page.tsx` の `<ProjectDialog>` に `open={dialogOpen}` を足す |
 | `dialogOpen is not defined` | state 宣言が漏れている | Day 09 Step 8 で `useState(false)` を宣言したか確認 |
-| 作成後に一覧が更新されない | キャッシュ無効化の呼び忘れ | `void utils.project.getAll.invalidate()` を追加 |
-| バリデーションが効かない | `resolver` の設定漏れ | `resolver: zodResolver(projectFormSchema)` を確認 |
-| 入力しても値が反映されない | `register` の接続漏れ | `{...register('name')}` のスプレッド構文を確認 |
+| 作成しても一覧に新しいプロジェクトが出ない | `createMutation` の `onSuccess` でキャッシュを無効化していない | 画面で作成直後の一覧に名前が出ないのを確認する。`src/app/project/page.tsx` の `onSuccess` に `void utils.project.getAll.invalidate()` を足す |
+| 名前が空でも送信できてしまう | `useForm` に `resolver` を設定していない | エディタで `src/component/project/project-dialog.tsx` の `useForm` を見る。`resolver: zodResolver(projectFormSchema)` を足す |
+| 名前を入れても `プロジェクト名は必須です` と出る | `<Input>` に `register` を繋いでいない（文字は見えるがフォームの値に取り込まれない） | エディタで `src/component/project/project-dialog.tsx` の名前欄を見る。`{...register('name')}` を `<Input>` に戻す |
 | 作成ボタンを押しても何も起きない | 入力がバリデーションで止まっているか、サーバーがエラーを返している | まず名前欄が空でないか確認する。Day 10 の `createMutation` には `onError` を書いていないのでサーバー側で失敗しても画面には何も出ない。ブラウザの開発者ツールで Network タブを開き、失敗した `/api/trpc/project.create` の応答を見る |
 
 ## 今日学んだ用語

@@ -406,6 +406,27 @@ CASES: list[tuple[str, str, str, int]] = [
         ),
         1,
     ),
+    (
+        "完成コード節のファイル見出しの直下が空のまま次の見出しに来る形は止める",
+        "day08_x.md",
+        day(
+            "",
+            f"### `{LAYOUT}`\n\n### `{PAGE}`\n\n"
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        1,
+    ),
+    (
+        "ファイル見出しの直下が参照行なら中身があるものとして通す",
+        "day08_x.md",
+        day(
+            "",
+            f"### `{LAYOUT}`\n\nこのファイルの全文は Step 1 に順に載っています。\n\n"
+            f"### `{PAGE}`\n\n"
+            + unit(PAGE, WHOLE_PAGE),
+        ),
+        0,
+    ),
 ]
 
 

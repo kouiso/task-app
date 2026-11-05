@@ -100,7 +100,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       router.refresh();
     },
     onError: (error) => {
-      toast.error(error.message ?? 'ユーザー情報の更新に失敗しました');
+      toast.error(error.message || 'ユーザー情報の更新に失敗しました');
     },
   });
 
@@ -212,7 +212,7 @@ export function UserEditClient({ userId }: UserEditClientProps) {
       <AppLayout>
         <div className="container mx-auto max-w-md mt-8">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 sm:pt-6">
               <h1 className="text-xl font-bold mb-2">アクセス権限がありません</h1>
               <p className="text-muted-foreground">管理者または本人のみユーザー編集が可能です</p>
             </CardContent>

@@ -50,6 +50,7 @@ RUNTIME_DEPS=(
 )
 
 DEV_DEPS=(
+  patch-package@8.0.1
   @biomejs/biome@2.4.15
   vitest@^3.2.4
   @vitest/coverage-v8@^3.2.4
@@ -229,6 +230,20 @@ install_dependencies() {
   # 再実行時も npm 側で整合性を取れるので、個別判定より同じ宣言を入れ直す方が教材向き。
   npm install "${RUNTIME_DEPS[@]}"
   npm install -D "${DEV_DEPS[@]}"
+  npx patch-package
+}
+
+copy_dependency_patch() {
+  local source_patch
+  source_patch="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/patches/next+15.5.24.patch"
+  if [ ! -f "$source_patch" ]; then
+    print_error "Next.js のフォント補修ファイルがありません: ${source_patch}"
+    return 1
+  fi
+  mkdir -p "${PROJECT_DIR}/patches"
+  if [ "$source_patch" != "${PROJECT_DIR}/patches/next+15.5.24.patch" ]; then
+    cp "$source_patch" "${PROJECT_DIR}/patches/next+15.5.24.patch"
+  fi
 }
 
 remove_eslint_config() {
@@ -352,7 +367,7 @@ configure_package_json() {
     scripts.dev="next dev" \
     scripts.build="prisma generate && next build" \
     scripts.vercel-build="prisma generate && next build" \
-    scripts.postinstall="prisma generate" \
+    scripts.postinstall="prisma generate && npx patch-package" \
     scripts.start="next start" \
     scripts.lint="biome check src prisma.config.ts next.config.ts package.json tsconfig.json" \
     scripts.lint:fix="biome check --write src prisma.config.ts next.config.ts package.json tsconfig.json" \
@@ -694,6 +709,7 @@ main() {
 
   ensure_empty_or_existing_next_app
   configure_security_overrides
+  copy_dependency_patch
   install_dependencies
   configure_package_json
   configure_tsconfig

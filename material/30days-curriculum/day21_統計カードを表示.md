@@ -744,13 +744,13 @@ if (isLoading) {
 - ローディング中にスピナーが表示される
 - `getOverview` の結果待ちだけを判定している
 
-ローディング確認: 読み込んでいる間は画面の中央にスピナーだけが出ます。
+ローディング確認: 読み込んでいる間は画面の上の方にスピナーだけが出ます。
 
 ここでスピナーだけを返すと読み込み中はサイドバーも消えます。
 この教材ではページ全体の描画にデータが要る画面はこの形にしています。
 サイドバーを残したい場合は Day 17 のように `<AppLayout>` の内側でスピナーを返します。
 
-![読み込み中のレポートページ。サイドバーも消え、画面の中央に丸いスピナーだけが出ている](./screenshots/day21/report-loading.png)
+![読み込み中のレポートページ。サイドバーも消え、白い画面の上の方に丸いスピナーだけが出ている](./screenshots/day21/report-loading.png)
 
 ---
 
@@ -863,40 +863,7 @@ if (isLoading) {
 完成版のコードではプロジェクト別集計も
 `overview.projectStats` に入って返ってきます。
 
-まずこれから書く行の中身を1つの塊で見ておきます。**このブロックはまだ書きません。**
-実際に書く場所はこのあと作る `<TableBody>` の中です。
-
-```typescript
-{/* filepath: 読み比べ用サンプル（実ファイルには対応しません） */}
-{/* projectStats は server 側で集計済み */}
-{overview?.projectStats.map((stat) => (
-  <TableRow key={stat.id}>
-    <TableCell className="font-medium">
-      {stat.name}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.totalTasks}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.completedTasks}
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.progress.toFixed(1)}%
-    </TableCell>
-    <TableCell className="text-right">
-      {stat.totalTimeHours.toFixed(1)}h
-    </TableCell>
-  </TableRow>
-))}
-```
-
-この `map` が回すのは Step 0-5 で `Map` から組み立てた `projectStats` です。画面側では `filter` や `reduce` を呼びません。プロジェクトごとの完了数をここで数え直すとカードの数字と表の数字が別々の計算から出ることになります。除外の条件を片方だけ直したとき合計と内訳の合わない表ができあがります。`stat.progress` と `stat.totalTimeHours` に `toFixed(1)` を付けているのは `71.42857142857143` のような値をそのまま出さないためです。
-
-**確認ポイント**:
-- `overview.projectStats` をそのまま描画している
-- クライアント側で `filter` / `reduce` を再実行していない
-
-次に Step 7 のカードグリッドの `</div>` の
+Step 7 のカードグリッドの `</div>` の
 直後にテーブルの JSX を追加します。
 
 ```typescript
@@ -962,9 +929,12 @@ if (isLoading) {
 
 `TableBody` の中で `projectStats` を1件ずつ行に変えます。`key` に `stat.id` を渡しているのは React が再描画のときにどの行がどのプロジェクトかを見分けるためです。ここを配列の番号にすると React は「0番目の行はこれからも0番目の行だ」と判断して同じ要素を使い回し、中の文字だけを差し替えます。`projectStats` は作成日の新しい順に並んでいるのでプロジェクトを1つ作ると先頭に割り込み、後ろの番号が1つずつずれます。するとさっきまで別のプロジェクトを映していた行に、隣のプロジェクトの数字が流し込まれます。行に入力欄やチェックボックスを足したときはそこへ入れた値まで別のプロジェクトの行へ移ります。ID を渡しておけば番号がずれても React は同じプロジェクトの行を追いかけられます。先頭の `overview?.projectStats` にある `?.` は `overview` がまだ届いていない一瞬を素通りさせる書き方です。
 
+この `map` が回すのはStep 0-5 で `Map` から組み立てた `projectStats` です。画面側では `filter` や `reduce` を呼びません。プロジェクトごとの完了数をここで数え直すとカードの数字と表の数字が別々の計算から出ることになります。除外の条件を片方だけ直したとき合計と内訳の合わない表ができあがります。
+
 **確認ポイント**:
 - `map` でプロジェクトごとに行を生成
-- `key` にプロジェクト ID を指定
+- `key` にプロジェクトIDを指定
+- クライアント側で `filter` / `reduce` を再実行していない
 
 ```typescript
 {/* filepath: src/app/report/page.tsx */}
@@ -985,6 +955,8 @@ if (isLoading) {
 ```
 
 残り2列を足して開いていたタグを内側から順に閉じます。`TableRow`、`TableBody`、`Table`、`CardContent`、`Card` と、開いた順の逆にたどるのが JSX の決まりです。1つでも順番を入れ違えると保存した瞬間に閉じタグが合わないという構文エラーが出て画面がエラー表示に切り替わります。これで4枚のカードの下に内訳の表が並び、合計がどのプロジェクトから来ているかを追えるようになります。
+
+`stat.progress` と `stat.totalTimeHours` に `toFixed(1)` を付けているのは`71.42857142857143` のような値をそのまま出さないためです。
 
 **確認ポイント**:
 - プロジェクト統計テーブルが表示される
@@ -1133,10 +1105,6 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getUserProjectIds } from './_helpers/permission';
 ```
 
-`TASK_STATUS` を取り込んでいるので集計の条件に `'DONE'` という文字列を直接書かずに済みます。文字列で書くと打ち間違えても動いてしまい、完了件数が常に0になる不具合として現れます。定数なら打ち間違いは編集中に分かります。
-
-`getUserProjectIds` は Day 20 の検索と同じ関数です。集計の対象を自分が参加しているプロジェクトへ絞るために使います。
-
 **getOverview の入口と空のときの戻り値**:
 
 ```typescript
@@ -1165,10 +1133,6 @@ export const reportRouter = createTRPCRouter({
     }
 ```
 
-参加しているプロジェクトが0件のときに13項目すべてを埋めて返しています。ここを `return null` や `return {}` にすると画面側は `overview.totalTasks` を読めず、登録した直後のユーザーだけ画面が落ちます。項目の形をそろえておけば画面は分岐を1本も増やさずに済みます。
-
-`recentTasks` などの配列を `[]` にしているのも同じ理由です。`undefined` を返すと画面の `.map()` がそこで止まります。
-
 **集計の土台となる条件**:
 
 ```typescript
@@ -1188,10 +1152,6 @@ export const reportRouter = createTRPCRouter({
       NOT: { status: TASK_STATUS.CANCELLED },
     } as const;
 ```
-
-2つの条件を変数にしてあるのがこの手続きの数字を合わせている部分です。この後に12本の問い合わせが並びますが全部がこの2つのどちらかを使います。条件を毎回書き写すと1か所だけ書き漏らした問い合わせが別の母数で数え、画面上で合計が合わなくなります。
-
-`activeTasksFilter` が `projectScope` を展開してから `NOT` を足しているので「アーカイブ済みを除く」と「取り消し済みを除く」が積み重なります。`as const` を付けているのはこの条件を書き換えられない形で固定するためです。
 
 **Promise.all の受け取り**:
 
@@ -1213,10 +1173,6 @@ export const reportRouter = createTRPCRouter({
       projectDoneGroups,
     ] = await Promise.all([
 ```
-
-左側の12個の名前と、この後に並ぶ12本の問い合わせは書いた順番どおりに対応します。名前を1つ入れ替えると件数の変数に作業時間が入り、型が合う場合はエラーも出ません。数字だけが静かに入れ替わるので追加や並べ替えのときは上下を見比べてください。
-
-`Promise.all` にしているので12本は同時に走ります。順番に `await` すると1本ずつの待ち時間が積み上がります。
 
 **プロジェクトと件数の集計・前半**:
 
@@ -1243,10 +1199,6 @@ export const reportRouter = createTRPCRouter({
       }),
 ```
 
-`select: { id: true, name: true }` で2列だけ取っているのはこの後の表示に id と名前しか使わないからです。`select` を書かないと全列が返り、使わない説明文や日時まで通信に載ります。
-
-完了件数の条件が `activeTasksFilter` ではなく `projectScope` になっている点に注目してください。取り消し済みのタスクは完了ではないので `NOT` の除外があっても件数は変わりません。母数の側だけが `activeTasksFilter` です。
-
 **件数の集計・後半と作業時間の合計**:
 
 ```typescript
@@ -1270,8 +1222,6 @@ export const reportRouter = createTRPCRouter({
       }),
 ```
 
-`aggregate` は合計値を返し、`count` は行数を返します。作業時間は1件ごとの分数を足し合わせる必要があるので `_sum` を使います。`findMany` で全件を取ってから画面で足す書き方もできますがその場合はタスクの全行が通信に載ります。
-
 **直近のタスクとステータス別の集計**:
 
 ```typescript
@@ -1294,10 +1244,6 @@ export const reportRouter = createTRPCRouter({
         _count: { _all: true },
       }),
 ```
-
-`take: 5` で5件に切っているのは直近の動きを見せるための一覧だからです。上限を付けないとタスクが1000件あるユーザーの画面で1000行が届きます。
-
-`groupBy` はステータスの種類ごとに件数を数えて返します。ステータスごとに `count` を呼ぶ方法もありますが、種類が増えると呼び出しも増えます。ここではキャンセル済みを除くので、返るステータスは最大4種類です。`groupBy` ならデータベースにある種類の分だけ自動で並びます。
 
 **優先度別とプロジェクト別の集計**:
 
@@ -1326,10 +1272,6 @@ export const reportRouter = createTRPCRouter({
     ]);
 ```
 
-プロジェクト別の `groupBy` が2本ある理由は条件が違うからです。1本目は母数の件数と作業時間、2本目は完了だけの件数を数えます。1本にまとめる書き方もありますが条件の違う数を1回の集計で分けて出すにはもっと複雑な指定が必要になります。
-
-`_count` と `_sum` を同じ集計で一緒に頼めるので1本目は件数と分数を1回で取っています。
-
 **割合と平均の計算**:
 
 ```typescript
@@ -1339,10 +1281,6 @@ export const reportRouter = createTRPCRouter({
     const averageTimePerTask = totalTasks > 0 ? totalTimeSpent / totalTasks : 0;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 ```
-
-3行すべてに `?? 0` か `totalTasks > 0` の確認が入っています。`_sum` は対象が1件も無いとき `null` を返し、割り算は分母が0のとき `NaN` になります。React は `null` をそのまま描画すると何も表示しません。`NaN` は数値表示の異常につながるため、どちらも0にそろえて返します。
-
-`Math.round` で整数に丸めているのは完了率をパーセントの整数として見せるためです。丸める場所を画面側にすると他の画面で違う桁数になります。
 
 **プロジェクト別の集計の対応表**:
 
@@ -1362,8 +1300,6 @@ export const reportRouter = createTRPCRouter({
       ]),
     );
 ```
-
-`groupBy` が返すのは配列なのでそのままではプロジェクトごとの値を引けません。`Map` に組み替えておくとこの後の `projects.map()` の中で id を渡すだけで引けます。配列のまま `find` を呼ぶとプロジェクトの数だけ全体を探し直します。
 
 **戻り値の前半**:
 
@@ -1391,10 +1327,6 @@ export const reportRouter = createTRPCRouter({
       })),
 ```
 
-`statusData` と `priorityData` を `key` と `value` という名前に置き換えているのは Day 22 でグラフに渡すときの形をそろえるためです。`status` と `priority` のまま返すとグラフの部品をステータス用と優先度用で2つ作ることになります。
-
-項目の並びが空のときの戻り値と同じ順になっている点も確かめてください。並びをそろえておくと項目の足し忘れを目で見つけられます。
-
 **projectStats の組み立て**:
 
 ```typescript
@@ -1421,8 +1353,6 @@ export const reportRouter = createTRPCRouter({
   }),
 });
 ```
-
-完成版の `src/server/api/routers/report.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -1617,10 +1547,6 @@ export const reportRouter = createTRPCRouter({
 });
 ```
 
-`?? { totalTasks: 0, totalTimeSpent: 0 }` が効くのはタスクが1件も無いプロジェクトです。`groupBy` はタスクのある分だけ行を返すので空のプロジェクトは対応表に載りません。この既定値が無いとそのプロジェクトの行で `undefined` を読んで画面が落ちます。
-
-`totalTimeHours` で60で割っているのはデータベースが分で持っている値を時間に直すためです。一方、カード用の `totalTimeSpent` と `averageTimePerTask` は分のまま返し、画面の計算式で時間へ換算します。返り値によって単位が異なるので、表の時間をさらに60で割らないようにしてください。
-
 ### `src/server/api/root.ts`
 
 **ルーターの取り込み**:
@@ -1636,8 +1562,6 @@ import { searchRouter } from './routers/search';
 import { taskRouter } from './routers/task';
 import { createCallerFactory, createTRPCRouter } from './trpc';
 ```
-
-今日足したのは `reportRouter` の1行だけです。並びがアルファベット順になっているのは Biome が整えるからで、追加した位置は気にしなくて大丈夫です。
 
 **手続きの一覧表**:
 
@@ -1657,8 +1581,6 @@ export type AppRouter = typeof appRouter;
 
 export const createCaller = createCallerFactory(appRouter);
 ```
-
-完成版の `src/server/api/root.ts` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 ```typescript
 // filepath: src/server/api/root.ts
@@ -1685,10 +1607,6 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-左に書いたキーがそのまま画面側の呼び名になります。`report: reportRouter` と書いたので `api.report.getOverview` で呼べます。ここを書き忘れるとルーターのファイルは正しく書けているのに画面側で `api.report` が見つからないというエラーが出ます。
-
-こちらの並びは Day 18 で決めた時系列順で、アルファベット順ではありません。作った順に読めるほうが、どの機能がどの Day で入ったかを追えるからです。
-
 ### `src/app/report/page.tsx`
 
 **画面の import**:
@@ -1712,10 +1630,6 @@ import {
 } from '@/component/ui/table';
 import { api } from '@/trpc/react';
 ```
-
-1行目の `'use client'` が要ります。`api.report.getOverview.useQuery()` はブラウザ側で動く仕組みなのでこの宣言が無いと、サーバーコンポーネントからこのフックを呼ぶためエラーになります。
-
-`Table` から始まる6つの部品を一度に取り込んでいるのはテーブルの1行1列がそれぞれ別の部品になっているからです。`<table>` を直接書く方法でも表は作れますがその場合は枠線や余白の指定を自分で書くことになります。
 
 **データ取得と表示用の値**:
 
@@ -1741,12 +1655,6 @@ export default function ReportPage() {
   }
 ```
 
-`useQuery()` に引数が無いのはこの手続きが入力を取らないからです。誰の集計を返すかはサーバー側が Cookie から取り出したユーザーで決まります。画面から id を送る形にすると書き換えて他人の集計を見る道ができます。
-
-4つの値を `return` の前で用意しているのは JSX の中に計算を書かないためです。JSX の中に `((overview?.totalTimeSpent ?? 0) / 60).toFixed(1)` を直接書くとどこが表示でどこが計算か読み分けにくくなります。
-
-`isLoading` の判定を値の準備より後に置いているのは `overview` が未定義のあいだも `?? 0` で受け止められるからです。判定を先に置いても動きますがこの並びだと値の定義が1か所にまとまります。
-
 **JSX — 見出し**:
 
 ```typescript
@@ -1766,10 +1674,6 @@ export default function ReportPage() {
           </p>
         </div>
 ```
-
-`<h1>` はページに1つだけ置きます。読み上げソフトや検索エンジンがそのページの主題として扱う見出しだからです。この後のカードやテーブルの見出しに `<h1>` を重ねると主題が複数あることになります。
-
-`text-muted-foreground` は文字を薄い色にする指定です。見出しと説明文で濃さを変えるとどちらが主かが色だけで伝わります。
 
 **JSX — 統計カードの前半2枚**:
 
@@ -1799,10 +1703,6 @@ export default function ReportPage() {
           </Card>
 ```
 
-`grid-cols-1` から `lg:grid-cols-4` まで3段の指定があるので幅に応じて1列・2列・4列へ切り替わります。スマートフォンで4列にすると数字の桁が折り返して読めなくなります。
-
-各カードで項目名を `text-sm` の薄い色、数字を `text-3xl font-bold` にしています。見せたいのは数字なので大きさと太さの差で目が先に数字へ行きます。両方を同じ大きさにすると4枚のカードがどれも同じ見た目になり、読者は数字を探すことになります。
-
 **JSX — 統計カードの後半2枚**:
 
 ```typescript
@@ -1828,10 +1728,6 @@ export default function ReportPage() {
           </Card>
         </div>
 ```
-
-数字の後ろに `h` を付けているのは単位が無いと 12 という数字を12時間とも12分とも読めるからです。完了率の側に `%` を付けているのも同じ考えです。
-
-`平均作業時間/タスク` という項目名にしてあるのは何あたりの平均かを示すためです。「平均作業時間」だけでは1日あたりとも1人あたりとも読めます。
 
 **JSX — テーブルの見出し**:
 
@@ -1861,10 +1757,6 @@ export default function ReportPage() {
               </TableHeader>
 ```
 
-プロジェクト名の列だけ `w-[200px]` で幅を固定し、残りの4列を `text-right` で右へ寄せています。数字は桁の位置がそろっていると比べやすく、左寄せだと桁数の違いで数の大小が読み取りにくくなります。
-
-名前の列に幅を決めておくとプロジェクト名の長さで表の形が変わりません。長い名前が1つ入るだけで数字の列が押しつぶされる状態を防げます。
-
 **JSX — テーブルの行・前半**:
 
 ```typescript
@@ -1884,10 +1776,6 @@ export default function ReportPage() {
                       {stat.completedTasks}
                     </TableCell>
 ```
-
-`overview?.` の `?.` がデータが届く前の状態を受け止めています。`isLoading` の判定を通っているので通常はここへ `undefined` が来ませんが通信が失敗した場合は `overview` が `undefined` のまま描画されます。この1文字が無いとその場面で画面が落ちます。
-
-`key={stat.id}` は React が行を見分けるための目印です。プロジェクトの id を渡しているので並び順が変わっても行の中身が入れ替わりません。
 
 **JSX — テーブルの行・後半と閉じタグ**:
 
@@ -1912,8 +1800,6 @@ export default function ReportPage() {
   );
 }
 ```
-
-完成版の `src/app/report/page.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2064,13 +1950,7 @@ export default function ReportPage() {
 }
 ```
 
-`toFixed(1)` で小数第1位までに丸めています。`progress` はサーバー側で `(完了 / 全体) * 100` を計算しただけの値なので丸めないと `33.33333333333333%` のような表示になります。カードの `completionRate` はサーバーで整数に丸めますが、表の `progress` は画面で小数第1位まで表示します。この教材では表示先ごとに精度が異なるため、丸める場所も分かれています。
-
-閉じタグは `</TableBody>`、`</Table>`、`</CardContent>`、`</Card>`、`</div>`、`</AppLayout>` の順で、開いた順の逆になっています。1つでも抜けるとブラウザに赤いエラー画面が出て足りない場所が書かれています。
-
 ### `src/component/layout/app-layout.tsx`
-
-Day 08 で作った長いファイルなので今日触った2か所を先に載せます。最後のブロックには Day 20 までに書いた行もそのまま入っています。
 
 **アイコンの取り込み**:
 
@@ -2087,8 +1967,6 @@ import {
   Search,
 } from 'lucide-react';
 ```
-
-今日足したのは `BarChart` の1語です。他の6つは Day 08 から Day 20 までに並べたもので消すとサイドバーのアイコンがその項目だけ出なくなります。名前をアルファベット順に並べてあるのは Biome の並べ替えに合わせるためで、順番が違うと保存した瞬間に並べ替えられ、触っていない行まで差分に入ります。
 
 **サイドバーのメニュー項目**:
 
@@ -2118,8 +1996,6 @@ const menuItems: MenuItem[] = [
   },
 ```
 
-ここまでの4件は Day 08 と Day 13 で足したものです。配列を途中で切って載せているのでこの時点では閉じかっこがありません。続きは次のブロックです。
-
 ```typescript
 // filepath: src/component/layout/app-layout.tsx（同じ配列の続き）
 // 検索と、今日足したレポート
@@ -2135,8 +2011,6 @@ const menuItems: MenuItem[] = [
   },
 ];
 ```
-
-完成版の `src/component/layout/app-layout.tsx` は次の通りです。Step で書き足した結果がこのファイルと一致しているかを確認します。
 
 <!-- code-block-length-exception: complete-copy-unit -->
 ```typescript
@@ -2346,9 +2220,6 @@ export function AppLayout({
 }
 ```
 
-末尾の「レポート」1件が今日の追加です。前の5件は Day 08・Day 13・Day 20 で足したものがそのまま残ります。並べた順がそのまま画面の上から下の順になるので途中へ差し込むとメニューの並びが教材の画面と変わります。`path` の `/report` は `src/app/report/page.tsx` の置き場所と対応していて綴りがずれるとメニューは出るのに押した先が404になります。
-
-> **完成形の参考コード**: 完成版には `src/app/report/page.tsx` と `src/server/api/routers/report.ts` があります。ただし今日書いたコードとは一部が異なります。違いは3つです。1つ目は完成版の画面に円グラフが2枚並んでいる点です。これは Day 22 で足します。2つ目は完成版の画面に週次レポートへのリンクがある点です。これは Day 23 で足します。3つ目は完成版の `report.ts` に `getOverview` 以外の手続きも入っていて `root.ts` には Day 24 で追加する `user` も登録されている点です。この3か所は違って当たり前だと思って読んでください。（販売用 ZIP に完成版の `src/` は入っていません。ここに挙げた違いは完成版がどう書かれているかの説明として読んでください）。
 
 ## 今日のまとめ
 
@@ -2359,12 +2230,14 @@ export function AppLayout({
 - [ ] レスポンシブグリッドを適用できた
 
 ## つまずきポイント
-
 | エラー / 問題 | 原因 | 解決方法 |
 |--------------|------|---------|
-| NaN が表示される | `overview` が未取得のまま参照している | `?? 0` でフォールバック |
-| 時間が分で表示 | 60で割り忘れ | `/ 60` で時間に変換 |
-| カードが縦並び | グリッドクラス不足 | sm/lg ブレークポイント |
+| `NaN` が表示される | `overview` が未取得のまま値を参照している | 画面のカードに `NaN` が出るのを確認する。`src/app/report/page.tsx` の各数値を `?? 0` でフォールバックする |
+| 時間が分のまま表示される | 60 で割っていない | 画面の合計時間の単位を見る。`src/app/report/page.tsx` の表示で `/ 60` して時間に変換する |
+| カードが縦1列のまま | グリッドのブレークポイントが足りない | 画面の横幅を変えて並びを見る。`src/app/report/page.tsx` のグリッドに `sm:` `lg:` のクラスを足す |
+| `Property 'report' does not exist on type` | `src/server/api/root.ts` に `reportRouter` を登録していない | `npx tsc --noEmit` の出力で `api.report` の型エラーを見る。`src/server/api/root.ts` の `appRouter` に `report: reportRouter` を足す |
+| エラーは出ないがカードの数字が全部0 | 参加中のプロジェクトを全部アーカイブしている | 画面で全カードが0のままなのを確認する。プロジェクトを1つアーカイブ解除して読み込み直す |
+| `JSX element 'div' has no corresponding closing tag.` | グリッドの `</div>` を閉じ忘れている | `npx tsc --noEmit` の出力でファイル名と行番号を見る。エラー行の少し上の `src/app/report/page.tsx` のグリッドに `</div>` を足す |
 
 ## 今日学んだ用語
 
