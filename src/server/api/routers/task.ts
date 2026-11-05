@@ -1,17 +1,18 @@
-import { Prisma, ProjectMemberRole } from '@prisma/client';
+import { Prisma, type ProjectMemberRole } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { TASK_PRIORITY } from '@/lib/constant/priority';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
-import { hasPermission, type PermissionKey } from '@/lib/constant/roles';
 import { TASK_STATUS } from '@/lib/constant/status';
 import { prisma } from '@/lib/prisma';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { lockProjectRows, lockProjectsOfTasks } from './_helpers/lock';
 import {
   assertMemberPermission,
   findTasksWithPermission,
   findTaskWithPermission,
   getUserProjectIds,
+  rolesWithPermission,
 } from './_helpers/permission';
 import { USER_SELECT } from './_helpers/select';
 
@@ -51,10 +52,8 @@ const bulkTaskIdsSchema = z
   .min(1)
   .max(MAX_BULK_TASKS)
   .refine((ids) => new Set(ids).size === ids.length, 'タスクIDを重複して指定できません');
-const getRolesWithPermission = (permission: PermissionKey): ProjectMemberRole[] =>
-  Object.values(ProjectMemberRole).filter((role) => hasPermission(role, permission));
-const TASK_EDIT_ROLES = getRolesWithPermission('canEdit');
-const TASK_DELETE_ROLES = getRolesWithPermission('canDelete');
+const TASK_EDIT_ROLES = rolesWithPermission('canEdit');
+const TASK_DELETE_ROLES = rolesWithPermission('canDelete');
 
 const buildBulkPermissionWhere = (
   ids: string[],
@@ -78,29 +77,12 @@ const assertBulkWriteCount = (count: number, expected: number) => {
   }
 };
 
-// プロジェクト行をロックする。メンバー削除（project.removeMember）も同じ行をロックするので、
-// ロックを取ったあとの担当者確認は、削除と同時に走っても削除済みのメンバーを通さない。
-// 複数のプロジェクトを取るときは ID 順にそろえる。相互に移動する 2 件が逆順で待ち合わないようにするため。
-const lockTaskProjects = async (tx: Prisma.TransactionClient, projectIds: string[]) => {
-  for (const projectId of [...new Set(projectIds)].sort()) {
-    const lockedProjects = await tx.$queryRaw<Array<{ id: string }>>(
-      Prisma.sql`SELECT "id" FROM "projects" WHERE "id" = ${projectId} FOR UPDATE`,
-    );
-    if (lockedProjects.length === 0) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'プロジェクトが見つかりません',
-      });
-    }
-  }
-};
-
 // 完了・中止のタスク。removeMember は、これらの担当者を完了実績として残す。
 const CLOSED_STATUSES = [TASK_STATUS.DONE, TASK_STATUS.CANCELLED] as const;
 const isClosedStatus = (status: string) => (CLOSED_STATUSES as readonly string[]).includes(status);
 
 const getNextTaskPosition = async (tx: Prisma.TransactionClient, projectId: string) => {
-  await lockTaskProjects(tx, [projectId]);
+  await lockProjectRows(tx, [projectId]);
 
   const maxPosition = await tx.task.findFirst({
     where: { projectId },
@@ -142,40 +124,6 @@ const lockTaskRows = async (tx: Prisma.TransactionClient, ids: string[]): Promis
   await tx.$queryRaw(
     Prisma.sql`SELECT "id" FROM "tasks" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR NO KEY UPDATE`,
   );
-};
-
-// 対象のタスクが属するプロジェクトを id の順にロックする。ロックを待つ間にタスクが別の
-// プロジェクトへ移ることがあるため、読み直してもロック済みの集合に収まるまで繰り返す。
-// 読み直しで取り済みより小さい id が現れたら、順序が逆転してデッドロックし得るので、
-// ロックを取らずに CONFLICT で返す（トランザクション全体が取り消される）。
-const lockProjectsOfTasks = async (
-  tx: Prisma.TransactionClient,
-  where: Prisma.TaskWhereInput,
-): Promise<void> => {
-  const locked = new Set<string>();
-  let highest = '';
-  for (;;) {
-    const rows = await tx.task.findMany({
-      where,
-      select: { projectId: true },
-      distinct: ['projectId'],
-    });
-    const pending = rows.map((row) => row.projectId).filter((id) => !locked.has(id));
-    if (pending.length === 0) {
-      return;
-    }
-    if (pending.some((id) => id < highest)) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: '他の操作と重なりました。もう一度お試しください',
-      });
-    }
-    for (const projectId of pending.sort()) {
-      await lockTaskProjects(tx, [projectId]);
-      locked.add(projectId);
-      highest = projectId;
-    }
-  }
 };
 
 // 完了・中止のタスクを未完了へ戻す前に、担当者がまだプロジェクトのメンバーか確かめ、
@@ -313,7 +261,7 @@ export const taskRouter = createTRPCRouter({
 
   create: protectedProcedure.input(taskCreateSchema).mutation(async ({ ctx, input }) => {
     return await prisma.$transaction(async (tx) => {
-      await lockTaskProjects(tx, [input.projectId]);
+      await lockProjectRows(tx, [input.projectId]);
       const project = await tx.project.findUnique({
         where: { id: input.projectId },
         include: {
@@ -439,7 +387,7 @@ export const taskRouter = createTRPCRouter({
         // 担当者を付ける・プロジェクトを移す・未完了へ戻すときだけ取る。タイトルや優先度だけの編集まで取ると、
         // 同じプロジェクトのタスク更新がすべて 1 件ずつの順番待ちになる。
         if (isProjectChanging || typeof data.assigneeId === 'string' || isReopening) {
-          await lockTaskProjects(tx, [existingTask.projectId, targetProjectId]);
+          await lockProjectRows(tx, [existingTask.projectId, targetProjectId]);
         }
 
         if (isProjectChanging) {
@@ -488,6 +436,13 @@ export const taskRouter = createTRPCRouter({
             id,
             // 完了日時を判断した状態が変わっていないことを、クライアントの日時指定がなくても確認する。
             updatedAt: expectedUpdatedAt ? new Date(expectedUpdatedAt) : existingTask.updatedAt,
+            // 認可確認と書き込みの間に権限が外れても更新しないよう、
+            // 現在の所属プロジェクトで必要ロールを持つことを書き込みの where に含める。
+            project: {
+              members: {
+                some: { userId: ctx.session.userId, role: { in: TASK_EDIT_ROLES } },
+              },
+            },
           },
           data: updateData,
           include: {
@@ -503,6 +458,10 @@ export const taskRouter = createTRPCRouter({
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        // updatedAt のずれ・タスクの削除・メンバー権限の剥奪は同じ P2025 で返る。
+        // 読み直して対象が無ければ NOT_FOUND、権限が無ければ FORBIDDEN、
+        // どちらでもなければ他の更新との競合として返す。
+        await findTaskWithPermission(id, ctx.session.userId, 'canEdit');
         throw new TRPCError({
           code: 'CONFLICT',
           // 自分自身の別操作（時間記録の追加など）による更新でも起こり得るため、
@@ -517,25 +476,33 @@ export const taskRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
-      const task = await findTaskWithPermission(input.id, ctx.session.userId);
-      assertMemberPermission(task.project.members, 'canDelete');
-
-      await prisma.task.delete({
-        where: { id: input.id },
+      return await prisma.$transaction(async (tx) => {
+        // removeMember などと同じプロジェクト行ロックを先に取り、
+        // そのトランザクション内で認可を再確認してから削除する。
+        // 確認のあとにメンバー削除・降格・タスク移動が割り込んでも、確定済みの結果で判定できる。
+        await lockProjectsOfTasks(tx, { id: input.id });
+        await findTaskWithPermission(input.id, ctx.session.userId, 'canDelete', tx);
+        await tx.task.delete({
+          where: { id: input.id },
+        });
+        return { success: true };
       });
-      return { success: true };
     }),
 
   addTime: protectedProcedure.input(taskTimeUpdateSchema).mutation(async ({ ctx, input }) => {
-    await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit');
+    return await prisma.$transaction(async (tx) => {
+      // delete と同じく、ロックを取ってから認可を再確認する。
+      await lockProjectsOfTasks(tx, { id: input.id });
+      await findTaskWithPermission(input.id, ctx.session.userId, 'canEdit', tx);
 
-    return await prisma.task.update({
-      where: { id: input.id },
-      data: {
-        timeSpentMinutes: {
-          increment: input.minutesToAdd,
+      return await tx.task.update({
+        where: { id: input.id },
+        data: {
+          timeSpentMinutes: {
+            increment: input.minutesToAdd,
+          },
         },
-      },
+      });
     });
   }),
 
