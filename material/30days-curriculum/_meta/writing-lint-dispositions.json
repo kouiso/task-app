@@ -197,7 +197,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 1583,
       "text": "…中に並びます。〈code〉 の入力は一番外側にも 〈code〉 が付いている…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 入れ子の位置を示す一番外/内側"
     },
@@ -257,7 +257,7 @@
       "counter": "B-11 するだけ",
       "line": 1538,
       "text": "…び出す側は4つのグループをただ並べるだけで済みます。件数を見出しに添えているのは…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 事実の簡便さ・限定の意味"
     },
@@ -267,7 +267,7 @@
       "counter": "B-11 するだけ",
       "line": 1679,
       "text": "…るのでこの画面はロールと操作名を渡すだけで済みます。…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 事実の簡便さ・限定の意味"
     },
@@ -277,7 +277,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 645,
       "text": "…〈code〉 がこのコンポーネントで一番効いている1行です。〈code〉 を…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 事実の簡便さ・限定の意味"
     },
@@ -287,7 +287,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 1538,
       "text": "…〈code〉 がこの部品で一番効いている1行です。〈code〉 を…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 事実の簡便さ・限定の意味"
     },
@@ -437,7 +437,7 @@
       "counter": "B-9 つまり",
       "line": 1034,
       "text": "…この関数を 〈code〉 の外、つまり 〈code〉 より前に置いてありま…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 言い換え・帰結を示し必要"
     },
@@ -447,7 +447,7 @@
       "counter": "B-9 つまり",
       "line": 1828,
       "text": "…こから下は 〈code〉 が無いときつまり一覧のときだけ動く部分です。…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: 言い換え・帰結を示し必要"
     },
@@ -537,7 +537,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 1909,
       "text": "…削除まで進まないところが完了処理との一番の違いです。この関数はダイアログを開…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "AI臭",
       "reason": "精度表 AI臭: 「一番の違い」強調、違いで足りる。完成済み教材は Phase 1 では書き換えない（プラン Phase 1 手順4）ため修正候補として残す"
     },
@@ -557,7 +557,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 1484,
       "text": "…4・15 で使った 〈code〉 は一番強いロックです。コメントを足す操作ま…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: ロックの強弱の技術的比較"
     },
@@ -567,7 +567,7 @@
       "counter": "A系 同一語反復「一番」",
       "line": 1484,
       "text": "…を確かめるために親にあたるタスク行へ一番弱い共有ロック（〈code〉）を掛け…",
-      "action": "keep",
+      "action": "fixed",
       "classification": "正当",
       "reason": "精度表 正当: ロックの強弱の技術的比較"
     }
