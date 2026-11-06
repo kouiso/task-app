@@ -1,7 +1,7 @@
 // check-public-content.mjs — issue・PR・コメント本文の公開内容チェック。
 // 公開リポの GitHub Actions から呼ぶ。AI・外部サービス・追加の認証情報は使わず、
 // .github/public-content-rules.json の正規表現規則だけで判定する。
-// 規則の語彙追加は JSON 側に足すだけでよい（依頼元の禁止語は customBannedWords）。
+// 規則の語彙追加は JSON 側の rules に足すだけでよい。
 //
 // 使い方:
 //   CHECK_BODY="..." node .github/ci/check-public-content.mjs --result out.json
@@ -79,8 +79,6 @@ export function scanText(text, config) {
     if (!found.has(rule.id)) found.set(rule.id, { label: rule.label, lines: new Set() });
     found.get(rule.id).lines.add(lineNo);
   };
-  const banned = (config.customBannedWords ?? []).filter((w) => typeof w === 'string' && w !== '');
-
   lines.forEach((line, index) => {
     const lineNo = index + 1;
     for (const rule of compiled) {
@@ -96,12 +94,6 @@ export function scanText(text, config) {
       }
       // pattern2 がある規則は同一行に両方ある時だけ検出（顧客名+金額の並び判定用）
       if (rule.re.test(line) && (!rule.re2 || rule.re2.test(line))) add(rule, lineNo);
-    }
-    for (const word of banned) {
-      if (line.includes(word)) {
-        add({ id: 'custom-banned-word', label: '依頼元指定の禁止語' }, lineNo);
-        break;
-      }
     }
   });
 
