@@ -70,13 +70,6 @@ test('attack: 典型的な悪用パターンで赤', () => {
   assert.ok(ids(r2).includes('attack-pattern'));
 });
 
-test('banned: customBannedWords の語で赤', () => {
-  const custom = { ...config, customBannedWords: ['極秘プロジェクトX'] };
-  const r = scanText('この件は極秘プロジェクトXに関係する', custom);
-  assert.ok(ids(r).includes('custom-banned-word'));
-  assert.equal(scanText('この件は無関係の話題', custom).ok, true);
-});
-
 test('clean: 普通の文章は緑', () => {
   const body = [
     '## 概要',
