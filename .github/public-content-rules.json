@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "description": "issue・PR・コメント本文の公開内容チェック規則。pattern は行単位で評価する正規表現（flags で i 等を指定可）。pattern2 がある規則は同一行に両方マッチした時だけ検出。依頼元から禁止語彙を受け取ったら customBannedWords か rules に追加する。",
+  "allowedEmailDomains": [
+    "ritmo.co.jp",
+    "example.com",
+    "example.org",
+    "example.net",
+    "users.noreply.github.com"
+  ],
+  "customBannedWords": [],
+  "rules": [
+    {
+      "id": "secret-assignment",
+      "label": "秘密値らしき文字列（APIキー・トークン・パスワードの代入形式）",
+      "pattern": "(api[_-]?key|access[_-]?token|auth[_-]?token|secret|passwd|password|pwd|client[_-]?secret|private[_-]?key|credentials?)[ \\t]*[:=：][ \\t]*[\"'`]?[A-Za-z0-9_\\-+/=.@$!%*?&]{8,}",
+      "flags": "i"
+    },
+    {
+      "id": "secret-known-token",
+      "label": "既知形式のトークン・秘密鍵らしき文字列",
+      "pattern": "(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|gh[orsu]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_\\-]{20,}|xox[baprs]-[A-Za-z0-9\\-]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\\-]{20,}|ya29\\.[A-Za-z0-9_\\-]{20,}|-----BEGIN[ A-Z0-9]*PRIVATE KEY-----|Bearer[ \\t]+[A-Za-z0-9_\\-.~+/]{16,}={0,2}|hooks\\.slack\\.com/services/[A-Za-z0-9\\-_+/]{10,})"
+    },
+    {
+      "id": "db-connection-string",
+      "label": "データベース接続文字列らしき文字列",
+      "pattern": "\\b(postgres(ql)?|mysql|mariadb|mongodb(\\+srv)?|redis|rediss|amqp|mssql|sqlserver|cockroachdb)://[^\\s\"'`\\]]+",
+      "flags": "i"
+    },
+    {
+      "id": "db-host-password",
+      "label": "DBホストとパスワードの組み合わせらしき記述",
+      "pattern": "(host(name)?|db[_-]?host|server)[ \\t]*[:=：][ \\t]*[^\\s,;\"']+.*(password|passwd|pwd)[ \\t]*[:=：][ \\t]*[^\\s,;\"']+",
+      "flags": "i"
+    },
+    {
+      "id": "personal-email",
+      "type": "email",
+      "label": "個人メールアドレスらしき文字列",
+      "pattern": "[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})"
+    },
+    {
+      "id": "customer-amount",
+      "label": "顧客名・氏名と金額の並びらしき記述",
+      "pattern": "[0-9０-９][0-9０-９,，]*[ \\t]*(億|千万|百万|万)?[ \\t]*円",
+      "pattern2": "(株式会社|合同会社|有限会社|（株）|\\(株\\)|㈱|Inc\\.?|Corp\\.?|Ltd\\.?|LLC|[一-龯ぁ-んァ-ヶA-Za-z]{2,}(様|氏|さん))"
+    },
+    {
+      "id": "attack-pattern",
+      "label": "攻撃手順・脆弱性悪用らしき記述",
+      "pattern": "(union[ \\t]+(all[ \\t]+)?select\\b|or[ \\t]+1[ \\t]*=[ \\t]*1|'[ \\t]*or[ \\t]+'1'[ \\t]*=[ \\t]*'1|<[ \\t]*script[^>]*>[ \\t]*alert[ \\t]*\\(|javascript[ \\t]*:|(\\.\\./){2,}|/etc/(passwd|shadow)|xp_cmdshell|drop[ \\t]+table[ \\t]+[a-z_]+)",
+      "flags": "i"
+    }
+  ]
+}
