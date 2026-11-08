@@ -1,0 +1,203 @@
+name: Deploy ZIP to course-library storage
+
+# 販売 ZIP（dist/task-app.zip）を作って course-library の R2 バケット
+# （course-library-materials）に置く。サイト（course-library Worker）が
+# `releases/task-app/<version>/` 配下のオブジェクトを配布元にする。
+#
+# ZIP の中身の定義は Makefile の zip-export が正（受講生が自分で書く対象の
+# src/server/api/routers/project.ts などは入らない）。
+#
+# 配置ルール（course-library docs/OPERATIONS.md と同じ考え方）:
+# - リリース用は「バージョンごとの不変 prefix」。一度置いたオブジェクトは上書きしない。
+# - main への push（リリースの取り込み）では、前のタグからのコミット内容で版を上げ
+#   （BREAKING/「!:」付きなら major・feat なら minor・それ以外は patch）、
+#   タグ v<X.Y.Z> と GitHub Release を作ってから `releases/task-app/<X.Y.Z>/` に置く。
+# - workflow_dispatch の `version` 入力で任意の版名の prefix にも置ける（再アップロード用）。
+# - サイトが購入者に出す版は manifest 側で版を指し替える別作業（レビュー付き）。
+#
+# ==== secrets の設定手順（未設定だと Check R2 secrets で失敗する）====
+#
+# 1. Cloudflare ダッシュボード → R2 → 「API トークンの管理」で R2 用 API トークンを作る
+#    （権限は「オブジェクトの読み取りと書き込み」、対象バケットは course-library-materials
+#    だけに絞るのが望ましい）
+# 2. GitHub の Settings > Secrets and variables > Actions でリポジトリ secret を3つ作る
+#    - R2_ACCOUNT_ID:  Cloudflare アカウント ID（ダッシュボード右側に表示される 32 桁の値）
+#    - R2_ACCESS_KEY_ID:     1. で発行した Access Key ID
+#    - R2_SECRET_ACCESS_KEY: 1. で発行した Secret Access Key
+# 3. トークンは失効しないので一度入れればよい。漏れたときは Cloudflare 側でロールする。
+#
+# 注意:
+# - バケットの公開設定（r2.dev・カスタム公開ドメイン）は有効にしない。配布は Worker 経由だけ。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "リリース版（例: 1.0.1）。releases/task-app/<version>/ に配置する"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+# なぜ: 2つの実行が同時に同名キーを書くと R2 側でどちらが新しいか分からなくなる。
+# アップロードは直列にし、実行中のものは止めない。
+concurrency:
+  group: deploy-r2
+  cancel-in-progress: false
+
+env:
+  RCLONE_VERSION: "1.75.2"
+  ZIP_PATH: dist/task-app.zip
+  ZIP_NAME: task-app-source.zip
+  BUCKET: course-library-materials
+
+jobs:
+  # main への push だけで動く。前のタグからのコミットを見て semver を上げ、
+  # タグと GitHub Release を作る。deploy より先に版が決まるので、R2 のキーはここの出力を使う。
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      version: ${{ steps.calc.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: calc
+        run: |
+          last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -n "$last" ]; then
+            base="${last#v}"
+            range="${last}..HEAD"
+          else
+            # package.json の版を起点にする（タグが1本も無い初回）
+            base=$(grep -m1 '"version"' package.json | sed 's/[^0-9.]//g')
+            range="HEAD"
+          fi
+          bump=patch
+          if git log "$range" --format='%s%n%b' | grep -qE 'BREAKING[ -]CHANGE|^[a-zA-Z]+(\([^)]*\))?!:'; then
+            bump=major
+          elif git log "$range" --format='%s' | grep -qE '^feat(\([^)]*\))?!?:'; then
+            bump=minor
+          fi
+          IFS=. read -r maj min pat <<< "$base"
+          case "$bump" in
+            major) maj=$((maj+1)); min=0; pat=0 ;;
+            minor) min=$((min+1)); pat=0 ;;
+            patch) pat=$((pat+1)) ;;
+          esac
+          ver="${maj}.${min}.${pat}"
+          echo "前の版 ${last:-（なし・起点 ${base}）} → ${ver}（${bump}、対象: ${range}）"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.calc.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "release ${VERSION}"
+          git push origin "v${VERSION}"
+          gh release create "v${VERSION}" --title "v${VERSION}" --generate-notes
+
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # version は main push 以外ではスキップされる。スキップは失敗ではないので
+    # 手動実行はそのまま進め、main push では版づくりの成功が要る。
+    needs: [version]
+    if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 配置先キーを決める。
+      # - workflow_dispatch: 入力 version をそのまま版として使う（形式チェック付き）
+      # - push main: version ジョブが作った版
+      - name: Resolve object key
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if ! printf '%s' "$INPUT_VERSION" | grep -qE '^[a-z0-9][a-z0-9.-]{0,62}$'; then
+              echo "::error::version の形式が不正です: ${INPUT_VERSION}（course-library の manifest 形式に合わせてください）"
+              exit 1
+            fi
+            PREFIX="releases/task-app/${INPUT_VERSION}/"
+          else
+            PREFIX="releases/task-app/${RELEASE_VERSION}/"
+          fi
+          echo "object_key=${PREFIX}${ZIP_NAME}" >> "$GITHUB_ENV"
+          echo "配置先: r2://${BUCKET}/${PREFIX}${ZIP_NAME}"
+
+      # zip-ci.yml と同じ入口で作って検査する（dist/task-app.zip の存在と中身）。
+      - name: Create ZIP
+        run: bash .github/ci/run.sh zip-build
+
+      - name: Verify ZIP exists
+        run: bash .github/ci/run.sh zip-exists
+
+      - name: Verify ZIP contents
+        run: bash .github/ci/run.sh zip-contents
+
+      # secrets 未設定でも「その時点の ZIP の中身」を run の画面から確認できるようにする。
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-app-zip
+          path: ${{ env.ZIP_PATH }}
+          retention-days: 7
+
+      # secrets は step の if: に書けないので、env に載せて空かどうかをシェルで見る。
+      # 未設定のまま進むと rclone が分かりにくい認証エラーで落ちるので、先にここで明示的に止める。
+      - name: Check R2 secrets
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          missing=()
+          [ -z "${R2_ACCOUNT_ID}" ] && missing+=("R2_ACCOUNT_ID")
+          [ -z "${R2_ACCESS_KEY_ID}" ] && missing+=("R2_ACCESS_KEY_ID")
+          [ -z "${R2_SECRET_ACCESS_KEY}" ] && missing+=("R2_SECRET_ACCESS_KEY")
+          if ((${#missing[@]})); then
+            echo "::error::Cloudflare R2 用の secrets が未設定です: ${missing[*]}"
+            echo "::error::設定手順は .github/workflows/deploy-r2.yml 冒頭のコメントを参照してください"
+            exit 1
+          fi
+
+      - name: Install rclone
+        run: |
+          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_VERSION}/SHA256SUMS"
+          grep "rclone-v${RCLONE_VERSION}-linux-amd64.zip" SHA256SUMS | sha256sum -c -
+          unzip -q "rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+          echo "${PWD}/rclone-v${RCLONE_VERSION}-linux-amd64" >> "${GITHUB_PATH}"
+          rclone version
+
+      # R2 は S3 互換 API。access_key_id / secret_access_key / endpoint を環境変数で渡す。
+      # copyto で指定キーへ新規オブジェクトとして置く（prefix は version ごとに新しい）。
+      - name: Upload to R2
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          if rclone lsf "r2:${BUCKET}/${object_key}" | grep -q .; then
+            echo "::error::${object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
+            exit 1
+          fi
+          rclone copyto -v --stats-one-line "${ZIP_PATH}" "r2:${BUCKET}/${object_key}"
+          rclone lsl "r2:${BUCKET}/${object_key}"
