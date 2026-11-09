@@ -12,6 +12,7 @@ name: Deploy ZIP to course-library storage
 # - main への push（リリースの取り込み）では、前のタグからのコミット内容で版を上げ
 #   （BREAKING/「!:」付きなら major・feat なら minor・それ以外は patch）、
 #   タグ v<X.Y.Z> と GitHub Release を作ってから `releases/task-app/<X.Y.Z>/` に置く。
+#   タグが1本も無い初回だけは package.json の版をそのままリリース版にする。
 # - workflow_dispatch の `version` 入力で任意の版名の prefix にも置ける（再アップロード用）。
 # - サイトが購入者に出す版は manifest 側で版を指し替える別作業（レビュー付き）。
 #
@@ -73,14 +74,16 @@ jobs:
         id: calc
         run: |
           last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
-          if [ -n "$last" ]; then
-            base="${last#v}"
-            range="${last}..HEAD"
-          else
-            # package.json の版を起点にする（タグが1本も無い初回）
-            base=$(grep -m1 '"version"' package.json | sed 's/[^0-9.]//g')
-            range="HEAD"
+          if [ -z "$last" ]; then
+            # タグが1本も無い初回は、リポジトリが宣言する版をそのまま出す
+            # （bump は 2 回目以降に効く。ここで足すと package.json の版より 1 つ先にずれる）
+            ver=$(grep -m1 '"version"' package.json | sed 's/[^0-9.]//g')
+            echo "初回リリース: package.json の版 ${ver} をそのまま使います"
+            echo "version=${ver}" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          base="${last#v}"
+          range="${last}..HEAD"
           bump=patch
           if git log "$range" --format='%s%n%b' | grep -qE 'BREAKING[ -]CHANGE|^[a-zA-Z]+(\([^)]*\))?!:'; then
             bump=major
@@ -94,7 +97,7 @@ jobs:
             patch) pat=$((pat+1)) ;;
           esac
           ver="${maj}.${min}.${pat}"
-          echo "前の版 ${last:-（なし・起点 ${base}）} → ${ver}（${bump}、対象: ${range}）"
+          echo "前の版 ${last} → ${ver}（${bump}、対象: ${range}）"
           echo "version=${ver}" >> "$GITHUB_OUTPUT"
 
       - name: Create tag and GitHub Release
