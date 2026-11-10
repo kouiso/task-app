@@ -50,7 +50,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RCLONE_VERSION: "1.75.2"
+  RCLONE_RELEASE: "1.75.2"
   ZIP_PATH: dist/task-app.zip
   ZIP_NAME: task-app-source.zip
   BUCKET: course-library-materials
@@ -181,12 +181,12 @@ jobs:
 
       - name: Install rclone
         run: |
-          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
-          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_VERSION}/SHA256SUMS"
-          grep "rclone-v${RCLONE_VERSION}-linux-amd64.zip" SHA256SUMS | sha256sum -c -
-          unzip -q "rclone-v${RCLONE_VERSION}-linux-amd64.zip"
-          echo "${PWD}/rclone-v${RCLONE_VERSION}-linux-amd64" >> "${GITHUB_PATH}"
-          rclone version
+          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_RELEASE}/rclone-v${RCLONE_RELEASE}-linux-amd64.zip"
+          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_RELEASE}/SHA256SUMS"
+          grep "rclone-v${RCLONE_RELEASE}-linux-amd64.zip" SHA256SUMS | sha256sum -c -
+          unzip -q "rclone-v${RCLONE_RELEASE}-linux-amd64.zip"
+          echo "${PWD}/rclone-v${RCLONE_RELEASE}-linux-amd64" >> "${GITHUB_PATH}"
+          "${PWD}/rclone-v${RCLONE_RELEASE}-linux-amd64/rclone" version
 
       # R2 は S3 互換 API。access_key_id / secret_access_key / endpoint を環境変数で渡す。
       # copyto で指定キーへ新規オブジェクトとして置く（prefix は version ごとに新しい）。
