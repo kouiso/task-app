@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "issue・PR・コメント本文の公開内容チェック規則。pattern は行単位で評価する正規表現（flags で i 等を指定可）。pattern2 がある規則は同一行に両方マッチした時だけ検出。依頼元から禁止語彙を受け取ったら customBannedWords か rules に追加する。",
+  "description": "issue・PR・コメント本文の公開内容チェック規則。pattern は行単位で評価する正規表現（flags で i 等を指定可）。pattern2 がある規則は同一行に両方マッチした時だけ検出。規則の追加は rules に書く。",
   "allowedEmailDomains": [
     "ritmo.co.jp",
     "example.com",
@@ -8,7 +8,6 @@
     "example.net",
     "users.noreply.github.com"
   ],
-  "customBannedWords": [],
   "rules": [
     {
       "id": "secret-assignment",
