@@ -376,7 +376,7 @@ def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
     同じ shim を再帰起動し、子プロセスが倍々に増える（mise 本体の既知の不具合と同じ仕組み）。
     実際の置き場を MISE_DATA_DIR に固定してから差し替える。
     """
-    if "MISE_DATA_DIR" not in env:
+    if not env.get("MISE_DATA_DIR"):
         xdg_home = env.get("XDG_DATA_HOME")
         base = Path(xdg_home) if xdg_home else Path.home() / ".local" / "share"
         env["MISE_DATA_DIR"] = str(base / "mise")
