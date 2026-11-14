@@ -368,6 +368,21 @@ def _toolchain_paths(root: Path) -> dict[str, str]:
     }
 
 
+def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
+    """子プロセス用 env の XDG_DATA_HOME を作業用に差し替える。
+
+    mise は既定のデータ置き場を $XDG_DATA_HOME/mise に取る。差し替えただけだと
+    空の置き場を見て、shim 経由の node 系コマンドが「latest」の解決のために
+    同じ shim を再帰起動し、子プロセスが倍々に増える（mise 本体の既知の不具合と同じ仕組み）。
+    実際の置き場を MISE_DATA_DIR に固定してから差し替える。
+    """
+    if not env.get("MISE_DATA_DIR"):
+        xdg_home = env.get("XDG_DATA_HOME")
+        base = Path(xdg_home) if xdg_home else Path.home() / ".local" / "share"
+        env["MISE_DATA_DIR"] = str(base / "mise")
+    env["XDG_DATA_HOME"] = str(work_dir / "xdg")
+
+
 def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
     TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
@@ -2094,7 +2109,7 @@ def main(argv: list[str]) -> int:
         env["PUPPETEER_EXECUTABLE_PATH"] = browser
         env["PUPPETEER_SKIP_DOWNLOAD"] = "true"
     # prepare_work_dir が置いた実体を mermaid-cli の Chromium から見えるようにする
-    env["XDG_DATA_HOME"] = str(WORK_DIR / "xdg")
+    redirect_font_data_home(env, WORK_DIR)
 
     before_inputs = None
     toolchain = None
