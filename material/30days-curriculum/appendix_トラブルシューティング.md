@@ -36,7 +36,7 @@
 
 #### `prisma generate` でエラー
 
-**原因**: `schema.prisma` の記述ミスです。実際には `Error: Prisma schema validation` と `Error code: P1012` に続いて、行番号付きのエラーが出ます。書いたはずの型名が `UnknownType` と出たときは、型名の綴りか構文が間違っています。
+**原因**: `schema.prisma` の記述ミスです。実際には `Error: Prisma schema validation` と `Error code: P1012` に続いて行番号付きのエラーが出ます。書いたはずの型名が `UnknownType` と出たときは型名の綴りか構文が間違っています。
 
 **解決方法**: エラー本文のファイル名と行番号を確認し、`schema.prisma` のその行を教材のコードと見比べます。
 #### PostgreSQL に接続できない

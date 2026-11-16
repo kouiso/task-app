@@ -237,7 +237,7 @@ export const projectRouter = createTRPCRouter({
 });
 ```
 
-初見で目が滑りやすいのは、`include` が3階層も入れ子になっているあたりです。外側から1段ずつほどけば迷いません。まず Prisma の `include` と `select` の使い分けを確認しておきます。
+初見で目が滑りやすいのは `include` が3階層も入れ子になっているあたりです。外側から1段ずつほどけば迷いません。まず Prisma の `include` と `select` の使い分けを確認しておきます。
 
 | キーワード | 役割 | このコードでの使い方 |
 |---|---|---|

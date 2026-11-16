@@ -1068,7 +1068,7 @@ const handleDelete = (taskId: string) => {
 };
 ```
 
-> `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と見た目をそろえつつ、`isPending` のあいだボタンを無効にして二重送信を防げます。
+> `window.confirm()` ではなく `DeleteConfirmDialog` コンポーネントを使います。Day 15 と見た目をそろえられますし、`isPending` のあいだボタンを無効にして二重送信も防げます。
 
 **確認ポイント**:
 - ファイルを保存した
@@ -2368,7 +2368,7 @@ export default function MyTasksPage() {
 
 ## 今日のまとめ
 
-Day 17 はここまでです。自分が担当しているタスクだけを抜き出し、ステータスや期限ごとに見渡せる専用ページが動くようになりました。
+Day 17 はここまでです。自分が担当しているタスクだけを抜き出してステータスや期限ごとに見渡せる専用ページが動くようになりました。
 
 - [ ] `getCurrentUser` で自分の ID を取得できた
 - [ ] `getAll({ assigneeId })` で自分のタスク取得
