@@ -426,9 +426,7 @@ sequenceDiagram
 
 ### Step 1: `defaultValues` + `useEffect(reset)` を理解する（5分）
 
-**ゴール**: `useForm` の `defaultValues` と
-`useEffect(reset(...))`（描画後に副作用を走らせるフック）が
-どのように編集モードを実現するかを理解します。
+**ゴール**: `useForm` の `defaultValues` と `useEffect(reset(...))`（描画後に副作用を走らせるフック）を組み合わせて、同じダイアログを編集用に切り替える流れを追います。
 
 **実装**:
 

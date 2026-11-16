@@ -274,7 +274,7 @@ const projectUpdateSchema = z.object({
 
 この「探す → 権限を見る → 実行する」という3段の並びは `update` と共通です。同じ形を繰り返しているので Day 12 で書く `addMember` も同じ順番で組み立てられます。
 
-続けて権限チェックと削除の処理を書きます。ここが `delete` で一番大事な部分です。
+続けて権限チェックと削除本体の処理を書きます。`update` とは許すロールの範囲が違うので、その差に注目してください。
 
 ```typescript
 // filepath: src/server/api/routers/project.ts（続き）
