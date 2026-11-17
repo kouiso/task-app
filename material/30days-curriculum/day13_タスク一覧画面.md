@@ -392,7 +392,7 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-`appRouter` に `task: taskRouter` を足したことでフロント側の `api.task.getAll` と `api.task.getById` が手続きにつながります。同時に `src/app/providers.tsx` から `root.ts` を経て `task.ts` まで import がつながるため `npx tsc --noEmit` がいま書いた `task.ts` も検査するようになります。今の `root.ts` には auth・project・task の3つが並びます。`comment` や `search` などはそれを使う Day で1つずつ足していきます。
+`appRouter` に `task: taskRouter` を足したことでフロント側の `api.task.getAll` と `api.task.getById` が手続きにつながります。あわせて `src/app/providers.tsx` から `root.ts` 経由で `task.ts` まで import がつながります。そのため `npx tsc --noEmit` はいま書いた `task.ts` も検査対象に含めます。今の `root.ts` には auth・project・task の3つが並びます。`comment` や `search` などはそれを使う Day で1つずつ足していきます。
 
 **確認ポイント**:
 - `root.ts` に `taskRouter` の import と `task: taskRouter` の2行を追加した
