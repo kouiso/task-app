@@ -719,7 +719,7 @@ const deleteCommentMutation =
   });
 ```
 
-削除が成功したら `invalidate` で一覧を取り直し、確認ダイアログの開閉 state と対象 ID も閉じます。
+削除が成功したら `invalidate` で一覧を取り直します。あわせて確認ダイアログの開閉 state と対象 ID も閉じます。
 配布済みの `DeleteConfirmDialog` は削除ボタンを押した時点では自動で閉じない作りなので成功を確認したここで閉じます。
 消えたコメントはサーバーから返ってこなくなるため取り直した一覧から自然に姿を消します。
 
@@ -841,7 +841,7 @@ return (
 | タイミング | 処理 |
 |-----------|------|
 | キャンセル | `onOpenChange` で false |
-| 削除ボタンを押す | `event.preventDefault()` で開いたまま保ち、削除成功の `onSuccess` で state を閉じる |
+| 削除ボタンを押す | `event.preventDefault()` で開いたまま保つ。削除成功の `onSuccess` で state を閉じる |
 | Esc キー | `onOpenChange` で false |
 | ダイアログ外クリック | 閉じない |
 
