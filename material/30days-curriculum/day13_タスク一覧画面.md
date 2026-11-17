@@ -343,7 +343,7 @@ Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getBy
       });
 ```
 
-`});` で `findUnique` の呼び出しが閉じ、結果が `task` に入りました。ただしまだ返してはいけません。`findUnique` は見つからないときに例外ではなく `null` を返すからです。Day 09 の `getAll` は配列を返すので0件でも困りませんでしたが1件を返す `getById` は「無い」と「見てはいけない」を自分で分ける必要があります。次のブロックがその2つの入口です。
+`});` で `findUnique` の呼び出しが閉じて結果が `task` に入りました。ただしまだそのまま返してはいけません。`findUnique` は見つからないときに例外ではなく `null` を返すからです。Day 09 の `getAll` は配列を返すので0件でも困りませんでした。しかし1件を返す `getById` では「存在しない」と「見る権限がない」を自分で切り分ける必要があります。次のブロックがその2つの分岐です。
 
 ```typescript
 // filepath: src/server/api/routers/task.ts（続き）

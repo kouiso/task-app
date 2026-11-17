@@ -128,7 +128,7 @@ import type { Prisma } from '@prisma/client';
 import { taskPrioritySchema, taskStatusSchema } from '@/lib/constant/query';
 import { getUserProjectIds } from './_helpers/permission';
 ```
-3つとも、今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて `Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値をそのまま持っているので画面から届いた文字列が正しい値かどうかを入口で確かめられます。`getUserProjectIds` はそのユーザーが参加しているプロジェクトの id だけを返す関数です。これを取り込んでおかないとあとで検索範囲を自分のプロジェクトへ絞れません。
+3つとも今日の検索処理でしか使いません。`Prisma` は型だけを取り込んでいて `Prisma.TaskWhereInput` のような検索条件の型注釈に使います。`taskStatusSchema` と `taskPrioritySchema` は Day 13 で決めたステータスと優先度の値を持っています。画面から届いた文字列が正しい値かどうかを入口で確かめる役目です。`getUserProjectIds` はそのユーザーが参加しているプロジェクトの id だけを返す関数です。これを取り込んでおかないとあとで検索範囲を自分のプロジェクトへ絞れません。
 
 続けて Day 14 の `import` 群の下に検索件数の上限を置きます。
 
@@ -303,7 +303,7 @@ const buildDateRangeFilter = (dateFrom?: string, dateTo?: string) => {
           select: USER_SELECT,
         },
 ```
-検索条件を `AND` の配列で積み上げているのは「参加中プロジェクトであること」「指定したフィルターに合うこと」「キーワードが合うこと」を全部同時に満たさせたいからです。条件が増えても配列に 1 個ずつ足していけば読みやすさを保てます。
+検索条件を `AND` の配列に積んでいるのは理由があります。「参加中プロジェクトであること」「指定したフィルターに合うこと」「キーワードが合うこと」の3つを同時に満たさせたいからです。条件が増えても配列に 1 個ずつ足していけば読みやすさを保てます。
 
 `buildDynamicWhere` の返り値をそのまま配列へ入れられます。返す形が `where` と同じだからです。キーワードだけ `push` で後から足しているのは入力が空のときに `OR` ごと省きたいからです。空の配列を `OR` に渡すとどの行も一致しなくなり、他の条件が合っていても結果は0件になります。
 
@@ -1367,7 +1367,7 @@ useEffect(() => {
   }
 }, [searchParams, form]);
 ```
-7つの項目すべてを毎回書き込みます。URL に載っていない項目は `empty` に戻るので `?status=TODO` の画面から `status` の付いていない URL へ戻ればフォームの `status` も `'all'` に戻ります。URL に書いてあることが画面のすべてと言い切れる状態です。書き込む項目を URL に載っているものだけに絞ると消えた条件が画面に残り、表示と検索結果が食い違います。
+7つの項目すべてを毎回書き込みます。URL に載っていない項目は `empty` に戻します。たとえば `?status=TODO` の画面から `status` の無い URL へ戻ればフォームの `status` も `'all'` に戻ります。URL に書いてあることが画面のすべてと言い切れる状態です。もし書き込む項目を URL に載っているものだけに絞ると消えたはずの条件が画面に残って検索結果と食い違います。
 
 依存配列に `searchParams` を入れてあるためこの処理は URL が変わるたびに走ります。`handleSearch` で URL を書き換えるとその変化を受けてここが動き、フォームの値が URL に追いつく、という一方向の流れになります。
 
