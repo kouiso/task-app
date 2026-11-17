@@ -484,15 +484,49 @@ figure img[src$=".png"] {
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
-    /* 表示は生成器が作る data-pdf-footnote-display を使う。href には共有
-       パラメータ ?usp= や改行可能位置の制限が無く、テーマの break-all が
-       語の途中で切っていた。表示URLは `/ ? & =` の直後だけで折れる。 */
-    content: attr(data-pdf-footnote) ". " attr(data-pdf-footnote-display);
+    /* 脚注の本文は実要素 .pdf-fn が持つ。::before を残すと空の脚注が
+       別に生成されるので消す（issue #763-28） */
+    content: none;
+    float: none;
+  }
+
+  /* 表のセルの中だと実要素の float: footnote が呼び出しと別ページに流れる
+     ので、表の中だけは従来どおり ::before の attr 生成で脚注を出す。
+     表示URLに不可視文字は入れず、版面に収まらない所は行末で折る */
+  :not(.footnote) td > a[data-pdf-footnote][href^="http"]::before,
+  :not(.footnote) th > a[data-pdf-footnote][href^="http"]::before {
+    content: attr(data-pdf-footnote) "． " attr(data-pdf-footnote-display);
+    float: footnote;
+    clear: both;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* 脚注の本文は生成器が <a> の内側に置いた .pdf-fn。テキストに不可視
+     文字を入れないので、コピーしたURLが壊れない。表示URLは `/ ? & =`
+     の直後の <wbr> だけで折れ、それ以外は .pdf-nw の nowrap で接着する */
+  :not(.footnote) > a[data-pdf-footnote][href^="http"] > .pdf-fn {
+    float: footnote;
     clear: both;
     inline-size: 100%;
     max-inline-size: 100%;
     word-break: normal;
     overflow-wrap: normal;
+    color: var(--vs-footnote--color-body, inherit);
+    font-size: var(--vs-footnote--font-size);
+    line-height: var(--vs-footnote--line-height);
+    text-decoration: none;
+  }
+
+  .pdf-fn .pdf-nw {
+    white-space: nowrap;
+  }
+
+  /* 番号は .pdf-fn の本文に全角ピリオド付きで入れるので、自動マーカーは消す */
+  .pdf-fn::footnote-marker {
+    content: none;
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
@@ -506,8 +540,8 @@ figure img[src$=".png"] {
    Day 04 の組版が止まるので、箇条書きと引用に限る。引用を外すと Day 01 の
    「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
 @media print {
-  li > a[data-pdf-footnote][href^="http"]::before,
-  blockquote > p > a[data-pdf-footnote][href^="http"]::before {
+  li > a[data-pdf-footnote][href^="http"] > .pdf-fn,
+  blockquote > p > a[data-pdf-footnote][href^="http"] > .pdf-fn {
     footnote-policy: line;
   }
 }
@@ -529,7 +563,9 @@ figure img[src$=".png"] {
     font-size: 0.6em;
     font-weight: normal;
     word-break: normal;
-    overflow-wrap: normal;
+    /* 表示には不可視文字を入れない（issue #763-28）。版面に収まらない
+       URL は行末で折れる */
+    overflow-wrap: anywhere;
   }
 }
 

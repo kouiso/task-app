@@ -139,19 +139,19 @@ ORPHAN_PREV_MIN_RATIO = 0.9
 # 脚注の表示URLは生成側で「/ ? & =」の直後だけに折り返しを許している。
 # それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
 URL_BREAK_ALLOWED_AFTER = "/?&="
-FOOTNOTE_URL_START = re.compile(r"^\s*\d+\.\s*https?://")
+FOOTNOTE_URL_START = re.compile(r"^\s*\d+[.．]\s*https?://")
 
 
 def generated_footnote_line(raw_text: str) -> bool:
     """生成器が出した脚注の行なら True。
 
-    生成器（build_pdf_book.py の footnote_display_url）は脚注の表示URLに
-    折返し用の不可視文字（U+200B・U+2060）を必ず挟む。原稿の番号付き
-    リストの行頭がたまたま `N. https://…` の形（インラインコードのURL）を
-    していても不可視文字は無いので、この印で脚注と取り違えない
-    （issue #474 直し6）。
+    生成器（build_pdf_book.py）は脚注の番号のあとに全角ピリオド（U+FF0E）
+    を入れる。原稿の番号付きリストの行頭がたまたま `N. https://…` の形
+    （インラインコードのURL）をしていても、区切りは半角ピリオドなので
+    この印で脚注と取り違えない。URL 本体には印も不可視文字も入れない
+    （issue #763-28）。
     """
-    return "\u200b" in raw_text or "\u2060" in raw_text
+    return "．" in raw_text
 # URLの続きとしてあり得る行（空白を含まずURL文字だけ）
 URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
 # 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
@@ -684,7 +684,7 @@ def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
             text = visible_text(line.text)
             if FOOTNOTE_URL_START.match(text) and generated_footnote_line(line.text):
                 footnote = True
-                number = re.match(r"^\s*(\d+)\.", text)
+                number = re.match(r"^\s*(\d+)[.．]", text)
                 numbers.append(int(number.group(1)))
                 continue
             stripped = text.strip()

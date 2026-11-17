@@ -67,14 +67,16 @@ class BookLinksTest(unittest.TestCase):
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
 <pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>'''
-        expected = ('''<p class="lead"><a data-pdf-footnote="1" '''
-                    + 'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2"'
-                    + ''' class="cta" title="A &gt; B"
- href="https://example.com/?a=1&amp;b=2"><span>装飾</span></a></p>
-<p><a data-pdf-footnote="2" '''
-                    + 'data-pdf-footnote-display="http\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060net/\u200bx"'
-                    + " href='http://example.net/x'>外部</a></p>\n"
-                    + '''<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
+        expected = (
+            "<p class=\"lead\"><a data-pdf-footnote=\"1\" "
+            "class=\"cta\" title=\"A &gt; B\"\n"
+            " href=\"https://example.com/?a=1&amp;b=2\">"
+            + '<span class="pdf-fn">1． <span class="pdf-nw">https:</span>/<wbr/>/<wbr/><span class="pdf-nw">example.com</span>/<wbr/>?<wbr/><span class="pdf-nw">a</span>=<wbr/><span class="pdf-nw">1</span>&amp;<wbr/><span class="pdf-nw">b</span>=<wbr/><span class="pdf-nw">2</span></span>'
+            + "<span>装飾</span></a></p>\n"
+            + "<p><a data-pdf-footnote=\"2\" href='http://example.net/x'>"
+            + '<span class="pdf-fn">2． <span class="pdf-nw">http:</span>/<wbr/>/<wbr/><span class="pdf-nw">example.net</span>/<wbr/><span class="pdf-nw">x</span></span>'
+            + "外部</a></p>\n"
+            + '''<p><a href="/relative">相対</a> <a href="#fragment">見出し</a>
 <a href="mailto:a@example.com">メール</a> <a href="tel:123">電話</a></p>
 <div class="note footnote compact"><a href="https://example.org/in-footnote">脚注内</a></div>
 <pre><code>&lt;a href="https://example.invalid/code"&gt;</code></pre>''')
@@ -85,12 +87,21 @@ class BookLinksTest(unittest.TestCase):
                   '<p><a href="https://example.net/x">外部</a></p>')
         result = number_external_link_footnotes(source)
         # 見出しの中のリンクは番号を消費せず、表示用URLだけを受け取る（issue #474 直し4）
-        self.assertIn('<a data-pdf-heading-url='
-                      '"https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200bdocs"'
+        self.assertIn('<a data-pdf-heading-url="https://example.com/docs"'
                       ' href="https://example.com/docs">公式</a>', result)
         # 本文のリンクは 1 から振られる
         self.assertIn('data-pdf-footnote="1" ', result)
         self.assertNotIn('data-pdf-footnote="2"', result)
+
+    def test_table_cell_link_keeps_attr_footnote_without_marks(self):
+        # セルの中の実要素 float: footnote は呼び出しと別ページに流れるので、
+        # 表の中だけ ::before の attr 生成に留める。表示URLに印は入れない
+        source = ('<table><tr><td><a href="https://example.com/docs">公式</a></td></tr></table>\n'
+                  '<p><a href="https://example.net/x">外部</a></p>')
+        result = number_external_link_footnotes(source)
+        self.assertIn('data-pdf-footnote-display="https://example.com/docs"', result)
+        self.assertNotIn('pdf-fn', result.split('</table>')[0])
+        self.assertIn('<span class="pdf-fn">', result)
 
     def test_bare_url_link_is_not_numbered(self):
         source = ('<p><a href="https://example.com/docs">https://example.com/docs</a></p>\n'
@@ -118,9 +129,9 @@ class BookLinksTest(unittest.TestCase):
     def test_print_footnote_numbers_restart_for_each_book_and_survive_void_elements(self):
         source = '<p><br><a href="https://example.com">外部</a><img src="x"></p>'
         expected = ('<p><br><a data-pdf-footnote="1" '
-                    'data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com"'
-                    ' href="https://example.com">外部</a>'
-                    '<img src="x"></p>')
+                    'href="https://example.com">'
+                    + '<span class="pdf-fn">1． <span class="pdf-nw">https:</span>/<wbr/>/<wbr/><span class="pdf-nw">example.com</span></span>'
+                    + '外部</a><img src="x"></p>')
         self.assertEqual(number_external_link_footnotes(source), expected)
         self.assertEqual(number_external_link_footnotes(source), expected)
 
@@ -128,8 +139,8 @@ class BookLinksTest(unittest.TestCase):
         source = ('<p><a href="https://drive.google.com/file/d/ID/view?usp=drivesdk">共有</a>'
                   '<a href="https://example.com/?a=1&usp=sharing&b=2#sec">両方</a></p>')
         result = number_external_link_footnotes(source)
-        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bdrive\u2060.\u2060google\u2060.\u2060com/\u200bfile/\u200bd/\u200bID/\u200bview"', result)
-        self.assertIn('data-pdf-footnote-display="https\u2060:\u2060/\u200b/\u200bexample\u2060.\u2060com/\u200b?\u200ba=\u200b1&amp;\u200bb=\u200b2\u2060#\u2060sec"', result)
+        self.assertIn('<span class="pdf-fn">1． <span class="pdf-nw">https:</span>/<wbr/>/<wbr/><span class="pdf-nw">drive.google.com</span>/<wbr/><span class="pdf-nw">file</span>/<wbr/><span class="pdf-nw">d</span>/<wbr/><span class="pdf-nw">ID</span>/<wbr/><span class="pdf-nw">view</span></span>', result)
+        self.assertIn('<span class="pdf-fn">2． <span class="pdf-nw">https:</span>/<wbr/>/<wbr/><span class="pdf-nw">example.com</span>/<wbr/>?<wbr/><span class="pdf-nw">a</span>=<wbr/><span class="pdf-nw">1</span>&amp;<wbr/><span class="pdf-nw">b</span>=<wbr/><span class="pdf-nw">2#sec</span></span>', result)
         self.assertIn('href="https://drive.google.com/file/d/ID/view?usp=drivesdk"', result)
 
     def test_print_footnote_reserved_attribute_is_rejected(self):
