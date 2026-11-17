@@ -134,7 +134,12 @@ def _classes(element: _Element) -> set[str]:
 
 
 def _inner_text(element: _Element) -> str:
-    """要素の中の可視テキストを全部つなぐ。コメントとタグは含まない。"""
+    """要素の中の可視テキストを全部つなぐ。コメントとタグは含まない。
+
+    脚注の本文（.pdf-fn）は脚注領域へ出るので段落の文には含めない。
+    含めると PDF 側の本文抽出（脚注を除く）とずれて、keep-next の
+    突き合わせが正常な本を拒否する（issue #763-28 の戻り）。
+    """
     parts: list[str] = []
     stack = list(reversed(element.children))
     while stack:
@@ -142,6 +147,8 @@ def _inner_text(element: _Element) -> str:
         if kind == "text":
             parts.append(value)
         elif kind == "el":
+            if "pdf-fn" in _classes(value):
+                continue
             stack.extend(reversed(value.children))
     return "".join(parts)
 
@@ -166,6 +173,8 @@ def _bold_text(element: _Element) -> str:
             if inside:
                 parts.append(value)
         else:
+            if "pdf-fn" in _classes(value):
+                continue
             nested = inside or value.tag == "strong"
             stack.extend(
                 (kind, value, nested)

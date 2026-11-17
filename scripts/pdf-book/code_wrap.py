@@ -1201,11 +1201,13 @@ def wrap_logical_lines(inner: str) -> str:
     if close_m:
         suffix = close_m.group(1)
         body = body[: close_m.start()]
-    # 改行を跨ぐ Prism span は行境界で閉じて開き直し、行 span が
-    # 要素の途中を切らない形にする
-    body, _ = _balance_multiline_spans(body)
+    # 原子的にする必要があるのは強制改行で2行以上に折れた文だけ。
+    # 1行のままの文は行の途中では割れないので、短い行の出力を変えずに済む
     wrapped = "\n".join(
-        f'<span class="{LINE_CLASS}">{line}</span>' for line in body.split("\n")
+        f'<span class="{LINE_CLASS}">{line}</span>'
+        if f'class="{FORCE_BREAK_CLASS}"' in line
+        else line
+        for line in body.split("\n")
     )
     return prefix + wrapped + suffix
 

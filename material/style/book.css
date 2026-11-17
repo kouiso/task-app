@@ -508,8 +508,11 @@ figure img[src$=".png"] {
   /* 表のセルの中だと実要素の float: footnote が呼び出しと別ページに流れる
      ので、表の中だけは従来どおり ::before の attr 生成で脚注を出す。
      表示URLに不可視文字は入れず、版面に収まらない所は行末で折る */
-  :not(.footnote) td > a[data-pdf-footnote][href^="http"]::before,
-  :not(.footnote) th > a[data-pdf-footnote][href^="http"]::before {
+  /* 生成器はセルの子孫にあるリンクすべてへ属性を付けるので、直下の
+     子だけでなく子孫セレクタにする。strong や p に包まれたリンクの
+     脚注が欠けるのを防ぐ */
+  :not(.footnote) td a[data-pdf-footnote][href^="http"]::before,
+  :not(.footnote) th a[data-pdf-footnote][href^="http"]::before {
     content: attr(data-pdf-footnote) "． " attr(data-pdf-footnote-display);
     float: footnote;
     clear: both;
