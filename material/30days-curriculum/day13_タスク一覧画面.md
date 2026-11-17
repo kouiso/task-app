@@ -367,7 +367,8 @@ Step 7 で配置する `TaskDetailDialog` は選択した1件を `api.task.getBy
 - `src/server/api/routers/task.ts` に `getAll` と `getById` を書き、`}),` と `});` まで閉じた
 - `getUserProjectIds` を使って自分のプロジェクトのタスクだけに絞っている
 - `getById` でも `assertMemberPermission` で閲覧権限を確認している
-- `npx tsc --noEmit` で型エラーが出ていない（画面から呼ぶ前に、ここまで書いた API の型を確認する）
+
+初期設定の `tsconfig.json` は未参照の `src/server` を除外しています。`npx tsc --noEmit` による型検査は次の `0-8` で `root.ts` へ登録したあとに行います。
 
 #### 0-8. root.ts に task ルーターを登録する
 
@@ -391,11 +392,11 @@ export type AppRouter = typeof appRouter;
 export const createCaller = createCallerFactory(appRouter);
 ```
 
-`appRouter` に `task: taskRouter` を足したことで、フロント側の `api.task.getAll` と `api.task.getById` が手続きにつながります。今の `root.ts` には auth・project・task の3つが並びます。`comment` や `search` などはそれを使う Day で1つずつ足していきます。
+`appRouter` に `task: taskRouter` を足したことでフロント側の `api.task.getAll` と `api.task.getById` が手続きにつながります。同時に `src/app/providers.tsx` から `root.ts` を経て `task.ts` まで import がつながるため `npx tsc --noEmit` がいま書いた `task.ts` も検査するようになります。今の `root.ts` には auth・project・task の3つが並びます。`comment` や `search` などはそれを使う Day で1つずつ足していきます。
 
 **確認ポイント**:
 - `root.ts` に `taskRouter` の import と `task: taskRouter` の2行を追加した
-- `npx tsc --noEmit` で型エラーが出ていない
+- `npx tsc --noEmit` で `task.ts` と `root.ts` を含めて型エラーが出ていない
 
 ---
 

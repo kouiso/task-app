@@ -508,6 +508,7 @@ git status --short
  M tsconfig.json
 ?? biome.json
 ?? docker-compose.yml
+?? patches/
 ?? prisma/
 ?? src/app/dashboard/
 ?? src/component/
@@ -534,7 +535,7 @@ git add package.json package-lock.json
 git add tsconfig.json next.config.ts
 git add postcss.config.mjs biome.json
 git add prisma prisma.config.ts
-git add public src
+git add patches public src
 git add docker-compose.yml
 git add .node-version
 git add -f .env.example
@@ -542,11 +543,11 @@ git status --short
 git ls-files package.json package-lock.json
 git ls-files tsconfig.json next.config.ts
 git ls-files postcss.config.mjs biome.json
-git ls-files prisma prisma.config.ts public src
+git ls-files patches prisma prisma.config.ts public src
 git ls-files docker-compose.yml .node-version .env.example
 ```
 
-`.node-version` は中身が `22` の1行だけのファイルで、手元の Node をこのバージョンにそろえる目的で置いてあります。`mise` のようなバージョン管理ツールがこのファイルを読みます。公開先の Vercel が使う Node のバージョンはこのファイルではなく `package.json` の `engines.node`（このプロジェクトでは `"22.x"`）で決まります。`package.json` はこの Step で add するので手元と公開先のバージョンはそろいます。
+`.node-version` は中身が `22` の1行だけのファイルで、手元の Node をこのバージョンにそろえる目的で置いてあります。`mise` のようなバージョン管理ツールがこのファイルを読みます。公開先の Vercel が使う Node のバージョンはこのファイルではなく `package.json` の `engines.node`（このプロジェクトでは `"22.x"`）で決まります。`package.json` はこの Step で add するので手元と公開先のバージョンはそろいます。あわせて add した `patches/` には `npm install` 直後の `postinstall`（`patch-package`）が当てる Next.js 用の修正パッチが入っています。Vercel のビルドでも同じパッチを当てるため GitHub へ一緒に送ります。
 
 `.env.example` にだけ `-f` を付けているのは `.gitignore` の `.env*` がこのファイルも除外しているためです。見本ファイルだけは意図的に例外として加えます。`-f` を付けずに実行すると `The following paths are ignored by one of your .gitignore files` と表示され、追加されません。
 

@@ -337,9 +337,9 @@ git status
 ```bash
 # filepath: ターミナル
 # Day 04〜29 で変更したアプリ用の場所を明示する
-git add src prisma package.json package-lock.json
+git add src prisma patches package.json package-lock.json
 git add .env.example docker-compose.yml
-git add next.config.ts tsconfig.json biome.json
+git add next.config.ts tsconfig.json biome.json vitest.config.ts
 
 # コミット対象と未ステージ差分を必ず確認する
 git diff --cached --name-only
