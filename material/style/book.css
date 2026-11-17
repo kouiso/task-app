@@ -185,6 +185,14 @@ code {
   display: inline-block;
 }
 
+/* 論理行ごとの span。inline-block はページの境で割れない一枚の箱なので、
+   強制改行（br.cw-force）で2行以上に折れた文が頁をまたいで、
+   ランニングヘッダーが文の途中へ入るのを防ぐ（issue #763-11）。
+   文が頁の残りに収まらない時は文ごと次の頁へ送られる。 */
+.cw-line {
+  display: inline-block;
+}
+
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);

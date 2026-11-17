@@ -108,6 +108,7 @@ SHRINK_MIN_PCT = int(SHRINK_MIN_PT * 100 / PRE_FONT_PT) + 1  # ≒70
 SHRINK_CLASS = "cw-shrink"
 BLOCK_SHRINK_CLASS = "cw-block-shrink"
 FORCE_BREAK_CLASS = "cw-force"
+LINE_CLASS = "cw-line"
 # 強制改行の直後に置く空き要素。幅は元の行の字下げ＋2桁で、続き行が
 # 字下げを失って左端に落ちる（字下げの浅い外側の行に見える）のを防ぐ。
 # 空白文字ではなく空要素にするのは、コピー時の文字列を変えないため。
@@ -1179,6 +1180,36 @@ def rewrite_pre_inner(
 LANG_RE = re.compile(r"language-([a-zA-Z0-9]+)")
 
 
+def wrap_logical_lines(inner: str) -> str:
+    """論理行ごとに <span class="cw-line"> で囲む。
+
+    強制改行（br.cw-force）で2行以上に折れた文がページの境で割れると、
+    ランニングヘッダーが文の途中へ入る（issue #763-11）。cw-line は
+    inline-block で、断片化できない一枚の箱になるので、文は丸ごと
+    次ページへ送られる。pre 自体は行の境目で割れるので、大きい
+    コード枠（pdf-breakable）が流れなくなることはない。
+    """
+    # <code …>・</code> は行 span の外に出す（行 span の中に開始タグだけが
+    # 残ると要素が境界をまたぐ）
+    prefix, suffix = "", ""
+    open_m = re.match(r"(\s*<code\b[^>]*>)", inner)
+    body = inner
+    if open_m:
+        prefix = open_m.group(1)
+        body = body[open_m.end():]
+    close_m = re.search(r"(</code>\s*)$", body)
+    if close_m:
+        suffix = close_m.group(1)
+        body = body[: close_m.start()]
+    # 改行を跨ぐ Prism span は行境界で閉じて開き直し、行 span が
+    # 要素の途中を切らない形にする
+    body, _ = _balance_multiline_spans(body)
+    wrapped = "\n".join(
+        f'<span class="{LINE_CLASS}">{line}</span>' for line in body.split("\n")
+    )
+    return prefix + wrapped + suffix
+
+
 def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str:
     """HTML全体の <pre> を走査して安全な折返しを入れた文字列を返す。
 
@@ -1194,7 +1225,8 @@ def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str
         lang_m = LANG_RE.search(open_tag)
         lang = lang_m.group(1).lower() if lang_m else ""
         inner = block[open_end:-len("</pre>")]
-        return open_tag + rewrite_pre_inner(inner, lang, residuals) + "</pre>"
+        rewritten = rewrite_pre_inner(inner, lang, residuals)
+        return open_tag + wrap_logical_lines(rewritten) + "</pre>"
     return PRE_RE.sub(repl, html_text)
 
 
