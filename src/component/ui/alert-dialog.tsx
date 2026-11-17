@@ -49,9 +49,12 @@ const AlertDialogContent = React.forwardRef<
         }}
         onCloseAutoFocus={(event) => {
           onCloseAutoFocus?.(event);
+          const previousElement = lastFocusedElementRef.current;
+          lastFocusedElementRef.current = null;
           if (event.defaultPrevented) return;
+          if (!previousElement || previousElement === document.body) return;
           event.preventDefault();
-          lastFocusedElementRef.current?.focus();
+          previousElement.focus();
         }}
       />
     </AlertDialogPortal>

@@ -11,15 +11,17 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from './alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from './dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from './dialog';
 
-function ControlledDialogHarness({
-  modal = true,
-  customFocusTarget = false,
-}: {
+interface ControlledDialogHarnessProps {
   modal?: boolean;
   customFocusTarget?: boolean;
-}) {
+}
+
+const ControlledDialogHarness = ({
+  modal = true,
+  customFocusTarget = false,
+}: ControlledDialogHarnessProps) => {
   const [open, setOpen] = React.useState(false);
   const customRef = React.useRef<HTMLButtonElement>(null);
 
@@ -50,9 +52,9 @@ function ControlledDialogHarness({
       </Dialog>
     </div>
   );
-}
+};
 
-function ControlledAlertDialogHarness() {
+const ControlledAlertDialogHarness = () => {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -69,7 +71,20 @@ function ControlledAlertDialogHarness() {
       </AlertDialog>
     </div>
   );
-}
+};
+
+const TriggerWithAutoFocusHarness = () => (
+  <Dialog>
+    <DialogTrigger asChild>
+      <button type="button">トリガーで開く</button>
+    </DialogTrigger>
+    <DialogContent>
+      <DialogTitle>トリガー付き</DialogTitle>
+      <DialogDescription>説明</DialogDescription>
+      <input aria-label="自動フォーカス欄" />
+    </DialogContent>
+  </Dialog>
+);
 
 describe('制御型 Dialog / AlertDialog のクローズ時フォーカス制御', () => {
   it('モーダル Dialog を Escape で閉じると開いたボタンへフォーカスが戻る', async () => {
@@ -131,6 +146,23 @@ describe('制御型 Dialog / AlertDialog のクローズ時フォーカス制御
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).toBeNull();
       expect(document.activeElement).toBe(opener);
+    });
+  });
+
+  it('開く直前の activeElement が body の時は既定の DialogTrigger 復帰を妨げない', async () => {
+    const user = userEvent.setup();
+    render(<TriggerWithAutoFocusHarness />);
+
+    const trigger = screen.getByRole('button', { name: 'トリガーで開く' });
+    // Safari 等でクリック時にボタンへフォーカスが乗らないケースを再現
+    trigger.addEventListener('click', () => document.body.focus(), { once: true });
+    await user.click(trigger);
+    await screen.findByRole('dialog');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
     });
   });
 });

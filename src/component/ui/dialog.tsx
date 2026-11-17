@@ -77,11 +77,17 @@ const DialogContent = React.forwardRef<
           onCloseAutoFocus={(event) => {
             onCloseAutoFocus?.(event);
             const interactedOutside = hasInteractedOutsideRef.current;
+            const previousElement = lastFocusedElementRef.current;
             hasInteractedOutsideRef.current = false;
+            lastFocusedElementRef.current = null;
             if (event.defaultPrevented) return;
+            if (!isModal && interactedOutside) {
+              event.preventDefault();
+              return;
+            }
+            if (!previousElement || previousElement === document.body) return;
             event.preventDefault();
-            if (!isModal && interactedOutside) return;
-            lastFocusedElementRef.current?.focus();
+            previousElement.focus();
           }}
         >
           {children}
