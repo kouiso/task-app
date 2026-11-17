@@ -223,17 +223,23 @@ table {
   /* 縦に並べ直した行がページの境で二つに割けると、見出しと説明が行き違いになる */
   break-inside: avoid;
 }
+/* 項目名と値を1行ずつ縦に並べると、本文の行間（line-height 2.05）と
+   項目ごとの余白で札1枚が頁の半分を使い、空頁が続く（issue #763-10）。
+   札の中だけ行間を詰めて項目間の余白も半分に減らし、1頁に複数の札を
+   収める。値の側に長い行内コードが来ることがあるので、項目名と値を
+   横に並べる組み方（値の列が細くなりコードが収まらなくなる）はしない */
 .pdf-stacked-row dl {
   margin: 0;
+  line-height: 1.45;
 }
 .pdf-stacked-row dt {
   color: var(--book-accent);
   font-weight: bold;
-  margin-block-start: 0.55em;
+  margin-block-start: 0.25em;
   break-after: avoid;
 }
 .pdf-stacked-row dd {
-  margin: 0.2em 0 0.7em;
+  margin: 0.05em 0 0.25em;
   text-align: start;
   orphans: 2;
   widows: 2;
