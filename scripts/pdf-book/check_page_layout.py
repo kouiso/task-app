@@ -342,10 +342,12 @@ def find_ink_overflow(rows: list[tuple[int, int, int]]) -> list[str]:
 class Line:
     """PDF から取り出した1行。座標は mm、原点はページの左上。"""
 
-    __slots__ = ("page", "block", "left", "top", "right", "bottom", "text")
+    __slots__ = ("page", "block", "left", "top", "right", "bottom", "text",
+                 "words")
 
     def __init__(self, page: int, block: int, left: float, top: float,
-                 right: float, bottom: float, text: str) -> None:
+                 right: float, bottom: float, text: str,
+                 words: list[str] | None = None) -> None:
         self.page = page
         self.block = block
         self.left = left
@@ -353,6 +355,7 @@ class Line:
         self.right = right
         self.bottom = bottom
         self.text = text
+        self.words = words
 
     @property
     def width(self) -> float:
@@ -384,16 +387,17 @@ def parse_line_boxes(xml_text: str) -> list[Line]:
     for number, page in enumerate(pages, start=1):
         for block, element in enumerate(page.iter(f"{namespace}block")):
             for line in element.findall(f"{namespace}line"):
-                text = "".join(
+                words = [
                     word.text or "" for word in line.findall(f"{namespace}word")
-                )
+                ]
                 lines.append(Line(
                     number, block,
                     float(line.get("xMin", "0")) * MM_PER_PT,
                     float(line.get("yMin", "0")) * MM_PER_PT,
                     float(line.get("xMax", "0")) * MM_PER_PT,
                     float(line.get("yMax", "0")) * MM_PER_PT,
-                    text,
+                    "".join(words),
+                    words,
                 ))
     return lines
 
@@ -697,7 +701,10 @@ def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
             body_parts.append(text)
         if not numbers:
             continue
-        body = "".join(body_parts)
+        # 行を区切らずに継ぐと呼び出し `*4` に次の行頭の数字がくっついて
+        # `*45` と読まれ、呼び出しが無いと誤判定される（箇条書きの
+        # 番号が呼び出しの直後に並ぶ冊で起きる。issue #763）
+        body = "\n".join(body_parts)
         for number in numbers:
             if not re.search(rf"\*{number}(?!\d)", body):
                 problems.append(
@@ -734,6 +741,27 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
     返すのは (つないだ文字列, {そのページの文字列が終わる位置: ページ番号})。
     """
     marker = _footnote_marker_re(markup)
+    # 実要素の float: footnote（.pdf-fn）は呼び出し位置に自動の
+    # ::footnote-call（裸の番号）を描く。同じ行に呼び出し「*N」が
+    # ある時だけ、その番号と一致する語を拾うと本文に混ざった
+    # 番号を外せる。語が丸ごと番号の物だけ対象にするので、本文中の
+    # 「2章」や「第2版」の数字は残る（issue #763-28）。
+    footnote_numbers = {
+        str(number)
+        for number in re.findall(r'data-pdf-footnote="(\d+)"', markup)
+    }
+
+    def strip_call_digits(text: str, words: list[str] | None) -> str:
+        if not words:
+            return text
+        present = {w for w in words if w in footnote_numbers}
+        if not present:
+            return text
+        return "".join(
+            w for w in words
+            if not (w in present and f"*{w}" in words)
+        )
+
     blocks: dict[tuple[int, int], list[Line]] = {}
     for line in lines:
         blocks.setdefault((line.page, line.block), []).append(line)
@@ -754,7 +782,7 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
             if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
                 continue
             texts[page] = texts.get(page, "") + normalize_text(
-                marker.sub("", line.text))
+                marker.sub("", strip_call_digits(line.text, line.words)))
     parts: list[str] = []
     page_ends: dict[int, int] = {}
     cursor = 0
