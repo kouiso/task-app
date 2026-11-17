@@ -543,6 +543,7 @@ figure img[src$=".png"] {
   }
 
   /* 番号は .pdf-fn の本文に全角ピリオド付きで入れるので、自動マーカーは消す */
+  /* biome-ignore lint/correctness/noUnknownPseudoElement: ::footnote-marker は Vivliostyle（CSS GCPM）の脚注マーカー擬似要素で、ブラウザの既知名には無い */
   .pdf-fn::footnote-marker {
     content: none;
   }
