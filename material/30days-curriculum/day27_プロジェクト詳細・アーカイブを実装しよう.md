@@ -1276,6 +1276,8 @@ function ProjectPageContent() {
   const deleteMutation = api.project.delete.useMutation({
     onSuccess: () => {
       utils.project.getAll.invalidate();
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
       router.push('/project');
     },
   });
@@ -1304,6 +1306,8 @@ function ProjectPageContent() {
       if (selectedProject) {
         utils.project.getById.invalidate({ id: selectedProject });
       }
+      setRemoveMemberDialogOpen(false);
+      setRemoveMemberTargetId(null);
     },
   });
 

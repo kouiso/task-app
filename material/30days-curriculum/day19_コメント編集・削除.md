@@ -698,8 +698,7 @@ Step 4 で書いた編集モードはここまでで呼び出しがつながり�
 
 ### Step 6: 確認ダイアログ付きの削除処理を書く（6分）
 
-**ゴール**: 確認ダイアログ付きの
-確認ダイアログ付きの削除処理を書くします。
+**ゴール**: 確認ダイアログ付きの削除処理を書きます。
 
 **実装**:
 
@@ -714,12 +713,14 @@ const deleteCommentMutation =
           { id: taskId },
         );
       }
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
     },
   });
 ```
 
-削除後にやることは編集と同じ `invalidate` ひとつです。
-編集では state のクリアも必要でしたが削除では編集モードに入っていないので要りません。
+削除が成功したら `invalidate` で一覧を取り直し、確認ダイアログの開閉 state と対象 ID も閉じます。
+配布済みの `DeleteConfirmDialog` は削除ボタンを押した時点では自動で閉じない作りなので成功を確認したここで閉じます。
 消えたコメントはサーバーから返ってこなくなるため取り直した一覧から自然に姿を消します。
 
 ここで `invalidate` を落とすと消したはずのコメントが画面に残り続けます。
@@ -840,7 +841,7 @@ return (
 | タイミング | 処理 |
 |-----------|------|
 | キャンセル | `onOpenChange` で false |
-| 削除ボタンを押す | API の完了を待たず、`onOpenChange` で false |
+| 削除ボタンを押す | `event.preventDefault()` で開いたまま保ち、削除成功の `onSuccess` で state を閉じる |
 | Esc キー | `onOpenChange` で false |
 | ダイアログ外クリック | 閉じない |
 
@@ -1457,6 +1458,8 @@ useEffect(() => {
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
       }
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
     },
   });
 ```
@@ -1946,6 +1949,8 @@ useEffect(() => {
       if (taskId) {
         utils.task.getById.invalidate({ id: taskId });
       }
+      setDeleteCommentDialogOpen(false);
+      setDeleteCommentTargetId(null);
     },
   });
 
