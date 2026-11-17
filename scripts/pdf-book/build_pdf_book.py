@@ -1318,6 +1318,14 @@ def parse_source(
     toc: list[tuple[str, str, list[tuple[str, str]]]] = []
     seq = 0
 
+    def append_body(line: str) -> None:
+        # この toolchain の parser は段落の直後の見出しを段落の続きとして
+        # 組む。見出しの直前が空行でなければ空行を足して、#### や
+        # ## ... {#sN} が本文へ露出しないようにする（issue #763-15）
+        if body and body[-1].strip() != "" and HEADING_RE.match(line):
+            body.append("")
+        body.append(line)
+
     for _, line, state, _ in fence_states(text):
         if state != "outside":
             body.append(line)
@@ -1334,7 +1342,7 @@ def parse_source(
             seq += 1
             anchor = f"s{seq}"
             toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
-            body.append(f"## {h2.group(1)} {{#{anchor}}}")
+            append_body(f"## {h2.group(1)} {{#{anchor}}}")
             continue
 
         h3_step = H3_STEP_RE.match(line)
@@ -1346,10 +1354,10 @@ def parse_source(
                 toc[-1][2].append((anchor, text))
             else:
                 toc.append((anchor, text, []))
-            body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
+            append_body(f"### {h3_step.group(1)} {{#{anchor}}}")
             continue
 
-        body.append(line)
+        append_body(line)
 
     return title, body, toc
 
@@ -1548,7 +1556,13 @@ def diagram_font_face() -> str:
         "<style>@font-face{"
         f"font-family:'{FONT_SOURCES[0][2]}';font-style:normal;font-weight:400;"
         f"src:url(data:font/ttf;base64,{encoded}) format('truetype');"
-        "}</style>"
+        "}"
+        # BIZ UDPGothic の f_i 合字は枠だけあって中身が空（実測: profile が
+        # 「pro le」に欠ける）。mermaid のラベルは foreignObject 内の
+        # p/span にも来るので全要素で合字を切り、f と i を別の字のまま出す
+        # （issue #763-26）
+        "*{font-variant-ligatures:none;}"
+        "</style>"
     )
 
 
