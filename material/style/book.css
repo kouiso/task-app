@@ -621,3 +621,11 @@ figure img[src$=".png"] {
   /* 空白も等幅でないと分けた片どうしの字面がずれる */
   font-family: var(--vs--monospace-font-family);
 }
+
+/* 各本の末尾にある奥付の section は、表のあとに「© …」とライセンス文が
+   続く。ここを頁またぎするとライセンスだけの頁が残り、目次の頁番号も
+   奥付の実際より1頁早く出る（issue #763-19）。末尾の section ごと
+   頁をまたがない塊にして、見出しからライセンスまで同じ頁に置く。 */
+body > section.level2:last-of-type {
+  break-inside: avoid;
+}
