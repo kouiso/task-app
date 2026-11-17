@@ -1185,9 +1185,12 @@ def wrap_logical_lines(inner: str) -> str:
 
     強制改行（br.cw-force）で2行以上に折れた文がページの境で割れると、
     ランニングヘッダーが文の途中へ入る（issue #763-11）。cw-line は
-    inline-block で、断片化できない一枚の箱になるので、文は丸ごと
+    ブロック箱で break-inside: avoid が効くので、文は丸ごと
     次ページへ送られる。pre 自体は行の境目で割れるので、大きい
     コード枠（pdf-breakable）が流れなくなることはない。
+    inline-block も原子的だが頁を跨いで動いた箱より後ろの文字が
+    PDF の文字列順で先に並び verify_pdf_copy が崩れた。ブロック箱なら
+    出現順が保たれる。行区切りの改行は span の内側へ畳む。
     """
     # <code …>・</code> は行 span の外に出す（行 span の中に開始タグだけが
     # 残ると要素が境界をまたぐ）
@@ -1203,13 +1206,17 @@ def wrap_logical_lines(inner: str) -> str:
         body = body[: close_m.start()]
     # 原子的にする必要があるのは強制改行で2行以上に折れた文だけ。
     # 1行のままの文は行の途中では割れないので、短い行の出力を変えずに済む
-    wrapped = "\n".join(
-        f'<span class="{LINE_CLASS}">{line}</span>'
-        if f'class="{FORCE_BREAK_CLASS}"' in line
-        else line
-        for line in body.split("\n")
-    )
-    return prefix + wrapped + suffix
+    # ブロック箱化した行は行区切りの改行を span の内側へ畳む。
+    # ブロック箱の後ろに置くと空行が一行増えるため。
+    lines = body.split("\n")
+    parts = []
+    for i, line in enumerate(lines):
+        tail = "\n" if i < len(lines) - 1 else ""
+        if f'class="{FORCE_BREAK_CLASS}"' in line:
+            parts.append(f'<span class="{LINE_CLASS}">{line}{tail}</span>')
+        else:
+            parts.append(line + tail)
+    return prefix + "".join(parts) + suffix
 
 
 def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str:

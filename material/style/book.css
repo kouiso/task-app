@@ -185,12 +185,15 @@ code {
   display: inline-block;
 }
 
-/* 論理行ごとの span。inline-block はページの境で割れない一枚の箱なので、
+/* 論理行ごとの span。ブロック箱にして break-inside: avoid を効かせ、
    強制改行（br.cw-force）で2行以上に折れた文が頁をまたいで、
    ランニングヘッダーが文の途中へ入るのを防ぐ（issue #763-11）。
-   文が頁の残りに収まらない時は文ごと次の頁へ送られる。 */
+   文が頁の残りに収まらない時は文ごと次の頁へ送られる。
+   inline-block でも原子的だが、頁を跨いで動いた箱より後ろの文字が
+   PDF の文字列順で先に並び verify_pdf_copy が崩れたためブロック箱にする。 */
 .cw-line {
-  display: inline-block;
+  display: block;
+  break-inside: avoid;
 }
 
 /* 囲み記事。blockquote は教材に812回出る */
