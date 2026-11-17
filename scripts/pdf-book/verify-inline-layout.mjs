@@ -63,7 +63,8 @@ function readJson(filePath, label) {
 function atomicWriteJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temporary = `${filePath}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`);
+  // 1冊1000件超の計測記録を整形出力すると空白だけで50MB増え36冊で数GBになる
+  fs.writeFileSync(temporary, `${JSON.stringify(value)}\n`);
   fs.renameSync(temporary, filePath);
 }
 
