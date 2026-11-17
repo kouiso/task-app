@@ -21,7 +21,8 @@ Day 07 で認証バックエンドを作りました。
 サイドバー付きのレイアウトを自分で作って
 まずダッシュボードにこのレイアウトを適用します。Day 09 以降のページには作るたびに同じレイアウトを適用していきます。
 
-- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider を読んで、どこまで届くか確認する
+- [ ] `src/app/providers.tsx` — 配布済みの tRPC Provider を読んでどこまで届くか確認する
+- [ ] `src/app/layout.tsx` — 配布済みのルートレイアウトが `Providers` で囲んでいることを確認する
 - [ ] `src/component/layout/app-layout.tsx` — サイドバー + メインコンテンツ
 - [ ] `src/app/dashboard/page.tsx` — AppLayout の中で動くダッシュボード
 - [ ] ログアウトが動作することを確認する
