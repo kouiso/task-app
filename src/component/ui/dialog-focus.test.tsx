@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as React from 'react';
 import { describe, expect, it } from 'vitest';
@@ -73,12 +73,16 @@ const ControlledAlertDialogHarness = () => {
   );
 };
 
-const TriggerWithAutoFocusHarness = () => (
+interface TriggerWithAutoFocusHarnessProps {
+  onOpenAutoFocus?: React.ComponentProps<typeof DialogContent>['onOpenAutoFocus'];
+}
+
+const TriggerWithAutoFocusHarness = ({ onOpenAutoFocus }: TriggerWithAutoFocusHarnessProps) => (
   <Dialog>
     <DialogTrigger asChild>
       <button type="button">トリガーで開く</button>
     </DialogTrigger>
-    <DialogContent>
+    <DialogContent onOpenAutoFocus={onOpenAutoFocus}>
       <DialogTitle>トリガー付き</DialogTitle>
       <DialogDescription>説明</DialogDescription>
       <input aria-label="自動フォーカス欄" />
@@ -151,13 +155,21 @@ describe('制御型 Dialog / AlertDialog のクローズ時フォーカス制御
 
   it('開く直前の activeElement が body の時は既定の DialogTrigger 復帰を妨げない', async () => {
     const user = userEvent.setup();
-    render(<TriggerWithAutoFocusHarness />);
+    const seenAtOpen: (Element | null)[] = [];
+    render(
+      <TriggerWithAutoFocusHarness
+        onOpenAutoFocus={() => seenAtOpen.push(document.activeElement)}
+      />,
+    );
 
     const trigger = screen.getByRole('button', { name: 'トリガーで開く' });
-    // Safari 等でクリック時にボタンへフォーカスが乗らないケースを再現
-    trigger.addEventListener('click', () => document.body.focus(), { once: true });
-    await user.click(trigger);
+    // user.click はクリック前にボタンへフォーカスを移すので、Safari のように
+    // クリックでフォーカスが乗らない環境を再現できない。tabindex の無い
+    // body.focus() もフォーカスを動かさない。fireEvent.click はフォーカスを
+    // 一切動かさないので、保存対象が body になる状態を確実に作れる。
+    fireEvent.click(trigger);
     await screen.findByRole('dialog');
+    expect(seenAtOpen).toEqual([document.body]);
 
     await user.keyboard('{Escape}');
     await waitFor(() => {
