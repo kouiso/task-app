@@ -375,7 +375,8 @@ pre.pdf-breakable {
 }
 
 /* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
-   hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
+   hoist_code_filepath）。中身はコメント記号を外した `filepath: ファイル名` で、
+   教材が読者に教える印なので `filepath:` の語は残す（issue #763-18）。コードでは
    なく「この枠がどのファイルか」の見出し。等幅で pre と同じ級数にし、
    折返せないコメント行として縮まないよう枠の外に置く。長いファイル名は
    ふつうに折り返す。break-after: avoid で直後のコード枠と同じページに留める。 */

@@ -1213,11 +1213,12 @@ _FILEPATH_TAIL_RE = re.compile(r"[ \t]*\*/[ \t]*\}?[ \t]*$")
 
 
 def code_filepath_label(line: str) -> str | None:
-    """行が filepath 見出しなら、コメント記号と `filepath:` を外した表示文字を返す。
+    """行が filepath 見出しなら、コメント記号を外した `filepath: …` の表示文字を返す。
 
     `// filepath:`・`# filepath:`・`/* filepath: … */`・`{/* filepath: … */}`
     の4形を受ける。先頭の字下げは「ファイル内のどの位置の続きか」を示す
-    目印で、見出し化したときは要らないので落とす。
+    目印で、見出し化したときは要らないので落とす。`filepath:` の語は
+    教材が読者に教える印なので残す（issue #763-18）。
     """
     match = _FILEPATH_LINE_RE.match(line)
     if not match:
@@ -1225,7 +1226,7 @@ def code_filepath_label(line: str) -> str | None:
     marker, body = match.group(1), match.group(2)
     if marker in ("/*", "{/*"):
         body = _FILEPATH_TAIL_RE.sub("", body)
-    return body
+    return f"filepath: {body}"
 
 
 def hoist_code_filepath(html_text: str) -> str:
