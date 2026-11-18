@@ -314,10 +314,7 @@ function auditPaginatedDom(manifest, constants) {
       if (/^(inline-)?(flex|grid)$/.test(style.display)) {
         return { status: 'unsupported', reason: 'anonymous_flex_or_grid_item', trail };
       }
-      // table-cell も包含ブロック（疑似表 .pdf-field の dt/dd）。通過すると列ではなく dl 全幅を測り、値列をはみ出すコードを縮小しない。
-      if (
-        ['block', 'flow-root', 'list-item', 'inline-block', 'table-cell'].includes(style.display)
-      ) {
+      if (['block', 'flow-root', 'list-item', 'inline-block'].includes(style.display)) {
         if (!style.writingMode.startsWith('horizontal')) {
           return { status: 'unsupported', reason: 'non_horizontal_writing_mode', trail };
         }

@@ -12,12 +12,6 @@ from html.parser import HTMLParser
 
 from inline_layout import HTML_VOID_ELEMENTS
 
-# これ以上の長さの行内コードを含むカード行は縦積みに戻す。
-# 横並びの値列は見出し語の桁ぶん狭いので、8pt 下限まで縮めても
-# 入りきらないコードが出る（実測で 90 文字前後のエラー文が限界を超えた）。
-# 55 文字は 8pt でおよそ横並び値列の収まる目安に安全側を足した長さ。
-STACK_INLINE_CODE_LIMIT = 55
-
 
 @dataclass
 class Element:
@@ -232,16 +226,7 @@ def restructure_tables(markup: str, forced: dict[int, str] | None = None) -> tup
         headers = rows[0].children
         for row_index, row in enumerate(rows[1:]):
             row_attrs = dict(row.attrs)
-            row_class = ' pdf-stacked-row'
-            # 横に長い行内コードがある行だけ、見出し語の横並びをやめて
-            # 縦積みに戻す。横並びの値列は左の桁ぶん狭く、下限の 8pt に
-            # 縮めても収まらないコードが出る（issue #763 通し番号10 対応）
-            cell_html = ''.join(_inner(markup, cell) for cell in row.children)
-            code_runs = [html.unescape(re.sub(r'<[^>]+>', '', run))
-                         for run in re.findall(r'<code\b[^>]*>(.*?)</code>', cell_html, re.S)]
-            if code_runs and max(len(run) for run in code_runs) >= STACK_INLINE_CODE_LIMIT:
-                row_class += ' pdf-stacked-row--stack'
-            row_attrs['class'] = (row_attrs.get('class', '') + row_class).strip()
+            row_attrs['class'] = (row_attrs.get('class', '') + ' pdf-stacked-row').strip()
             # 組版後に「行がページを跨いでいないか」を照合するための冊内の行番号
             row_attrs['data-pdf-stacked-row'] = f'{order}-{row_index}'
             parts.append('<div' + _attribute_text(row_attrs) + '><dl>')
@@ -251,13 +236,8 @@ def restructure_tables(markup: str, forced: dict[int, str] | None = None) -> tup
                 if row_index:
                     label = re.sub(r'\s+id=(?:"[^"]*"|\x27[^\x27]*\x27)', '', label)
                 h_attrs = {k: v for k, v in header.attrs.items() if k not in {'scope', 'style'} and (k != 'id' or not row_index)}
-                # 見出し語と値を1組の .pdf-field に包む。float だと PDF の
-                # 文字抽出で値が先に来て組版検査の並び判定に反するため、
-                # 疑似表のセルにして DOM 順のまま横に並べる
-                parts += ['<div class="pdf-field">',
-                          '<dt' + _attribute_text(h_attrs) + '>' + label + '</dt>',
-                          '<dd' + _attribute_text({k: v for k, v in cell.attrs.items() if k not in {'style', 'headers'}}) + '>' + _inner(markup, cell) + '</dd>',
-                          '</div>']
+                parts += ['<dt' + _attribute_text(h_attrs) + '>' + label + '</dt>',
+                          '<dd' + _attribute_text({k: v for k, v in cell.attrs.items() if k not in {'style', 'headers'}}) + '>' + _inner(markup, cell) + '</dd>']
             parts.append('</dl></div>')
         parts.append('</section>')
         item['data_rows'] = len(rows) - 1

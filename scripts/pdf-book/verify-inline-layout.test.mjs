@@ -475,32 +475,3 @@ test('unmarked inline code fails before PDF even with an otherwise complete mani
   assert.doesNotMatch(JSON.stringify(result.report.dom_audit.violations), /PRE-IS-EXCLUDED/);
   assert.equal(fs.existsSync(result.output), false);
 });
-
-// 疑似表（.pdf-field）の値列に置かれたコードは flow 扱い。収まる幅は値列の幅を
-// 基準にしないと、値列をはみ出すコードが縮小対象から漏れる。
-test('flow code inside a pseudo-table cell measures the cell, not the full dl width', {
-  skip: !canIntegrate,
-}, () => {
-  const directory = makeScratch('inline-layout-pseudo-cell-test-');
-  writeFixture(directory, {
-    html: `<!doctype html><html lang="ja"><body>
-      <dl class="pdf-field">
-        <dt>項目の名前</dt>
-        <dd><code data-pdf-inline-id="cell-code">CELL-CODE</code></dd>
-      </dl>
-    </body></html>`,
-    css: `@page{size:A4;margin:20mm}body{font:12pt sans-serif}.pdf-field{display:table;table-layout:fixed;width:400px;margin:0}.pdf-field>dt{display:table-cell;width:230px;padding:0}.pdf-field>dd{display:table-cell;padding:0}code{font:12pt monospace;white-space:nowrap}`,
-    expected: manifest([
-      { id: 'cell-code', expected_text: 'CELL-CODE', source_order: 0, context: 'flow' },
-    ]),
-  });
-  const result = runFixture(directory);
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  const flow = observedItem(result.report, 'cell-code');
-  assert.equal(flow.flow_geometry.status, 'supported');
-  // dl 全幅は 400px。値列の dd は 170px であり、縮小判定はその幅を基準にする。
-  assert.ok(
-    flow.flow_geometry.available_width < 200,
-    `expected value-column width, got ${flow.flow_geometry.available_width}`,
-  );
-});
