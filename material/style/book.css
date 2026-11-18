@@ -185,6 +185,17 @@ code {
   display: inline-block;
 }
 
+/* 論理行ごとの span。ブロック箱にして break-inside: avoid を効かせ、
+   強制改行（br.cw-force）で2行以上に折れた文が頁をまたいで、
+   ランニングヘッダーが文の途中へ入るのを防ぐ（issue #763-11）。
+   文が頁の残りに収まらない時は文ごと次の頁へ送られる。
+   inline-block でも原子的だが、頁を跨いで動いた箱より後ろの文字が
+   PDF の文字列順で先に並び verify_pdf_copy が崩れたためブロック箱にする。 */
+.cw-line {
+  display: block;
+  break-inside: avoid;
+}
+
 /* 囲み記事。blockquote は教材に812回出る */
 blockquote {
   border: 1px solid var(--book-rule);
@@ -223,17 +234,23 @@ table {
   /* 縦に並べ直した行がページの境で二つに割けると、見出しと説明が行き違いになる */
   break-inside: avoid;
 }
+/* 項目名と値を1行ずつ縦に並べると、本文の行間（line-height 2.05）と
+   項目ごとの余白で札1枚が頁の半分を使い、空頁が続く（issue #763-10）。
+   札の中だけ行間を詰めて項目間の余白も半分に減らし、1頁に複数の札を
+   収める。値の側に長い行内コードが来ることがあるので、項目名と値を
+   横に並べる組み方（値の列が細くなりコードが収まらなくなる）はしない */
 .pdf-stacked-row dl {
   margin: 0;
+  line-height: 1.45;
 }
 .pdf-stacked-row dt {
   color: var(--book-accent);
   font-weight: bold;
-  margin-block-start: 0.55em;
+  margin-block-start: 0.25em;
   break-after: avoid;
 }
 .pdf-stacked-row dd {
-  margin: 0.2em 0 0.7em;
+  margin: 0.05em 0 0.25em;
   text-align: start;
   orphans: 2;
   widows: 2;
@@ -269,6 +286,12 @@ table {
 .pdf-keep-next + figure {
   display: block;
   text-align: center;
+}
+/* display: block に戻しても、段落がちょうどページの底まで埋まる配置では
+   Vivliostyle の avoid が段落だけ残す（day08 の実測）。印付き段落と図を
+   包む div に割れ禁止を掛けて、段落ごと図を次ページへ送る。 */
+.pdf-keep-group {
+  break-inside: avoid;
 }
 .pdf-keep-next + figure img {
   display: block;
@@ -375,7 +398,8 @@ pre.pdf-breakable {
 }
 
 /* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
-   hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
+   hoist_code_filepath）。中身はコメント記号を外した `filepath: ファイル名` で、
+   教材が読者に教える印なので `filepath:` の語は残す（issue #763-18）。コードでは
    なく「この枠がどのファイルか」の見出し。等幅で pre と同じ級数にし、
    折返せないコメント行として縮まないよう枠の外に置く。長いファイル名は
    ふつうに折り返す。break-after: avoid で直後のコード枠と同じページに留める。 */
@@ -484,15 +508,53 @@ figure img[src$=".png"] {
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
-    /* 表示は生成器が作る data-pdf-footnote-display を使う。href には共有
-       パラメータ ?usp= や改行可能位置の制限が無く、テーマの break-all が
-       語の途中で切っていた。表示URLは `/ ? & =` の直後だけで折れる。 */
-    content: attr(data-pdf-footnote) ". " attr(data-pdf-footnote-display);
+    /* 脚注の本文は実要素 .pdf-fn が持つ。::before を残すと空の脚注が
+       別に生成されるので消す（issue #763-28） */
+    content: none;
+    float: none;
+  }
+
+  /* 表のセルの中だと実要素の float: footnote が呼び出しと別ページに流れる
+     ので、表の中だけは従来どおり ::before の attr 生成で脚注を出す。
+     表示URLに不可視文字は入れず、版面に収まらない所は行末で折る */
+  /* 生成器はセルの子孫にあるリンクすべてへ属性を付けるので、直下の
+     子だけでなく子孫セレクタにする。strong や p に包まれたリンクの
+     脚注が欠けるのを防ぐ */
+  :not(.footnote) td a[data-pdf-footnote][href^="http"]::before,
+  :not(.footnote) th a[data-pdf-footnote][href^="http"]::before {
+    content: attr(data-pdf-footnote) "． " attr(data-pdf-footnote-display);
+    float: footnote;
+    clear: both;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* 脚注の本文は生成器が <a> の内側に置いた .pdf-fn。テキストに不可視
+     文字を入れないので、コピーしたURLが壊れない。表示URLは `/ ? & =`
+     の直後の <wbr> だけで折れ、それ以外は .pdf-nw の nowrap で接着する */
+  :not(.footnote) > a[data-pdf-footnote][href^="http"] > .pdf-fn {
+    float: footnote;
     clear: both;
     inline-size: 100%;
     max-inline-size: 100%;
     word-break: normal;
     overflow-wrap: normal;
+    color: var(--vs-footnote--color-body, inherit);
+    font-size: var(--vs-footnote--font-size);
+    line-height: var(--vs-footnote--line-height);
+    text-decoration: none;
+  }
+
+  .pdf-fn .pdf-nw {
+    white-space: nowrap;
+  }
+
+  /* 番号は .pdf-fn の本文に全角ピリオド付きで入れるので、自動マーカーは消す */
+  /* biome-ignore lint/correctness/noUnknownPseudoElement: ::footnote-marker は Vivliostyle（CSS GCPM）の脚注マーカー擬似要素で、ブラウザの既知名には無い */
+  .pdf-fn::footnote-marker {
+    content: none;
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
@@ -504,11 +566,16 @@ figure img[src$=".png"] {
 /* 箇条書きと引用の中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
    次のページへ送る（issue #474 直し4）。素の段落の中のリンクへ当てると
    Day 04 の組版が止まるので、箇条書きと引用に限る。引用を外すと Day 01 の
-   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
+   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。
+   素の段落は代わりに、呼び出しを含む段落へ .pdf-fn-call の頁またぎ禁止を
+   付けて、呼び出しと脚注が別ページに分かれるのを防ぐ（issue #763）。 */
 @media print {
-  li > a[data-pdf-footnote][href^="http"]::before,
-  blockquote > p > a[data-pdf-footnote][href^="http"]::before {
+  li > a[data-pdf-footnote][href^="http"] > .pdf-fn,
+  blockquote > p > a[data-pdf-footnote][href^="http"] > .pdf-fn {
     footnote-policy: line;
+  }
+  p.pdf-fn-call {
+    break-inside: avoid;
   }
 }
 
@@ -529,7 +596,9 @@ figure img[src$=".png"] {
     font-size: 0.6em;
     font-weight: normal;
     word-break: normal;
-    overflow-wrap: normal;
+    /* 表示には不可視文字を入れない（issue #763-28）。版面に収まらない
+       URL は行末で折れる */
+    overflow-wrap: anywhere;
   }
 }
 
@@ -583,4 +652,12 @@ figure img[src$=".png"] {
   border-radius: 2px;
   /* 空白も等幅でないと分けた片どうしの字面がずれる */
   font-family: var(--vs--monospace-font-family);
+}
+
+/* 各本の末尾にある奥付の section は、表のあとに「© …」とライセンス文が
+   続く。ここを頁またぎするとライセンスだけの頁が残り、目次の頁番号も
+   奥付の実際より1頁早く出る（issue #763-19）。末尾の section ごと
+   頁をまたがない塊にして、見出しからライセンスまで同じ頁に置く。 */
+body > section.level2:last-of-type {
+  break-inside: avoid;
 }

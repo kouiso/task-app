@@ -50,7 +50,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from breakable_code import mark_breakable_pres  # noqa: E402
-from keep_next import mark_keep_next  # noqa: E402
+from keep_next import mark_keep_next, mark_footnote_call_paragraphs  # noqa: E402
 from code_wrap import (  # noqa: E402
     hoist_code_filepath,
     unsafe_runs,
@@ -746,31 +746,49 @@ HTML_VOID_ELEMENTS = {
 }
 
 
-def footnote_display_url(href: str) -> str:
-    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
-
-    共有パラメータ `usp` は紙面で読む価値が無いので表示から外す。
-    折り返しは `/` `?` `&` `=` の直後だけに許し、それ以外の区切り記号
-    （`.` `-` `:` など）は行継ぎ禁止文字で接着する。テーマ側の
-    `word-break: break-all` がどこでも切るため、単語の途中で折れていた。
-    """
+def _footnote_display_text(href: str) -> str:
+    """共有パラメータ `usp` を外した、表示用のURLの生テキストを返す。"""
     head, _, fragment = href.partition('#')
     base, _, query = head.partition('?')
     params = [param for param in query.split('&')
               if param and param.split('=', 1)[0] != 'usp']
     display = base + (('?' + '&'.join(params)) if params else '')
     display += '#' + fragment if fragment else ''
+    return display
+
+
+def footnote_display_url(href: str) -> str:
+    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
+
+    以前は折返し位置を U+200B・U+2060 の不可視文字で接着していたが、
+    読者が URL をコピーすると無効なアドレスになるので、印はテキストへ
+    入れない（issue #763-28）。属性値へ入れる用途（見出しの下の1行）用。
+    """
+    return html.escape(_footnote_display_text(href))
+
+
+def footnote_display_url_markup(href: str) -> str:
+    """脚注要素に入れる表示URLのマークアップ。
+
+    折り返しは `/` `?` `&` `=` の直後の `<wbr>` だけに許し、それ以外の区切り
+    （`.` `-` `:` など）は `<span class="pdf-nw">` の nowrap で接着する。
+    `<wbr>` は本文へ文字として残らないので、コピーしてもURLが壊れない。
+    """
     pieces = []
-    for character in display:
+    run = []
+    for character in _footnote_display_text(href):
         if character in '/?&=':
-            pieces.append(character + '\u200b')
-        elif character.isascii() and character.isalnum():
-            pieces.append(character)
+            if run:
+                pieces.append(
+                    f'<span class="pdf-nw">{html.escape("".join(run))}</span>')
+                run = []
+            pieces.append(html.escape(character) + '<wbr/>')
         else:
-            # CJK やパーセント記号は isalnum では素通りできない。CJK はどこでも
-            # 折れてしまうので、ハイフン等の区切りと同じくこちらで接着する
-            pieces.append('\u2060' + character + '\u2060')
-    return html.escape(''.join(pieces))
+            run.append(character)
+    if run:
+        pieces.append(f'<span class="pdf-nw">{html.escape("".join(run))}</span>')
+    return ''.join(pieces)
+
 
 
 class ExternalLinkFootnotes(HTMLParser):
@@ -784,6 +802,7 @@ class ExternalLinkFootnotes(HTMLParser):
 
     def __init__(self, markup: str):
         super().__init__(convert_charrefs=False)
+        self.markup = markup
         self.line_starts = [0]
         for index, character in enumerate(markup):
             if character == '\n':
@@ -793,6 +812,22 @@ class ExternalLinkFootnotes(HTMLParser):
         self.number = 0
         # 文字列比較のために開いた <a> の本文を </a> まで集める
         self.capture: dict | None = None
+
+    def _start_tag_end(self, offset: int) -> int:
+        """offset（<a の直後）から、開始タグを閉じる `>` の次の位置を返す。"""
+        index = offset
+        quote = None
+        while index < len(self.markup):
+            char = self.markup[index]
+            if quote:
+                if char == quote:
+                    quote = None
+            elif char in '"\'':
+                quote = char
+            elif char == '>':
+                return index + 1
+            index += 1
+        return offset
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -863,10 +898,32 @@ class ExternalLinkFootnotes(HTMLParser):
             )
             return
         self.number += 1
+        if any(parent_tag in ('td', 'th')
+               for parent_tag, _ in self.parents[:-1]):
+            # 表のセルの中だと実要素の float: footnote が呼び出しと別ページに
+            # 流れる（Vivliostyle がセル内の脚注領域を別断片へ送る）。
+            # 表の中だけは ::before の attr 生成で脚注を出し、表示URLは
+            # 不可視文字を入れないまま overflow-wrap で折る（issue #763-28）
+            self.edits.append(
+                (capture['insertion'],
+                 f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
+                 f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+            )
+            return
         self.edits.append(
             (capture['insertion'],
-             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
-             f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+        )
+        # 脚注の本文は attr() の生成コンテンツだとマークアップを入れられないので、
+        # 実要素として <a> の内側に置き、float: footnote で脚注領域へ送る。
+        # 番号は CSS で ::footnote-marker を消して自分で付ける。区切りは
+        # 全角ピリオド — 原稿の `N. ` は半角なので、検査側が生成脚注行と
+        # 取り違えない印になる。URL 本体に印は入れない（コピーを汚さない）。
+        tag_end = self._start_tag_end(capture['insertion'])
+        self.edits.append(
+            (tag_end,
+             f'<span class="pdf-fn">{self.number}． '
+             f'{footnote_display_url_markup(href)}</span>')
         )
 
     def handle_endtag(self, tag):
@@ -1261,6 +1318,14 @@ def parse_source(
     toc: list[tuple[str, str, list[tuple[str, str]]]] = []
     seq = 0
 
+    def append_body(line: str) -> None:
+        # この toolchain の parser は段落の直後の見出しを段落の続きとして
+        # 組む。見出しの直前が空行でなければ空行を足して、#### や
+        # ## ... {#sN} が本文へ露出しないようにする（issue #763-15）
+        if body and body[-1].strip() != "" and HEADING_RE.match(line):
+            body.append("")
+        body.append(line)
+
     for _, line, state, _ in fence_states(text):
         if state != "outside":
             body.append(line)
@@ -1277,7 +1342,7 @@ def parse_source(
             seq += 1
             anchor = f"s{seq}"
             toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
-            body.append(f"## {h2.group(1)} {{#{anchor}}}")
+            append_body(f"## {h2.group(1)} {{#{anchor}}}")
             continue
 
         h3_step = H3_STEP_RE.match(line)
@@ -1289,10 +1354,10 @@ def parse_source(
                 toc[-1][2].append((anchor, text))
             else:
                 toc.append((anchor, text, []))
-            body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
+            append_body(f"### {h3_step.group(1)} {{#{anchor}}}")
             continue
 
-        body.append(line)
+        append_body(line)
 
     return title, body, toc
 
@@ -1491,7 +1556,13 @@ def diagram_font_face() -> str:
         "<style>@font-face{"
         f"font-family:'{FONT_SOURCES[0][2]}';font-style:normal;font-weight:400;"
         f"src:url(data:font/ttf;base64,{encoded}) format('truetype');"
-        "}</style>"
+        "}"
+        # BIZ UDPGothic の f_i 合字は枠だけあって中身が空（実測: profile が
+        # 「pro le」に欠ける）。mermaid のラベルは foreignObject 内の
+        # p/span にも来るので全要素で合字を切り、f と i を別の字のまま出す
+        # （issue #763-26）
+        "*{font-variant-ligatures:none;}"
+        "</style>"
     )
 
 
@@ -1858,6 +1929,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         # 置く印を付ける（issue #475）。脚注の番号付けより先に付ける
         markup = mark_keep_next(markup)
         markup = number_external_link_footnotes(markup)
+        markup = mark_footnote_call_paragraphs(markup)
         validate_annotated_html(markup, manifest)
         html_doc.write_text(markup, encoding="utf-8")
         (WORK_DIR / f"{slug}.inline-manifest.json").write_text(
