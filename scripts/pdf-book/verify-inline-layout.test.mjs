@@ -499,5 +499,8 @@ test('flow code inside a pseudo-table cell measures the cell, not the full dl wi
   const flow = observedItem(result.report, 'cell-code');
   assert.equal(flow.flow_geometry.status, 'supported');
   // dl 全幅は 400px。値列の dd は 170px であり、縮小判定はその幅を基準にする。
-  assert.ok(flow.flow_geometry.available_width < 200, `expected value-column width, got ${flow.flow_geometry.available_width}`);
+  assert.ok(
+    flow.flow_geometry.available_width < 200,
+    `expected value-column width, got ${flow.flow_geometry.available_width}`,
+  );
 });
