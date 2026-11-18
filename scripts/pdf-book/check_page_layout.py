@@ -770,7 +770,8 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
             if i > 0 and (words[i - 1].endswith("*") or words[i - 1] == f"*{w}"):
                 continue
             rest = ("".join(words[i + 1:]) + ahead)[:80]
-            call = re.search(rf"\*{w}(?!\d)", rest)
+            # `{/*1件も` のようなコードコメントの `*N` は呼び出しではない
+            call = re.search(rf"(?<!/)\*{w}(?!\d)", rest)
             # 手前の裸番号は `N リンク語 *N` の呼び出し。ただし番号と `*N` の
             # 間に同じ数字がもう1つある時は、手前は本文の数値（`その1日目`
             # と `教材は1カリキュラム目次 *1` の1）で、近い方が呼び出し。
