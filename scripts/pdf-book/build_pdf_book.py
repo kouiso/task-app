@@ -477,7 +477,9 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     if _toolchain_manifest_matches():
         try:
             return _verify_release_toolchain()
-        except Exception:
+        # 検証の失敗（版数ずれ・実行ファイル欠落・リンク越境）は全て OSError 系。
+        # それ以外の例外は cache 不良ではなく実装バグなので消して npm ci へ回さん。
+        except OSError:
             shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
     # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
     # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
