@@ -641,7 +641,7 @@ const view = (
             f"{first_line}\nconst x = 1;</code></pre>"
         )
         out = hoist_code_filepath(source)
-        expected = f'<p class="code-filepath">{html.escape(label)}</p>'
+        expected = f'<p class="code-filepath">filepath: {html.escape(label)}</p>'
         if expected not in out:
             failures.append(f"{lang} の filepath 行が見出しに出ていない: {out}")
         body = out.split("</p>", 1)[1]
@@ -665,8 +665,9 @@ const view = (
     if hoist_code_filepath(untouched) != untouched:
         failures.append("filepath でない1行目を書き換えてしまった")
 
-    # code_filepath_label は原稿側の判定にも使う（verify_pdf_copy・check_pdf_book）
-    if code_filepath_label("  # filepath: .env.example") != ".env.example":
+    # code_filepath_label は原稿側の判定にも使う（verify_pdf_copy・check_pdf_book）。
+    # 値は教材が説明する「filepath:」の印を保った形で返る
+    if code_filepath_label("  # filepath: .env.example") != "filepath: .env.example":
         failures.append("# filepath 行の値を取れていない")
     if code_filepath_label("const x = 1;") is not None:
         failures.append("filepath でない行を filepath と誤認した")

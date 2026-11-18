@@ -226,19 +226,45 @@ table {
 .pdf-stacked-row dl {
   margin: 0;
 }
-.pdf-stacked-row dt {
+/* 見出し語と値を縦に重ねると 1 行ぶんのカードが 10 行を超え、
+   行ごとにほぼ空の頁が続いた（issue #763 通し番号10）。
+   見出し語は左の固定桁、値は右側へ流す横並びにして高さを抑える。
+   float ではなく疑似表のセルにするのは、PDF の文字抽出が DOM 順の
+   まま「見出し語→値」になる組版検査との整合を保つため */
+.pdf-field {
+  display: table;
+  inline-size: 100%;
+  table-layout: fixed;
+  break-inside: avoid;
+}
+.pdf-field > dt {
+  display: table-cell;
+  inline-size: 8em;
   color: var(--book-accent);
   font-weight: bold;
-  margin-block-start: 0.55em;
-  break-after: avoid;
+  padding-block-start: 0.3em;
 }
-.pdf-stacked-row dd {
-  margin: 0.2em 0 0.7em;
+.pdf-field > dd {
+  display: table-cell;
+  margin: 0;
+  padding-block: 0.3em;
+  padding-inline-start: 1em;
   text-align: start;
   orphans: 2;
   widows: 2;
   /* 本文と同じく、末尾の不自然な一文字行を減らす */
   text-wrap: pretty;
+}
+
+/* 横に長いコードを含む行は縦積みに戻して値列を全幅にする */
+.pdf-stacked-row--stack .pdf-field {
+  display: block;
+}
+.pdf-stacked-row--stack .pdf-field > dt,
+.pdf-stacked-row--stack .pdf-field > dd {
+  display: block;
+  inline-size: auto;
+  padding-inline-start: 0;
 }
 .pdf-table-caption {
   font-weight: bold;
@@ -373,6 +399,20 @@ pre {
 pre.pdf-breakable {
   break-inside: auto;
 }
+/* 内側の code が既定の inline のままだと、中のブロック要素群が1つの行箱に
+   閉じ込められてページ境目で割れず、丸ごと次ページへ飛んで手前の filepath
+   見出しだけを取り残す（実測: Day 06 p46） */
+pre.pdf-breakable > code {
+  display: block;
+}
+
+/* 分割許可の枠でも、改行していいのは論理行の境目だけ。
+   cw-force で折り返した表示行の途中で割れると、1 文の間に柱が入る
+   （issue #763 通し番号11）。各行は span の塊になっていて割れない。 */
+pre.pdf-breakable .pdf-codeline {
+  display: block;
+  break-inside: avoid;
+}
 
 /* filepath 行はコード枠の1行目から枠の直前へ出す（build_pdf_book.py の
    hoist_code_filepath）。中身はコメント記号を外したファイル名で、コードでは
@@ -484,15 +524,36 @@ figure img[src$=".png"] {
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::before {
-    /* 表示は生成器が作る data-pdf-footnote-display を使う。href には共有
-       パラメータ ?usp= や改行可能位置の制限が無く、テーマの break-all が
-       語の途中で切っていた。表示URLは `/ ? & =` の直後だけで折れる。 */
-    content: attr(data-pdf-footnote) ". " attr(data-pdf-footnote-display);
+    /* 脚注本文はリンク内の .pdf-fnbody 実要素が担う。attr() 文字列には
+       <wbr> や接着span を置けず、折り返し制御を不可視文字で誤魔化すと
+       PDF の文字層に残って写したアドレスが壊れる（issue #763 通し番号28） */
+    content: none;
+    float: none;
+  }
+
+  :not(.footnote) > a[data-pdf-footnote][href^="http"] > .pdf-fnbody {
+    display: inline;
+    float: footnote;
     clear: both;
     inline-size: 100%;
     max-inline-size: 100%;
     word-break: normal;
     overflow-wrap: normal;
+    color: var(--vs-footnote--color-body, var(--book-text));
+    font-size: var(--vs-footnote--font-size, 10.5pt);
+    line-height: var(--vs-footnote--line-height, 1.6);
+    text-decoration: none;
+  }
+
+  /* 実要素を脚注へ浮かすと Vivliostyle が呼び出し印を自動生成する。
+     呼び出しは従来どおり ::after の *N だけにし、脚注欄の番号も
+     *N. の形にそろえる（規定の 1. とずれるのを防ぐ） */
+  .pdf-fnbody::footnote-call {
+    content: none;
+  }
+
+  .pdf-fnbody::footnote-marker {
+    content: "*" counter(footnote) ". ";
   }
 
   :not(.footnote) > a[data-pdf-footnote][href^="http"]::after {
@@ -501,14 +562,44 @@ figure img[src$=".png"] {
   }
 }
 
-/* 箇条書きと引用の中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
-   次のページへ送る（issue #474 直し4）。素の段落の中のリンクへ当てると
-   Day 04 の組版が止まるので、箇条書きと引用に限る。引用を外すと Day 01 の
-   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
+/* 脚注がそのページに入らないとき、呼び出しの行ごと次のページへ送る
+   （issue #474 直し4）。素の段落の中のリンクへ当てると Day 03 では
+   脚注が最終行の本文へ重なって描かれ、Day 04 の組版が止まるので、
+   箇条書きと引用に限る。引用を外すと Day 01 の「Microsoft の公式手順」
+   の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
 @media print {
-  li > a[data-pdf-footnote][href^="http"]::before,
-  blockquote > p > a[data-pdf-footnote][href^="http"]::before {
+  li > a[data-pdf-footnote][href^="http"] > .pdf-fnbody,
+  blockquote > p > a[data-pdf-footnote][href^="http"] > .pdf-fnbody {
     footnote-policy: line;
+  }
+}
+
+/* 表セルの中のリンクは脚注にしない。footnote-policy の line は表の中で
+   組版が止まり（行ボックスの移動と表レイアウトが循環する）、block は
+   Vivliostyle の値定義（auto|line）に無いので、呼び出しと脚注を同じ
+   ページに束ねる手段が表の中には存在しない。代わりにリンク末尾の
+   .pdf-tdurl 実要素がURLをセルの中に出す（issue #763 通し番号28）。
+   リンクの文字列がURLそのもののセルは data-pdf-bare-url 側に回す。 */
+@media print {
+  :not(.footnote) > a[data-pdf-td-url][href^="http"] {
+    counter-increment: none;
+  }
+  :not(.footnote) > a[data-pdf-td-url][href^="http"]::before {
+    content: none;
+    float: none;
+  }
+  :not(.footnote) > a[data-pdf-td-url][href^="http"]::after {
+    content: none;
+  }
+
+  /* 見出しの .pdf-hurl と同じく、表示はリンク内の実要素が担う。
+     セル内に収めるためブロックにはせず、リンク文字列の直後に（URL）と続ける */
+  :not(.footnote) > a[data-pdf-td-url][href^="http"] > .pdf-tdurl {
+    display: inline;
+    color: var(--book-muted);
+    font-size: 0.6em;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 }
 
@@ -523,7 +614,11 @@ figure img[src$=".png"] {
     float: none;
   }
   :not(.footnote) > a[data-pdf-heading-url][href^="http"]::after {
-    content: attr(data-pdf-heading-url);
+    content: none;
+  }
+
+  /* 脚注と同じく、表示はリンク内の .pdf-hurl 実要素が担う（通し番号28） */
+  :not(.footnote) > a[data-pdf-heading-url][href^="http"] > .pdf-hurl {
     display: block;
     color: var(--book-muted);
     font-size: 0.6em;
@@ -543,6 +638,33 @@ figure img[src$=".png"] {
     content: none;
     float: none;
   }
+}
+
+/* 脚注本文・見出し下のURL行・セル内URLは印刷でだけ出す実要素。画面上は隠す */
+.pdf-fnbody,
+.pdf-hurl,
+.pdf-tdurl {
+  display: none;
+}
+.pdf-fnbody .pdf-nb,
+.pdf-hurl .pdf-nb,
+.pdf-tdurl .pdf-nb {
+  /* URL 中の折れたくない塊を接着する。<wbr> は塊と塊の間でだけ改行を許す。
+     文字は ::before の attr(data-u) で出し、HTML の文字ノードを汚さない */
+  white-space: nowrap;
+}
+.pdf-fnbody .pdf-nb::before,
+.pdf-hurl .pdf-nb::before,
+.pdf-tdurl .pdf-nb::before {
+  content: attr(data-u);
+}
+
+/* 末尾の奥付は短い塊なのに、ライセンス段落だけが次ページへ残ることがあった。
+   見出し・奥付表・ライセンスをひとまとめにして最終ページを埋める。
+   36冊すべて末尾の H2 が奥付なので、最後の level2 節が対象になる
+   （issue #763 通し番号19） */
+section.level2:last-of-type {
+  break-inside: avoid;
 }
 
 /* 段落末尾の数文字を一体にする。Vivliostyle の行分割は行長しか見ないので、

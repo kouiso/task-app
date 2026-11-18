@@ -34,7 +34,7 @@ function readJson(filePath, label) {
 function atomicWriteJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temporary = `${filePath}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`);
+  fs.writeFileSync(temporary, `${JSON.stringify(value)}\n`);
   fs.renameSync(temporary, filePath);
 }
 

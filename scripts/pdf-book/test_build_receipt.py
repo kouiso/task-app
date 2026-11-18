@@ -461,6 +461,63 @@ class BuildReceiptTest(unittest.TestCase):
         self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
         self.assertTrue(Path(resolved["theme_path"]).is_dir())
 
+    def test_prepare_release_toolchain_reuses_manifest_identical_install(self):
+        destination = self.root / "reused-toolchain"
+        toolchain_src = self.root / "toolchain-src"
+        toolchain_src.mkdir()
+        for name in ("package.json", "package-lock.json"):
+            content = f'{{"marker": "{name}"}}'
+            (toolchain_src / name).write_text(content, encoding="utf-8")
+            (destination).mkdir(exist_ok=True)
+            (destination / name).write_text(content, encoding="utf-8")
+        modules = destination / "node_modules"
+        for identifier in (
+            build_pdf_book.VIVLIOSTYLE_CLI,
+            build_pdf_book.VFM_CLI,
+            build_pdf_book.THEME,
+            build_pdf_book.MERMAID_CLI,
+        ):
+            name, version = identifier.rsplit("@", 1)
+            package = modules / name
+            package.mkdir(parents=True, exist_ok=True)
+            (package / "package.json").write_text(
+                json.dumps({"name": name, "version": version}), encoding="utf-8"
+            )
+        bins = modules / ".bin"
+        bins.mkdir(parents=True)
+        bin_targets = {
+            "vivliostyle": (modules / "@vivliostyle/cli/dist/cli.js",
+                            "../@vivliostyle/cli/dist/cli.js"),
+            "vfm": (modules / "@vivliostyle/vfm/lib/cli.js",
+                    "../@vivliostyle/vfm/lib/cli.js"),
+            "mmdc": (modules / "@mermaid-js/mermaid-cli/src/cli.js",
+                     "../@mermaid-js/mermaid-cli/src/cli.js"),
+        }
+        for name, (target, relative_target) in bin_targets.items():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("fixture", encoding="utf-8")
+            (bins / name).symlink_to(relative_target)
+        commands = []
+
+        def forbidden_install(command, **kwargs):
+            commands.append(command)
+            return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.object(build_pdf_book, "TOOLCHAIN_DIR", destination),
+            patch.object(build_pdf_book, "TOOLCHAIN_SRC_DIR", toolchain_src),
+            patch.object(build_pdf_book.subprocess, "run", side_effect=forbidden_install),
+        ):
+            resolved = build_pdf_book.prepare_release_toolchain({})
+
+        # 正本と manifest/lock が一致する既存ツールチェーンは検証だけで再利用する。
+        # 空き容量の細い環境で npm ci の staging 数百MB だけが原因でビルドが
+        # 止まるのを防ぐための経路なので、install が走らないことを固定する。
+        self.assertEqual(commands, [])
+        self.assertEqual(resolved["root"], str(destination))
+        self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
+        self.assertTrue(Path(resolved["theme_path"]).is_dir())
+
     def test_toolchain_tree_rejects_symlink_outside_its_root(self):
         toolchain = self.root / "toolchain-boundary"
         toolchain.mkdir()

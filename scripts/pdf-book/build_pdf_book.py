@@ -386,31 +386,43 @@ def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
 def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
     TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
-    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
-    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
-    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
-    try:
-        # コピーも try の内側に入れる。ここで raise すると except の rmtree が
-        # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
-        for name in ("package.json", "package-lock.json"):
-            source = TOOLCHAIN_SRC_DIR / name
-            if not source.exists():
-                raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
-            shutil.copyfile(source, staging / name)
-        result = _run_logged(
-            ["npm", "ci", "--ignore-scripts"], label="npm ci",
-            cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
-        )
-        if result.returncode != 0:
-            raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
-        if TOOLCHAIN_DIR.exists():
-            shutil.rmtree(TOOLCHAIN_DIR)
-        staging.replace(TOOLCHAIN_DIR)
-    except Exception:
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
+    manifest_names = ("package.json", "package-lock.json")
+    # 正本と同じ manifest/lock の隔離環境が残っていれば再解決しない。
+    # npm ci は別途数百MBの staging を要し、残容量が細い環境ではそれだけで
+    # ビルドが止まる。解決結果の正当性は下の版数・実行ファイル・
+    # シンボリックリンク検査が再利用のたびに拘束する。
+    reusable = TOOLCHAIN_DIR.is_dir() and all(
+        (TOOLCHAIN_SRC_DIR / name).is_file()
+        and (TOOLCHAIN_DIR / name).is_file()
+        and (TOOLCHAIN_DIR / name).read_bytes() == (TOOLCHAIN_SRC_DIR / name).read_bytes()
+        for name in manifest_names
+    )
+    if not reusable:
+        staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
+        # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
+        # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+        try:
+            # コピーも try の内側に入れる。ここで raise すると except の rmtree が
+            # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
+            for name in manifest_names:
+                source = TOOLCHAIN_SRC_DIR / name
+                if not source.exists():
+                    raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
+                shutil.copyfile(source, staging / name)
+            result = _run_logged(
+                ["npm", "ci", "--ignore-scripts"], label="npm ci",
+                cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+            )
+            if result.returncode != 0:
+                raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
+            if TOOLCHAIN_DIR.exists():
+                shutil.rmtree(TOOLCHAIN_DIR)
+            staging.replace(TOOLCHAIN_DIR)
+        except Exception:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
 
+    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
     modules = TOOLCHAIN_DIR / "node_modules"
     for identifier in identifiers:
         expected_name, expected_version = identifier.rsplit("@", 1)
@@ -735,24 +747,28 @@ PDF_FOOTNOTE_ATTRIBUTE = 'data-pdf-footnote'
 PDF_FOOTNOTE_DISPLAY_ATTRIBUTE = 'data-pdf-footnote-display'
 PDF_HEADING_URL_ATTRIBUTE = 'data-pdf-heading-url'
 PDF_BARE_URL_ATTRIBUTE = 'data-pdf-bare-url'
+PDF_TD_URL_ATTRIBUTE = 'data-pdf-td-url'
 PDF_RESERVED_ATTRIBUTES = {
     PDF_FOOTNOTE_ATTRIBUTE, PDF_FOOTNOTE_DISPLAY_ATTRIBUTE,
     PDF_HEADING_URL_ATTRIBUTE, PDF_BARE_URL_ATTRIBUTE,
+    PDF_TD_URL_ATTRIBUTE,
 }
 HEADING_TAGS = frozenset({'h1', 'h2', 'h3', 'h4', 'h5', 'h6'})
+TABLE_CELL_TAGS = frozenset({'td', 'th'})
 HTML_VOID_ELEMENTS = {
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr',
 }
 
 
-def footnote_display_url(href: str) -> str:
-    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
+def footnote_display_html(href: str) -> str:
+    """脚注に印刷する表示用のURLを、実要素の並びとして作る。リンク先（href）自体は変えない。
 
     共有パラメータ `usp` は紙面で読む価値が無いので表示から外す。
-    折り返しは `/` `?` `&` `=` の直後だけに許し、それ以外の区切り記号
-    （`.` `-` `:` など）は行継ぎ禁止文字で接着する。テーマ側の
-    `word-break: break-all` がどこでも切るため、単語の途中で折れていた。
+    折り返しは `/` `?` `&` `=` の直後だけに許す。不可視文字（U+200B の
+    改行許可・U+2060 の接着）だと PDF の文字層へ残り、読者が写すと無効な
+    アドレスになる（issue #763 通し番号28）。要素なら文字層は素のURLの
+    ままで、`<wbr>` が改行許可・`.pdf-nb` が折り返し禁止として働く。
     """
     head, _, fragment = href.partition('#')
     base, _, query = head.partition('?')
@@ -760,26 +776,29 @@ def footnote_display_url(href: str) -> str:
               if param and param.split('=', 1)[0] != 'usp']
     display = base + (('?' + '&'.join(params)) if params else '')
     display += '#' + fragment if fragment else ''
-    pieces = []
+    segments: list[str] = []
+    current: list[str] = []
     for character in display:
+        current.append(character)
         if character in '/?&=':
-            pieces.append(character + '\u200b')
-        elif character.isascii() and character.isalnum():
-            pieces.append(character)
-        else:
-            # CJK やパーセント記号は isalnum では素通りできない。CJK はどこでも
-            # 折れてしまうので、ハイフン等の区切りと同じくこちらで接着する
-            pieces.append('\u2060' + character + '\u2060')
-    return html.escape(''.join(pieces))
+            segments.append(''.join(current))
+            current = []
+    if current:
+        segments.append(''.join(current))
+    return '<wbr>'.join(
+        f'<span class="pdf-nb" data-u="{html.escape(segment, quote=True)}"></span>'
+        for segment in segments)
 
 
 class ExternalLinkFootnotes(HTMLParser):
     """外部リンクの開始タグを変えず、印刷用の通し番号だけ差し込む。
 
-    issue #474 の直し4・直し5で2種類の例外を付けた。
+    issue #474 の直し4・直し5に、表セルの中のリンクを例外へ加えた3種類。
     見出しの中のリンクは番号を振らず、表示用のURLを data-pdf-heading-url に
     入れて book.css が見出しの下の1行に出す。リンクの文字列がURLそのものの
     リンクも番号を振らず、data-pdf-bare-url を付けて脚注を出さない。
+    表セルの中のリンクは footnote-policy が表では効かないため番号を振らず、
+    data-pdf-td-url を付けてリンク末尾の .pdf-tdurl がURLをセル内に出す。
     """
 
     def __init__(self, markup: str):
@@ -812,13 +831,35 @@ class ExternalLinkFootnotes(HTMLParser):
                 insertion = self.line_starts[line - 1] + column + 2
                 if any(parent_tag in HEADING_TAGS for parent_tag, _ in self.parents):
                     # 見出しの中のリンクは脚注にしない。表示用のURLは
-                    # book.css の ::after が見出しの下の1行に出す（直し4）
+                    # リンク末尾の .pdf-hurl 実要素が見出しの下の1行に出る
+                    # （直し4・issue #763 通し番号28）
                     self.edits.append(
                         (insertion,
-                         f' {PDF_HEADING_URL_ATTRIBUTE}="{footnote_display_url(href)}"')
+                         f' {PDF_HEADING_URL_ATTRIBUTE}="1"')
                     )
+                    self.capture = {
+                        'kind': 'heading',
+                        'href': href,
+                    }
+                elif any(parent_tag in TABLE_CELL_TAGS
+                         for parent_tag, _ in self.parents) or any(
+                             'pdf-field' in classes
+                             for _, classes in self.parents):
+                    # 表セルの中のリンクも脚注にしない。footnote-policy の
+                    # line は表の中で組版が止まり、block はエンジンの値定義
+                    # （auto|line）に無いので、呼び出しと脚注を同じページに
+                    # 束ねる手段が表の中には存在しない。.pdf-field の dt/dd は
+                    # 幅不足で疑似表化した表のセルなので同じ扱いにする。
+                    # リンク末尾の .pdf-tdurl がURLをセルの中に出す（issue #763）
+                    self.capture = {
+                        'kind': 'cell',
+                        'insertion': insertion,
+                        'href': href,
+                        'chunks': [],
+                    }
                 else:
                     self.capture = {
+                        'kind': 'body',
                         'insertion': insertion,
                         'href': href,
                         'chunks': [],
@@ -829,20 +870,22 @@ class ExternalLinkFootnotes(HTMLParser):
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
         if tag == 'a':
-            self.finish_anchor()
+            line, column = self.getpos()
+            raw = self.get_starttag_text() or ''
+            self.finish_anchor(self.line_starts[line - 1] + column + len(raw))
         if tag not in HTML_VOID_ELEMENTS:
             self.parents.pop()
 
     def handle_data(self, data):
-        if self.capture is not None:
+        if self.capture is not None and self.capture.get('kind') in ('body', 'cell'):
             self.capture['chunks'].append(data)
 
     def handle_entityref(self, name):
-        if self.capture is not None:
+        if self.capture is not None and self.capture.get('kind') in ('body', 'cell'):
             self.capture['chunks'].append(html.unescape(f'&{name};'))
 
     def handle_charref(self, name):
-        if self.capture is not None:
+        if self.capture is not None and self.capture.get('kind') in ('body', 'cell'):
             self.capture['chunks'].append(html.unescape(f'&#{name};'))
 
     @staticmethod
@@ -850,12 +893,35 @@ class ExternalLinkFootnotes(HTMLParser):
         # 折り返し用の不可視文字と前後の空白を外し、末尾の / の有無は同一視する
         return text.replace('\u200b', '').replace('\u2060', '').strip().rstrip('/')
 
-    def finish_anchor(self):
+    def finish_anchor(self, end_insertion: int):
         capture, self.capture = self.capture, None
         if capture is None:
             return
-        text = ''.join(capture['chunks'])
         href = capture['href']
+        if capture['kind'] == 'heading':
+            self.edits.append(
+                (end_insertion,
+                 f'<span class="pdf-hurl">{footnote_display_html(href)}</span>')
+            )
+            return
+        text = ''.join(capture['chunks'])
+        if capture['kind'] == 'cell':
+            if text and self._bare_url_key(text) == self._bare_url_key(href):
+                # 文字列がURLそのものなら重ねて出さない（直し5 と同じ扱い）
+                self.edits.append(
+                    (capture['insertion'], f' {PDF_BARE_URL_ATTRIBUTE}="1"')
+                )
+            else:
+                self.edits.append(
+                    (capture['insertion'], f' {PDF_TD_URL_ATTRIBUTE}="1"')
+                )
+                self.edits.append(
+                    (end_insertion,
+                     '<span class="pdf-tdurl">（'
+                     f'{footnote_display_html(href)}'
+                     '）</span>')
+                )
+            return
         if text and self._bare_url_key(text) == self._bare_url_key(href):
             # 文字列がURLそのものなら脚注にしない（直し5）
             self.edits.append(
@@ -865,13 +931,20 @@ class ExternalLinkFootnotes(HTMLParser):
         self.number += 1
         self.edits.append(
             (capture['insertion'],
-             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
-             f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+        )
+        # 脚注本文はリンク末尾（::after の *N と同じ場所）へ入れ、book.css の
+        # float: footnote がページ下の脚注欄へ送る。先頭側だと折り返したリンクで
+        # 呼び出し印と別行・別ページに離れることがある
+        self.edits.append(
+            (end_insertion,
+             f'<span class="pdf-fnbody">{footnote_display_html(href)}</span>')
         )
 
     def handle_endtag(self, tag):
         if tag == 'a':
-            self.finish_anchor()
+            line, column = self.getpos()
+            self.finish_anchor(self.line_starts[line - 1] + column)
         if tag not in HTML_VOID_ELEMENTS and self.parents:
             self.parents.pop()
 
@@ -1277,7 +1350,7 @@ def parse_source(
             seq += 1
             anchor = f"s{seq}"
             toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
-            body.append(f"## {h2.group(1)} {{#{anchor}}}")
+            _append_heading(body, f"## {h2.group(1)} {{#{anchor}}}")
             continue
 
         h3_step = H3_STEP_RE.match(line)
@@ -1289,12 +1362,25 @@ def parse_source(
                 toc[-1][2].append((anchor, text))
             else:
                 toc.append((anchor, text, []))
-            body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
+            _append_heading(body, f"### {h3_step.group(1)} {{#{anchor}}}")
+            continue
+
+        if HEADING_RE.match(line):
+            _append_heading(body, line)
             continue
 
         body.append(line)
 
     return title, body, toc
+
+
+def _append_heading(body: list[str], heading: str) -> None:
+    """見出しを1行足す。直前が空行でない段落行だと、VFM は見出しを
+    段落の続きとみなして `## 題 {#s2}` がそのまま本文に出る
+    （issue #763 通し番号15）。必ず空行を1行挟んで見出しにする。"""
+    if body and body[-1].strip():
+        body.append("")
+    body.append(heading)
 
 
 _TS_FENCE = re.compile(r"^(\s*)```(?:typescript|ts)\s*$")
@@ -1491,7 +1577,11 @@ def diagram_font_face() -> str:
         "<style>@font-face{"
         f"font-family:'{FONT_SOURCES[0][2]}';font-style:normal;font-weight:400;"
         f"src:url(data:font/ttf;base64,{encoded}) format('truetype');"
-        "}</style>"
+        "}"
+        # fi などの合字は PDF の文字層へ復元対応を持たず、コピーすると
+        # 空白になる（実測: pro le / unde ned）。合字を無効にして
+        # 字形と文字層を1字ずつ対応させる（issue #763 通し番号26）
+        "svg{font-variant-ligatures:none;}</style>"
     )
 
 
@@ -1979,6 +2069,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         return problems
     finally:
         measurement_pdf.unlink(missing_ok=True)
+        # 仮組版の計測JSONは1冊数十MBに達し、36冊残すと数GBを食い潰す
+        measurement_file.unlink(missing_ok=True)
     audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"] = str(WORK_DIR / f"{slug}.inline-layout.json")
     if output.exists():
         output.unlink()
@@ -2038,6 +2130,9 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         "artifacts": {name: {"path": str(file.resolve()), "sha256": sha256_file(file)}
                       for name, file in artifacts.items()},
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # フォント埋め込み済みの SVG は1枚6MB近くあり証跡の束縛対象でもないため片付ける
+    for svg_file in WORK_DIR.glob(f"{slug}-*.svg"):
+        svg_file.unlink(missing_ok=True)
 
     # ページ数は進捗表示のためだけに読む。poppler が無い環境でも組版は続ける
     try:
