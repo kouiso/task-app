@@ -383,44 +383,62 @@ def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
     env["XDG_DATA_HOME"] = str(work_dir / "xdg")
 
 
-def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
-    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
-    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
-    manifest_names = ("package.json", "package-lock.json")
-    # 正本と同じ manifest/lock の隔離環境が残っていれば再解決しない。
-    # npm ci は別途数百MBの staging を要し、残容量が細い環境ではそれだけで
-    # ビルドが止まる。解決結果の正当性は下の版数・実行ファイル・
-    # シンボリックリンク検査が再利用のたびに拘束する。
-    reusable = TOOLCHAIN_DIR.is_dir() and all(
-        (TOOLCHAIN_SRC_DIR / name).is_file()
-        and (TOOLCHAIN_DIR / name).is_file()
-        and (TOOLCHAIN_DIR / name).read_bytes() == (TOOLCHAIN_SRC_DIR / name).read_bytes()
-        for name in manifest_names
-    )
-    if not reusable:
-        staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
-        # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
-        # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+_TOOLCHAIN_MANIFEST_NAMES = ("package.json", "package-lock.json")
+
+
+def _toolchain_manifest_matches() -> bool:
+    """正本と同じ manifest/lock の隔離環境が残っているかだけを見る。
+
+    読み取りに失敗するキャッシュは「無い」扱いにして再解決へ回す。
+    ここで raise すると、読めない cache が残っているだけでビルドが毎回死ぬ。
+    """
+    if not TOOLCHAIN_DIR.is_dir():
+        return False
+    for name in _TOOLCHAIN_MANIFEST_NAMES:
+        source = TOOLCHAIN_SRC_DIR / name
+        cached = TOOLCHAIN_DIR / name
+        if not source.is_file() or not cached.is_file():
+            return False
         try:
-            # コピーも try の内側に入れる。ここで raise すると except の rmtree が
-            # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
-            for name in manifest_names:
-                source = TOOLCHAIN_SRC_DIR / name
-                if not source.exists():
-                    raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
-                shutil.copyfile(source, staging / name)
-            result = _run_logged(
-                ["npm", "ci", "--ignore-scripts"], label="npm ci",
-                cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
-            )
-            if result.returncode != 0:
-                raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
-            if TOOLCHAIN_DIR.exists():
-                shutil.rmtree(TOOLCHAIN_DIR)
-            staging.replace(TOOLCHAIN_DIR)
-        except Exception:
-            shutil.rmtree(staging, ignore_errors=True)
-            raise
+            if cached.read_bytes() != source.read_bytes():
+                return False
+        except OSError:
+            return False
+    return True
+
+
+def _install_release_toolchain(env: dict[str, str]) -> None:
+    """staging で固定版を npm ci し、成功したものだけ TOOLCHAIN_DIR へ公開する。"""
+    staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
+    installed = False
+    try:
+        # コピーもここに含める。ここで raise すると後始末が走らんので、
+        # 失敗のたびに staging のゴミが dist/ へ残る
+        for name in _TOOLCHAIN_MANIFEST_NAMES:
+            source = TOOLCHAIN_SRC_DIR / name
+            if not source.exists():
+                raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
+            shutil.copyfile(source, staging / name)
+        result = _run_logged(
+            ["npm", "ci", "--ignore-scripts"], label="npm ci",
+            cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+        )
+        if result.returncode != 0:
+            raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
+        if TOOLCHAIN_DIR.exists():
+            shutil.rmtree(TOOLCHAIN_DIR)
+        staging.replace(TOOLCHAIN_DIR)
+        installed = True
+    finally:
+        if not installed:
+            try:
+                shutil.rmtree(staging)
+            except OSError as error:
+                print(f"警告: PDFツールの staging を消せませんでした: {staging} ({error})")
+
+
+def _verify_release_toolchain() -> dict[str, str]:
+    """TOOLCHAIN_DIR の版数・実行ファイル・リンク閉域を検査し、実体のパスを返す。"""
     identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
 
     modules = TOOLCHAIN_DIR / "node_modules"
@@ -430,10 +448,8 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
         try:
             package = json.loads(package_json.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as error:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
             raise OSError(f"PDFツールのpackage.jsonを読めません: {identifier}") from error
         if package.get("name") != expected_name or package.get("version") != expected_version:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
             raise OSError(
                 f"PDFツールの解決版が指定と違います: {identifier} -> "
                 f"{package.get('name')}@{package.get('version')}"
@@ -448,6 +464,25 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     # 固定せず実行バイトを拘束できない。全リンクの解決先が内部にあることを先に確かめる。
     _hash_tree_stably(TOOLCHAIN_DIR)
     return toolchain
+
+
+def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
+    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
+    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
+    # 正本と同じ manifest/lock の隔離環境が残っていれば再解決しない。
+    # npm ci は別途数百MBの staging を要し、残容量が細い環境ではそれだけで
+    # ビルドが止まる。解決結果の正当性は版数・実行ファイル・リンク検査が
+    # 再利用のたびに拘束する。検査に落ちたキャッシュは消して再解決へ回す。
+    # 残すと manifest が一致したまま壊れた cache を毎回再利用して永久に失敗する。
+    if _toolchain_manifest_matches():
+        try:
+            return _verify_release_toolchain()
+        except Exception:
+            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
+    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
+    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+    _install_release_toolchain(env)
+    return _verify_release_toolchain()
 
 
 def referenced_images(sources: list[Path]) -> list[Path]:
