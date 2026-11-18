@@ -447,7 +447,8 @@ def _verify_release_toolchain() -> dict[str, str]:
         package_json = modules / expected_name / "package.json"
         try:
             package = json.loads(package_json.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+        # UnicodeDecodeError（ValueError 系）も壊れた cache の一部として再解決へ回す。
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
             raise OSError(f"PDFツールのpackage.jsonを読めません: {identifier}") from error
         if package.get("name") != expected_name or package.get("version") != expected_version:
             raise OSError(
