@@ -139,23 +139,19 @@ ORPHAN_PREV_MIN_RATIO = 0.9
 # 脚注の表示URLは生成側で「/ ? & =」の直後だけに折り返しを許している。
 # それ以外の位置（語の途中）で切れていたら、表示URLの接着が効いていない証拠。
 URL_BREAK_ALLOWED_AFTER = "/?&="
-FOOTNOTE_URL_START = re.compile(r"^\s*\*?\d+\.\s*https?://")
-STARRED_FOOTNOTE_URL_START = re.compile(r"^\s*\*\d+\.\s*https?://")
+FOOTNOTE_URL_START = re.compile(r"^\s*\d+[.．]\s*https?://")
 
 
 def generated_footnote_line(raw_text: str) -> bool:
     """生成器が出した脚注の行なら True。
 
-    現行の生成器（build_pdf_book.py + book.css の ::footnote-marker）は
-    不可視文字を使わず `*N. https://…` の形で脚注を出す（issue #763 通し番号28）。
-    原稿の番号付きリストの行頭は `N. https://…` で先頭に `*` が付かないため
-    取り違えない。過去の回帰テストにある旧形式（U+200B・U+2060 入り）も通す。
+    生成器（build_pdf_book.py）は脚注の番号のあとに全角ピリオド（U+FF0E）
+    を入れる。原稿の番号付きリストの行頭がたまたま `N. https://…` の形
+    （インラインコードのURL）をしていても、区切りは半角ピリオドなので
+    この印で脚注と取り違えない。URL 本体には印も不可視文字も入れない
+    （issue #763-28）。
     """
-    return (
-        bool(STARRED_FOOTNOTE_URL_START.match(visible_text(raw_text)))
-        or "\u200b" in raw_text
-        or "\u2060" in raw_text
-    )
+    return "．" in raw_text
 # URLの続きとしてあり得る行（空白を含まずURL文字だけ）
 URL_CONTINUATION = re.compile(r"^[A-Za-z0-9_?&=./:%#~+@()\[\],!*;'\-]+$")
 # 生成器が差し込む改行制御用の不可視文字（ZWSP・WJ・BOM・SOFT HYPHEN）。
@@ -346,10 +342,12 @@ def find_ink_overflow(rows: list[tuple[int, int, int]]) -> list[str]:
 class Line:
     """PDF から取り出した1行。座標は mm、原点はページの左上。"""
 
-    __slots__ = ("page", "block", "left", "top", "right", "bottom", "text")
+    __slots__ = ("page", "block", "left", "top", "right", "bottom", "text",
+                 "words")
 
     def __init__(self, page: int, block: int, left: float, top: float,
-                 right: float, bottom: float, text: str) -> None:
+                 right: float, bottom: float, text: str,
+                 words: list[str] | None = None) -> None:
         self.page = page
         self.block = block
         self.left = left
@@ -357,6 +355,7 @@ class Line:
         self.right = right
         self.bottom = bottom
         self.text = text
+        self.words = words
 
     @property
     def width(self) -> float:
@@ -388,16 +387,17 @@ def parse_line_boxes(xml_text: str) -> list[Line]:
     for number, page in enumerate(pages, start=1):
         for block, element in enumerate(page.iter(f"{namespace}block")):
             for line in element.findall(f"{namespace}line"):
-                text = "".join(
+                words = [
                     word.text or "" for word in line.findall(f"{namespace}word")
-                )
+                ]
                 lines.append(Line(
                     number, block,
                     float(line.get("xMin", "0")) * MM_PER_PT,
                     float(line.get("yMin", "0")) * MM_PER_PT,
                     float(line.get("xMax", "0")) * MM_PER_PT,
                     float(line.get("yMax", "0")) * MM_PER_PT,
-                    text,
+                    "".join(words),
+                    words,
                 ))
     return lines
 
@@ -688,7 +688,7 @@ def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
             text = visible_text(line.text)
             if FOOTNOTE_URL_START.match(text) and generated_footnote_line(line.text):
                 footnote = True
-                number = re.match(r"^\s*\*?(\d+)\.", text)
+                number = re.match(r"^\s*(\d+)[.．]", text)
                 numbers.append(int(number.group(1)))
                 continue
             stripped = text.strip()
@@ -701,7 +701,10 @@ def find_footnote_separation_problems(lines: list[Line]) -> list[str]:
             body_parts.append(text)
         if not numbers:
             continue
-        body = "".join(body_parts)
+        # 行を区切らずに継ぐと呼び出し `*4` に次の行頭の数字がくっついて
+        # `*45` と読まれ、呼び出しが無いと誤判定される（箇条書きの
+        # 番号が呼び出しの直後に並ぶ冊で起きる。issue #763）
+        body = "\n".join(body_parts)
         for number in numbers:
             if not re.search(rf"\*{number}(?!\d)", body):
                 problems.append(
@@ -738,9 +741,58 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
     返すのは (つないだ文字列, {そのページの文字列が終わる位置: ページ番号})。
     """
     marker = _footnote_marker_re(markup)
+    # 実要素の float: footnote（.pdf-fn）は呼び出し位置に自動の
+    # ::footnote-call（裸の番号）を描く。同じ行に呼び出し「*N」が
+    # ある時だけ、その番号と一致する語を拾うと本文に混ざった
+    # 番号を外せる。語が丸ごと番号の物だけ対象にするので、本文中の
+    # 「2章」や「第2版」の数字は残る（issue #763-28）。
+    footnote_numbers = {
+        str(number)
+        for number in re.findall(r'data-pdf-footnote="(\d+)"', markup)
+    }
+
+    def strip_call_digits(
+        text: str, words: list[str] | None, ahead: str = ""
+    ) -> str:
+        if not words:
+            return text
+        kept: list[str] = []
+        for i, w in enumerate(words):
+            # 消すのは呼び出しが描く番号（`*` や `*N` の直後の語、
+            # または近い後方に呼び出し `*N` が来る裸の番号）だけ。
+            # リンクの脚注は呼び出しの裸の番号がリンク語の手前にも出る
+            # （`教材は 1 カリキュラム目次 *1`・`区切りは 2 カリキュラム目次 *2`）
+            # で、行をまたいで `先に3` → 次の行の `*3` の形にもなる。
+            # 同じ行に `*N` があっても「Step 1」のような本文の数値は残す。
+            if w not in footnote_numbers:
+                kept.append(w)
+                continue
+            if i > 0 and (words[i - 1].endswith("*") or words[i - 1] == f"*{w}"):
+                continue
+            rest = ("".join(words[i + 1:]) + ahead)[:80]
+            # `{/*1件も` のようなコードコメントの `*N` は呼び出しではない
+            call = re.search(rf"(?<!/)\*{w}(?!\d)", rest)
+            # 手前の裸番号は `N リンク語 *N` の呼び出し。ただし番号と `*N` の
+            # 間に同じ数字がもう1つある時は、手前は本文の数値（`その1日目`
+            # と `教材は1カリキュラム目次 *1` の1）で、近い方が呼び出し。
+            if call and w not in rest[: call.start()]:
+                continue
+            kept.append(w)
+        return "".join(kept)
+
     blocks: dict[tuple[int, int], list[Line]] = {}
     for line in lines:
         blocks.setdefault((line.page, line.block), []).append(line)
+    # 呼び出し `*N` が行をまたぐことがあるので、抽出順で直後に来る
+    # 行の文をあらかじめ持っておく（ブロックは1行ごとに切れるため
+    # ブロック内では次の行に辿れない）。
+    sorted_lines = sorted(lines, key=lambda line: (line.page, line.top))
+    ahead_by_line: dict[int, str] = {
+        id(line): "".join(
+            visible_text(later.text) for later in sorted_lines[index + 1:index + 4]
+        )
+        for index, line in enumerate(sorted_lines)
+    }
     texts: dict[int, str] = {}
     for (page, _), block_lines in sorted(blocks.items()):
         block_lines.sort(key=lambda line: line.top)
@@ -757,8 +809,10 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
             # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
             if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
                 continue
+            # 呼び出し `*N` が行をまたぐことがあるので、直後の行の文も渡す
+            ahead = ahead_by_line.get(id(line), "")
             texts[page] = texts.get(page, "") + normalize_text(
-                marker.sub("", line.text))
+                marker.sub("", strip_call_digits(line.text, line.words, ahead)))
     parts: list[str] = []
     page_ends: dict[int, int] = {}
     cursor = 0

@@ -246,15 +246,31 @@ def try_match(probe: str, marks: set[int], pdf: str, idx: int) -> MatchResult:
     return MatchResult(True, "ok", "", pdf_index)
 
 
+def _flex_head_token(part: str) -> str:
+    """ASCII ↔ 非ASCII の境に空白なしでも可変な空白を許す。
+
+    抽出テキストは半角数字・英字と全角の境へ空白を挿れる
+    （`30日は8つの局` → `30 日は 8 つの局`）。
+    """
+    seq: list[str] = []
+    prev_ascii: bool | None = None
+    for ch in part:
+        is_ascii = ord(ch) < 128
+        if prev_ascii is not None and is_ascii != prev_ascii:
+            seq.append(r"\s*")
+        seq.append(re.escape(ch))
+        prev_ascii = is_ascii
+    return "".join(seq)
+
+
 def _candidate_offsets(head: str, pdf: str, start: int):
-    cursor = start
-    while True:
-        idx = pdf.find(head, cursor)
-        if idx < 0:
-            return
-        if _is_extracted_line_start(pdf, idx):
-            yield idx
-        cursor = idx + 1
+    # 抽出テキストは桁揃えで空白数が原稿とずれる（`origin  ` → `origin   `）。
+    # 連続する空白をまとめて可変扱いし、一致した開始位置を返す。
+    parts = [part for part in head.split() if part]
+    pattern = re.compile(r"\s+".join(_flex_head_token(part) for part in parts))
+    for match in pattern.finditer(pdf, start):
+        if _is_extracted_line_start(pdf, match.start()):
+            yield match.start()
 
 
 def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[int]:
@@ -323,9 +339,22 @@ def find_block(
     line_data = _block_line_data(block)
     if not line_data:
         return MatchResult(True, "empty", "", start), 0
-    first_probe = line_data[0][0].lstrip()
-    first_token = re.match(r"\S+", first_probe)
-    head = first_token.group(0)[:10] if first_token else first_probe[:10]
+    # 先頭語（`{/*` や `//` だけ）では候補が他のブロックに食い込み、
+    # 以降のブロックが本来の位置より後ろで照合されて連鎖的に mismatch する。
+    # 行頭から10文字を頭にして候補を絞る。ただし折れてよい位置の手前で
+    # 切らないと、許容された改行の向こう側まで頭に含まれて見つからない。
+    raw_probe = line_data[0][0]
+    first_probe = raw_probe.lstrip()
+    indent = len(raw_probe) - len(first_probe)
+    # 折れ候補の位置はインデント込みの原稿上の位置なので、
+    # 行頭の空白を引いた位置が頭の10文字内にあるかで見る。
+    first_marks = line_data[0][1]
+    early = [
+        mark - indent
+        for mark in sorted(first_marks)
+        if indent + 3 <= mark < indent + 10
+    ]
+    head = first_probe[: early[0]] if early else first_probe[:10]
     last_failure = MatchResult(
         False, "missing", f"prefix not found after offset {start}: {head!r}", start
     )

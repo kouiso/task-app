@@ -620,19 +620,19 @@ const view = (
 
     # 25. filepath 見出しは4形とも pre の外の .code-filepath へ出す
     filepath_cases = [
-        ("tsx", "// filepath: src/app/page.tsx", "src/app/page.tsx"),
-        ("bash", "# filepath: ターミナル", "ターミナル"),
+        ("tsx", "// filepath: src/app/page.tsx", "filepath: src/app/page.tsx"),
+        ("bash", "# filepath: ターミナル", "filepath: ターミナル"),
         (
             "css",
             "  /* filepath: src/app/globals.css（同じファイルの続き） */",
-            "src/app/globals.css（同じファイルの続き）",
+            "filepath: src/app/globals.css（同じファイルの続き）",
         ),
         (
             "tsx",
             "            <span class=\"token punctuation\">{</span>"
             "<span class=\"token comment\">/* filepath: src/app/page.tsx（同じファイルの続き） */</span>"
             "<span class=\"token punctuation\">}</span>",
-            "src/app/page.tsx（同じファイルの続き）",
+            "filepath: src/app/page.tsx（同じファイルの続き）",
         ),
     ]
     for lang, first_line, label in filepath_cases:
@@ -641,7 +641,7 @@ const view = (
             f"{first_line}\nconst x = 1;</code></pre>"
         )
         out = hoist_code_filepath(source)
-        expected = f'<p class="code-filepath">filepath: {html.escape(label)}</p>'
+        expected = f'<p class="code-filepath">{html.escape(label)}</p>'
         if expected not in out:
             failures.append(f"{lang} の filepath 行が見出しに出ていない: {out}")
         body = out.split("</p>", 1)[1]
@@ -665,8 +665,7 @@ const view = (
     if hoist_code_filepath(untouched) != untouched:
         failures.append("filepath でない1行目を書き換えてしまった")
 
-    # code_filepath_label は原稿側の判定にも使う（verify_pdf_copy・check_pdf_book）。
-    # 値は教材が説明する「filepath:」の印を保った形で返る
+    # code_filepath_label は原稿側の判定にも使う（verify_pdf_copy・check_pdf_book）
     if code_filepath_label("  # filepath: .env.example") != "filepath: .env.example":
         failures.append("# filepath 行の値を取れていない")
     if code_filepath_label("const x = 1;") is not None:
