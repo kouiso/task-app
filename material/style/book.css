@@ -566,11 +566,16 @@ figure img[src$=".png"] {
 /* 箇条書きと引用の中のリンクは脚注がそのページに入らないとき、呼び出しの行ごと
    次のページへ送る（issue #474 直し4）。素の段落の中のリンクへ当てると
    Day 04 の組版が止まるので、箇条書きと引用に限る。引用を外すと Day 01 の
-   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。 */
+   「Microsoft の公式手順」の脚注だけが次のページへ流れ、呼び出しと別ページになる。
+   素の段落は代わりに、呼び出しを含む段落へ .pdf-fn-call の頁またぎ禁止を
+   付けて、呼び出しと脚注が別ページに分かれるのを防ぐ（issue #763）。 */
 @media print {
   li > a[data-pdf-footnote][href^="http"] > .pdf-fn,
   blockquote > p > a[data-pdf-footnote][href^="http"] > .pdf-fn {
     footnote-policy: line;
+  }
+  p.pdf-fn-call {
+    break-inside: avoid;
   }
 }
 

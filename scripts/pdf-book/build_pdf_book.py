@@ -50,7 +50,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from breakable_code import mark_breakable_pres  # noqa: E402
-from keep_next import mark_keep_next  # noqa: E402
+from keep_next import mark_keep_next, mark_footnote_call_paragraphs  # noqa: E402
 from code_wrap import (  # noqa: E402
     hoist_code_filepath,
     unsafe_runs,
@@ -1929,6 +1929,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         # 置く印を付ける（issue #475）。脚注の番号付けより先に付ける
         markup = mark_keep_next(markup)
         markup = number_external_link_footnotes(markup)
+        markup = mark_footnote_call_paragraphs(markup)
         validate_annotated_html(markup, manifest)
         html_doc.write_text(markup, encoding="utf-8")
         (WORK_DIR / f"{slug}.inline-manifest.json").write_text(

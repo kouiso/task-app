@@ -390,6 +390,62 @@ def mark_keep_next(markup: str) -> str:
     return markup
 
 
+FOOTNOTE_ATTR = "data-pdf-footnote"
+FN_CALL_CLASS = "pdf-fn-call"
+
+
+def mark_footnote_call_paragraphs(markup: str) -> str:
+    """脚注の呼び出しを含む段落へ、頁またぎを許さない印を付ける。
+
+    呼び出しの行がページ末に残って脚注だけが次のページへ送られると、読者は
+    リンク先を探してページをめくることになる（issue #763 の day03 で実測）。
+    footnote-policy: line は箇条書きと引用で効くが、素の段落では呼び出し行の
+    移動と本文の回り込みが衝突して脚注と本文が重なる。break-inside: avoid
+    だけでは段落自身がページに収まる限り呼び出しが末尾に残るので、
+    pdf-keep-next と同じ仕組みで段落と直後の要素を pdf-keep-group に包み、
+    脚注領域を引いた版面に収まらない時は段落ごと次ページへ送る。
+    """
+    root = _parse(markup)
+    marked: list[_Element] = [
+        element
+        for element in _walk(root)
+        if element.tag == "p"
+        and not _has_skip_ancestor(element)
+        and f'{FOOTNOTE_ATTR}="' in markup[element.open_end:element.end]
+    ]
+    groups: dict[int, int] = {}
+    for element in reversed(marked):
+        following = _next_element(element)
+        if (
+            following is not None
+            and following.tag in _KEEP_GROUP_TAGS
+            and following.end
+        ):
+            end = groups.pop(id(following), following.end)
+            groups[id(element)] = end
+    edits: list[tuple[int, int, str]] = []
+    for element in marked:
+        open_tag = markup[element.start:element.open_end]
+        if FN_CALL_CLASS in _classes(element):
+            continue
+        match = CLASS_ATTR_RE.search(open_tag)
+        if match:
+            new_tag = open_tag.replace(
+                match.group(0),
+                f'class="{match.group(1)} {FN_CALL_CLASS}"', 1)
+        else:
+            new_tag = open_tag[:-1].rstrip() + f' class="{FN_CALL_CLASS}">'
+        edits.append((element.start, element.open_end, new_tag))
+        if id(element) in groups:
+            edits.append(
+                (element.start, element.start, '<div class="pdf-keep-group">')
+            )
+            edits.append((groups[id(element)], groups[id(element)], "</div>"))
+    for start, end, replacement in sorted(edits, key=lambda e: (-e[0], -e[1])):
+        markup = markup[:start] + replacement + markup[end:]
+    return markup
+
+
 class Paragraph:
     """検査で突き合わせる段落。text は出力用の文、norm は比較用の形。"""
 
