@@ -90,6 +90,24 @@ const TriggerWithAutoFocusHarness = ({ onOpenAutoFocus }: TriggerWithAutoFocusHa
   </Dialog>
 );
 
+const InnerAutoFocusHarness = () => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(true)}>
+        開く
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogTitle>自動フォーカス</DialogTitle>
+          <DialogDescription>説明</DialogDescription>
+          <input aria-label="自動フォーカス欄" autoFocus />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 describe('制御型 Dialog / AlertDialog のクローズ時フォーカス制御', () => {
   it('モーダル Dialog を Escape で閉じると開いたボタンへフォーカスが戻る', async () => {
     const user = userEvent.setup();
@@ -149,6 +167,22 @@ describe('制御型 Dialog / AlertDialog のクローズ時フォーカス制御
     await user.click(screen.getByRole('button', { name: 'キャンセル' }));
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(document.activeElement).toBe(opener);
+    });
+  });
+
+  it('内側要素の autoFocus で onOpenAutoFocus が抑制されても開いたボタンへフォーカスが戻る', async () => {
+    const user = userEvent.setup();
+    render(<InnerAutoFocusHarness />);
+
+    const opener = screen.getByRole('button', { name: '開く' });
+    await user.click(opener);
+    await screen.findByRole('dialog');
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: '自動フォーカス欄' }));
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
       expect(document.activeElement).toBe(opener);
     });
   });

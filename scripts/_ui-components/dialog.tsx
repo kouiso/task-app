@@ -6,13 +6,33 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-const DialogModalContext = React.createContext(true);
+const DialogContext = React.createContext<{ modal: boolean; openerElement: HTMLElement | null }>({
+  modal: true,
+  openerElement: null,
+});
 
-const Dialog = ({ modal = true, ...props }: DialogPrimitive.DialogProps) => (
-  <DialogModalContext.Provider value={modal}>
-    <DialogPrimitive.Root modal={modal} {...props} />
-  </DialogModalContext.Provider>
-);
+const Dialog = ({ modal = true, ...props }: DialogPrimitive.DialogProps) => {
+  // 制御型で Content 内の autoFocus が onOpenAutoFocus を潰しても開き元を
+  // 拾えるよう、open が false→true へ変わったレンダー時点で記録する。
+  // この時点ではまだ Content の DOM 効果が走っていないので安全に取れる。
+  // open=false では消さない。閉じるレンダーは Content の onCloseAutoFocus より
+  // 先に走り、そこで参照する復帰先を消してしまうため。次の open で上書きされる。
+  const open = props.open;
+  const openerElementRef = React.useRef<HTMLElement | null>(null);
+  const previousOpenRef = React.useRef<boolean | undefined>(undefined);
+  if (open === true && previousOpenRef.current !== true) {
+    openerElementRef.current =
+      typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+  previousOpenRef.current = open;
+  return (
+    <DialogContext.Provider value={{ modal, openerElement: openerElementRef.current }}>
+      <DialogPrimitive.Root modal={modal} {...props} />
+    </DialogContext.Provider>
+  );
+};
 Dialog.displayName = DialogPrimitive.Root.displayName;
 
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -49,7 +69,7 @@ const DialogContent = React.forwardRef<
     // では復帰先がなく FocusScope 側の復帰も抑止されて body に落ちてしまう。
     // 非モーダル（modal={false}）で外部要素を操作して閉じた時は Radix 本家と
     // 同じく復帰を抑止し、移動先の外部要素にフォーカスを残す。
-    const isModal = React.useContext(DialogModalContext);
+    const { modal: isModal, openerElement } = React.useContext(DialogContext);
     const lastFocusedElementRef = React.useRef<HTMLElement | null>(null);
     const hasInteractedOutsideRef = React.useRef(false);
     return (
@@ -64,8 +84,15 @@ const DialogContent = React.forwardRef<
           {...props}
           onOpenAutoFocus={(event) => {
             hasInteractedOutsideRef.current = false;
-            lastFocusedElementRef.current =
+            const activeElement =
               document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            const isActiveInsideContent =
+              activeElement !== null &&
+              event.currentTarget instanceof HTMLElement &&
+              event.currentTarget.contains(activeElement);
+            lastFocusedElementRef.current = isActiveInsideContent
+              ? openerElement
+              : (activeElement ?? openerElement);
             onOpenAutoFocus?.(event);
           }}
           onInteractOutside={(event) => {
@@ -77,7 +104,7 @@ const DialogContent = React.forwardRef<
           onCloseAutoFocus={(event) => {
             onCloseAutoFocus?.(event);
             const interactedOutside = hasInteractedOutsideRef.current;
-            const previousElement = lastFocusedElementRef.current;
+            const previousElement = lastFocusedElementRef.current ?? openerElement;
             hasInteractedOutsideRef.current = false;
             lastFocusedElementRef.current = null;
             if (event.defaultPrevented) return;
