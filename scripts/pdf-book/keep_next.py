@@ -35,6 +35,12 @@ MAX_INTRO_CHARS = 70
 # 直後の要素がこれらの塊なら、より厳しい字数（MAX_INTRO_CHARS）で印を付ける。
 # 塊は丸ごと次ページへ送られやすく、手前の導入文が残りやすい
 NEXT_BLOCK_TAGS = {"pre", "table", "ul", "ol", "dl"}
+
+# 印付き段落と一緒に pdf-keep-group で包んでよい直後の要素。
+# 見出し・section など流れの骨格を担う要素は包まない。
+_KEEP_GROUP_TAGS = {
+    "p", "figure", "pre", "table", "ul", "ol", "dl", "blockquote", "div",
+}
 STACKED_TABLE_CLASS = "pdf-stacked-table"
 # この直後に来た段落が導入文になりやすい見出し
 HEADING_TAGS = {"h2", "h3", "h4"}
@@ -67,13 +73,14 @@ class _Element:
     """組版前 HTML の1要素。children は ('el', _Element) / ('text', str) /
     ('comment', str) の並びで、兄弟関係の判定に使う。"""
 
-    __slots__ = ("tag", "attrs", "start", "open_end", "children", "parent")
+    __slots__ = ("tag", "attrs", "start", "open_end", "end", "children", "parent")
 
     def __init__(self, tag: str, attrs: dict, parent: "_Element | None"):
         self.tag = tag
         self.attrs = attrs
         self.start = 0        # 開始タグの先頭の位置
         self.open_end = 0     # 開始タグの終わり（'>' の次）の位置
+        self.end = 0          # 閉じタグの終わり（'>' の次）の位置
         self.children: list[tuple[str, object]] = []
         self.parent = parent
 
@@ -119,6 +126,7 @@ class _Tree(HTMLParser):
         # 対応する開始タグまで畳む。対応が無い閉じタグは無視する
         for depth in range(len(self.stack) - 1, 0, -1):
             if self.stack[depth].tag == tag:
+                self.stack[depth].end = self._position() + len(tag) + 3
                 del self.stack[depth:]
                 return
 
@@ -314,18 +322,70 @@ def _add_keep_next(open_tag: str) -> str:
     return open_tag[:-1].rstrip() + f' class="{KEEP_NEXT_CLASS}">'
 
 
+def _next_element(element: _Element) -> "_Element | None":
+    """次の兄弟要素を返す。間の空白テキストとコメントは飛ばす。"""
+    if element.parent is None:
+        return None
+    siblings = element.parent.children
+    for index, (kind, value) in enumerate(siblings):
+        if kind == "el" and value is element:
+            for kind2, value2 in siblings[index + 1:]:
+                if kind2 == "el":
+                    return value2
+                if kind2 == "text" and value2.strip():
+                    return None
+            return None
+    return None
+
+
 def mark_keep_next(markup: str) -> str:
-    """導入・ラベルの <p> に pdf-keep-next を付けた文字列を返す。"""
+    """導入・ラベルの <p> に pdf-keep-next を付けた文字列を返す。
+
+    直後が <figure> の印付き段落は、段落と図を
+    `pdf-keep-group`（break-inside: avoid）の div で包む。
+    break-after/break-before の avoid だけでは flex 由来の図の手前で
+    効かず、段落だけがページ末尾に残る冊があった（issue #475、day08）。
+    ひとつの箱にすると段落ごと図が次ページへ送られる。
+    """
     root = _parse(markup)
+    # break-after: avoid は直後が分断できない箱（figure・表・リスト・
+    # keep-group）の時に Vivliostyle が段落だけ残して効かない。
+    # 段落と次のブロックを pdf-keep-group の div で包んで
+    # break-inside: avoid にすると、箱ごと次ページへ送られる
+    # （issue #475・day08 の実測）。見出し・section など流れの骨格を
+    # 担う要素は包まない。
+    # 印が連続する時は内側のグループに吸収させて平らな1組にする
+    # （div の入れ子は同じ位置に閉じタグが重なって挿入順が
+    # 読みにくいので、1つの div に畳む）。
+    marked: list[_Element] = [
+        element
+        for element in _walk(root)
+        if element.tag == "p"
+        and not _has_skip_ancestor(element)
+        and qualifies(element)
+    ]
+    groups: dict[int, int] = {}
+    for element in reversed(marked):
+        following = _next_element(element)
+        if (
+            following is not None
+            and following.tag in _KEEP_GROUP_TAGS
+            and following.end
+        ):
+            end = groups.pop(id(following), following.end)
+            groups[id(element)] = end
     edits: list[tuple[int, int, str]] = []
-    for element in _walk(root):
-        if element.tag != "p" or _has_skip_ancestor(element):
-            continue
-        if not qualifies(element):
-            continue
+    for element in marked:
         open_tag = markup[element.start:element.open_end]
         edits.append((element.start, element.open_end, _add_keep_next(open_tag)))
-    for start, end, replacement in reversed(edits):
+        if id(element) in groups:
+            edits.append(
+                (element.start, element.start, '<div class="pdf-keep-group">')
+            )
+            edits.append((groups[id(element)], groups[id(element)], "</div>"))
+    # 全部原文の位置のまま、後ろから1度だけ書き換える（先の編集で
+    # 後ろの位置がずれないよう、開始位置の降順・同位置は終了の降順）。
+    for start, end, replacement in sorted(edits, key=lambda e: (-e[0], -e[1])):
         markup = markup[:start] + replacement + markup[end:]
     return markup
 

@@ -287,6 +287,12 @@ table {
   display: block;
   text-align: center;
 }
+/* display: block に戻しても、段落がちょうどページの底まで埋まる配置では
+   Vivliostyle の avoid が段落だけ残す（day08 の実測）。印付き段落と図を
+   包む div に割れ禁止を掛けて、段落ごと図を次ページへ送る。 */
+.pdf-keep-group {
+  break-inside: avoid;
+}
 .pdf-keep-next + figure img {
   display: block;
   margin-inline: auto;
