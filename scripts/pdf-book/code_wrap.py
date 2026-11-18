@@ -1208,6 +1208,40 @@ def wrap_logical_lines(inner: str) -> str:
     # 1行のままの文は行の途中では割れないので、短い行の出力を変えずに済む
     # ブロック箱化した行は行区切りの改行を span の内側へ畳む。
     # ブロック箱の後ろに置くと空行が一行増えるため。
+    #
+    # ハイライトの token span は行区切りの \n を内側に含むことがある
+    # （plain-text なら複数行を跨ぐ）。そのまま \n で割ると cw-line が
+    # token span の内側で開き、token の </span> が cw-line を行の途中で
+    # 閉じてしまう（残りが span の外の行へ崩れる）。先に \n の所で
+    # 開いている span を閉じて開き直し、どの行もタグが閉じた形にする。
+    def _tag_name(tag: str) -> str:
+        return tag[1:].split(None, 1)[0].rstrip(">")
+
+    rebalanced = []
+    open_tags: list[str] = []
+    for chunk in re.split(r"(<[^>]+>)", body):
+        if chunk.startswith("<"):
+            if not chunk.startswith("</") and not chunk.endswith("/>"):
+                # cw-* の囲み span（cw-block-shrink 等）は行を跨ぐのが正しい
+                # 形なので、行の境で切らない。開き直すのは token span だけ。
+                if not chunk.startswith("<br") and 'class="cw-' not in chunk:
+                    open_tags.append(chunk)
+            elif chunk.startswith("</"):
+                if open_tags:
+                    open_tags.pop()
+            rebalanced.append(chunk)
+            continue
+        if "\n" not in chunk:
+            rebalanced.append(chunk)
+            continue
+        pieces = chunk.split("\n")
+        for i, piece in enumerate(pieces):
+            if i:
+                close = "".join(f"</{_tag_name(t)}>" for t in reversed(open_tags))
+                reopen = "".join(open_tags)
+                rebalanced.append(close + "\n" + reopen)
+            rebalanced.append(piece)
+    body = "".join(rebalanced)
     lines = body.split("\n")
     parts = []
     for i, line in enumerate(lines):

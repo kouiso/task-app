@@ -247,14 +247,13 @@ def try_match(probe: str, marks: set[int], pdf: str, idx: int) -> MatchResult:
 
 
 def _candidate_offsets(head: str, pdf: str, start: int):
-    cursor = start
-    while True:
-        idx = pdf.find(head, cursor)
-        if idx < 0:
-            return
-        if _is_extracted_line_start(pdf, idx):
-            yield idx
-        cursor = idx + 1
+    # 抽出テキストは桁揃えで空白数が原稿とずれる（`origin  ` → `origin   `）。
+    # 連続する空白をまとめて可変扱いし、一致した開始位置を返す。
+    parts = [part for part in head.split() if part]
+    pattern = re.compile(r"\s+".join(re.escape(part) for part in parts))
+    for match in pattern.finditer(pdf, start):
+        if _is_extracted_line_start(pdf, match.start()):
+            yield match.start()
 
 
 def _allowed_breaks(text_atoms: list[str], states: list[str], lang: str) -> set[int]:
@@ -323,9 +322,14 @@ def find_block(
     line_data = _block_line_data(block)
     if not line_data:
         return MatchResult(True, "empty", "", start), 0
+    # 先頭語（`{/*` や `//` だけ）では候補が他のブロックに食い込み、
+    # 以降のブロックが本来の位置より後ろで照合されて連鎖的に mismatch する。
+    # 行頭から10文字を頭にして候補を絞る。ただし折れてよい位置の手前で
+    # 切らないと、許容された改行の向こう側まで頭に含まれて見つからない。
     first_probe = line_data[0][0].lstrip()
-    first_token = re.match(r"\S+", first_probe)
-    head = first_token.group(0)[:10] if first_token else first_probe[:10]
+    first_marks = line_data[0][1]
+    early = [mark for mark in sorted(first_marks) if 3 <= mark < 10]
+    head = first_probe[: early[0]] if early else first_probe[:10]
     last_failure = MatchResult(
         False, "missing", f"prefix not found after offset {start}: {head!r}", start
     )
