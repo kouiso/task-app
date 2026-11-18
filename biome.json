@@ -103,7 +103,12 @@
       "linter": {
         "rules": {
           "correctness": {
-            "noUnknownPseudoElement": "off"
+            "noUnknownPseudoElement": {
+              "level": "on",
+              "options": {
+                "ignore": ["footnote-call", "footnote-marker"]
+              }
+            }
           }
         }
       }
