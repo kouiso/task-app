@@ -754,12 +754,16 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
     def strip_call_digits(text: str, words: list[str] | None) -> str:
         if not words:
             return text
-        present = {w for w in words if w in footnote_numbers}
-        if not present:
-            return text
         return "".join(
-            w for w in words
-            if not (w in present and f"*{w}" in words)
+            w
+            for i, w in enumerate(words)
+            # 消すのは呼び出しが描く番号（`*` や `*N` の直後の語）だけ。
+            # 同じ行に `*N` があっても「Step 1」のような本文の数値は残す。
+            if not (
+                w in footnote_numbers
+                and i > 0
+                and (words[i - 1].endswith("*") or words[i - 1] == f"*{w}")
+            )
         )
 
     blocks: dict[tuple[int, int], list[Line]] = {}
