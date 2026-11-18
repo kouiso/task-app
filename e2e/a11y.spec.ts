@@ -156,4 +156,26 @@ test.describe('Accessibility: dialog focus trap', () => {
 
     await expect(newProjectButton).toBeFocused();
   });
+
+  test('delete confirm alert dialog restores focus on Cancel and Escape', async ({ page }) => {
+    await page.goto('/project');
+    await page.waitForLoadState('networkidle', { timeout: 15000 });
+
+    const deleteButton = page.getByRole('button', { name: /を削除$/ }).first();
+    await expect(deleteButton).toBeVisible();
+    await deleteButton.click();
+
+    const alertDialog = page.getByRole('alertdialog');
+    await expect(alertDialog).toBeVisible({ timeout: 5000 });
+
+    await alertDialog.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(alertDialog).not.toBeVisible({ timeout: 3000 });
+    await expect(deleteButton).toBeFocused();
+
+    await deleteButton.click();
+    await expect(alertDialog).toBeVisible({ timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await expect(alertDialog).not.toBeVisible({ timeout: 3000 });
+    await expect(deleteButton).toBeFocused();
+  });
 });

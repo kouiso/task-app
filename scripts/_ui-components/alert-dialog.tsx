@@ -5,7 +5,31 @@ import * as React from 'react';
 import { buttonVariants } from '@/component/ui/button';
 import { cn } from '@/lib/utils';
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialogContext = React.createContext<{ openerElement: HTMLElement | null }>({
+  openerElement: null,
+});
+
+const AlertDialog = (props: AlertDialogPrimitive.AlertDialogProps) => {
+  // dialog.tsx と同じ理由。制御型で open が立ち上がったレンダー時点の
+  // activeElement を開き元として保持する。open=false では消さない（閉じる
+  // レンダーが onCloseAutoFocus より先に走り復帰先を消すため）
+  const open = props.open;
+  const openerElementRef = React.useRef<HTMLElement | null>(null);
+  const previousOpenRef = React.useRef<boolean | undefined>(undefined);
+  if (open === true && previousOpenRef.current !== true) {
+    openerElementRef.current =
+      typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+  previousOpenRef.current = open;
+  return (
+    <AlertDialogContext.Provider value={{ openerElement: openerElementRef.current }}>
+      <AlertDialogPrimitive.Root {...props} />
+    </AlertDialogContext.Provider>
+  );
+};
+AlertDialog.displayName = AlertDialogPrimitive.Root.displayName;
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 
@@ -29,19 +53,45 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
-        className,
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-));
+>(({ className, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+  // dialog.tsx と同じ理由。trigger 無しの制御型でも開いた要素へフォーカスを戻す
+  const { openerElement } = React.useContext(AlertDialogContext);
+  const lastFocusedElementRef = React.useRef<HTMLElement | null>(null);
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+          className,
+        )}
+        {...props}
+        onOpenAutoFocus={(event) => {
+          const activeElement =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          const isActiveInsideContent =
+            activeElement !== null &&
+            event.currentTarget instanceof HTMLElement &&
+            event.currentTarget.contains(activeElement);
+          lastFocusedElementRef.current = isActiveInsideContent
+            ? openerElement
+            : (activeElement ?? openerElement);
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const previousElement = lastFocusedElementRef.current ?? openerElement;
+          lastFocusedElementRef.current = null;
+          if (event.defaultPrevented) return;
+          if (!previousElement || previousElement === document.body) return;
+          event.preventDefault();
+          previousElement.focus();
+        }}
+      />
+    </AlertDialogPortal>
+  );
+});
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
