@@ -751,24 +751,47 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
         for number in re.findall(r'data-pdf-footnote="(\d+)"', markup)
     }
 
-    def strip_call_digits(text: str, words: list[str] | None) -> str:
+    def strip_call_digits(
+        text: str, words: list[str] | None, ahead: str = ""
+    ) -> str:
         if not words:
             return text
-        return "".join(
-            w
-            for i, w in enumerate(words)
-            # 消すのは呼び出しが描く番号（`*` や `*N` の直後の語）だけ。
+        kept: list[str] = []
+        for i, w in enumerate(words):
+            # 消すのは呼び出しが描く番号（`*` や `*N` の直後の語、
+            # または近い後方に呼び出し `*N` が来る裸の番号）だけ。
+            # リンクの脚注は呼び出しの裸の番号がリンク語の手前にも出る
+            # （`教材は 1 カリキュラム目次 *1`・`区切りは 2 カリキュラム目次 *2`）
+            # で、行をまたいで `先に3` → 次の行の `*3` の形にもなる。
             # 同じ行に `*N` があっても「Step 1」のような本文の数値は残す。
-            if not (
-                w in footnote_numbers
-                and i > 0
-                and (words[i - 1].endswith("*") or words[i - 1] == f"*{w}")
-            )
-        )
+            if w not in footnote_numbers:
+                kept.append(w)
+                continue
+            if i > 0 and (words[i - 1].endswith("*") or words[i - 1] == f"*{w}"):
+                continue
+            rest = ("".join(words[i + 1:]) + ahead)[:80]
+            call = re.search(rf"\*{w}(?!\d)", rest)
+            # 手前の裸番号は `N リンク語 *N` の呼び出し。ただし番号と `*N` の
+            # 間に同じ数字がもう1つある時は、手前は本文の数値（`その1日目`
+            # と `教材は1カリキュラム目次 *1` の1）で、近い方が呼び出し。
+            if call and w not in rest[: call.start()]:
+                continue
+            kept.append(w)
+        return "".join(kept)
 
     blocks: dict[tuple[int, int], list[Line]] = {}
     for line in lines:
         blocks.setdefault((line.page, line.block), []).append(line)
+    # 呼び出し `*N` が行をまたぐことがあるので、抽出順で直後に来る
+    # 行の文をあらかじめ持っておく（ブロックは1行ごとに切れるため
+    # ブロック内では次の行に辿れない）。
+    sorted_lines = sorted(lines, key=lambda line: (line.page, line.top))
+    ahead_by_line: dict[int, str] = {
+        id(line): "".join(
+            visible_text(later.text) for later in sorted_lines[index + 1:index + 4]
+        )
+        for index, line in enumerate(sorted_lines)
+    }
     texts: dict[int, str] = {}
     for (page, _), block_lines in sorted(blocks.items()):
         block_lines.sort(key=lambda line: line.top)
@@ -785,8 +808,10 @@ def _body_page_texts(lines: list[Line], markup: str) -> tuple[str, dict[int, int
             # 柱（天 0〜20mm）とノンブル（地 278mm〜）は版面の外なので除く
             if line.bottom <= HEAD_BAND_BOTTOM_MM or line.top >= FOLIO_BAND_TOP_MM:
                 continue
+            # 呼び出し `*N` が行をまたぐことがあるので、直後の行の文も渡す
+            ahead = ahead_by_line.get(id(line), "")
             texts[page] = texts.get(page, "") + normalize_text(
-                marker.sub("", strip_call_digits(line.text, line.words)))
+                marker.sub("", strip_call_digits(line.text, line.words, ahead)))
     parts: list[str] = []
     page_ends: dict[int, int] = {}
     cursor = 0

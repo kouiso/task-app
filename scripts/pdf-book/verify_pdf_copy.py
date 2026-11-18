@@ -246,11 +246,28 @@ def try_match(probe: str, marks: set[int], pdf: str, idx: int) -> MatchResult:
     return MatchResult(True, "ok", "", pdf_index)
 
 
+def _flex_head_token(part: str) -> str:
+    """ASCII ↔ 非ASCII の境に空白なしでも可変な空白を許す。
+
+    抽出テキストは半角数字・英字と全角の境へ空白を挿れる
+    （`30日は8つの局` → `30 日は 8 つの局`）。
+    """
+    seq: list[str] = []
+    prev_ascii: bool | None = None
+    for ch in part:
+        is_ascii = ord(ch) < 128
+        if prev_ascii is not None and is_ascii != prev_ascii:
+            seq.append(r"\s*")
+        seq.append(re.escape(ch))
+        prev_ascii = is_ascii
+    return "".join(seq)
+
+
 def _candidate_offsets(head: str, pdf: str, start: int):
     # 抽出テキストは桁揃えで空白数が原稿とずれる（`origin  ` → `origin   `）。
     # 連続する空白をまとめて可変扱いし、一致した開始位置を返す。
     parts = [part for part in head.split() if part]
-    pattern = re.compile(r"\s+".join(re.escape(part) for part in parts))
+    pattern = re.compile(r"\s+".join(_flex_head_token(part) for part in parts))
     for match in pattern.finditer(pdf, start):
         if _is_extracted_line_start(pdf, match.start()):
             yield match.start()
