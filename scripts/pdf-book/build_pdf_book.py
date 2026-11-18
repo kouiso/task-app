@@ -386,30 +386,42 @@ def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
 def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
     TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
+    manifest_names = ("package.json", "package-lock.json")
+    # 正本と同じ manifest/lock の隔離環境が残っていれば再解決しない。
+    # npm ci は別途数百MBの staging を要し、残容量が細い環境ではそれだけで
+    # ビルドが止まる。解決結果の正当性は下の版数・実行ファイル・
+    # シンボリックリンク検査が再利用のたびに拘束する。
+    reusable = TOOLCHAIN_DIR.is_dir() and all(
+        (TOOLCHAIN_SRC_DIR / name).is_file()
+        and (TOOLCHAIN_DIR / name).is_file()
+        and (TOOLCHAIN_DIR / name).read_bytes() == (TOOLCHAIN_SRC_DIR / name).read_bytes()
+        for name in manifest_names
+    )
+    if not reusable:
+        staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
+        # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
+        # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+        try:
+            # コピーも try の内側に入れる。ここで raise すると except の rmtree が
+            # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
+            for name in manifest_names:
+                source = TOOLCHAIN_SRC_DIR / name
+                if not source.exists():
+                    raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
+                shutil.copyfile(source, staging / name)
+            result = _run_logged(
+                ["npm", "ci", "--ignore-scripts"], label="npm ci",
+                cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+            )
+            if result.returncode != 0:
+                raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
+            if TOOLCHAIN_DIR.exists():
+                shutil.rmtree(TOOLCHAIN_DIR)
+            staging.replace(TOOLCHAIN_DIR)
+        except Exception:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
     identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
-    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
-    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
-    try:
-        # コピーも try の内側に入れる。ここで raise すると except の rmtree が
-        # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
-        for name in ("package.json", "package-lock.json"):
-            source = TOOLCHAIN_SRC_DIR / name
-            if not source.exists():
-                raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
-            shutil.copyfile(source, staging / name)
-        result = _run_logged(
-            ["npm", "ci", "--ignore-scripts"], label="npm ci",
-            cwd=staging, env=env, capture_output=True, text=True, timeout=BUILD_TIMEOUT,
-        )
-        if result.returncode != 0:
-            raise OSError(f"PDFツールの解決に失敗: {(result.stderr or result.stdout)[-300:]}")
-        if TOOLCHAIN_DIR.exists():
-            shutil.rmtree(TOOLCHAIN_DIR)
-        staging.replace(TOOLCHAIN_DIR)
-    except Exception:
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
 
     modules = TOOLCHAIN_DIR / "node_modules"
     for identifier in identifiers:
