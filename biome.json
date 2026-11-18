@@ -96,5 +96,17 @@
       "bracketSameLine": false,
       "quoteStyle": "single"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["material/style/book.css"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnknownPseudoElement": "off"
+          }
+        }
+      }
+    }
+  ]
 }
