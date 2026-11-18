@@ -385,7 +385,12 @@ def mark_keep_next(markup: str) -> str:
             edits.append((groups[id(element)], groups[id(element)], "</div>"))
     # 全部原文の位置のまま、後ろから1度だけ書き換える（先の編集で
     # 後ろの位置がずれないよう、開始位置の降順・同位置は終了の降順）。
-    for start, end, replacement in sorted(edits, key=lambda e: (-e[0], -e[1])):
+    # 同位置の挿入は開く <div> を先に書く（閉じる </div> を後に書くと
+    # 出力が </div><div> の順になり、空白なしで隣接する2組が
+    # 空の div と1組への誤結合になるのを防ぐ）。
+    for start, end, replacement in sorted(
+        edits, key=lambda e: (-e[0], -e[1], e[2] == "</div>")
+    ):
         markup = markup[:start] + replacement + markup[end:]
     return markup
 
@@ -441,7 +446,9 @@ def mark_footnote_call_paragraphs(markup: str) -> str:
                 (element.start, element.start, '<div class="pdf-keep-group">')
             )
             edits.append((groups[id(element)], groups[id(element)], "</div>"))
-    for start, end, replacement in sorted(edits, key=lambda e: (-e[0], -e[1])):
+    for start, end, replacement in sorted(
+        edits, key=lambda e: (-e[0], -e[1], e[2] == "</div>")
+    ):
         markup = markup[:start] + replacement + markup[end:]
     return markup
 
