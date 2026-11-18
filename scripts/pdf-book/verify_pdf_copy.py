@@ -326,9 +326,17 @@ def find_block(
     # 以降のブロックが本来の位置より後ろで照合されて連鎖的に mismatch する。
     # 行頭から10文字を頭にして候補を絞る。ただし折れてよい位置の手前で
     # 切らないと、許容された改行の向こう側まで頭に含まれて見つからない。
-    first_probe = line_data[0][0].lstrip()
+    raw_probe = line_data[0][0]
+    first_probe = raw_probe.lstrip()
+    indent = len(raw_probe) - len(first_probe)
+    # 折れ候補の位置はインデント込みの原稿上の位置なので、
+    # 行頭の空白を引いた位置が頭の10文字内にあるかで見る。
     first_marks = line_data[0][1]
-    early = [mark for mark in sorted(first_marks) if 3 <= mark < 10]
+    early = [
+        mark - indent
+        for mark in sorted(first_marks)
+        if indent + 3 <= mark < indent + 10
+    ]
     head = first_probe[: early[0]] if early else first_probe[:10]
     last_failure = MatchResult(
         False, "missing", f"prefix not found after offset {start}: {head!r}", start

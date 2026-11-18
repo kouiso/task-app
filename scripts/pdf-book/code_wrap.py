@@ -1222,9 +1222,10 @@ def wrap_logical_lines(inner: str) -> str:
     for chunk in re.split(r"(<[^>]+>)", body):
         if chunk.startswith("<"):
             if not chunk.startswith("</") and not chunk.endswith("/>"):
-                # cw-* の囲み span（cw-block-shrink 等）は行を跨ぐのが正しい
-                # 形なので、行の境で切らない。開き直すのは token span だけ。
-                if not chunk.startswith("<br") and 'class="cw-' not in chunk:
+                # cw-* の囲み span（cw-block-shrink・cw-hang 等）も対応は
+                # 追う。追跡から外すと cw-hang の </span> が token span を
+                # 誤って閉じ、行の境で開き直す対象がずれる。
+                if not chunk.startswith("<br"):
                     open_tags.append(chunk)
             elif chunk.startswith("</"):
                 if open_tags:
@@ -1237,8 +1238,10 @@ def wrap_logical_lines(inner: str) -> str:
         pieces = chunk.split("\n")
         for i, piece in enumerate(pieces):
             if i:
-                close = "".join(f"</{_tag_name(t)}>" for t in reversed(open_tags))
-                reopen = "".join(open_tags)
+                # cw-* の囲み span は行を跨ぐ正しい形なので境では切らない。
+                splittable = [t for t in open_tags if 'class="cw-' not in t]
+                close = "".join(f"</{_tag_name(t)}>" for t in reversed(splittable))
+                reopen = "".join(splittable)
                 rebalanced.append(close + "\n" + reopen)
             rebalanced.append(piece)
     body = "".join(rebalanced)
