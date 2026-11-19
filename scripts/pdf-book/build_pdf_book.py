@@ -1879,16 +1879,33 @@ def work_slug(stem: str) -> str:
     return f"{head}-{hashlib.sha256(stem.encode('utf-8')).hexdigest()[:6]}"
 
 
+def _unlink_recording(file: Path, problems: list[str], source_name: str) -> None:
+    """後片付けの削除。消せなくても先に決めた結果を上書きしない。
+
+    Windows では別プロセスが開いたファイルの削除が OSError になる。
+    missing_ok=True は不存在だけを無視するので、ここで捉えてパスと原因だけ
+    残して続ける（issue #775）。
+    """
+    try:
+        file.unlink(missing_ok=True)
+    except OSError as error:
+        problems.append(f"{source_name}: {file} の削除に失敗（続行）: {error}")
+
+
 def build_one(path: Path, browser: str | None, env: dict[str, str],
               link_map: dict[str, str] | None = None) -> list[str]:
     """1本を PDF にする。問題があれば説明の一覧を返す（空なら成功）。"""
     stem = path.stem
     output = OUT_DIR / f"{stem}.pdf"
-    # 前段の変換失敗でも、前回のPDFを今回の生成物に見せない。
-    output.unlink(missing_ok=True)
     slug = work_slug(stem)
     binding_file = WORK_DIR / f"{slug}.evidence-binding.json"
-    binding_file.unlink(missing_ok=True)
+    try:
+        # 前段の変換失敗でも、前回のPDFを今回の生成物に見せない。
+        output.unlink(missing_ok=True)
+        binding_file.unlink(missing_ok=True)
+    except OSError as error:
+        # 前回の生成物が消せないまま組むと取り違えられるので、この冊だけ落とす
+        return [f"{path.name}: 前回の生成物を削除できません: {error}"]
     source_sha256 = sha256_file(path)
     # U+FE0F（異体字セレクタ16）は「絵文字として描け」という指定。付いていると
     # Chromium が単色の Noto Emoji を無視してシステムのカラー絵文字フォントを呼び、
@@ -2036,13 +2053,13 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         "PDF_BOOK_INLINE_LAYOUT_MANIFEST": str(manifest_file),
         "PDF_BOOK_INLINE_LAYOUT_REPORT": str(measurement_file),
     }
-    measurement_file.unlink(missing_ok=True)
+    _unlink_recording(measurement_file, problems, path.name)
     measure_command = command.copy()
     measure_command[measure_command.index("-o") + 1] = str(measurement_pdf)
     try:
         # 変換後は同じHTMLを再計測し、古い表の寸法を最終PDFへ流用しない。
         for attempt in range(len(table_structure) + 1):
-            measurement_file.unlink(missing_ok=True)
+            _unlink_recording(measurement_file, problems, path.name)
             _run_logged(
                 measure_command, label="inline measurement", slug=slug,
                 capture_output=True, text=True, cwd=WORK_DIR,
@@ -2100,10 +2117,10 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         problems.append(f"{path.name}: 行内コードの実測または縮小候補の計算に失敗: {error}")
         return problems
     finally:
-        measurement_pdf.unlink(missing_ok=True)
+        _unlink_recording(measurement_pdf, problems, path.name)
     audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"] = str(WORK_DIR / f"{slug}.inline-layout.json")
     if output.exists():
-        output.unlink()
+        _unlink_recording(output, problems, path.name)
     try:
         result = _run_logged(
             command, label="vivliostyle", slug=slug,
@@ -2122,11 +2139,11 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             f"{path.name}: 組版に失敗: {(result.stderr or result.stdout).strip()[-300:]}"
         )
         if output.exists():
-            output.unlink()
+            _unlink_recording(output, problems, path.name)
         return problems
 
     pdf_audit_file = WORK_DIR / f"{slug}.inline-pdf.json"
-    pdf_audit_file.unlink(missing_ok=True)
+    _unlink_recording(pdf_audit_file, problems, path.name)
     try:
         audited = _run_logged(
             ["node", str(Path(__file__).with_name("verify-inline-pdf.mjs")),
@@ -2142,11 +2159,11 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
             raise ValueError("生成PDFと行内コードの文字・配置が一致しません")
     except (OSError, ValueError, subprocess.TimeoutExpired) as error:
         problems.append(f"{path.name}: PDF生成後の行内コード検査に失敗: {error}")
-        output.unlink(missing_ok=True)
+        _unlink_recording(output, problems, path.name)
         return problems
 
     if sha256_file(path) != source_sha256:
-        output.unlink(missing_ok=True)
+        _unlink_recording(output, problems, path.name)
         return [f"{path.name}: 組版中に原稿が変更されました"]
     artifacts = {
         "source": path, "html": html_doc, "inline_manifest": manifest_file,
@@ -2258,7 +2275,10 @@ def main(argv: list[str]) -> int:
     # この先はPDFを上書きし得る。部分ビルドや失敗のあとに、過去の全冊証跡を
     # 現在の出力へ流用させないため、実行直前に失効させる。
     if touches_release_outputs:
-        RELEASE_RECEIPT.unlink(missing_ok=True)
+        try:
+            RELEASE_RECEIPT.unlink(missing_ok=True)
+        except OSError as error:
+            print(f"前回の全冊証跡を削除できません（続行）: {error}", file=sys.stderr)
 
     try:
         prepare_work_dir()
