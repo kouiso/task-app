@@ -2164,7 +2164,8 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
 
     if sha256_file(path) != source_sha256:
         _unlink_recording(output, problems, path.name)
-        return [f"{path.name}: 組版中に原稿が変更されました"]
+        problems.append(f"{path.name}: 組版中に原稿が変更されました")
+        return problems
     artifacts = {
         "source": path, "html": html_doc, "inline_manifest": manifest_file,
         "inline_layout": Path(audit_env["PDF_BOOK_INLINE_LAYOUT_REPORT"]),

@@ -22,6 +22,8 @@ class UnlinkRecordingTest(unittest.TestCase):
         self.assertEqual(1, len(problems))
         self.assertIn("a.md", problems[0])
         self.assertIn("削除に失敗", problems[0])
+        self.assertIn("/tmp/x", problems[0])
+        self.assertIn("locked", problems[0])
 
     def test_successful_unlink_records_nothing(self):
         problems = []
