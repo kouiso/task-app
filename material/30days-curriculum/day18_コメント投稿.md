@@ -291,10 +291,9 @@ router だけ書いても `api.comment.create` はまだ呼べません。
 Day 14 で書いた `root.ts` を開きます。import の並びと `appRouter` の中身を次の2ブロックの形に書き換えます。
 増えるのは `commentRouter` の import 1行と `comment: commentRouter,` の1行だけです。ほかの行は貼り足しません。
 `appRouter` の中は Day 07 から router を足した順（`auth` → `project` → `task` → `search` → `comment`）に並べます。
-手元の `appRouter` の中で `search: searchRouter,` が `task: taskRouter,` より上にある場合はこの2行を入れ替えてください。
-`searchRouter` と `taskRouter` の import 行は入れ替えません。
-import の並びは Biome（コード整形ツール）がアルファベット順にそろえます。`searchRouter` が `taskRouter` より上のままで正しい形です。
-並びを入れ替えても `api.task` や `api.search` の呼び名は変わりません。Day 20 と Day 21 はこの並びを前提に `root.ts` を説明するのでそろえておきます。
+`searchRouter` と `taskRouter` の import 行はアルファベット順のままで構いません。
+import の並びは Biome（コード整形ツール）がアルファベット順にそろえるため `searchRouter` が `taskRouter` より上のままで正しい形です。
+Day 20 と Day 21 もこの並びを前提に `root.ts` を説明します。
 
 ```typescript
 // filepath: src/server/api/root.ts

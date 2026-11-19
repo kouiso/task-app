@@ -1340,7 +1340,7 @@ URL に詳細 ID があるかで対象の問い合わせを選びます。401・
 - 未選択時は API を呼ばない設定になっている
 - 一覧の `getAll` のクエリが `const selectedProject` と `currentUser` のクエリより下にある
 
-カードを押して詳細画面へ進む入口も今日のうちに本実装します。Day 09 で置いた受け皿 `const handleProjectClick = (id: string) => { void id; };` をまるごと消し、mutation 群の下かつ `handleEdit` の直前へ次を書いてください。直後には上で説明した `handleDetailClose` と `projectDetail` のクエリが続きます。
+カードを押して詳細画面へ進む入口も今日のうちに本実装します。Day 09 で置いた3行の受け皿（`const handleProjectClick = (id: string) => {` から `void id;` を挟んで閉じる `};` まで）をまるごと消してください。そのうえで mutation 群の下かつ `handleEdit` の直前へ次を書きます。直後には上で説明した `handleDetailClose` と `projectDetail` のクエリが続きます。
 
 ```typescript
 // filepath: src/app/project/page.tsx

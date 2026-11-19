@@ -1230,6 +1230,8 @@ const removeMemberMutation =
             { projectId: selectedProject }
           );
       }
+      setRemoveMemberDialogOpen(false);
+      setRemoveMemberTargetId(null);
     },
   });
 ```
@@ -2536,6 +2538,8 @@ function ProjectPageContent() {
           projectId: selectedProject,
         });
       }
+      setRemoveMemberDialogOpen(false);
+      setRemoveMemberTargetId(null);
     },
   });
 ```

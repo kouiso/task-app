@@ -457,7 +457,7 @@ export const searchRouter = createTRPCRouter({
 // filepath: src/server/api/root.ts（import と appRouter に追加）
 import { searchRouter } from './routers/search';
 
-// appRouter の中に追加
+// appRouter の末尾（task: taskRouter, の下）に追加
 search: searchRouter,
 ```
 
@@ -2108,8 +2108,8 @@ import { createCallerFactory, createTRPCRouter } from './trpc';
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   project: projectRouter,
-  search: searchRouter,
   task: taskRouter,
+  search: searchRouter,
 });
 
 export type AppRouter = typeof appRouter;
