@@ -1,11 +1,15 @@
 name: Deploy ZIP to course-library storage
 
-# 販売 ZIP（dist/task-app.zip）を作って course-library の R2 バケット
+# 販売 ZIP（task-app-curriculum-v*.zip）を作って course-library の R2 バケット
 # （course-library-materials）に置く。サイト（course-library Worker）が
 # `releases/task-app/<version>/` 配下のオブジェクトを配布元にする。
 #
-# ZIP の中身の定義は Makefile の zip-export が正（受講生が自分で書く対象の
-# src/server/api/routers/project.ts などは入らない）。
+# ZIP の中身の定義は scripts/build-zip.sh が正（写経用の土台だけ。task-app/
+# トップフォルダ付きで、完成アプリの src/・prisma/ は入らない）。
+# Makefile の zip-export（dist/task-app.zip）はリポジトリほぼ全部の開発用
+# アーカイブで、教材 Day 1 の `cd task-app` が成立しない＆解答が入るので
+# 購入者には出さない。scripts/curriculum-qa/check-sale-package.sh が
+# 販売 ZIP の必須エントリを検査する（material-gate.yml でも同じ検査が走る）。
 #
 # 配置ルール（course-library docs/OPERATIONS.md と同じ考え方）:
 # - リリース用は「バージョンごとの不変 prefix」。一度置いたオブジェクトは上書きしない。
@@ -51,8 +55,12 @@ concurrency:
 
 env:
   RCLONE_RELEASE: "1.75.2"
-  ZIP_PATH: dist/task-app.zip
-  ZIP_NAME: task-app-source.zip
+  # build-zip.sh の出力名は版を含む（task-app-curriculum-v1.1.zip）ので、
+  # 配布用の固定名に写してから上げる。R2 のオブジェクト名は course-library
+  # manifest の material.filename と一致させる（購入者への保存名は Worker 側で
+  # task-app-curriculum-v<X.Y.Z>.zip に組み直される）。
+  ZIP_PATH: task-app-curriculum.zip
+  ZIP_NAME: task-app-curriculum.zip
   BUCKET: course-library-materials
 
 jobs:
@@ -137,21 +145,24 @@ jobs:
               exit 1
             fi
             PREFIX="releases/task-app/${INPUT_VERSION}/"
+            echo "release_version=${INPUT_VERSION}" >> "$GITHUB_ENV"
           else
             PREFIX="releases/task-app/${RELEASE_VERSION}/"
+            echo "release_version=${RELEASE_VERSION}" >> "$GITHUB_ENV"
           fi
           echo "object_key=${PREFIX}${ZIP_NAME}" >> "$GITHUB_ENV"
           echo "配置先: r2://${BUCKET}/${PREFIX}${ZIP_NAME}"
 
-      # zip-ci.yml と同じ入口で作って検査する（dist/task-app.zip の存在と中身）。
-      - name: Create ZIP
-        run: bash .github/ci/run.sh zip-build
-
-      - name: Verify ZIP exists
-        run: bash .github/ci/run.sh zip-exists
-
-      - name: Verify ZIP contents
-        run: bash .github/ci/run.sh zip-contents
+      # sale-package フェーズと同じ入口（material-gate.yml と同じ定義）:
+      # build-zip.sh が写経用の土台 ZIP を組み、check-sale-package.sh が
+      # 必須エントリ（task-app/ トップ・scaffold-from-scratch.sh など）を検査する。
+      - name: Build sales ZIP
+        run: |
+          bash scripts/build-zip.sh
+          bash scripts/curriculum-qa/check-sale-package.sh
+          built="$(ls task-app-curriculum-*.zip | head -n1)"
+          cp "$built" "${ZIP_PATH}"
+          echo "built from ${built} -> ${ZIP_PATH}"
 
       # secrets 未設定でも「その時点の ZIP の中身」を run の画面から確認できるようにする。
       - name: Upload ZIP artifact
@@ -204,3 +215,59 @@ jobs:
           fi
           rclone copyto -v --stats-one-line "${ZIP_PATH}" "r2:${BUCKET}/${object_key}"
           rclone lsl "r2:${BUCKET}/${object_key}"
+
+      # ==== course-library への昇格通知 ====
+      # 配置した版を購入者に見せる判断は course-library 側の
+      # promote-product.yml が握る（manifest 更新 PR → レビュー → マージ → deploy）。
+      # ここでは repository_dispatch(product-release) で版を通知するだけ。
+      # 通知の資格情報（どちらも無い時は手動コマンドを summary に出して終わる。
+      # リリース自体は失敗にしない）:
+      # - APP_ID / APP_PRIVATE_KEY: kouiso/course-library にインストール済みの
+      #   GitHub App（contents: write。App が course-library に未インストールでも
+      #   トークン発行で失敗 → 手動フォールバックへ落ちる）
+      # - COURSE_LIBRARY_TOKEN: 上記が無い時の fine-grained PAT（contents:write）
+      - name: Create course-library dispatch token
+        id: dispatch-token
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: kouiso
+          repositories: course-library
+          permission-contents: write
+
+      - name: Notify course-library of the new release
+        env:
+          APP_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          PAT_TOKEN: ${{ secrets.COURSE_LIBRARY_TOKEN }}
+          PAYLOAD_VERSION: ${{ env.release_version }}
+        run: |
+          TOKEN="${APP_TOKEN:-$PAT_TOKEN}"
+          SHA256="$(sha256sum "${ZIP_PATH}" | cut -d' ' -f1)"
+          SOURCE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          DATE="$(date +%F)"
+          if [ -z "${TOKEN}" ]; then
+            {
+              echo "### course-library への昇格通知: 手動フォールバック"
+              echo "通知用の資格情報（APP_ID/APP_PRIVATE_KEY または COURSE_LIBRARY_TOKEN）が無いため、"
+              echo "manifest の版指し替えは手動で起こしてください:"
+              echo ""
+              echo '```bash'
+              echo "gh workflow run promote-product.yml -R kouiso/course-library \\"
+              echo "  -f collection=task-app -f version=${PAYLOAD_VERSION} -f date=${DATE}"
+              echo '```'
+              echo ""
+              echo "- ZIP sha256: \`${SHA256}\`"
+              echo "- 配置キー: \`${object_key}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          payload=$(printf '{"event_type":"product-release","client_payload":{"collection":"task-app","version":"%s","date":"%s","sha256":"%s","source":"%s"}}' \
+            "${PAYLOAD_VERSION}" "${DATE}" "${SHA256}" "${SOURCE}")
+          if ! curl -fsS --connect-timeout 10 --max-time 30 -X POST "https://api.github.com/repos/kouiso/course-library/dispatches" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "${payload}"; then
+            echo "::warning::course-library への dispatch が失敗しました。手動で promote-product.yml を起こしてください（version=${PAYLOAD_VERSION}）"
+          fi
