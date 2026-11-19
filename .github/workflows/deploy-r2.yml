@@ -265,7 +265,7 @@ jobs:
           fi
           payload=$(printf '{"event_type":"product-release","client_payload":{"collection":"task-app","version":"%s","date":"%s","sha256":"%s","source":"%s"}}' \
             "${PAYLOAD_VERSION}" "${DATE}" "${SHA256}" "${SOURCE}")
-          if ! curl -fsS -X POST "https://api.github.com/repos/kouiso/course-library/dispatches" \
+          if ! curl -fsS --connect-timeout 10 --max-time 30 -X POST "https://api.github.com/repos/kouiso/course-library/dispatches" \
             -H "Authorization: Bearer ${TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -d "${payload}"; then
