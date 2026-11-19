@@ -1294,10 +1294,10 @@ return (
 
 `type="button"` と `type="submit"` の書き分けがここでの分かれ目です。`<form>` の中のボタンは既定で送信ボタンになるためキャンセル側へ `type="button"` を付けないと押した瞬間に送信が走ります。送信側の `type="submit"` は `handleSubmit(handleFormSubmit)` へつながり、zod の検証を通ったときだけ `handleFormSubmit` が呼ばれます。最後の `}` で `TaskDialog` 関数が閉じ、ダイアログの部品が1つ完成します。
 
-部品のコードが閉じたので、プロジェクトのルートで `npx tsc --noEmit` を実行します。エラーが出た場合は、表示されたファイル名と行番号を確認して直します。画面への組み込みは次の Step 8 です。以下の操作確認は、Step 8 でダイアログを開けるようになってから行います。
+部品のコードが閉じたのでいったんファイルを保存します。初期設定の `tsconfig.json` は未参照の `src/component/task` を除外しています。`npx tsc --noEmit` による型検査と実際の操作確認は次の Step 8 で `src/app/task/page.tsx` からこの部品を import したあとに行います。
 
 **確認ポイント**:
-- `npx tsc --noEmit` がエラーなしで終了する
+- `src/component/task/task-dialog.tsx` を保存した
 - `TaskDialog` 関数の閉じ括弧まで書けている
 
 **Step 8 の組み込み後の操作確認**:

@@ -643,7 +643,9 @@ Day 15 の編集ダイアログは開いたときに今の値が入っている�
 
 **確認ポイント**:
 - `time-log-dialog.tsx` を保存できた
-- `npx tsc --noEmit` がエラーなしで終了する
+- `TimeLogDialog` 関数の閉じ括弧まで書けている
+
+初期設定の `tsconfig.json` は未参照の `src/component/task` を除外しています。`npx tsc --noEmit` は次の Step 3 で `TaskCard` から import したあとに行います。
 
 下の画像は Step 3 まで書き終えてカードの「時間記録」ボタンから開いた状態です。いまの自分の画面にはまだこれを開く入口がありません。入口は Step 3 で足します。
 
@@ -918,7 +920,8 @@ const handleTimeLogSuccess = useCallback(() => {
 画面の動きを順に並べると追加を押した直後はまだ前の値が出ていて取り直しが終わった時点で新しい合計へ置き換わります。差は1秒に満たないので操作しているときはすぐ増えたように見えます。
 
 **確認ポイント**:
-- `handleTimeLogSuccess` を追加し、`<TaskCard>` に2つの props を渡した
+- `handleTimeLogSuccess` を追加して `<TaskCard>` に2つの props を渡した
+- `npx tsc --noEmit` が `time-log-dialog.tsx` と `task-card.tsx` を含めてエラーなしで終了する
 - カードの「時間記録」ボタンを押すとダイアログが開き、閉じられる
 - 「1時間30分」を入力して追加できる
 - 時間と分の両方を0のまま送信するとエラーが出る
