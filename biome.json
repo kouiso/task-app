@@ -96,5 +96,22 @@
       "bracketSameLine": false,
       "quoteStyle": "single"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["material/style/book.css"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnknownPseudoElement": {
+              "level": "on",
+              "options": {
+                "ignore": ["footnote-call", "footnote-marker"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

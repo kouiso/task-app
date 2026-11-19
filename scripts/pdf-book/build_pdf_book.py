@@ -50,7 +50,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "curriculum-qa"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "pdf-book"))
 from markdown_scan import fence_states  # noqa: E402
 from breakable_code import mark_breakable_pres  # noqa: E402
-from keep_next import mark_keep_next  # noqa: E402
+from keep_next import mark_keep_next, mark_footnote_call_paragraphs  # noqa: E402
 from code_wrap import (  # noqa: E402
     hoist_code_filepath,
     unsafe_runs,
@@ -383,17 +383,38 @@ def redirect_font_data_home(env: dict[str, str], work_dir: Path) -> None:
     env["XDG_DATA_HOME"] = str(work_dir / "xdg")
 
 
-def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
-    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
-    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
+_TOOLCHAIN_MANIFEST_NAMES = ("package.json", "package-lock.json")
+
+
+def _toolchain_manifest_matches() -> bool:
+    """正本と同じ manifest/lock の隔離環境が残っているかだけを見る。
+
+    読み取りに失敗するキャッシュは「無い」扱いにして再解決へ回す。
+    ここで raise すると、読めない cache が残っているだけでビルドが毎回死ぬ。
+    """
+    if not TOOLCHAIN_DIR.is_dir():
+        return False
+    for name in _TOOLCHAIN_MANIFEST_NAMES:
+        source = TOOLCHAIN_SRC_DIR / name
+        cached = TOOLCHAIN_DIR / name
+        if not source.is_file() or not cached.is_file():
+            return False
+        try:
+            if cached.read_bytes() != source.read_bytes():
+                return False
+        except OSError:
+            return False
+    return True
+
+
+def _install_release_toolchain(env: dict[str, str]) -> None:
+    """staging で固定版を npm ci し、成功したものだけ TOOLCHAIN_DIR へ公開する。"""
     staging = Path(tempfile.mkdtemp(prefix=".pdf-book-toolchain-", dir=TOOLCHAIN_DIR.parent))
-    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
-    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
-    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+    installed = False
     try:
-        # コピーも try の内側に入れる。ここで raise すると except の rmtree が
-        # 走らんので、失敗のたびに staging のゴミが dist/ へ残る
-        for name in ("package.json", "package-lock.json"):
+        # コピーもここに含める。ここで raise すると後始末が走らんので、
+        # 失敗のたびに staging のゴミが dist/ へ残る
+        for name in _TOOLCHAIN_MANIFEST_NAMES:
             source = TOOLCHAIN_SRC_DIR / name
             if not source.exists():
                 raise FileNotFoundError(f"PDFツールの{ name }が無い: {source}")
@@ -407,9 +428,18 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
         if TOOLCHAIN_DIR.exists():
             shutil.rmtree(TOOLCHAIN_DIR)
         staging.replace(TOOLCHAIN_DIR)
-    except Exception:
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
+        installed = True
+    finally:
+        if not installed:
+            try:
+                shutil.rmtree(staging)
+            except OSError as error:
+                print(f"警告: PDFツールの staging を消せませんでした: {staging} ({error})")
+
+
+def _verify_release_toolchain() -> dict[str, str]:
+    """TOOLCHAIN_DIR の版数・実行ファイル・リンク閉域を検査し、実体のパスを返す。"""
+    identifiers = [VIVLIOSTYLE_CLI, VFM_CLI, THEME, MERMAID_CLI]
 
     modules = TOOLCHAIN_DIR / "node_modules"
     for identifier in identifiers:
@@ -417,11 +447,10 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
         package_json = modules / expected_name / "package.json"
         try:
             package = json.loads(package_json.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
+        # UnicodeDecodeError（ValueError 系）も壊れた cache の一部として再解決へ回す。
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
             raise OSError(f"PDFツールのpackage.jsonを読めません: {identifier}") from error
         if package.get("name") != expected_name or package.get("version") != expected_version:
-            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
             raise OSError(
                 f"PDFツールの解決版が指定と違います: {identifier} -> "
                 f"{package.get('name')}@{package.get('version')}"
@@ -436,6 +465,27 @@ def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
     # 固定せず実行バイトを拘束できない。全リンクの解決先が内部にあることを先に確かめる。
     _hash_tree_stably(TOOLCHAIN_DIR)
     return toolchain
+
+
+def prepare_release_toolchain(env: dict[str, str]) -> dict[str, str]:
+    """全冊証跡用の隔離環境へ固定版を解決し、その実体を直接実行できる形で返す。"""
+    TOOLCHAIN_DIR.parent.mkdir(parents=True, exist_ok=True)
+    # 正本と同じ manifest/lock の隔離環境が残っていれば再解決しない。
+    # npm ci は別途数百MBの staging を要し、残容量が細い環境ではそれだけで
+    # ビルドが止まる。解決結果の正当性は版数・実行ファイル・リンク検査が
+    # 再利用のたびに拘束する。検査に落ちたキャッシュは消して再解決へ回す。
+    # 残すと manifest が一致したまま壊れた cache を毎回再利用して永久に失敗する。
+    if _toolchain_manifest_matches():
+        try:
+            return _verify_release_toolchain()
+        # 検証の失敗（版数ずれ・実行ファイル欠落・リンク越境）は全て OSError 系。
+        # それ以外の例外は cache 不良ではなく実装バグなので消して npm ci へ回さん。
+        except OSError:
+            shutil.rmtree(TOOLCHAIN_DIR, ignore_errors=True)
+    # lockfile なしで解決すると推移的依存が浮動して、実行環境だけで起きる
+    # 組版ハング（#501）のような再現不可バグを生む。正本の package-lock で止める。
+    _install_release_toolchain(env)
+    return _verify_release_toolchain()
 
 
 def referenced_images(sources: list[Path]) -> list[Path]:
@@ -746,31 +796,49 @@ HTML_VOID_ELEMENTS = {
 }
 
 
-def footnote_display_url(href: str) -> str:
-    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
-
-    共有パラメータ `usp` は紙面で読む価値が無いので表示から外す。
-    折り返しは `/` `?` `&` `=` の直後だけに許し、それ以外の区切り記号
-    （`.` `-` `:` など）は行継ぎ禁止文字で接着する。テーマ側の
-    `word-break: break-all` がどこでも切るため、単語の途中で折れていた。
-    """
+def _footnote_display_text(href: str) -> str:
+    """共有パラメータ `usp` を外した、表示用のURLの生テキストを返す。"""
     head, _, fragment = href.partition('#')
     base, _, query = head.partition('?')
     params = [param for param in query.split('&')
               if param and param.split('=', 1)[0] != 'usp']
     display = base + (('?' + '&'.join(params)) if params else '')
     display += '#' + fragment if fragment else ''
+    return display
+
+
+def footnote_display_url(href: str) -> str:
+    """脚注に印刷する表示用のURLを作る。リンク先（href）自体は変えない。
+
+    以前は折返し位置を U+200B・U+2060 の不可視文字で接着していたが、
+    読者が URL をコピーすると無効なアドレスになるので、印はテキストへ
+    入れない（issue #763-28）。属性値へ入れる用途（見出しの下の1行）用。
+    """
+    return html.escape(_footnote_display_text(href))
+
+
+def footnote_display_url_markup(href: str) -> str:
+    """脚注要素に入れる表示URLのマークアップ。
+
+    折り返しは `/` `?` `&` `=` の直後の `<wbr>` だけに許し、それ以外の区切り
+    （`.` `-` `:` など）は `<span class="pdf-nw">` の nowrap で接着する。
+    `<wbr>` は本文へ文字として残らないので、コピーしてもURLが壊れない。
+    """
     pieces = []
-    for character in display:
+    run = []
+    for character in _footnote_display_text(href):
         if character in '/?&=':
-            pieces.append(character + '\u200b')
-        elif character.isascii() and character.isalnum():
-            pieces.append(character)
+            if run:
+                pieces.append(
+                    f'<span class="pdf-nw">{html.escape("".join(run))}</span>')
+                run = []
+            pieces.append(html.escape(character) + '<wbr/>')
         else:
-            # CJK やパーセント記号は isalnum では素通りできない。CJK はどこでも
-            # 折れてしまうので、ハイフン等の区切りと同じくこちらで接着する
-            pieces.append('\u2060' + character + '\u2060')
-    return html.escape(''.join(pieces))
+            run.append(character)
+    if run:
+        pieces.append(f'<span class="pdf-nw">{html.escape("".join(run))}</span>')
+    return ''.join(pieces)
+
 
 
 class ExternalLinkFootnotes(HTMLParser):
@@ -784,6 +852,7 @@ class ExternalLinkFootnotes(HTMLParser):
 
     def __init__(self, markup: str):
         super().__init__(convert_charrefs=False)
+        self.markup = markup
         self.line_starts = [0]
         for index, character in enumerate(markup):
             if character == '\n':
@@ -793,6 +862,22 @@ class ExternalLinkFootnotes(HTMLParser):
         self.number = 0
         # 文字列比較のために開いた <a> の本文を </a> まで集める
         self.capture: dict | None = None
+
+    def _start_tag_end(self, offset: int) -> int:
+        """offset（<a の直後）から、開始タグを閉じる `>` の次の位置を返す。"""
+        index = offset
+        quote = None
+        while index < len(self.markup):
+            char = self.markup[index]
+            if quote:
+                if char == quote:
+                    quote = None
+            elif char in '"\'':
+                quote = char
+            elif char == '>':
+                return index + 1
+            index += 1
+        return offset
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -863,10 +948,32 @@ class ExternalLinkFootnotes(HTMLParser):
             )
             return
         self.number += 1
+        if any(parent_tag in ('td', 'th')
+               for parent_tag, _ in self.parents[:-1]):
+            # 表のセルの中だと実要素の float: footnote が呼び出しと別ページに
+            # 流れる（Vivliostyle がセル内の脚注領域を別断片へ送る）。
+            # 表の中だけは ::before の attr 生成で脚注を出し、表示URLは
+            # 不可視文字を入れないまま overflow-wrap で折る（issue #763-28）
+            self.edits.append(
+                (capture['insertion'],
+                 f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
+                 f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+            )
+            return
         self.edits.append(
             (capture['insertion'],
-             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"'
-             f' {PDF_FOOTNOTE_DISPLAY_ATTRIBUTE}="{footnote_display_url(href)}"')
+             f' {PDF_FOOTNOTE_ATTRIBUTE}="{self.number}"')
+        )
+        # 脚注の本文は attr() の生成コンテンツだとマークアップを入れられないので、
+        # 実要素として <a> の内側に置き、float: footnote で脚注領域へ送る。
+        # 番号は CSS で ::footnote-marker を消して自分で付ける。区切りは
+        # 全角ピリオド — 原稿の `N. ` は半角なので、検査側が生成脚注行と
+        # 取り違えない印になる。URL 本体に印は入れない（コピーを汚さない）。
+        tag_end = self._start_tag_end(capture['insertion'])
+        self.edits.append(
+            (tag_end,
+             f'<span class="pdf-fn">{self.number}． '
+             f'{footnote_display_url_markup(href)}</span>')
         )
 
     def handle_endtag(self, tag):
@@ -1261,6 +1368,14 @@ def parse_source(
     toc: list[tuple[str, str, list[tuple[str, str]]]] = []
     seq = 0
 
+    def append_body(line: str) -> None:
+        # この toolchain の parser は段落の直後の見出しを段落の続きとして
+        # 組む。見出しの直前が空行でなければ空行を足して、#### や
+        # ## ... {#sN} が本文へ露出しないようにする（issue #763-15）
+        if body and body[-1].strip() != "" and HEADING_RE.match(line):
+            body.append("")
+        body.append(line)
+
     for _, line, state, _ in fence_states(text):
         if state != "outside":
             body.append(line)
@@ -1277,7 +1392,7 @@ def parse_source(
             seq += 1
             anchor = f"s{seq}"
             toc.append((anchor, strip_inline_markdown(h2.group(1)), []))
-            body.append(f"## {h2.group(1)} {{#{anchor}}}")
+            append_body(f"## {h2.group(1)} {{#{anchor}}}")
             continue
 
         h3_step = H3_STEP_RE.match(line)
@@ -1289,10 +1404,10 @@ def parse_source(
                 toc[-1][2].append((anchor, text))
             else:
                 toc.append((anchor, text, []))
-            body.append(f"### {h3_step.group(1)} {{#{anchor}}}")
+            append_body(f"### {h3_step.group(1)} {{#{anchor}}}")
             continue
 
-        body.append(line)
+        append_body(line)
 
     return title, body, toc
 
@@ -1491,7 +1606,13 @@ def diagram_font_face() -> str:
         "<style>@font-face{"
         f"font-family:'{FONT_SOURCES[0][2]}';font-style:normal;font-weight:400;"
         f"src:url(data:font/ttf;base64,{encoded}) format('truetype');"
-        "}</style>"
+        "}"
+        # BIZ UDPGothic の f_i 合字は枠だけあって中身が空（実測: profile が
+        # 「pro le」に欠ける）。mermaid のラベルは foreignObject 内の
+        # p/span にも来るので全要素で合字を切り、f と i を別の字のまま出す
+        # （issue #763-26）
+        "*{font-variant-ligatures:none;}"
+        "</style>"
     )
 
 
@@ -1858,6 +1979,7 @@ def build_one(path: Path, browser: str | None, env: dict[str, str],
         # 置く印を付ける（issue #475）。脚注の番号付けより先に付ける
         markup = mark_keep_next(markup)
         markup = number_external_link_footnotes(markup)
+        markup = mark_footnote_call_paragraphs(markup)
         validate_annotated_html(markup, manifest)
         html_doc.write_text(markup, encoding="utf-8")
         (WORK_DIR / f"{slug}.inline-manifest.json").write_text(

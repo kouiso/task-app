@@ -1,3 +1,4 @@
+import contextlib
 import json
 import sys
 import tempfile
@@ -398,6 +399,47 @@ class BuildReceiptTest(unittest.TestCase):
         ):
             self.assertEqual(build_pdf_book.build_one(source, None, env), [])
 
+    def _write_toolchain_fixture(self, target: Path) -> None:
+        """固定版4件の package.json と .bin のリンクを持つ偽 node_modules を作る。"""
+        modules = target / "node_modules"
+        for identifier in (
+            build_pdf_book.VIVLIOSTYLE_CLI,
+            build_pdf_book.VFM_CLI,
+            build_pdf_book.THEME,
+            build_pdf_book.MERMAID_CLI,
+        ):
+            name, version = identifier.rsplit("@", 1)
+            package = modules / name
+            package.mkdir(parents=True, exist_ok=True)
+            (package / "package.json").write_text(
+                json.dumps({"name": name, "version": version}), encoding="utf-8"
+            )
+        bins = modules / ".bin"
+        bins.mkdir(parents=True)
+        bin_targets = {
+            "vivliostyle": (modules / "@vivliostyle/cli/dist/cli.js",
+                            "../@vivliostyle/cli/dist/cli.js"),
+            "vfm": (modules / "@vivliostyle/vfm/lib/cli.js",
+                    "../@vivliostyle/vfm/lib/cli.js"),
+            "mmdc": (modules / "@mermaid-js/mermaid-cli/src/cli.js",
+                     "../@mermaid-js/mermaid-cli/src/cli.js"),
+        }
+        for name, (target_bin, relative_target) in bin_targets.items():
+            target_bin.parent.mkdir(parents=True, exist_ok=True)
+            target_bin.write_text("fixture", encoding="utf-8")
+            (bins / name).symlink_to(relative_target)
+
+    def _patch_toolchain(self, destination: Path, toolchain_src: Path):
+        @contextlib.contextmanager
+        def patched():
+            with (
+                patch.object(build_pdf_book, "TOOLCHAIN_DIR", destination),
+                patch.object(build_pdf_book, "TOOLCHAIN_SRC_DIR", toolchain_src),
+            ):
+                yield
+
+        return patched()
+
     def test_prepare_release_toolchain_validates_exact_resolved_packages(self):
         destination = self.root / "resolved-toolchain"
         toolchain_src = self.root / "toolchain-src"
@@ -407,49 +449,22 @@ class BuildReceiptTest(unittest.TestCase):
             encoding="utf-8",
         )
         (toolchain_src / "package-lock.json").write_text("{}", encoding="utf-8")
-        commands = []
+        commands: list[list[str]] = []
 
-        def install(command, **kwargs):
+        def install(command: list[str], **kwargs: object) -> "build_pdf_book.subprocess.CompletedProcess[str]":
             commands.append(command)
-            staging = Path(kwargs["cwd"])
+            staging = Path(str(kwargs["cwd"]))
             # package-lock.json が staging へコピーされていることを拘束する。
             # これが無いと npm ci は lockfile を読めず推移的依存が浮動する（#501）
             self.assertTrue(
                 (staging / "package-lock.json").is_file(),
                 "package-lock.json が staging へコピーされていない",
             )
-            modules = staging / "node_modules"
-            for identifier in (
-                build_pdf_book.VIVLIOSTYLE_CLI,
-                build_pdf_book.VFM_CLI,
-                build_pdf_book.THEME,
-                build_pdf_book.MERMAID_CLI,
-            ):
-                name, version = identifier.rsplit("@", 1)
-                package = modules / name
-                package.mkdir(parents=True, exist_ok=True)
-                (package / "package.json").write_text(
-                    json.dumps({"name": name, "version": version}), encoding="utf-8"
-                )
-            bins = modules / ".bin"
-            bins.mkdir(parents=True)
-            bin_targets = {
-                "vivliostyle": (modules / "@vivliostyle/cli/dist/cli.js",
-                                 "../@vivliostyle/cli/dist/cli.js"),
-                "vfm": (modules / "@vivliostyle/vfm/lib/cli.js",
-                        "../@vivliostyle/vfm/lib/cli.js"),
-                "mmdc": (modules / "@mermaid-js/mermaid-cli/src/cli.js",
-                         "../@mermaid-js/mermaid-cli/src/cli.js"),
-            }
-            for name, (target, relative_target) in bin_targets.items():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text("fixture", encoding="utf-8")
-                (bins / name).symlink_to(relative_target)
+            self._write_toolchain_fixture(staging)
             return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
 
         with (
-            patch.object(build_pdf_book, "TOOLCHAIN_DIR", destination),
-            patch.object(build_pdf_book, "TOOLCHAIN_SRC_DIR", toolchain_src),
+            self._patch_toolchain(destination, toolchain_src),
             patch.object(build_pdf_book.subprocess, "run", side_effect=install),
         ):
             resolved = build_pdf_book.prepare_release_toolchain({})
@@ -460,6 +475,62 @@ class BuildReceiptTest(unittest.TestCase):
         self.assertEqual(resolved["root"], str(destination))
         self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
         self.assertTrue(Path(resolved["theme_path"]).is_dir())
+
+    def test_prepare_release_toolchain_reuses_manifest_identical_install(self):
+        destination = self.root / "reused-toolchain"
+        toolchain_src = self.root / "toolchain-src"
+        toolchain_src.mkdir()
+        for name in ("package.json", "package-lock.json"):
+            content = f'{{"marker": "{name}"}}'
+            (toolchain_src / name).write_text(content, encoding="utf-8")
+            (destination).mkdir(exist_ok=True)
+            (destination / name).write_text(content, encoding="utf-8")
+        self._write_toolchain_fixture(destination)
+
+        def forbidden_install(command: list[str], **kwargs: object) -> "build_pdf_book.subprocess.CompletedProcess[str]":
+            # 再利用経路で install が走ったらその時点で失敗させる。
+            # 空き容量の細い環境で npm ci の staging 数百MB だけが原因で
+            # ビルドが止まるのを防ぐための経路なので、呼ばれた時点で違反。
+            self.fail(f"再利用経路で install が呼ばれた: {command}")
+
+        with (
+            self._patch_toolchain(destination, toolchain_src),
+            patch.object(build_pdf_book.subprocess, "run", side_effect=forbidden_install),
+        ):
+            resolved = build_pdf_book.prepare_release_toolchain({})
+
+        self.assertEqual(resolved["root"], str(destination))
+        self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
+        self.assertTrue(Path(resolved["theme_path"]).is_dir())
+
+    def test_prepare_release_toolchain_reinstalls_when_reused_cache_is_broken(self):
+        # manifest/lock が一致していても中身が壊れた cache は消して再解決する。
+        # 消さずに残すと manifest が一致したまま検証に落ち続け、ビルドが毎回死ぬ。
+        destination = self.root / "broken-toolchain"
+        toolchain_src = self.root / "toolchain-src"
+        toolchain_src.mkdir()
+        for name in ("package.json", "package-lock.json"):
+            content = f'{{"marker": "{name}"}}'
+            (toolchain_src / name).write_text(content, encoding="utf-8")
+            destination.mkdir(exist_ok=True)
+            (destination / name).write_text(content, encoding="utf-8")
+        # 実行ファイルも package.json も無い、manifest だけが残った壊れた cache
+        commands: list[list[str]] = []
+
+        def install(command: list[str], **kwargs: object) -> "build_pdf_book.subprocess.CompletedProcess[str]":
+            commands.append(command)
+            self._write_toolchain_fixture(Path(str(kwargs["cwd"])))
+            return build_pdf_book.subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            self._patch_toolchain(destination, toolchain_src),
+            patch.object(build_pdf_book.subprocess, "run", side_effect=install),
+        ):
+            resolved = build_pdf_book.prepare_release_toolchain({})
+
+        self.assertEqual(commands[0][:2], ["npm", "ci"])
+        self.assertEqual(resolved["root"], str(destination))
+        self.assertTrue(Path(resolved["vivliostyle_bin"]).is_file())
 
     def test_toolchain_tree_rejects_symlink_outside_its_root(self):
         toolchain = self.root / "toolchain-boundary"

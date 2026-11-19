@@ -133,7 +133,7 @@ Git が使える環境では、`create-next-app` がプロジェクトの Git �
 git --version
 ```
 
-`git version 2.x.x` のように表示されれば準備済みです。`git: command not found` と出たら Git を導入します。macOS では `xcode-select --install` を実行します。Ubuntu 22.04 または WSL2 の Ubuntu では `sudo apt update && sudo apt install -y git` を実行します。導入方法の全体は [Git 公式のインストール手順](https://git-scm.com/install/)で確認できます。終わったら `git --version` をもう一度実行してから進んでください。
+`git version 2.x.x` のように表示されれば準備済みです。`git: command not found` と出たら Git を導入します。導入方法の全体は [Git 公式のインストール手順](https://git-scm.com/install/)で確認できます。macOS では `xcode-select --install` を実行します。Ubuntu 22.04 または WSL2 の Ubuntu では `sudo apt update && sudo apt install -y git` を実行します。終わったら `git --version` をもう一度実行してから進んでください。
 
 もしこのあと `git status` を実行して `not a git repository` と表示されたらプロジェクトのルートで一度だけ次を実行します。
 

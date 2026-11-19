@@ -55,7 +55,7 @@ flowchart LR
     style C fill:#e8f5e9
 ```
 
-`https://task-app-<自分のユーザー名>.vercel.app` の形になります。数字や記号が混じることもあります。この URL を今日の終わりに人へ送ります。
+既定の Project Name はリポジトリ名と同じ `task-app` です。その名前が空いていれば `https://task-app.vercel.app` になりますし、すでに使われていれば後ろにチーム名や英数字が付いた `https://task-app-xxxx.vercel.app` の形になります。この URL を今日の終わりに人へ送ります。
 
 - [ ] Day 03 の完成状態から作業を再開する
 - [ ] GitHub に `task-app` が push 済みであることを確認する

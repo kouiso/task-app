@@ -108,6 +108,7 @@ SHRINK_MIN_PCT = int(SHRINK_MIN_PT * 100 / PRE_FONT_PT) + 1  # ≒70
 SHRINK_CLASS = "cw-shrink"
 BLOCK_SHRINK_CLASS = "cw-block-shrink"
 FORCE_BREAK_CLASS = "cw-force"
+LINE_CLASS = "cw-line"
 # 強制改行の直後に置く空き要素。幅は元の行の字下げ＋2桁で、続き行が
 # 字下げを失って左端に落ちる（字下げの浅い外側の行に見える）のを防ぐ。
 # 空白文字ではなく空要素にするのは、コピー時の文字列を変えないため。
@@ -1179,6 +1180,82 @@ def rewrite_pre_inner(
 LANG_RE = re.compile(r"language-([a-zA-Z0-9]+)")
 
 
+def wrap_logical_lines(inner: str) -> str:
+    """論理行ごとに <span class="cw-line"> で囲む。
+
+    強制改行（br.cw-force）で2行以上に折れた文がページの境で割れると、
+    ランニングヘッダーが文の途中へ入る（issue #763-11）。cw-line は
+    ブロック箱で break-inside: avoid が効くので、文は丸ごと
+    次ページへ送られる。pre 自体は行の境目で割れるので、大きい
+    コード枠（pdf-breakable）が流れなくなることはない。
+    inline-block も原子的だが頁を跨いで動いた箱より後ろの文字が
+    PDF の文字列順で先に並び verify_pdf_copy が崩れた。ブロック箱なら
+    出現順が保たれる。行区切りの改行は span の内側へ畳む。
+    """
+    # <code …>・</code> は行 span の外に出す（行 span の中に開始タグだけが
+    # 残ると要素が境界をまたぐ）
+    prefix, suffix = "", ""
+    open_m = re.match(r"(\s*<code\b[^>]*>)", inner)
+    body = inner
+    if open_m:
+        prefix = open_m.group(1)
+        body = body[open_m.end():]
+    close_m = re.search(r"(</code>\s*)$", body)
+    if close_m:
+        suffix = close_m.group(1)
+        body = body[: close_m.start()]
+    # 原子的にする必要があるのは強制改行で2行以上に折れた文だけ。
+    # 1行のままの文は行の途中では割れないので、短い行の出力を変えずに済む
+    # ブロック箱化した行は行区切りの改行を span の内側へ畳む。
+    # ブロック箱の後ろに置くと空行が一行増えるため。
+    #
+    # ハイライトの token span は行区切りの \n を内側に含むことがある
+    # （plain-text なら複数行を跨ぐ）。そのまま \n で割ると cw-line が
+    # token span の内側で開き、token の </span> が cw-line を行の途中で
+    # 閉じてしまう（残りが span の外の行へ崩れる）。先に \n の所で
+    # 開いている span を閉じて開き直し、どの行もタグが閉じた形にする。
+    def _tag_name(tag: str) -> str:
+        return tag[1:].split(None, 1)[0].rstrip(">")
+
+    rebalanced = []
+    open_tags: list[str] = []
+    for chunk in re.split(r"(<[^>]+>)", body):
+        if chunk.startswith("<"):
+            if not chunk.startswith("</") and not chunk.endswith("/>"):
+                # cw-* の囲み span（cw-block-shrink・cw-hang 等）も対応は
+                # 追う。追跡から外すと cw-hang の </span> が token span を
+                # 誤って閉じ、行の境で開き直す対象がずれる。
+                if not chunk.startswith("<br"):
+                    open_tags.append(chunk)
+            elif chunk.startswith("</"):
+                if open_tags:
+                    open_tags.pop()
+            rebalanced.append(chunk)
+            continue
+        if "\n" not in chunk:
+            rebalanced.append(chunk)
+            continue
+        pieces = chunk.split("\n")
+        for i, piece in enumerate(pieces):
+            if i:
+                # cw-* の囲み span は行を跨ぐ正しい形なので境では切らない。
+                splittable = [t for t in open_tags if 'class="cw-' not in t]
+                close = "".join(f"</{_tag_name(t)}>" for t in reversed(splittable))
+                reopen = "".join(splittable)
+                rebalanced.append(close + "\n" + reopen)
+            rebalanced.append(piece)
+    body = "".join(rebalanced)
+    lines = body.split("\n")
+    parts = []
+    for i, line in enumerate(lines):
+        tail = "\n" if i < len(lines) - 1 else ""
+        if f'class="{FORCE_BREAK_CLASS}"' in line:
+            parts.append(f'<span class="{LINE_CLASS}">{line}{tail}</span>')
+        else:
+            parts.append(line + tail)
+    return prefix + "".join(parts) + suffix
+
+
 def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str:
     """HTML全体の <pre> を走査して安全な折返しを入れた文字列を返す。
 
@@ -1194,7 +1271,8 @@ def wrap_code_in_html(html_text: str, residuals: list[str] | None = None) -> str
         lang_m = LANG_RE.search(open_tag)
         lang = lang_m.group(1).lower() if lang_m else ""
         inner = block[open_end:-len("</pre>")]
-        return open_tag + rewrite_pre_inner(inner, lang, residuals) + "</pre>"
+        rewritten = rewrite_pre_inner(inner, lang, residuals)
+        return open_tag + wrap_logical_lines(rewritten) + "</pre>"
     return PRE_RE.sub(repl, html_text)
 
 
@@ -1213,11 +1291,12 @@ _FILEPATH_TAIL_RE = re.compile(r"[ \t]*\*/[ \t]*\}?[ \t]*$")
 
 
 def code_filepath_label(line: str) -> str | None:
-    """行が filepath 見出しなら、コメント記号と `filepath:` を外した表示文字を返す。
+    """行が filepath 見出しなら、コメント記号を外した `filepath: …` の表示文字を返す。
 
     `// filepath:`・`# filepath:`・`/* filepath: … */`・`{/* filepath: … */}`
     の4形を受ける。先頭の字下げは「ファイル内のどの位置の続きか」を示す
-    目印で、見出し化したときは要らないので落とす。
+    目印で、見出し化したときは要らないので落とす。`filepath:` の語は
+    教材が読者に教える印なので残す（issue #763-18）。
     """
     match = _FILEPATH_LINE_RE.match(line)
     if not match:
@@ -1225,7 +1304,7 @@ def code_filepath_label(line: str) -> str | None:
     marker, body = match.group(1), match.group(2)
     if marker in ("/*", "{/*"):
         body = _FILEPATH_TAIL_RE.sub("", body)
-    return body
+    return f"filepath: {body}"
 
 
 def hoist_code_filepath(html_text: str) -> str:

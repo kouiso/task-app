@@ -47,7 +47,7 @@ flowchart TD
     E --> G[ナビゲーション]
     E --> H[ユーザー情報]
     E --> I[ログアウトボタン]
-    F --> J[ページの中身（children）]
+    F --> J[children]
 
     style B fill:#e3f2fd
     style D fill:#e8f5e9
@@ -102,7 +102,7 @@ Day 07 で作った tRPC サーバーを、ブラウザ側から呼ぶには
 ```mermaid
 flowchart LR
     A[ブラウザ] -->|api.auth.login.mutate| B[TRPCReactProvider]
-    B -->|HTTP POST /api/trpc| C[tRPC サーバー]
+    B -->|/api/trpc| C[tRPC サーバー]
     C -->|JSON| B
     B -->|data| A
 ```
@@ -209,10 +209,10 @@ export default function RootLayout({
 
 ```mermaid
 flowchart TD
-    A[AppLayout マウント] --> B{セッション取得中？}
+    A[AppLayout] --> B{セッション取得中？}
     B -->|Yes| C[ローディング表示]
     B -->|No| D{ログイン済み？}
-    D -->|No| E["/login にリダイレクト"]
+    D -->|No| E["/login へ"]
     D -->|Yes| F[サイドバー +<br/>コンテンツ表示]
 
     style C fill:#fff3e0
@@ -618,7 +618,7 @@ flowchart TD
     A --> C["login/page.tsx"]
     A --> D["register/page.tsx"]
     B --> E["AppLayout"]
-    E --> F["Day 02 で作った<br/>dashboard の中身"]
+    E --> F["Day 02 の<br/>dashboard"]
 
     style E fill:#e8f5e9
     style C fill:#fff3e0
