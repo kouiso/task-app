@@ -1,0 +1,144 @@
+# 教材の仕様の正本（edu-creator 3.0 の course-spec）。章立て・1日の予算・検査に渡す値をここ1か所に置く（G10・T-3）。
+# 章のタイトルは本文の最初の見出しから作った（2026-11-08）。ルートの edu-config.yaml は旧版の edu-creator が読む設定で、
+# 章タイトル30件中14件が本文と食い違っている。章立ての正本はこちらにする。
+# 検査: edu-creator のリポジトリを隣に置き、リポジトリの根で
+#   uv run --project ../edu-creator edu-creator spec check material/30days-curriculum/_meta/course-spec.yaml
+#   uv run --project ../edu-creator edu-creator check --spec material/30days-curriculum/_meta/course-spec.yaml
+# budget_report_only: v2 では Day の数を変えないので、Day 予算は測って公開するだけにする（プランの U-15）
+spec_version: 1
+name: task-app
+days: 30
+learner:
+  description: プログラミング未経験
+  prior_code_lines_max: 100
+  os:
+  - windows
+  - macos
+budget:
+  code_block_lines: 25
+  copy_lines: 200
+  files: 5
+  minutes: 120
+  new_concepts: 3
+stack_profile: nextjs
+app_repo: ../../..
+material_dir: ..
+distribution:
+  formats:
+  - pdf
+  - zip
+qa:
+  budget_report_only: true
+  gui_services:
+  - Vercel
+  no_table_days:
+  - 1
+  - 2
+  - 3
+  - 4
+  real_root_files:
+  - vitest.config.ts
+  required_mermaid_days:
+  - 4
+  - 7
+  - 9
+  - 13
+  - 16
+  - 21
+  - 27
+  screenshot_exempt:
+    00-1_学びのロードマップ.md: 学びの進め方を示すロードマップ。画面操作の手順を持たない索引の本で、撮る画面が存在しない
+    00_カリキュラム目次.md: カリキュラム全体の目次。画面操作の手順を持たない索引の本で、撮る画面が存在しない
+    day04_ネットに公開.md: デプロイの日。主役は Vercel の管理画面で撮れず、アプリの画面は Day 02 から変わらん
+    day30_完成版を公開！.md: 公開の日。新規の画面は完成版ダッシュボードだけで、ログイン画面は Day 05 の使い回し
+chapters:
+- day: 1
+  title: 開発環境を整えて初めてのアプリを動かそう
+  file: day01_開発環境を整えて、初めてのアプリを動かそう.md
+- day: 2
+  title: ダッシュボードに自分だけのメッセージを追加しよう
+  file: day02_ダッシュボードに自分だけのメッセージを追加しよう.md
+- day: 3
+  title: GitHub に保存する
+  file: day03_GitHubに保存する.md
+- day: 4
+  title: ネットに公開
+  file: day04_ネットに公開.md
+- day: 5
+  title: ログイン画面の UI を作ろう
+  file: day05_ログイン画面のUI.md
+- day: 6
+  title: ユーザー登録画面を作ろう
+  file: day06_ユーザー登録画面.md
+- day: 7
+  title: 認証バックエンドを作ってログインを動かそう
+  file: day07_認証バックエンドを作ろう.md
+- day: 8
+  title: サイドバー付きのアプリレイアウトを作ろう
+  file: day08_サイドバーを完成させよう.md
+- day: 9
+  title: プロジェクト一覧画面を作ろう
+  file: day09_プロジェクト一覧画面.md
+- day: 10
+  title: プロジェクト新規作成を実装しよう
+  file: day10_プロジェクト新規作成.md
+- day: 11
+  title: プロジェクト編集・削除を実装しよう
+  file: day11_プロジェクト編集・削除.md
+- day: 12
+  title: メンバー追加を実装しよう
+  file: day12_メンバー追加.md
+- day: 13
+  title: タスク一覧画面を作ろう
+  file: day13_タスク一覧画面.md
+- day: 14
+  title: タスク新規作成を実装しよう
+  file: day14_タスク新規作成.md
+- day: 15
+  title: タスク編集・削除を実装しよう
+  file: day15_タスク編集・削除.md
+- day: 16
+  title: ステータス変更と作業時間の記録を実装しよう
+  file: day16_ステータス変更・時間記録.md
+- day: 17
+  title: マイタスクページ（自分のタスク一覧）を作ろう
+  file: day17_自分のタスクページ.md
+- day: 18
+  title: コメント投稿を実装しよう
+  file: day18_コメント投稿.md
+- day: 19
+  title: コメント編集・削除を実装しよう
+  file: day19_コメント編集・削除.md
+- day: 20
+  title: タスク検索機能を実装しよう
+  file: day20_タスク検索機能.md
+- day: 21
+  title: 統計カードを表示しよう
+  file: day21_統計カードを表示.md
+- day: 22
+  title: グラフを表示しよう
+  file: day22_グラフを表示.md
+- day: 23
+  title: 週次レポートを表示しよう
+  file: day23_週次レポート.md
+- day: 24
+  title: ユーザー一覧（管理者用）を作ろう
+  file: day24_ユーザー一覧（管理者用）.md
+- day: 25
+  title: プロフィール編集を実装しよう
+  file: day25_プロフィール編集.md
+- day: 26
+  title: エラーページを作ってバグを退治しよう
+  file: day26_エラーページを作って、バグを退治しよう.md
+- day: 27
+  title: プロジェクト詳細・アーカイブを仕上げよう
+  file: day27_プロジェクト詳細・アーカイブを実装しよう.md
+- day: 28
+  title: タスク一括操作を実装しよう
+  file: day28_タスク一括操作を実装しよう.md
+- day: 29
+  title: ユーザー詳細・編集ページを作ろう
+  file: day29_ユーザー詳細・編集ページを作ろう.md
+- day: 30
+  title: 完成版を公開！
+  file: day30_完成版を公開！.md

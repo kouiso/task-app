@@ -1,0 +1,45 @@
+name: Course Spec
+
+# G10・T-3: 章立ての正本（material/30days-curriculum/_meta/course-spec.yaml）が本文の見出しと一致することを PR ごとに確かめる。
+# 判定は edu-creator 3.0 の `spec check`。edu-creator は public のリポジトリで、決まったコミットに固定して取り出す。
+# 依存は educreator が使う pydantic と PyYAML だけを入れる（edu-creator 全体の依存は入れない）。
+on:
+  pull_request:
+    paths:
+      - 'material/30days-curriculum/**/*.md'
+      - 'material/30days-curriculum/_meta/course-spec.yaml'
+      - '.github/workflows/course-spec.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # edu-creator を上げるときは、このコミットを替える
+  EDU_CREATOR_SHA: 39e19dc239effe07dcc7e29b1d38b4fea5d16104
+
+jobs:
+  spec-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout edu-creator
+        uses: actions/checkout@v4
+        with:
+          repository: kouiso/edu-creator
+          ref: ${{ env.EDU_CREATOR_SHA }}
+          path: .edu-creator
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Chapters match the material
+        env:
+          PYTHONPATH: .edu-creator
+        run: >-
+          uv run --no-project --python 3.11 --with pydantic --with pyyaml
+          python -m educreator.cli spec check material/30days-curriculum/_meta/course-spec.yaml
