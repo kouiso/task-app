@@ -176,10 +176,12 @@ curriculum_approach:
     - "各Dayで必要なコードは全て教材内に記載する"
 
 # 30日間カリキュラム
+# 章タイトルの正本は material/30days-curriculum/_meta/course-spec.yaml（G10・T-3）。
+# この一覧は旧版パイプライン（main_pm.py / edu_creator.cli.generate）が読む設定で、タイトルは正本に揃えてある。
 chapters:
   # Week 1: 環境構築・基礎
   - id: "day01"
-    title: "開発環境を整えて、初めてのアプリを動かそう"
+    title: "開発環境を整えて初めてのアプリを動かそう"
     subtitle: "〜プログラミングの「キッチン」を準備する〜"
     what_you_will_make: "npx create-next-appで新規プロジェクトを作成し、ブラウザで表示"
     what_you_will_learn: "Node.js、npm、VS Code、Next.js、Tailwind CSS、開発サーバーの基本"
@@ -190,21 +192,21 @@ chapters:
       - "教材の指示通りにコードを入力すれば動く"
 
   - id: "day02"
-    title: "データに名札をつけて管理しよう"
-    subtitle: "〜お弁当箱に「サンドイッチ」と書くように〜"
-    what_you_will_make: "TypeScriptで変数や型を使ったデータ管理の練習"
-    what_you_will_learn: "TypeScriptの変数宣言（const/let）と基本的な型の使い方"
-    topics: ["TypeScript", "変数", "型", "const", "let", "基本的な型"]
+    title: "ダッシュボードに自分だけのメッセージを追加しよう"
+    subtitle: "〜ダッシュボードに自分の言葉を載せる〜"
+    what_you_will_make: "名前・あいさつ・今日の集中テーマを表示するダッシュボードのメッセージカード"
+    what_you_will_learn: "page.tsx の編集、Server Component、design token の使い方"
+    topics: ["ダッシュボード", "メッセージカード", "Server Component", "design token"]
 
   - id: "day03"
-    title: "GitHubに保存しよう"
+    title: "GitHub に保存する"
     subtitle: "〜コードのタイムマシンを手に入れる〜"
     what_you_will_make: "GitHubリポジトリにプロジェクトをpush"
     what_you_will_learn: "Gitの基本操作とGitHubへのpush方法"
     topics: ["Git", "GitHub", "push", "バージョン管理"]
 
   - id: "day04"
-    title: "ネットに公開しよう"
+    title: "ネットに公開"
     subtitle: "〜作ったアプリを世界中に見せる〜"
     what_you_will_make: "Vercelにデプロイして公開されたアプリ"
     what_you_will_learn: "Vercelへのデプロイと環境変数の設定"
@@ -212,7 +214,7 @@ chapters:
 
   # Week 2: ログイン・認証
   - id: "day05"
-    title: "ログイン画面のUIを作ろう"
+    title: "ログイン画面の UI を作ろう"
     subtitle: "〜ユーザーが最初に出会う画面をデザインする〜"
     what_you_will_make: "react-hook-formとzodでバリデーション付きのログインフォーム"
     what_you_will_learn: "shadcn/uiフォームコンポーネント、react-hook-form、zodバリデーション"
@@ -226,18 +228,18 @@ chapters:
     topics: ["react-hook-form", "zod", "shadcn/ui", "ユーザー登録", "フォームバリデーション"]
 
   - id: "day07"
-    title: "ログイン処理の仕組みを理解しよう"
+    title: "認証バックエンドを作ってログインを動かそう"
     subtitle: "〜パスワードを安全に扱う裏側の仕組み〜"
-    what_you_will_make: "カスタムJWT認証によるログイン処理（api.auth）"
-    what_you_will_learn: "カスタムJWT認証の仕組み、jose、bcryptによるパスワードハッシュ化、tRPCのauthルーター"
-    topics: ["カスタムJWT認証", "tRPC", "api.auth", "jose", "bcrypt", "パスワードハッシュ"]
+    what_you_will_make: "ログイン・ユーザー登録が動く認証バックエンド（JWT セッション・tRPC・middleware）"
+    what_you_will_learn: "JWT、bcrypt、HttpOnly Cookie、tRPC、ルート保護の連携"
+    topics: ["認証バックエンド", "JWT", "bcrypt", "HttpOnly Cookie", "tRPC", "middleware"]
 
   - id: "day08"
-    title: "ログアウトとページ保護を実装しよう"
-    subtitle: "〜ログインしてない人はここから先は通しまへんで〜"
-    what_you_will_make: "ログアウト機能と認証ガードで保護されたページ"
-    what_you_will_learn: "ログアウト処理、AppLayoutによる認証ガード、ページ保護の実装"
-    topics: ["ログアウト", "ページ保護", "AppLayout", "認証ガード"]
+    title: "サイドバー付きのアプリレイアウトを作ろう"
+    subtitle: "〜アプリの骨格を自分の手で作る〜"
+    what_you_will_make: "サイドバー付きの共通レイアウト（AppLayout）とダッシュボードへの適用"
+    what_you_will_learn: "レイアウトの構成、tRPC Provider、サイドバーコンポーネントの実装"
+    topics: ["サイドバー", "AppLayout", "共通レイアウト", "Providers"]
 
   # Week 3: プロジェクト管理
   - id: "day09"
@@ -291,14 +293,14 @@ chapters:
     topics: ["タスク編集", "タスク削除", "CRUD", "Prisma update", "Prisma delete"]
 
   - id: "day16"
-    title: "ステータス変更・タイマーを実装しよう"
+    title: "ステータス変更と作業時間の記録を実装しよう"
     subtitle: "〜タスクの進み具合を管理する〜"
-    what_you_will_make: "ステータス変更機能と作業時間を計測するタイマー"
-    what_you_will_learn: "ステータス管理、タイマー実装、作業時間の記録"
-    topics: ["ステータス変更", "タイマー", "作業時間計測", "状態管理"]
+    what_you_will_make: "編集ダイアログからのステータス変更と、作業時間を手で記録する機能"
+    what_you_will_learn: "ステータス管理、作業時間の手動記録、合計作業時間の表示"
+    topics: ["ステータス変更", "作業時間記録", "編集ダイアログ", "状態管理"]
 
   - id: "day17"
-    title: "自分のタスクページを作ろう"
+    title: "マイタスクページ（自分のタスク一覧）を作ろう"
     subtitle: "〜自分に割り当てられたタスクだけを見る〜"
     what_you_will_make: "ログインユーザーのタスクだけを表示するマイタスクページ"
     what_you_will_learn: "ユーザーフィルタリング、マイタスクビューの実装"
@@ -365,35 +367,35 @@ chapters:
 
   # Week 8: 仕上げ・公開
   - id: "day26"
-    title: "エラー対策・デバッグを学ぼう"
+    title: "エラーページを作ってバグを退治しよう"
     subtitle: "〜バグを見つけて直す技術を身につける〜"
-    what_you_will_make: "エラーハンドリングが実装されたアプリ"
-    what_you_will_learn: "TRPCError、エラーハンドリング、デバッグ手法"
-    topics: ["エラーハンドリング", "TRPCError", "デバッグ", "エラー対策"]
+    what_you_will_make: "通信エラーを利用者が判断できるエラーページと、3つのバグパターンの修正"
+    what_you_will_learn: "error.tsx、DevTools（Console・Network・Elements）、デバッグの進め方"
+    topics: ["エラーページ", "error.tsx", "デバッグ", "DevTools"]
 
   - id: "day27"
-    title: "セキュリティ対策を学ぼう"
-    subtitle: "〜アプリを安全に守る〜"
-    what_you_will_make: "セキュリティが強化されたアプリ"
-    what_you_will_learn: "JWT認証、HttpOnly Cookie、protectedProcedure、bcryptの仕組み"
-    topics: ["セキュリティ", "JWT", "HttpOnly Cookie", "protectedProcedure", "bcrypt"]
+    title: "プロジェクト詳細・アーカイブを仕上げよう"
+    subtitle: "〜一覧の中で詳細まで面倒を見る〜"
+    what_you_will_make: "一覧と同じページ内で切り替わるプロジェクト詳細表示とアーカイブ機能"
+    what_you_will_learn: "URL による一覧↔詳細の切替、isArchived、ProjectDetailView"
+    topics: ["プロジェクト詳細", "アーカイブ", "ProjectDetailView", "URLパラメータ"]
 
   - id: "day28"
-    title: "テストを書こう"
-    subtitle: "〜コードが正しく動くことを自動で確認する〜"
-    what_you_will_make: "VitestとTesting Libraryで書いた自動テスト"
-    what_you_will_learn: "Vitestの使い方、Testing Library、テストの書き方"
-    topics: ["Vitest", "Testing Library", "テスト", "自動テスト"]
+    title: "タスク一括操作を実装しよう"
+    subtitle: "〜まとめて片づける力をつける〜"
+    what_you_will_make: "チェックボックスで選んだタスクの一括完了・ステータス変更・削除"
+    what_you_will_learn: "Set による選択状態の管理、一括操作 API、確認ダイアログ"
+    topics: ["一括操作", "Set", "チェックボックス", "バルク更新"]
 
   - id: "day29"
-    title: "最終調整・動作確認をしよう"
-    subtitle: "〜公開前の最終チェックリスト〜"
-    what_you_will_make: "型チェック・Lintを通した完成間近のアプリ"
-    what_you_will_learn: "型チェック、Lint、最終調整の進め方"
-    topics: ["型チェック", "Lint", "最終調整", "動作確認"]
+    title: "ユーザー詳細・編集ページを作ろう"
+    subtitle: "〜管理者と本人のためのページを作る〜"
+    what_you_will_make: "動的ルーティングで作るユーザー詳細ページと編集ページ"
+    what_you_will_learn: "動的ルーティング、getById/update、管理者と本人の権限モデル"
+    topics: ["ユーザー詳細", "ユーザー編集", "動的ルーティング", "権限"]
 
   - id: "day30"
-    title: "完成版を公開！卒業！"
+    title: "完成版を公開！"
     subtitle: "〜30日間の集大成を世界に届ける〜"
     what_you_will_make: "Vercelにデプロイされた完成版アプリ"
     what_you_will_learn: "最終デプロイ、30日間の振り返り、次のステップ"
