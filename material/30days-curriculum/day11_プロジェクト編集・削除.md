@@ -1179,6 +1179,25 @@ const {
 
 一覧のクエリだけ場所を移すのは `enabled: !selectedProject` が `selectedProject` を読むからです。一覧のクエリの元の位置は Step 1 で書いた `const selectedProject` より上にあります。`const` は宣言した行より前では読めません。元の場所で書き換えると `Block-scoped variable 'selectedProject' used before its declaration` という型エラーになります。
 
+Day 10 までに書いた一覧の待機中と失敗の表示はここから書く取得状態の分岐に置き換わります。
+古い表示は `projectsError` を `error` の中身として読んでいます。
+書き換えた `projectsError` は `isError` から受け取る `true` か `false` です。
+古い表示の一部を残したままだと `Property 'data' does not exist on type 'boolean'` という型エラーになります。
+Step 10 の `npm run build` も通りません。
+次の4か所を消してください。
+
+1. `const projectAccessDenied =` から `projectsError?.data?.code === 'FORBIDDEN';` までの3行
+2. `if (projectsLoading) {` から対応する閉じ `}` までの `if` の分岐
+3. `if (projectsError && (!projects || projectAccessDenied)) {` から対応する閉じ `}` までの `if` の分岐
+4. 一覧の `return (` の中にある `{projectsError && projects && !projectAccessDenied && (` から `)}` までの帯（「最新の一覧を取得できませんでした。」と出す `<p>`）
+
+すぐ上に Day 09・10 で写した位置の目印のコメント（`// 読み込み中の分岐の後ろに追加` など）があれば、それも一緒に消してください。
+
+1〜3の役目はこのあと書く `if (requiredLoading` と `if (authFailed || forbidden || notFound` の2つの分岐が引き継ぎます。
+4の帯の代わりはこのあと作る `staleDataWarning` です。
+1・3・4は古い `projectsError` か消した `projectAccessDenied` を読みます。残すと型エラーになります。
+2は残しても型エラーにはなりません。ただしこのあと書く `if (requiredLoading` と同じ待機中の表示が二重になるので消します。
+
 **表示に必要な取得状態**
 
 ```typescript
@@ -1334,7 +1353,15 @@ URL に詳細 ID があるかで対象の問い合わせを選びます。401・
 
 再取得だけが失敗して以前のデータが残っている場合は、内容を消さず警告と再試行を添えます。`role="alert"` を付けるのは画面リーダーがこの帯を変化として読み上げるようにするためです。帯は `hasFetchError` が真の間だけ出るので、取り直しに成功すれば消えます。
 
+作った `staleDataWarning` を一覧の画面に置きます。
+一覧の `return (` の中にある `<div className="flex flex-col gap-6">` の直下へ `{staleDataWarning}` を1行足してください。
+上で消した帯があった場所ではありません。
+見出しより上に置くと取得に失敗したことが画面の最初に見えるためです。
+詳細の画面にも同じ1行を置きます。その場所はこの Step の後半で書きます。
+
 **確認ポイント**:
+- Day 10 までの `projectAccessDenied` と2つの `if` の分岐と一覧の帯を消した
+- 一覧の `<div className="flex flex-col gap-6">` の直下に `{staleDataWarning}` がある
 - `handleDetailClose` は `/project` に戻る（URL パラメータなし）
 - `useQuery` に `enabled` オプションを設定した
 - 未選択時は API を呼ばない設定になっている
@@ -2777,6 +2804,7 @@ export default function ProjectPage() {
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
 | Step 9 追加後に `getById` が無いというエラーが出る | Step 0 の `getById` がルーターの外に貼られている | `project.ts` の最後の `});` の1行上に `getById` があるか確認します |
+| `Property 'data' does not exist on type 'boolean'` か `Cannot find name 'projectAccessDenied'` という型エラーが出る | Day 10 までの一覧の待機中と失敗の表示が残っている | Step 9 で消す4か所（`projectAccessDenied`・2つの `if` の分岐・一覧の帯）が残っていないか確認します |
 | `npm run build` で型エラーが出る | Step 0 の手続きが未追加か、ルーターの外に出ている | エラー文に出ているファイル名と行で、どの手続きが欠けているかを特定します |
 | `ProjectDetailView` が表示されない | URL に `projectId` が無い | URL に `?projectId=xxx` が付いているか確認 |
 

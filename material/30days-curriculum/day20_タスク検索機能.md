@@ -1744,7 +1744,7 @@ Step 2 の `{/* Step 8-9: 検索結果 */}` を以下に置き換えます。ロ
 ここまででカードの基本情報を渡しました。続けて作業時間・操作ハンドラー・権限を渡して map と外側のタグを閉じます。まだ開きタグが閉じていないため2ブロックをつなげ終えてから保存してください。
 
 ```typescript
-{/* filepath: src/app/search/page.tsx */}
+              // filepath: src/app/search/page.tsx（同じファイルの続き）
               timeSpentMinutes={
                 task.timeSpentMinutes}
               onEdit={handleTaskEdit}

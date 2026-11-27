@@ -193,6 +193,77 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     return hits, scanned
 
 
+TAG_START = re.compile(r"<[A-Za-z]")
+
+
+def inside_open_tag(lines: list[str]) -> bool:
+    """渡した行をつないだ末尾が、開始タグの `<` と `>` のあいだにあるか。
+
+    開始タグと波括弧を積んで読む。開始タグの中では波括弧の外の `>` か `/>` で
+    タグを出る。波括弧の中（属性の値や `{items.map(...)}`）では `>` を数えず、
+    `<名前` が来たら入れ子の開始タグに入る。`render={() => (<Select>…)}` の中の
+    子要素の位置を、外側の `<Controller` の属性の位置と取り違えないためである。
+    文字列の中の記号は数えない。
+    """
+    stack: list[str] = []
+    quote = ""
+    text = "\n".join(lines)
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        top = stack[-1] if stack else ""
+        if quote:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote:
+                quote = ""
+        elif top in ("tag", "brace") and ch in "\"'`":
+            quote = ch
+        elif ch == "{":
+            stack.append("brace")
+        elif ch == "}" and top == "brace":
+            stack.pop()
+        elif ch == ">" and top == "tag":
+            stack.pop()
+        elif top != "tag" and TAG_START.match(text, i):
+            stack.append("tag")
+        i += 1
+    return bool(stack) and stack[-1] == "tag"
+
+
+def find_attribute_comments(root: Path) -> list[tuple[str, int, str]]:
+    """開始タグの途中に置かれた `{/* ... */}` を探す。
+
+    `{/* */}` は子要素の位置でだけコメントになる。開始タグの途中（属性の位置）に
+    置くと TypeScript が `TS1005: '...' expected` で止まる。教材は1つの開始タグを
+    2つのブロックに分けて書かせることがあり、2つ目の先頭に `{/* filepath */}` を
+    置くと、写した読者のファイルがこの形になる。型検査の道具は目印の行を外してから
+    組むので、この形は build でも見つからない。だから文面のほうで見る。
+
+    次の行の形（`>` や `名前=`）だけで決めると、`<pre>` の中の `NODE_ENV=development`
+    のような子要素の文字を取り違える。だから直前の同じファイルのブロックから続けて
+    読み、開始タグが閉じていないときだけ数える。
+    """
+    hits: list[tuple[str, int, str]] = []
+    for path in sorted(root.rglob("*.md")):
+        previous: tuple[str | None, list[str]] = (None, [])
+        for lang, body in code_blocks(path.read_text(encoding="utf-8")):
+            target = block_target(body)
+            if lang not in JSX_LANGS:
+                previous = (target, [])
+                continue
+            carried = previous[1] if target is not None and previous[0] == target else []
+            seen: list[str] = []
+            for lineno, line in body:
+                if JSX_COMMENT.match(line) and inside_open_tag(carried + seen):
+                    hits.append((str(path.relative_to(root)), lineno, line.strip()))
+                elif not JSX_COMMENT.match(line):
+                    seen.append(line)
+            previous = (target, carried + seen)
+    return hits
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:] or ["material/30days-curriculum"]
     if len(args) != 1 or not Path(args[0]).is_dir():
@@ -205,11 +276,18 @@ def main(argv: list[str]) -> int:
         print(f"❌ コードブロックがありません: {root}", file=sys.stderr)
         return 2
 
+    attribute_hits = find_attribute_comments(root)
     if hits:
         print(f"❌ JSX の位置に `//` の目印が {len(hits)} 行残っています")
         for name, line, text in hits:
             print(f"  {name}:{line}: {text}")
         print("  `{/* ... */}` に変えてください。そのままだと画面に文字として出ます。")
+    if attribute_hits:
+        print(f"❌ 開始タグの途中に `{{/* */}}` の目印が {len(attribute_hits)} 行あります")
+        for name, line, text in attribute_hits:
+            print(f"  {name}:{line}: {text}")
+        print("  `//` に変えてください。そのままだと写した読者のファイルが構文エラーになります。")
+    if hits or attribute_hits:
         return 1
 
     print(f"✅ JSX の位置の目印 OK（コードブロック {scanned} 個）")
