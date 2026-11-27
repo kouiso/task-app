@@ -71,17 +71,4 @@ export function writeStructuredLog(fields: StructuredLogFields): void {
   console.info(line);
 }
 
-export async function setSentryRequestContext(requestId: string, path?: string): Promise<void> {
-  const dsn = process.env['SENTRY_DSN'] ?? process.env['NEXT_PUBLIC_SENTRY_DSN'];
-  if (!dsn) {
-    return;
-  }
-
-  const Sentry = await import('@sentry/nextjs');
-  Sentry.setTag('request_id', requestId);
-  if (path) {
-    Sentry.setTag('request_path', path);
-  }
-}
-
 export { REQUEST_ID_HEADER };

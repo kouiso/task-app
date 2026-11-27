@@ -2,11 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
-import {
-  getRequestIdFromHeaders,
-  setSentryRequestContext,
-  writeStructuredLog,
-} from '@/lib/observability';
+import { getRequestIdFromHeaders, writeStructuredLog } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
@@ -89,8 +85,6 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 
 const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
   const startedAt = Date.now();
-  await setSentryRequestContext(ctx.requestId, `/api/trpc/${path}`);
-
   const result = await next();
   writeStructuredLog({
     event: 'trpc.procedure',

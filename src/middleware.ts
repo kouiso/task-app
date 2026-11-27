@@ -3,7 +3,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import {
   getRequestIdFromHeaders,
   setRequestIdHeader,
-  setSentryRequestContext,
   writeStructuredLog,
 } from '@/lib/observability';
 import { isValidRedirectUrl } from '@/lib/redirect';
@@ -38,8 +37,6 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const startedAt = Date.now();
   const requestId = getRequestIdFromHeaders(request.headers);
-
-  await setSentryRequestContext(requestId, pathname);
 
   const requestHeaders = new Headers(request.headers);
   setRequestIdHeader(requestHeaders, requestId);

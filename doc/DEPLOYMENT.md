@@ -9,7 +9,6 @@ This runbook describes the first Vercel deployment path for task-app.
 - A Vercel project connected to `kouiso/task-app`.
 - A PostgreSQL database reachable from Vercel.
 - A 32+ character `JWT_SECRET`.
-- Optional Sentry project DSNs.
 
 ## Environment Variables
 
@@ -21,8 +20,6 @@ Set these in Vercel for Production, Preview, and Development as appropriate.
 | `JWT_SECRET` | Yes | 32+ character random secret. |
 | `NODE_ENV` | Yes | `production` on Vercel production. |
 | `NEXT_PUBLIC_BASE_URL` | Recommended | Production site URL for robots/sitemap. |
-| `NEXT_PUBLIC_SENTRY_DSN` | Optional | Browser Sentry DSN. |
-| `SENTRY_DSN` | Optional | Server/Edge Sentry DSN. |
 | `_DEVELOPER_EMAIL` | Optional | Seed admin email. |
 | `_DEVELOPER_FIRSTNAME` | Optional | Seed admin first name. |
 | `_DEVELOPER_LASTNAME` | Optional | Seed admin last name. |
@@ -33,7 +30,7 @@ Do not put production secrets in `.env.example` or commit real `.env` files.
 
 1. Create or select the Vercel project.
 2. Connect the GitHub repository and set the production branch to `main`.
-3. Add `DATABASE_URL`, `JWT_SECRET`, and optional Sentry variables in Vercel Project Settings.
+3. Add `DATABASE_URL` and `JWT_SECRET` in Vercel Project Settings.
 4. Confirm the build command is `npm run vercel-build`.
 5. Confirm the install command is Vercel default npm install.
 6. Deploy once from `main`.
@@ -75,14 +72,6 @@ Rotating `JWT_SECRET` invalidates all current session cookies.
 4. Redeploy.
 5. Run smoke checks against read/write flows.
 6. Keep old credentials temporarily until rollback is no longer needed.
-
-### Sentry DSN
-
-1. Create the new Sentry project or client key.
-2. Update `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`.
-3. Redeploy.
-4. Trigger a controlled non-production test error if available.
-5. Confirm server, edge, and browser events arrive.
 
 ## Rollback
 
