@@ -512,6 +512,26 @@ OK_NESTED_JSX_IN_ATTRIBUTE = """```typescript
 ```
 """
 
+# 続きとして読むのは、直前のブロックが同じファイルのときだけ。別のファイルや
+# JSX でないブロックを挟んだら読み直す（取り違えて数えないための区切り）。
+OK_OTHER_FILE_AFTER_OPEN_TAG = LINK_OPEN + """
+```tsx
+{/* filepath: src/component/layout/other.tsx */}
+<p>別のファイル</p>
+```
+"""
+
+OK_NON_JSX_BLOCK_BETWEEN = LINK_OPEN + """
+```bash
+npm run dev
+```
+
+```tsx
+    {/* filepath: src/component/layout/app-layout.tsx（続き） */}
+    <span />
+```
+"""
+
 ATTRIBUTE_CASES = [
     ("開始タグを閉じる行の前のJSXコメント", BAD_COMMENT_BEFORE_CLOSE, 1),
     ("属性の行の前のJSXコメント", BAD_COMMENT_BEFORE_ATTRIBUTE, 1),
@@ -520,6 +540,8 @@ ATTRIBUTE_CASES = [
     ("要素の前のJSXコメント", OK_COMMENT_BEFORE_ELEMENT, 0),
     ("名前=で始まる子要素の文字", OK_TEXT_CHILD_WITH_EQUALS, 0),
     ("属性の値の中の入れ子のJSX", OK_NESTED_JSX_IN_ATTRIBUTE, 0),
+    ("別のファイルのブロックは続きにしない", OK_OTHER_FILE_AFTER_OPEN_TAG, 0),
+    ("JSXでないブロックを挟んだら読み直す", OK_NON_JSX_BLOCK_BETWEEN, 0),
 ]
 
 def main() -> int:
