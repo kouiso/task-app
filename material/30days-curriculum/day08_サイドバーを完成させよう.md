@@ -470,7 +470,7 @@ Day 04 で公開した URL をスマートフォンから開くとログイン�
 この前半でリンク先と、現在地に応じた色を決めています。続きでアイコンと文字を描き、一覧のタグを閉じます。2つのブロックは同じ `Link` の続きなので、間に別のコードは入れません。
 
 ```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（続き） */}
+                // filepath: src/component/layout/app-layout.tsx（続き）
                 >
                   {item.icon}
                   {item.text}
@@ -1038,8 +1038,7 @@ export function AppLayout({
 ```
 
 ```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-                {/* ナビゲーションの続き */}
+                // filepath: src/component/layout/app-layout.tsx（同じファイルの続き）
                 >
                   {item.icon}
                   {item.text}
