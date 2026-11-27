@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from check_jsx_marker import find_violations  # noqa: E402
+from check_jsx_marker import find_attribute_comments, find_violations  # noqa: E402
 
 
 BAD_TSX = """```tsx
@@ -420,6 +420,56 @@ CASES = [
 ]
 
 
+# 開始タグの途中の `{/* */}`。day08 と day20 に実際にあった形（2つ目のブロックが
+# `>` や属性から始まる）を写した。
+BAD_COMMENT_BEFORE_CLOSE = """```tsx
+                {/* filepath: src/component/layout/app-layout.tsx（続き） */}
+                >
+                  {item.icon}
+                </Link>
+```
+"""
+
+BAD_COMMENT_BEFORE_ATTRIBUTE = """```typescript
+{/* filepath: src/app/search/page.tsx */}
+              timeSpentMinutes={
+                task.timeSpentMinutes}
+            />
+```
+"""
+
+BAD_TWO_COMMENTS_BEFORE_CLOSE = """```tsx
+                {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+                {/* ナビゲーションの続き */}
+                >
+```
+"""
+
+OK_SLASH_BEFORE_CLOSE = """```tsx
+                // filepath: src/component/layout/app-layout.tsx（続き）
+                >
+                  {item.icon}
+                </Link>
+```
+"""
+
+OK_COMMENT_BEFORE_ELEMENT = """```tsx
+{/* filepath: src/app/search/page.tsx */}
+<TaskCard
+  id={task.id}
+/>
+```
+"""
+
+
+ATTRIBUTE_CASES = [
+    ("開始タグを閉じる行の前のJSXコメント", BAD_COMMENT_BEFORE_CLOSE, 1),
+    ("属性の行の前のJSXコメント", BAD_COMMENT_BEFORE_ATTRIBUTE, 1),
+    ("開始タグを閉じる行の前に2行", BAD_TWO_COMMENTS_BEFORE_CLOSE, 2),
+    ("開始タグの途中の // の目印", OK_SLASH_BEFORE_CLOSE, 0),
+    ("要素の前のJSXコメント", OK_COMMENT_BEFORE_ELEMENT, 0),
+]
+
 def main() -> int:
     failed = 0
     with tempfile.TemporaryDirectory() as d:
@@ -432,8 +482,16 @@ def main() -> int:
                 print(f"❌ {label}: 検出 {len(hits)} 件（期待 {want} 件）")
                 failed += 1
             target.unlink()
+        for i, (label, text, want) in enumerate(ATTRIBUTE_CASES):
+            target = root / f"day{i:02d}_属性.md"
+            target.write_text(text, encoding="utf-8")
+            hits = find_attribute_comments(root)
+            if len(hits) != want:
+                print(f"❌ {label}: 検出 {len(hits)} 件（期待 {want} 件）")
+                failed += 1
+            target.unlink()
 
-    total = len(CASES)
+    total = len(CASES) + len(ATTRIBUTE_CASES)
     if failed:
         print(f"❌ JSX の位置の目印 {total - failed}/{total} 合格")
         return 1

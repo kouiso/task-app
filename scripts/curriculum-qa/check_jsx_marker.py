@@ -193,6 +193,38 @@ def find_violations(root: Path) -> tuple[list[tuple[str, int, str]], int]:
     return hits, scanned
 
 
+# 開始タグの `<` と `>` のあいだ（属性を書く場所）を示す行。`>` や `/>` で開始タグを
+# 閉じる行と、`名前=` で属性を渡す行がこれに当たる。
+ATTRIBUTE_LINE = re.compile(r"^\s*(?:/?>|[A-Za-z_$][\w$-]*=)")
+
+
+def find_attribute_comments(root: Path) -> list[tuple[str, int, str]]:
+    """開始タグの途中に置かれた `{/* ... */}` を探す。
+
+    `{/* */}` は子要素の位置でだけコメントになる。開始タグの途中（属性の位置）に
+    置くと TypeScript が `TS1005: '...' expected` で止まる。教材は1つの開始タグを
+    2つのブロックに分けて書かせることがあり、2つ目の先頭に `{/* filepath */}` を
+    置くと、写した読者のファイルがこの形になる。型検査の道具は目印の行を外してから
+    組むので、この形は build でも見つからない。だから文面のほうで見る。
+    """
+    hits: list[tuple[str, int, str]] = []
+    for path in sorted(root.rglob("*.md")):
+        for lang, body in code_blocks(path.read_text(encoding="utf-8")):
+            if lang not in JSX_LANGS:
+                continue
+            for i, (lineno, line) in enumerate(body):
+                if not JSX_COMMENT.match(line):
+                    continue
+                j = i + 1
+                while j < len(body) and (
+                    body[j][1].strip() == "" or JSX_COMMENT.match(body[j][1])
+                ):
+                    j += 1
+                if j < len(body) and ATTRIBUTE_LINE.match(body[j][1]):
+                    hits.append((str(path.relative_to(root)), lineno, line.strip()))
+    return hits
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:] or ["material/30days-curriculum"]
     if len(args) != 1 or not Path(args[0]).is_dir():
@@ -205,11 +237,18 @@ def main(argv: list[str]) -> int:
         print(f"❌ コードブロックがありません: {root}", file=sys.stderr)
         return 2
 
+    attribute_hits = find_attribute_comments(root)
     if hits:
         print(f"❌ JSX の位置に `//` の目印が {len(hits)} 行残っています")
         for name, line, text in hits:
             print(f"  {name}:{line}: {text}")
         print("  `{/* ... */}` に変えてください。そのままだと画面に文字として出ます。")
+    if attribute_hits:
+        print(f"❌ 開始タグの途中に `{{/* */}}` の目印が {len(attribute_hits)} 行あります")
+        for name, line, text in attribute_hits:
+            print(f"  {name}:{line}: {text}")
+        print("  `//` に変えてください。そのままだと写した読者のファイルが構文エラーになります。")
+    if hits or attribute_hits:
         return 1
 
     print(f"✅ JSX の位置の目印 OK（コードブロック {scanned} 個）")
