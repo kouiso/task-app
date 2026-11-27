@@ -1182,18 +1182,21 @@ const {
 Day 10 までに書いた一覧の待機中と失敗の表示はここから書く取得状態の分岐に置き換わります。
 古い表示は `projectsError` を `error` の中身として読んでいます。
 書き換えた `projectsError` は `isError` から受け取る `true` か `false` です。
-古い表示を残したままだと `Property 'data' does not exist on type 'boolean'` という型エラーになります。
+古い表示の一部を残したままだと `Property 'data' does not exist on type 'boolean'` という型エラーになります。
 Step 10 の `npm run build` も通りません。
 次の4か所を消してください。
 
-1. `const projectAccessDenied =` から `projectsError?.data?.code === 'FORBIDDEN';` までの3行（直前の `// 読み込み中の表示` のコメントの行を含めて）
+1. `const projectAccessDenied =` から `projectsError?.data?.code === 'FORBIDDEN';` までの3行
 2. `if (projectsLoading) {` から対応する閉じ `}` までの `if` の分岐
-3. `if (projectsError && (!projects || projectAccessDenied)) {` から対応する閉じ `}` までの `if` の分岐（直前の `// 最初の取得失敗` のコメントの行を含めて）
+3. `if (projectsError && (!projects || projectAccessDenied)) {` から対応する閉じ `}` までの `if` の分岐
 4. 一覧の `return (` の中にある `{projectsError && projects && !projectAccessDenied && (` から `)}` までの帯（「最新の一覧を取得できませんでした。」と出す `<p>`）
 
-1〜3 の役目はこのあと書く `if (requiredLoading` と `if (authFailed || forbidden || notFound` の2つの分岐が引き継ぎます。
-4 の帯の代わりはこのあと作る `staleDataWarning` です。
-4か所はどれも古い `projectsError` を前提にしています。1か所でも残すと型エラーは消えません。
+すぐ上に Day 09・10 で写した位置の目印のコメント（`// 読み込み中の分岐の後ろに追加` など）があれば、それも一緒に消してください。
+
+1〜3の役目はこのあと書く `if (requiredLoading` と `if (authFailed || forbidden || notFound` の2つの分岐が引き継ぎます。
+4の帯の代わりはこのあと作る `staleDataWarning` です。
+1・3・4は古い `projectsError` か消した `projectAccessDenied` を読みます。残すと型エラーになります。
+2は残しても型エラーにはなりません。ただしこのあと書く `if (requiredLoading` と同じ待機中の表示が二重になるので消します。
 
 **表示に必要な取得状態**
 
@@ -2801,7 +2804,7 @@ export default function ProjectPage() {
 | 削除確認ダイアログが出ない | `deleteDialogOpen` の state が定義されていない | Step 2 の `useState` を確認 |
 | アーカイブボタンが反応しない | `handleArchive` が `ProjectDetailView` に渡されていない | Step 9 で `onArchive={handleArchive}` を確認 |
 | Step 9 追加後に `getById` が無いというエラーが出る | Step 0 の `getById` がルーターの外に貼られている | `project.ts` の最後の `});` の1行上に `getById` があるか確認します |
-| `Property 'data' does not exist on type 'boolean'` という型エラーが出る | Day 10 までの一覧の待機中と失敗の表示が残っている | Step 9 で消す4か所（`projectAccessDenied`・2つの `if` の分岐・一覧の帯）が残っていないか確認します |
+| `Property 'data' does not exist on type 'boolean'` か `Cannot find name 'projectAccessDenied'` という型エラーが出る | Day 10 までの一覧の待機中と失敗の表示が残っている | Step 9 で消す4か所（`projectAccessDenied`・2つの `if` の分岐・一覧の帯）が残っていないか確認します |
 | `npm run build` で型エラーが出る | Step 0 の手続きが未追加か、ルーターの外に出ている | エラー文に出ているファイル名と行で、どの手続きが欠けているかを特定します |
 | `ProjectDetailView` が表示されない | URL に `projectId` が無い | URL に `?projectId=xxx` が付いているか確認 |
 
