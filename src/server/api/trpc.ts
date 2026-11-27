@@ -86,7 +86,14 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
   const startedAt = Date.now();
   const result = await next();
+  // 失敗を info のまま流すと本番のログから拾えないので、サーバー側の失敗は error、それ以外の失敗は warn にする
+  const level: 'info' | 'warn' | 'error' = result.ok
+    ? 'info'
+    : result.error.code === 'INTERNAL_SERVER_ERROR'
+      ? 'error'
+      : 'warn';
   writeStructuredLog({
+    level,
     event: 'trpc.procedure',
     requestId: ctx.requestId,
     path,
@@ -94,6 +101,7 @@ const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
     status: result.ok ? 200 : 500,
     durationMs: Date.now() - startedAt,
     ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
+    ...(result.ok ? {} : { errorCode: result.error.code }),
   });
 
   return result;

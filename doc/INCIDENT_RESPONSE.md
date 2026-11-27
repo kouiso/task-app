@@ -28,7 +28,7 @@ This runbook covers production incidents for task-app.
 ## Error Log Flow
 
 1. Find the failing request in Vercel logs and copy its `requestId`.
-2. Confirm whether the error is browser, server, or edge.
+2. Confirm whether the error is server or edge (`http.error` / `trpc.procedure` logs). Browser errors are not collected; ask the reporter for the steps, time and a screenshot.
 3. Compare the first seen timestamp with the Vercel deployment timeline.
 4. Identify the route, tRPC procedure, or middleware path involved.
 5. Add labels/severity in the tracking issue.

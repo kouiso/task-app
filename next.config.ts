@@ -23,7 +23,11 @@ const nextConfig: NextConfig = {
   compiler: {
     // SWCでReact最適化
     reactRemoveProperties: process.env.NODE_ENV === 'production',
-    removeConsole: process.env.NODE_ENV === 'production' && process.env['PLAYWRIGHT_TEST'] !== '1',
+    // 構造化ログ（writeStructuredLog）は console.info / warn / error で出すので、本番でも消さない
+    removeConsole:
+      process.env.NODE_ENV === 'production' && process.env['PLAYWRIGHT_TEST'] !== '1'
+        ? { exclude: ['error', 'warn', 'info'] }
+        : false,
   },
 
   // セキュリティヘッダー
