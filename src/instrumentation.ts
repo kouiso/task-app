@@ -23,7 +23,8 @@ export const onRequestError: Instrumentation.onRequestError = (err, request, con
     level: 'error',
     event: 'http.error',
     ...(typeof header === 'string' ? { requestId: header } : {}),
-    path: request.path,
+    // request.path は query を含むので、検索語などを残さないよう path だけにする
+    path: request.path.split('?')[0] ?? request.path,
     method: request.method,
     routeType: context.routeType,
     message: err instanceof Error ? err.message : String(err),

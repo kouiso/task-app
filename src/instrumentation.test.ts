@@ -20,7 +20,7 @@ describe('onRequestError', () => {
   it('サーバーの例外を request id 付きの error ログに残す', async () => {
     await onRequestError(
       new Error('boom'),
-      { path: '/project', method: 'GET', headers: { 'x-request-id': 'trace-abcdef12' } },
+      { path: '/project?q=secret', method: 'GET', headers: { 'x-request-id': 'trace-abcdef12' } },
       context,
     );
 

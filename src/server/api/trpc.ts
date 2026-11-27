@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
@@ -98,7 +99,7 @@ const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
     requestId: ctx.requestId,
     path,
     method: type,
-    status: result.ok ? 200 : 500,
+    status: result.ok ? 200 : getHTTPStatusCodeFromError(result.error),
     durationMs: Date.now() - startedAt,
     ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
     ...(result.ok ? {} : { errorCode: result.error.code }),

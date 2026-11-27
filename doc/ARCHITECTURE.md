@@ -71,10 +71,10 @@ Project deletion cascades to project members and tasks; task deletion cascades t
 
 ## Error Reporting
 
-The app does not ship an error-tracking SDK. Server-side errors are written as structured JSON logs with the request ID, which Vercel logs can search:
+The app does not ship an error-tracking SDK. Server-side errors are recorded as structured JSON logs with the request ID, which Vercel logs can search:
 
 - `onRequestError` in `src/instrumentation.ts` logs uncaught errors from rendering, Route Handlers, Server Actions and middleware as `event: "http.error"`, `level: "error"`.
 - `withObservability` in `src/server/api/trpc.ts` logs every procedure as `event: "trpc.procedure"`; failures carry `errorCode` and `level` (`error` for `INTERNAL_SERVER_ERROR`, otherwise `warn`).
-- `next.config.ts` keeps `console.info` / `warn` / `error` in production builds so these logs are not stripped.
+- Production builds strip `console.*` calls (`removeConsole` in `next.config.ts`). `writeStructuredLog` writes through `globalThis.console`, so only these structured lines reach the production logs.
 
 Browser-side errors are not collected.

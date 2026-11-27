@@ -59,16 +59,18 @@ export function writeStructuredLog(fields: StructuredLogFields): void {
     ...payload,
   });
 
+  // 本番ビルドは next.config.ts の removeConsole で `console.*` の呼び出しを消す。構造化ログは
+  // 本番で障害を追う唯一の手がかりなので、変数に受けた console から出して消されないようにする
+  const sink = globalThis.console;
   if (level === 'error') {
-    console.error(line);
+    sink.error(line);
     return;
   }
   if (level === 'warn') {
-    console.warn(line);
+    sink.warn(line);
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: structured log を Vercel Log Drain へ送るため
-  console.info(line);
+  sink.info(line);
 }
 
 export { REQUEST_ID_HEADER };
