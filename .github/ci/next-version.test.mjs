@@ -50,7 +50,10 @@ const nextVersion = (commits, { tag = 'v1.2.4' } = {}) => {
 };
 
 test('本文の途中の BREAKING CHANGE という語では major にしない', () => {
-  assert.equal(nextVersion([['fix(ci): something', 'BREAKING CHANGE の扱いは変えない。']]), 'version=1.2.5');
+  assert.equal(
+    nextVersion([['fix(ci): something', 'BREAKING CHANGE の扱いは変えない。']]),
+    'version=1.2.5',
+  );
 });
 
 test('本文の行頭の type!: では major にしない', () => {
@@ -58,8 +61,14 @@ test('本文の行頭の type!: では major にしない', () => {
 });
 
 test('本文の脚注の BREAKING CHANGE: では major にする', () => {
-  assert.equal(nextVersion([['fix: drop old field', 'BREAKING CHANGE: field x is removed']]), 'version=2.0.0');
-  assert.equal(nextVersion([['fix: drop old field', 'BREAKING-CHANGE: field x is removed']]), 'version=2.0.0');
+  assert.equal(
+    nextVersion([['fix: drop old field', 'BREAKING CHANGE: field x is removed']]),
+    'version=2.0.0',
+  );
+  assert.equal(
+    nextVersion([['fix: drop old field', 'BREAKING-CHANGE: field x is removed']]),
+    'version=2.0.0',
+  );
 });
 
 test('件名の type!: と type(scope)!: では major にする', () => {
