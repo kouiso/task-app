@@ -249,7 +249,7 @@ npm run build
 ページ数の `(6/6)` の部分はその時点のページ数によって変わります。ここまでの3日ぶんを素直に進めた状態ならこの数字になります。
 
 ```text
-   ▲ Next.js 15.5.24
+   ▲ Next.js 15.5.29
    - Environments: .env
 
    Creating an optimized production build ...

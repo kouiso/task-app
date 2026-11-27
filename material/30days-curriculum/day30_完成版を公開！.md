@@ -648,7 +648,7 @@ npm ls next react typescript prisma
 
 | 技術 | バージョン | 役割 |
 |------|----------|------|
-| Next.js | 15.5.24 | フレームワーク（App Router） |
+| Next.js | 15.5.29 | フレームワーク（App Router） |
 | React | 18.3.1 | UI ライブラリ |
 | TypeScript | 5.x | 型安全な JavaScript |
 | shadcn/ui | — | UI コンポーネント |

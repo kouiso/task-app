@@ -60,7 +60,8 @@ redmine-clone（Flask/Python実装）の完全リプレイス版として、最�
 ### 技術スタック（変更禁止）
 
 #### フロントエンド
-- **Next.js 15.5.24** - App Router必須（Pages Router禁止）
+- **Next.js 15.5.29** - App Router必須（Pages Router禁止）
+  - 2026-11-27 に 15.5.24 から上げた（#780。15.5.24 に critical の advisory GHSA-2464-fhr4-w9xw ほか）。持ち主の判断は「いやまーじまでやってほしかった」。この例外は 15.5 系のパッチ更新に限る
 - **React 18.3.1** - UIライブラリ
 - **TypeScript 5.9.3** - 厳格モード完全対応
 - **shadcn/ui** - Radix UIベースのコンポーネントライブラリ

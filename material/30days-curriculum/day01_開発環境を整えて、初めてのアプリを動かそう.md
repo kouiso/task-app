@@ -458,7 +458,7 @@ npm run dev
 > task-app@0.1.0 dev
 > next dev
 
-   ▲ Next.js 15.5.24
+   ▲ Next.js 15.5.29
    - Local:        http://localhost:3000
    - Network:      http://192.168.55.2:3000
    - Environments: .env

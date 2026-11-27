@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT_DIR="$(pwd -P)"
 
 RUNTIME_DEPS=(
-  next@15.5.24
+  next@15.5.29
   react@^18.3.1
   react-dom@^18.3.1
   @trpc/client@^11.8.0
@@ -192,7 +192,7 @@ ensure_empty_or_existing_next_app() (
 
   # 教材との差分を減らすため、Next.js 15 系に固定する。
   # npx 自身が初回に確認を出して入力待ちで止まるため、--yes を npx へも渡す。
-  npx --yes create-next-app@15.5.24 "$create_dir" \
+  npx --yes create-next-app@15.5.29 "$create_dir" \
     --typescript \
     --tailwind \
     --app \
@@ -235,14 +235,14 @@ install_dependencies() {
 
 copy_dependency_patch() {
   local source_patch
-  source_patch="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/patches/next+15.5.24.patch"
+  source_patch="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/patches/next+15.5.29.patch"
   if [ ! -f "$source_patch" ]; then
     print_error "Next.js のフォント補修ファイルがありません: ${source_patch}"
     return 1
   fi
   mkdir -p "${PROJECT_DIR}/patches"
-  if [ "$source_patch" != "${PROJECT_DIR}/patches/next+15.5.24.patch" ]; then
-    cp "$source_patch" "${PROJECT_DIR}/patches/next+15.5.24.patch"
+  if [ "$source_patch" != "${PROJECT_DIR}/patches/next+15.5.29.patch" ]; then
+    cp "$source_patch" "${PROJECT_DIR}/patches/next+15.5.29.patch"
   fi
 }
 
