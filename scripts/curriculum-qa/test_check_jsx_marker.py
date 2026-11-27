@@ -420,36 +420,56 @@ CASES = [
 ]
 
 
-# 開始タグの途中の `{/* */}`。day08 と day20 に実際にあった形（2つ目のブロックが
-# `>` や属性から始まる）を写した。
-BAD_COMMENT_BEFORE_CLOSE = """```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（続き） */}
-                >
-                  {item.icon}
-                </Link>
+# 開始タグの途中の `{/* */}`。day08 と day20 に実際にあった形（1つの開始タグを
+# 2つのブロックに分け、2つ目の先頭に目印を置く）を写した。
+LINK_OPEN = """```tsx
+// filepath: src/component/layout/app-layout.tsx
+<li key={item.path}>
+  <Link
+    href={item.path}
+    className={cn(
+      'flex items-center',
+    )}
+```
+"""
+
+BAD_COMMENT_BEFORE_CLOSE = LINK_OPEN + """
+```tsx
+    {/* filepath: src/component/layout/app-layout.tsx（続き） */}
+    >
+      {item.icon}
+    </Link>
 ```
 """
 
 BAD_COMMENT_BEFORE_ATTRIBUTE = """```typescript
 {/* filepath: src/app/search/page.tsx */}
-              timeSpentMinutes={
-                task.timeSpentMinutes}
-            />
+<TaskCard key={task.id}
+  id={task.id}
+```
+
+```typescript
+{/* filepath: src/app/search/page.tsx */}
+  timeSpentMinutes={
+    task.timeSpentMinutes}
+/>
 ```
 """
 
-BAD_TWO_COMMENTS_BEFORE_CLOSE = """```tsx
-                {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
-                {/* ナビゲーションの続き */}
-                >
+BAD_TWO_COMMENTS_BEFORE_CLOSE = LINK_OPEN + """
+```tsx
+    {/* filepath: src/component/layout/app-layout.tsx（同じファイルの続き） */}
+    {/* ナビゲーションの続き */}
+    >
 ```
 """
 
-OK_SLASH_BEFORE_CLOSE = """```tsx
-                // filepath: src/component/layout/app-layout.tsx（続き）
-                >
-                  {item.icon}
-                </Link>
+OK_SLASH_BEFORE_CLOSE = LINK_OPEN + """
+```tsx
+    // filepath: src/component/layout/app-layout.tsx（続き）
+    >
+      {item.icon}
+    </Link>
 ```
 """
 
@@ -461,6 +481,36 @@ OK_COMMENT_BEFORE_ELEMENT = """```tsx
 ```
 """
 
+# 子要素の文字が `名前=` で始まっても、開始タグは閉じているので数えない（CodeRabbit 指摘の例）。
+OK_TEXT_CHILD_WITH_EQUALS = """```tsx
+<pre>
+  {/* 設定例を表示します */}
+  NODE_ENV=development
+</pre>
+```
+"""
+
+# 属性の値の中に入れ子の JSX がある形（day14 の Controller）。外側の開始タグの
+# 属性の位置ではなく、`<Select>` の子要素の位置にある。
+OK_NESTED_JSX_IN_ATTRIBUTE = """```typescript
+// filepath: src/component/task/task-dialog.tsx
+<Controller
+  name="status"
+  render={({ field }) => (
+    <Select
+      value={field.value}>
+      <SelectTrigger id="status">
+      </SelectTrigger>
+```
+
+```typescript
+      {/* filepath: src/component/task/task-dialog.tsx */}
+      <SelectContent />
+    </Select>
+  )}
+/>
+```
+"""
 
 ATTRIBUTE_CASES = [
     ("開始タグを閉じる行の前のJSXコメント", BAD_COMMENT_BEFORE_CLOSE, 1),
@@ -468,6 +518,8 @@ ATTRIBUTE_CASES = [
     ("開始タグを閉じる行の前に2行", BAD_TWO_COMMENTS_BEFORE_CLOSE, 2),
     ("開始タグの途中の // の目印", OK_SLASH_BEFORE_CLOSE, 0),
     ("要素の前のJSXコメント", OK_COMMENT_BEFORE_ELEMENT, 0),
+    ("名前=で始まる子要素の文字", OK_TEXT_CHILD_WITH_EQUALS, 0),
+    ("属性の値の中の入れ子のJSX", OK_NESTED_JSX_IN_ATTRIBUTE, 0),
 ]
 
 def main() -> int:
