@@ -128,7 +128,7 @@ API の一部は、後の日の画面を先に動かせるスターターです�
 |---------|------|
 | フレームワーク | Next.js 15（App Router） |
 | 言語 | TypeScript 5.8 |
-| API 層 | tRPC 11.8 |
+| API 層 | tRPC 11.17 |
 | ORM | Prisma 6.16（Client）/ 6.19（CLI） |
 | データベース | PostgreSQL（Docker） |
 | UI コンポーネント | shadcn/ui + Tailwind CSS v4 |
