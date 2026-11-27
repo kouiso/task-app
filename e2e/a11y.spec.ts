@@ -22,12 +22,11 @@ const expectNoCriticalAxeViolations = async (page: Page) => {
     (violation) => violation.impact === 'critical',
   );
 
-  if (criticalViolations.length > 0) {
-    const summary = criticalViolations
-      .map((v) => `${v.id}: ${v.description} (${v.nodes.length} node(s))`)
-      .join('\n');
-    expect.fail(`Critical axe violations found:\n${summary}`);
-  }
+  // Playwright の expect には fail が無い。違反の一覧をメッセージに載せて空配列と比べる
+  const summary = criticalViolations
+    .map((v) => `${v.id}: ${v.description} (${v.nodes.length} node(s))`)
+    .join('\n');
+  expect(criticalViolations, `Critical axe violations found:\n${summary}`).toEqual([]);
 };
 
 const loginAsAdmin = async (page: Page) => {
@@ -82,11 +81,13 @@ test.describe('Accessibility: authenticated pages', () => {
     const statusFilter = page.getByRole('tablist', { name: 'ステータスフィルター' });
     await expect(statusFilter).toBeVisible();
 
+    // 画面の先頭からはサイドバーとヘッダーを通るので、タブの直前の要素から Tab で入る
+    await page.getByRole('button', { name: 'ユーザーメニューを切り替え' }).focus();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('tab', { name: 'すべて' })).toBeFocused();
 
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('tab', { name: '未着手' })).toBeFocused();
+    await expect(page.getByRole('tab', { name: '未対応' })).toBeFocused();
 
     const projectFilter = page.getByRole('combobox', { name: 'プロジェクトフィルター' });
     await expect(projectFilter).toBeVisible();
