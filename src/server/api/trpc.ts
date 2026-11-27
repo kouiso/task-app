@@ -102,7 +102,14 @@ const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
     status: result.ok ? 200 : getHTTPStatusCodeFromError(result.error),
     durationMs: Date.now() - startedAt,
     ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
-    ...(result.ok ? {} : { errorCode: result.error.code }),
+    // 失敗の種類（DB 接続の失敗か実装の例外か）を見分けるため、元の例外の名前だけを残す。
+    // メッセージは Prisma のエラーなどで入力値を含むことがあるので出さない
+    ...(result.ok
+      ? {}
+      : {
+          errorCode: result.error.code,
+          ...(result.error.cause ? { errorCause: result.error.cause.name } : {}),
+        }),
   });
 
   return result;

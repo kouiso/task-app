@@ -55,7 +55,7 @@ Issue #114 の observability baseline です。障害傾向、学習者の詰ま
 | Vercel Log Drain | structured log の集約、HTTP latency / 404 rate の集計 | Datadog / Axiom / Logtail のいずれかへ JSON log を転送 |
 | Analytics | funnel event の集計 | Vercel Analytics または PostHog を選定 |
 
-エラーを調べるときは `requestId` で Vercel log を引き、同じ request の `http.request` と `trpc.procedure` を並べて見る運用にします。
+エラーを調べるときは `requestId` で Vercel log を引き、同じ request の `http.request`・`trpc.procedure`・`http.error`（画面の描画や Route Handler で投げられた例外）を並べて見る運用にします。手順は `doc/INCIDENT_RESPONSE.md` にあります。
 
 ## Learner Funnel
 
