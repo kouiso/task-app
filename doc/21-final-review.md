@@ -399,7 +399,7 @@ Week 3: 本番化 (Days 15-21)
 1. Docker コンテナ化
 2. Kubernetes 運用
 3. CI/CD パイプライン(GitHub Actions 発展)
-4. 監視・ロギング(Datadog、Sentry)
+4. 監視・ロギング(Datadog など)
 
 【レベル 2: Data】
 1. 時系列データ処理

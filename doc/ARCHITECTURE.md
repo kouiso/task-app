@@ -19,9 +19,6 @@ flowchart TD
   Prisma --> Postgres[(PostgreSQL)]
   TRPCRouter --> Session[JWT session helpers]
   Session --> Cookie[httpOnly session cookie]
-  Sentry[Sentry configs] -. captures errors .- NextApp
-  Sentry -. captures errors .- Middleware
-  Sentry -. captures errors .- TRPCRoute
 ```
 
 ## Runtime Layers
@@ -34,7 +31,7 @@ flowchart TD
 | Session | `src/lib/session.ts` | Sign and verify HS256 JWTs, set/delete the `session` cookie, expose current session. |
 | Edge auth gate | `src/middleware.ts` | Redirect unauthenticated page requests and verify JWTs with jose in Edge Runtime. |
 | Database | `prisma/schema.prisma`, `src/lib/prisma.ts` | Persist users, projects, tasks, comments, sessions, login attempts, and relations. |
-| Observability | `sentry.*.config.ts` | Enable Sentry server, edge, and browser reporting when DSNs are configured. |
+| Observability | `src/lib/observability.ts` | Attach a request ID and write structured JSON logs from the middleware and tRPC procedures. |
 
 ## Data Flow
 
@@ -74,4 +71,10 @@ Project deletion cascades to project members and tasks; task deletion cascades t
 
 ## Error Reporting
 
-Sentry is optional and activates only when `SENTRY_DSN` or `NEXT_PUBLIC_SENTRY_DSN` is set. Server and Edge configs prefer `SENTRY_DSN` and fall back to the public DSN. Browser config uses `NEXT_PUBLIC_SENTRY_DSN` and enables replay integration.
+The app does not ship an error-tracking SDK. Server-side errors are recorded as structured JSON logs with the request ID, which Vercel logs can search:
+
+- `onRequestError` in `src/instrumentation.ts` logs uncaught errors from rendering, Route Handlers, Server Actions and middleware as `event: "http.error"`, `level: "error"`.
+- `withObservability` in `src/server/api/trpc.ts` logs every procedure as `event: "trpc.procedure"`; failures carry `errorCode` and `level` (`error` for `INTERNAL_SERVER_ERROR`, otherwise `warn`).
+- Production builds strip `console.*` calls (`removeConsole` in `next.config.ts`). `writeStructuredLog` writes through `globalThis.console`, so only these structured lines reach the production logs.
+
+Browser-side errors are not collected.

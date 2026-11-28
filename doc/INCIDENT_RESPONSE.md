@@ -12,11 +12,9 @@ This runbook covers production incidents for task-app.
    - Latest deployment health.
    - Build/runtime logs.
    - Recent environment variable changes.
-3. Check Sentry.
-   - New issue count.
-   - First seen time.
-   - Affected release/deployment.
-   - Stack trace and user/session breadcrumbs.
+3. Check structured logs in Vercel.
+   - Filter by `requestId`, `event` (`http.request`, `trpc.procedure`), and `status`.
+   - First seen time and the affected deployment.
 4. Check database health.
    - Connection failures.
    - Migration/schema mismatch.
@@ -27,15 +25,15 @@ This runbook covers production incidents for task-app.
    - Disable a broken optional integration.
    - Stop writes or restore data if corruption is suspected.
 
-## Sentry Alert Flow
+## Error Log Flow
 
-1. Open the Sentry alert and copy the issue URL.
-2. Confirm whether the event is browser, server, or edge.
+1. Find the failing request in Vercel logs and copy its `requestId`.
+2. Confirm whether the error is server or edge (`http.error` / `trpc.procedure` logs). Browser errors are not collected; ask the reporter for the steps, time and a screenshot.
 3. Compare the first seen timestamp with the Vercel deployment timeline.
 4. Identify the route, tRPC procedure, or middleware path involved.
 5. Add labels/severity in the tracking issue.
 6. If the error affects authentication, data writes, or admin flows, treat it as high severity.
-7. Create a hotfix branch from `main` and attach Sentry/Vercel evidence to the PR.
+7. Create a hotfix branch from `main` and attach Vercel log evidence to the PR.
 
 ## Vercel Rollback and PITR
 
@@ -71,7 +69,6 @@ Next update:
 Owner:
 Evidence:
 - Vercel deployment/log URL:
-- Sentry issue URL:
 - Database/provider event URL:
 ```
 

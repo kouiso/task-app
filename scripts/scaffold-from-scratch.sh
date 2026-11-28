@@ -452,14 +452,6 @@ NODE_ENV="development"
 
 # 本番URL (robots.txt/sitemapで使用。ローカル開発では空でOK)
 # NEXT_PUBLIC_BASE_URL="https://your-app.vercel.app"
-
-# ------------------------------------------------------------------------------
-# Sentry エラーモニタリング (オプション)
-# ------------------------------------------------------------------------------
-# 設定しない場合は Sentry は無効化されます（ローカル開発・CI では通常不要）
-# DSN は https://sentry.io のプロジェクト設定から取得してください
-# NEXT_PUBLIC_SENTRY_DSN="https://xxxx@xxxx.ingest.sentry.io/xxxx"
-# SENTRY_DSN="https://xxxx@xxxx.ingest.sentry.io/xxxx"
 EOF
 }
 

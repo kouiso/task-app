@@ -1,6 +1,6 @@
 # Metrics / Observability
 
-Issue #114 の observability baseline です。Sentry exception capture だけでは障害傾向、学習者の詰まりどころ、API 遅延を追えないため、request-id・structured log・metric catalog を標準化します。
+Issue #114 の observability baseline です。障害傾向、学習者の詰まりどころ、API 遅延を追えるように、request-id・structured log・metric catalog を標準化します。
 
 ## Request ID
 
@@ -9,7 +9,6 @@ Issue #114 の observability baseline です。Sentry exception capture だけ�
 | Header | `x-request-id` |
 | 生成場所 | `src/middleware.ts` |
 | 伝播 | middleware が request / response header に付与 |
-| Sentry | `request_id` tag と `request_path` tag を設定 |
 | Log | JSON structured log の `requestId` に出力 |
 
 既存 header が `a-zA-Z0-9._:-` の 8-128 文字であれば再利用し、それ以外は `crypto.randomUUID()` で再生成します。
@@ -47,17 +46,16 @@ Issue #114 の observability baseline です。Sentry exception capture だけ�
 | `http.response.latency_ms` | histogram | middleware | `path`, `method`, `status` | p95 > 1000ms で調査 |
 | `trpc.procedure.latency_ms` | histogram | tRPC middleware | `path`, `type`, `ok` | p95 > 800ms で調査 |
 | `http.404.count` | counter | middleware / Vercel logs | `path`, `referer` | 教材リンク切れ候補 |
-| `http.500.count` | counter | Sentry + Vercel logs | `path`, `requestId` | 即時 triage |
+| `http.500.count` | counter | Vercel logs | `path`, `requestId` | 即時 triage |
 
-## Vercel Log Drain / Sentry Custom Event
+## Vercel Log Drain
 
 | 連携先 | 用途 | 初期設定 |
 | --- | --- | --- |
 | Vercel Log Drain | structured log の集約、HTTP latency / 404 rate の集計 | Datadog / Axiom / Logtail のいずれかへ JSON log を転送 |
-| Sentry | exception と request-id の突合 | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` を設定 |
 | Analytics | funnel event の集計 | Vercel Analytics または PostHog を選定 |
 
-Sentry issue を確認するときは `request_id` tag で Vercel log を逆引きし、同じ request の `http.request` と `trpc.procedure` を並べて見る運用にします。
+エラーを調べるときは `requestId` で Vercel log を引き、同じ request の `http.request`・`trpc.procedure`・`http.error`（画面の描画や Route Handler で投げられた例外）を並べて見る運用にします。手順は `doc/INCIDENT_RESPONSE.md` にあります。
 
 ## Learner Funnel
 
@@ -67,4 +65,4 @@ Sentry issue を確認するときは `request_id` tag で Vercel log を逆引�
 | First task create | `funnel.first_task.created` | user の初回 `task.create` 成功 |
 | First task complete | `funnel.first_task.completed` | user の初回 `task.update(status=DONE)` 成功 |
 
-初期実装では structured log と Sentry tag までを入れます。funnel event の永続化先は Vercel Analytics / PostHog / DB audit table の比較後に決めます。
+初期実装では structured log までを入れます。funnel event の永続化先は Vercel Analytics / PostHog / DB audit table の比較後に決めます。

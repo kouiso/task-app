@@ -1,12 +1,9 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { USER_ROLE } from '@/lib/constant/roles';
-import {
-  getRequestIdFromHeaders,
-  setSentryRequestContext,
-  writeStructuredLog,
-} from '@/lib/observability';
+import { getRequestIdFromHeaders, writeStructuredLog } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
@@ -89,17 +86,30 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 
 const withObservability = t.middleware(async ({ ctx, path, type, next }) => {
   const startedAt = Date.now();
-  await setSentryRequestContext(ctx.requestId, `/api/trpc/${path}`);
-
   const result = await next();
+  // 失敗を info のまま流すと本番のログから拾えないので、サーバー側の失敗は error、それ以外の失敗は warn にする
+  const level: 'info' | 'warn' | 'error' = result.ok
+    ? 'info'
+    : result.error.code === 'INTERNAL_SERVER_ERROR'
+      ? 'error'
+      : 'warn';
   writeStructuredLog({
+    level,
     event: 'trpc.procedure',
     requestId: ctx.requestId,
     path,
     method: type,
-    status: result.ok ? 200 : 500,
+    status: result.ok ? 200 : getHTTPStatusCodeFromError(result.error),
     durationMs: Date.now() - startedAt,
     ...(ctx.session?.userId ? { userId: ctx.session.userId } : {}),
+    // 失敗の種類（DB 接続の失敗か実装の例外か）を見分けるため、元の例外の名前だけを残す。
+    // メッセージは Prisma のエラーなどで入力値を含むことがあるので出さない
+    ...(result.ok
+      ? {}
+      : {
+          errorCode: result.error.code,
+          ...(result.error.cause ? { errorCause: result.error.cause.name } : {}),
+        }),
   });
 
   return result;

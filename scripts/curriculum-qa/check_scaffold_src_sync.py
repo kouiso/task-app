@@ -35,7 +35,7 @@ EXPECTED_DIFFERENT: dict[str, str] = {
     "src/component/task/task-detail-dialog.tsx": "Day 16 と Day 18 で読者が中身を足す",
     "src/component/project/project-detail-view.tsx": "Day 12 で読者がメンバー管理を足す",
     "src/server/api/root.ts": "読者が Day ごとに router を1つずつ登録していく。配布物は空の状態",
-    "src/server/api/trpc.ts": "本体だけ Sentry と構造化ログの middleware を持つ。教材では教えない",
+    "src/server/api/trpc.ts": "本体だけ構造化ログの middleware を持つ。教材では教えない",
     # 中身のズレは `isTimerActive` と `timerStartedAt` の2列だけ（配布物にしかない）。
     # `src/` にも教材にも参照が0件の死んだ列で、読者の DB にだけできる。
     # 消すと30日ぶんの再構成ビルドをやり直すことになるので、リリース後へ回した。

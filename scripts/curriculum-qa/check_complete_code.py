@@ -69,12 +69,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # 読者に意図的に別のものを書かせるファイル。値は「なぜ違ってよいか」。
 # 理由を書けない差分は、ただのズレとして落とす。
 EXPECTED_DIFFERENT: dict[str, str] = {
-    # src/ にはリクエストID・Sentry・構造化ログが入る。教材は認証だけを教える
+    # src/ にはリクエストID・構造化ログが入る。教材は認証だけを教える
     # 縮小版で、観測基盤はカリキュラムの対象外（check_scaffold_src_sync の
     # src/server/api/trpc.ts と同じ区分）。
-    "src/middleware.ts": "src/ のみ観測基盤（requestId/Sentry/構造化ログ）を持つ。教材では教えない",
+    "src/middleware.ts": "src/ のみ観測基盤（requestId/構造化ログ）を持つ。教材では教えない",
     # 同上。本体だけが持つ middleware 群を教材は出さない。
-    "src/server/api/trpc.ts": "src/ のみ Sentry と構造化ログの middleware を持つ。教材では教えない",
+    "src/server/api/trpc.ts": "src/ のみ構造化ログの middleware を持つ。教材では教えない",
     # 教材は useState 版を配布物から zod + useForm 版へ書き直させる。
     # src/ は配布版（useState 別解）のままで、教材が意図的に別実装を教える
     # （day16 本文に「配布版は useState だけで書いた別解」と明記済み）。
