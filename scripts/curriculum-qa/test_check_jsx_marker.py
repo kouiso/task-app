@@ -532,7 +532,78 @@ npm run dev
 ```
 """
 
+# filepath の行が無い続きでも、開始タグの途中なら `{/* */}` は構文エラーになる。
+BAD_NO_FILEPATH_CONTINUATION = LINK_OPEN + """
+```tsx
+    {/* ナビゲーションの続き */}
+    >
+```
+"""
+
+# 属性と同じ行に置いても、開始タグの途中では `{/* */}` は構文エラーになる。
+BAD_INLINE_COMMENT_WITH_ATTRIBUTE = LINK_OPEN + """
+```tsx
+    className="w-full" {/* ナビゲーションの続き */}
+    >
+```
+"""
+
+# 2つの半分の間に別のファイルの JSX ブロックが挟まっても、同じファイルの
+# 開始タグは開いたままである。
+BAD_OTHER_JSX_FILE_BETWEEN = LINK_OPEN + """
+```tsx
+{/* filepath: src/component/layout/other.tsx */}
+<p>別のファイル</p>
+```
+
+```tsx
+    {/* filepath: src/component/layout/app-layout.tsx（続き） */}
+    >
+```
+"""
+
+# 属性式の中の JSX の地の文にある apostrophe を文字列の始まりと数えると、
+# 外側の開始タグが開いていることを見失う。
+BAD_APOSTROPHE_IN_NESTED_TEXT = """```tsx
+// filepath: src/component/task/task-dialog.tsx
+<Controller
+  name="status"
+  render={() => (
+    <p>Don't</p>
+  )}
+  fallback={null}
+```
+
+```tsx
+  {/* filepath: src/component/task/task-dialog.tsx */}
+/>
+```
+"""
+
+# 属性式の中の関数コメントにある apostrophe も同じく状態をずらさない。
+BAD_APOSTROPHE_IN_LINE_COMMENT = """```tsx
+// filepath: src/component/task/task-dialog.tsx
+<Controller
+  name="status"
+  render={() => {
+    // don't render yet
+    return <span />
+  }}
+  fallback={null}
+```
+
+```tsx
+  {/* filepath: src/component/task/task-dialog.tsx */}
+/>
+```
+"""
+
 ATTRIBUTE_CASES = [
+    ("filepathが無い直接の続き", BAD_NO_FILEPATH_CONTINUATION, 1),
+    ("属性と同じ行のJSXコメント", BAD_INLINE_COMMENT_WITH_ATTRIBUTE, 1),
+    ("別ファイルのJSXを挟んだ同じfileの続き", BAD_OTHER_JSX_FILE_BETWEEN, 1),
+    ("入れ子JSXの地の文のapostrophe", BAD_APOSTROPHE_IN_NESTED_TEXT, 1),
+    ("関数コメントのapostrophe", BAD_APOSTROPHE_IN_LINE_COMMENT, 1),
     ("開始タグを閉じる行の前のJSXコメント", BAD_COMMENT_BEFORE_CLOSE, 1),
     ("属性の行の前のJSXコメント", BAD_COMMENT_BEFORE_ATTRIBUTE, 1),
     ("開始タグを閉じる行の前に2行", BAD_TWO_COMMENTS_BEFORE_CLOSE, 2),

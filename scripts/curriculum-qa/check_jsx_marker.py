@@ -62,6 +62,7 @@ TERNARY_OPEN = re.compile(
 )
 TERNARY_ELSE_OPEN = re.compile(r"^\s*\)\s*:\s*\(\s*$")
 JSX_COMMENT = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
+JSX_COMMENT_ANYWHERE = re.compile(r"\{/\*.*?\*/\}")
 # 枝の中で括弧を数える前に消すもの。JSX コメントと文字列の中の括弧やタグは
 # 式の入れ子に関係しない。`'` は画面文字の「Don't」にも出るので消さない。
 # 文字列は1行に限る。閉じ忘れた `"` が後ろの行まで飲み込むと、括弧を数え損ねる。
@@ -203,23 +204,55 @@ def inside_open_tag(lines: list[str]) -> bool:
     タグを出る。波括弧の中（属性の値や `{items.map(...)}`）では `>` を数えず、
     `<名前` が来たら入れ子の開始タグに入る。`render={() => (<Select>…)}` の中の
     子要素の位置を、外側の `<Controller` の属性の位置と取り違えないためである。
-    文字列の中の記号は数えない。
+    文字列の中の記号は数えない。`Don't` のように英字に挟まれた apostrophe は
+    JSX の地の文の縮約形なので文字列の始まりとみなさない。
     """
     stack: list[str] = []
     quote = ""
+    line_comment = False
+    block_comment = False
     text = "\n".join(lines)
     i = 0
     while i < len(text):
         ch = text[i]
+        nxt = text[i + 1] if i + 1 < len(text) else ""
         top = stack[-1] if stack else ""
+        if line_comment:
+            if ch == "\n":
+                line_comment = False
+            i += 1
+            continue
+        if block_comment:
+            if ch == "*" and nxt == "/":
+                block_comment = False
+                i += 2
+            else:
+                i += 1
+            continue
         if quote:
             if ch == "\\":
                 i += 2
                 continue
             if ch == quote:
                 quote = ""
+        elif top in ("tag", "brace") and ch == "/" and nxt == "/":
+            line_comment = True
+            i += 2
+            continue
+        elif top in ("tag", "brace") and ch == "/" and nxt == "*":
+            block_comment = True
+            i += 2
+            continue
         elif top in ("tag", "brace") and ch in "\"'`":
-            quote = ch
+            apostrophe_in_word = (
+                ch == "'"
+                and i > 0
+                and nxt
+                and text[i - 1].isalnum()
+                and nxt.isalpha()
+            )
+            if not apostrophe_in_word:
+                quote = ch
         elif ch == "{":
             stack.append("brace")
         elif ch == "}" and top == "brace":
@@ -242,25 +275,38 @@ def find_attribute_comments(root: Path) -> list[tuple[str, int, str]]:
     組むので、この形は build でも見つからない。だから文面のほうで見る。
 
     次の行の形（`>` や `名前=`）だけで決めると、`<pre>` の中の `NODE_ENV=development`
-    のような子要素の文字を取り違える。だから直前の同じファイルのブロックから続けて
-    読み、開始タグが閉じていないときだけ数える。
+    のような子要素の文字を取り違える。だから同じファイルのブロックごとに開いた
+    開始タグを保持し、別のファイルの JSX ブロックが間に入っても同じファイルの
+    続きでは状態を失わない。filepath の無い続きブロックは、直前の JSX ブロックが
+    開始タグの途中で終わっている時だけその続きとみなす。filepath が無く、別の
+    ブロックを挟んだ物は書き込み先を決められないため、既知の境界として残す。
     """
     hits: list[tuple[str, int, str]] = []
     for path in sorted(root.rglob("*.md")):
-        previous: tuple[str | None, list[str]] = (None, [])
+        states: dict[str, list[str]] = {}
+        last_context: list[str] = []
         for lang, body in code_blocks(path.read_text(encoding="utf-8")):
             target = block_target(body)
             if lang not in JSX_LANGS:
-                previous = (target, [])
+                states.clear()
+                last_context = []
                 continue
-            carried = previous[1] if target is not None and previous[0] == target else []
+            if target is not None:
+                carried = states.get(target, [])
+            elif inside_open_tag(last_context):
+                carried = last_context
+            else:
+                carried = []
             seen: list[str] = []
             for lineno, line in body:
-                if JSX_COMMENT.match(line) and inside_open_tag(carried + seen):
+                if JSX_COMMENT_ANYWHERE.search(line) and inside_open_tag(carried + seen):
                     hits.append((str(path.relative_to(root)), lineno, line.strip()))
                 elif not JSX_COMMENT.match(line):
                     seen.append(line)
-            previous = (target, carried + seen)
+            context = carried + seen
+            if target is not None:
+                states[target] = context
+            last_context = context
     return hits
 
 

@@ -14,7 +14,7 @@ RUNTIME_DEPS=(
   @trpc/server@11.17.0
   @trpc/react-query@11.17.0
   @trpc/next@11.17.0
-  @tanstack/react-query@^5.59.0
+  @tanstack/react-query@5.100.14
   prisma@^6.16.2
   @prisma/client@^6.16.2
   jose@^6.2.1
@@ -63,7 +63,7 @@ DEV_DEPS=(
   @types/react-dom@^18.3.1
   tsx@^4.19.0
   dotenv@^17.4.2
-  typescript@^5.6.3
+  typescript@5.9.3
   tailwindcss@^4.1.18
   @tailwindcss/postcss@^4.1.18
 )
