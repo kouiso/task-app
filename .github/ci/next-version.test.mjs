@@ -52,33 +52,42 @@ const nextVersion = (commits, { tag = 'v1.2.4' } = {}) => {
 test('本文の途中の BREAKING CHANGE という語では major にしない', () => {
   assert.equal(
     nextVersion([['fix(ci): something', 'BREAKING CHANGE の扱いは変えない。']]),
-    'version=1.2.5',
+    'version=1.2.5\nprevious_version=1.2.4',
   );
 });
 
 test('本文の行頭の type!: では major にしない', () => {
-  assert.equal(nextVersion([['docs: list', 'fix!: 旧形式を消した件の説明']]), 'version=1.2.5');
+  assert.equal(
+    nextVersion([['docs: list', 'fix!: 旧形式を消した件の説明']]),
+    'version=1.2.5\nprevious_version=1.2.4',
+  );
 });
 
 test('本文の脚注の BREAKING CHANGE: では major にする', () => {
   assert.equal(
     nextVersion([['fix: drop old field', 'BREAKING CHANGE: field x is removed']]),
-    'version=2.0.0',
+    'version=2.0.0\nprevious_version=1.2.4',
   );
   assert.equal(
     nextVersion([['fix: drop old field', 'BREAKING-CHANGE: field x is removed']]),
-    'version=2.0.0',
+    'version=2.0.0\nprevious_version=1.2.4',
   );
 });
 
 test('件名の type!: と type(scope)!: では major にする', () => {
-  assert.equal(nextVersion([['feat!: new api']]), 'version=2.0.0');
-  assert.equal(nextVersion([['refactor(api)!: rename']]), 'version=2.0.0');
+  assert.equal(nextVersion([['feat!: new api']]), 'version=2.0.0\nprevious_version=1.2.4');
+  assert.equal(nextVersion([['refactor(api)!: rename']]), 'version=2.0.0\nprevious_version=1.2.4');
 });
 
 test('件名の feat: では minor、ほかは patch にする', () => {
-  assert.equal(nextVersion([['feat(ui): add button'], ['fix: typo']]), 'version=1.3.0');
-  assert.equal(nextVersion([['fix: typo'], ['docs: note']]), 'version=1.2.5');
+  assert.equal(
+    nextVersion([['feat(ui): add button'], ['fix: typo']]),
+    'version=1.3.0\nprevious_version=1.2.4',
+  );
+  assert.equal(
+    nextVersion([['fix: typo'], ['docs: note']]),
+    'version=1.2.5\nprevious_version=1.2.4',
+  );
 });
 
 test('タグが無い初回は package.json の版をそのまま使う', () => {

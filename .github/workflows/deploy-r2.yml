@@ -1,8 +1,8 @@
 name: Deploy ZIP to course-library storage
 
-# 販売 ZIP（task-app-curriculum-v*.zip）を作って course-library の R2 バケット
-# （course-library-materials）に置く。サイト（course-library Worker）が
-# `releases/task-app/<version>/` 配下のオブジェクトを配布元にする。
+# 販売 ZIP（task-app-curriculum-v*.zip）と教材本文 ZIP（task-app-textbook.zip）を
+# course-library の R2 バケット（course-library-materials）に置く。サイト
+# （course-library Worker）が `releases/task-app/<version>/` 配下のオブジェクトを配布元にする。
 #
 # ZIP の中身の定義は scripts/build-zip.sh が正（写経用の土台だけ。task-app/
 # トップフォルダ付きで、完成アプリの src/・prisma/ は入らない）。
@@ -61,7 +61,10 @@ env:
   # task-app-curriculum-v<X.Y.Z>.zip に組み直される）。
   ZIP_PATH: task-app-curriculum.zip
   ZIP_NAME: task-app-curriculum.zip
+  TEXTBOOK_ZIP_PATH: task-app-textbook.zip
+  TEXTBOOK_ZIP_NAME: task-app-textbook.zip
   BUCKET: course-library-materials
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
 
 jobs:
   # main への push だけで動く。前のタグからのコミットを見て semver を上げ、
@@ -72,6 +75,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.calc.outputs.version }}
+      previous_version: ${{ steps.calc.outputs.previous_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -95,8 +99,8 @@ jobs:
           gh release create "v${VERSION}" --title "v${VERSION}" --generate-notes
 
   deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
     # version は main push 以外ではスキップされる。スキップは失敗ではないので
     # 手動実行はそのまま進め、main push では版づくりの成功が要る。
     needs: [version]
@@ -105,6 +109,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       # 配置先キーを決める。
       # - workflow_dispatch: 入力 version をそのまま版として使う（形式チェック付き）
@@ -113,6 +119,7 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          PREVIOUS_VERSION: ${{ needs.version.outputs.previous_version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if ! printf '%s' "$INPUT_VERSION" | grep -qE '^[a-z0-9][a-z0-9.-]{0,62}$'; then
@@ -126,7 +133,11 @@ jobs:
             echo "release_version=${RELEASE_VERSION}" >> "$GITHUB_ENV"
           fi
           echo "object_key=${PREFIX}${ZIP_NAME}" >> "$GITHUB_ENV"
-          echo "配置先: r2://${BUCKET}/${PREFIX}${ZIP_NAME}"
+          echo "textbook_object_key=${PREFIX}${TEXTBOOK_ZIP_NAME}" >> "$GITHUB_ENV"
+          if [ -n "${PREVIOUS_VERSION}" ]; then
+            echo "previous_textbook_object_key=releases/task-app/${PREVIOUS_VERSION}/${TEXTBOOK_ZIP_NAME}" >> "$GITHUB_ENV"
+          fi
+          echo "配置先: r2://${BUCKET}/${PREFIX}${ZIP_NAME} と r2://${BUCKET}/${PREFIX}${TEXTBOOK_ZIP_NAME}"
 
       # sale-package フェーズと同じ入口（material-gate.yml と同じ定義）:
       # build-zip.sh が写経用の土台 ZIP を組み、check-sale-package.sh が
@@ -135,17 +146,38 @@ jobs:
         run: |
           bash scripts/build-zip.sh
           bash scripts/curriculum-qa/check-sale-package.sh
-          built="$(ls task-app-curriculum-*.zip | head -n1)"
-          cp "$built" "${ZIP_PATH}"
-          echo "built from ${built} -> ${ZIP_PATH}"
+          shopt -s nullglob
+          built=(task-app-curriculum-*.zip)
+          if [ "${#built[@]}" -eq 0 ]; then
+            echo "::error::task-app-curriculum-*.zip が見つかりません"
+            exit 1
+          fi
+          cp "${built[0]}" "${ZIP_PATH}"
+          echo "built from ${built[0]} -> ${ZIP_PATH}"
 
       # secrets 未設定でも「その時点の ZIP の中身」を run の画面から確認できるようにする。
-      - name: Upload ZIP artifact
+      - name: Upload sales ZIP artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: task-app-zip
           path: ${{ env.ZIP_PATH }}
           retention-days: 7
+
+      # PDF の入力が前の版から変わっていなければ、70分級の組版をせず
+      # 前の版の ZIP を R2 内で写す。判定の根拠は .github/ci/pdf-release-inputs.mjs。
+      - name: Decide textbook input freshness
+        id: textbook-inputs
+        env:
+          PREVIOUS_VERSION: ${{ needs.version.outputs.previous_version }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || [ -z "${PREVIOUS_VERSION}" ]; then
+            {
+              echo "pdf_inputs_changed=true"
+              echo "pdf_inputs_reason=no previous release input is available; rebuilding PDFs"
+            } >> "$GITHUB_OUTPUT"
+          else
+            node .github/ci/pdf-release-inputs.mjs --base "v${PREVIOUS_VERSION}" --head HEAD
+          fi
 
       # secrets は step の if: に書けないので、env に載せて空かどうかをシェルで見る。
       # 未設定のまま進むと rclone が分かりにくい認証エラーで落ちるので、先にここで明示的に止める。
@@ -174,9 +206,69 @@ jobs:
           echo "${PWD}/rclone-v${RCLONE_RELEASE}-linux-amd64" >> "${GITHUB_PATH}"
           "${PWD}/rclone-v${RCLONE_RELEASE}-linux-amd64/rclone" version
 
+      - name: Resolve textbook source
+        id: textbook-mode
+        env:
+          PDF_INPUTS_CHANGED: ${{ steps.textbook-inputs.outputs.pdf_inputs_changed }}
+          PDF_INPUTS_REASON: ${{ steps.textbook-inputs.outputs.pdf_inputs_reason }}
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          if rclone lsf "r2:${BUCKET}/${object_key}" | grep -q .; then
+            echo "::error::${object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
+            exit 1
+          fi
+          if rclone lsf "r2:${BUCKET}/${textbook_object_key}" | grep -q .; then
+            echo "::error::${textbook_object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
+            exit 1
+          fi
+          mode=build
+          if [ "${PDF_INPUTS_CHANGED}" = "false" ]; then
+            if [ -n "${previous_textbook_object_key:-}" ] && rclone lsl "r2:${BUCKET}/${previous_textbook_object_key}" >/dev/null 2>&1; then
+              mode=copy
+              echo "PDF inputs are unchanged; copying ${previous_textbook_object_key} inside R2"
+            else
+              echo "::warning::前の版の教材 ZIP が R2 に無いため、今回は組み直す"
+            fi
+          else
+            echo "${PDF_INPUTS_REASON}"
+          fi
+          echo "mode=${mode}" >> "$GITHUB_OUTPUT"
+
+      # 組版は pdf-book-full.yml と同じ ubuntu-24.04・同じ composite action・同じ入口を使う。
+      - name: 組版環境を用意
+        if: steps.textbook-mode.outputs.mode == 'build'
+        uses: ./.github/actions/pdf-book-env
+
+      - name: Build textbook PDFs
+        if: steps.textbook-mode.outputs.mode == 'build'
+        env:
+          PDF_BOOK_BUILD_LOG_DIR: ${{ runner.temp }}/pdf-book-logs
+        run: bash .github/ci/run.sh pdf-full-build
+
+      - name: Upload textbook build logs
+        if: always() && steps.textbook-mode.outputs.mode == 'build'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pdf-book-build-logs
+          include-hidden-files: true
+          path: ${{ runner.temp }}/pdf-book-logs/
+          if-no-files-found: warn
+
+      - name: Verify textbook PDFs
+        if: steps.textbook-mode.outputs.mode == 'build'
+        run: bash .github/ci/run.sh pdf-full-verify
+
+      - name: Package textbook ZIP
+        if: steps.textbook-mode.outputs.mode == 'build'
+        run: bash .github/ci/package-textbook-zip.sh dist/pdf "${TEXTBOOK_ZIP_PATH}"
+
       # R2 は S3 互換 API。access_key_id / secret_access_key / endpoint を環境変数で渡す。
       # copyto で指定キーへ新規オブジェクトとして置く（prefix は version ごとに新しい）。
-      - name: Upload to R2
+      - name: Upload sales ZIP to R2
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare
@@ -188,8 +280,43 @@ jobs:
             echo "::error::${object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
             exit 1
           fi
+          if rclone lsf "r2:${BUCKET}/${textbook_object_key}" | grep -q .; then
+            echo "::error::${textbook_object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
+            exit 1
+          fi
           rclone copyto -v --stats-one-line "${ZIP_PATH}" "r2:${BUCKET}/${object_key}"
           rclone lsl "r2:${BUCKET}/${object_key}"
+
+      - name: Upload textbook ZIP to R2
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          TEXTBOOK_MODE: ${{ steps.textbook-mode.outputs.mode }}
+        run: |
+          if rclone lsf "r2:${BUCKET}/${textbook_object_key}" | grep -q .; then
+            echo "::error::${textbook_object_key} は既に存在します。不変 prefix の約束により上書きしません（version を上げてください）"
+            exit 1
+          fi
+          if [ "${TEXTBOOK_MODE}" = "copy" ]; then
+            rclone copyto "r2:${BUCKET}/${previous_textbook_object_key}" "r2:${BUCKET}/${textbook_object_key}"
+          else
+            rclone copyto -v --stats-one-line "${TEXTBOOK_ZIP_PATH}" "r2:${BUCKET}/${textbook_object_key}"
+          fi
+          rclone lsl "r2:${BUCKET}/${textbook_object_key}"
+          if [ "${TEXTBOOK_MODE}" = "copy" ]; then
+            rclone copyto "r2:${BUCKET}/${textbook_object_key}" "${TEXTBOOK_ZIP_PATH}"
+          fi
+          bash .github/ci/check-textbook-zip.sh "${TEXTBOOK_ZIP_PATH}"
+
+      - name: Upload textbook ZIP artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-app-textbook-zip
+          path: ${{ env.TEXTBOOK_ZIP_PATH }}
+          retention-days: 7
 
       # ==== course-library への昇格通知 ====
       # 配置した版を購入者に見せる判断は course-library 側の
@@ -220,6 +347,7 @@ jobs:
         run: |
           TOKEN="${APP_TOKEN:-$PAT_TOKEN}"
           SHA256="$(sha256sum "${ZIP_PATH}" | cut -d' ' -f1)"
+          TEXTBOOK_SHA256="$(sha256sum "${TEXTBOOK_ZIP_PATH}" | cut -d' ' -f1)"
           SOURCE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           DATE="$(date +%F)"
           if [ -z "${TOKEN}" ]; then
@@ -235,6 +363,8 @@ jobs:
               echo ""
               echo "- ZIP sha256: \`${SHA256}\`"
               echo "- 配置キー: \`${object_key}\`"
+              echo "- 教材 ZIP sha256: \`${TEXTBOOK_SHA256}\`"
+              echo "- 教材配置キー: \`${textbook_object_key}\`"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi

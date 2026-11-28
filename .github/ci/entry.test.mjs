@@ -308,7 +308,7 @@ test('full traverses every gate family with one PDF self-test path and isolated 
     prepareFull(f);
     const r = f.run('full');
     assert.equal(r.status, 0, r.stdout + r.stderr);
-    assert.match(r.stdout, /OK: 1 ファイルが一致/);
+    assert.match(r.stdout, /OK:\s+1 ファイルが一致/);
     const log = f.log();
     for (const cmd of [
       'npm audit --omit=dev --audit-level=high',

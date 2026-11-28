@@ -42,3 +42,4 @@ esac
 ver="${maj}.${min}.${pat}"
 echo "前の版 ${last} → ${ver}（${bump}、対象: ${range}）" >&2
 echo "version=${ver}" >> "$out"
+echo "previous_version=${base}" >> "$out"

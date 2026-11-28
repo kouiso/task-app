@@ -68,3 +68,15 @@ jobs:
 
       - name: 出力を検査
         run: bash .github/ci/run.sh pdf-full-verify
+
+      # deploy-r2.yml が R2 へ置くのと同じ形へ束ねて残す。
+      # PR の段階では R2 へ上げられないので、この artifact が配布 ZIP の証跡になる。
+      - name: 教材 ZIP を作る
+        run: bash .github/ci/package-textbook-zip.sh dist/pdf task-app-textbook.zip
+
+      - name: 教材 ZIP を残す
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-app-textbook-zip
+          path: task-app-textbook.zip
+          retention-days: 14
