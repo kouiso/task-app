@@ -21,7 +21,9 @@ test.describe('Search', () => {
     await expect(page).toHaveURL('/search');
     await expect(page.getByRole('heading', { name: '検索' })).toBeVisible();
     await expect(page.locator('#keyword')).toBeVisible();
-    await expect(page.getByRole('button', { name: '検索' })).toBeVisible();
+    // 検索はライブ検索で、送信ボタンは無い。条件を消すボタンと案内文が出ていることを見る
+    await expect(page.getByRole('button', { name: 'クリア' })).toBeVisible();
+    await expect(page.getByText('検索条件を入力して検索してください')).toBeVisible();
   });
 
   test('should search tasks by partial title match', async ({ page }) => {

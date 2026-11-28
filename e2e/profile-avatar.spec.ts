@@ -13,7 +13,21 @@ async function loginViaApi(context: import('@playwright/test').BrowserContext, b
   }
 }
 
+// 1x1 の PNG。外部の画像サーバーに届かない環境でも、Radix の Avatar が <img> を出せるようにする
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 test.describe('avatar update', () => {
+  // Radix の Avatar は画像の読み込みに成功してから <img> を差し込む。外部の画像サーバーへの
+  // 到達を前提にしないよう、テストの画像 URL は手元で返す
+  test.beforeEach(async ({ context }) => {
+    await context.route('https://placehold.jp/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL_PNG }),
+    );
+  });
+
   test('avatar URL set via /profile/edit is reflected on /profile', async ({
     page,
     context,
@@ -29,10 +43,7 @@ test.describe('avatar update', () => {
     await page.fill('input#avatar', newAvatar);
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/profile$/);
-    await page.waitForTimeout(1500);
-
-    const imgSrc = await page.locator('main img').first().getAttribute('src');
-    expect(imgSrc).toBe(newAvatar);
+    await expect(page.locator('main img').first()).toHaveAttribute('src', newAvatar);
   });
 
   test('avatar URL set via /user/[id]/edit (own profile) is reflected on detail page', async ({
@@ -59,9 +70,6 @@ test.describe('avatar update', () => {
     await page.fill('input#avatar', newAvatar);
     await page.click('button[type="submit"]');
     await page.waitForURL((currentUrl) => currentUrl.pathname === `/user/${userId}`);
-    await page.waitForTimeout(2000);
-
-    const imgSrc = await page.locator('main img').first().getAttribute('src');
-    expect(imgSrc).toBe(newAvatar);
+    await expect(page.locator('main img').first()).toHaveAttribute('src', newAvatar);
   });
 });
