@@ -261,7 +261,7 @@ def main() -> int:
             'scripts.postinstall="prisma generate && npx patch-package"' in scaffold_script
         ),
         "source production dependency audit overrides": (
-            dependencies.get("next") == "^15.5.24"
+            dependencies.get("next") == "^15.5.29"
             and dev_dependencies.get("postcss") == "8.5.23"
             and overrides.get("postcss") == "8.5.23"
             and overrides.get("sharp") == "0.35.5"
@@ -270,8 +270,8 @@ def main() -> int:
             all(
                 token in scaffold_script
                 for token in (
-                    "next@15.5.24",
-                    "create-next-app@15.5.24",
+                    "next@15.5.29",
+                    "create-next-app@15.5.29",
                     'overrides.postcss="8.5.23"',
                     'overrides.sharp="0.35.5"',
                 )

@@ -214,7 +214,7 @@ for (const bytes of [Buffer.from('<html>upstream error</html>'), Buffer.from([0]
 test('sale ZIP and reader setup carry the same pinned Next font patch', () => {
   const built = spawnSync('bash', ['scripts/build-zip.sh'], { encoding: 'utf8' });
   assert.equal(built.status, 0, built.stdout + built.stderr);
-  const patch = 'patches/next+15.5.24.patch';
+  const patch = 'patches/next+15.5.29.patch';
   const extracted = spawnSync(
     'unzip',
     ['-p', 'task-app-curriculum-v1.1.zip', `task-app/${patch}`],

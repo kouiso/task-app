@@ -55,7 +55,7 @@ Task-App で学んだ技術スタックを使ってゼロから新しいアプ�
 
 ```bash
 # 1. Next.jsプロジェクトの作成
-npx create-next-app@15.5.24 my-new-app \
+npx create-next-app@15.5.29 my-new-app \
   --typescript --tailwind --app --src-dir \
   --import-alias "@/*" --yes
 cd my-new-app
