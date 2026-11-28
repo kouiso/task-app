@@ -14,7 +14,7 @@ name: Deploy ZIP to course-library storage
 # 配置ルール（course-library docs/OPERATIONS.md と同じ考え方）:
 # - リリース用は「バージョンごとの不変 prefix」。一度置いたオブジェクトは上書きしない。
 # - main への push（リリースの取り込み）では、前のタグからのコミット内容で版を上げ
-#   （BREAKING/「!:」付きなら major・feat なら minor・それ以外は patch）、
+#   （件名の「!:」か本文の脚注「BREAKING CHANGE: 」があれば major・feat なら minor・それ以外は patch）、
 #   タグ v<X.Y.Z> と GitHub Release を作ってから `releases/task-app/<X.Y.Z>/` に置く。
 #   タグが1本も無い初回だけは package.json の版をそのままリリース版にする。
 # - workflow_dispatch の `version` 入力で任意の版名の prefix にも置ける（再アップロード用）。
@@ -80,33 +80,8 @@ jobs:
 
       - name: Compute next version
         id: calc
-        run: |
-          last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
-          if [ -z "$last" ]; then
-            # タグが1本も無い初回は、リポジトリが宣言する版をそのまま出す
-            # （bump は 2 回目以降に効く。ここで足すと package.json の版より 1 つ先にずれる）
-            ver=$(grep -m1 '"version"' package.json | sed 's/[^0-9.]//g')
-            echo "初回リリース: package.json の版 ${ver} をそのまま使います"
-            echo "version=${ver}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          base="${last#v}"
-          range="${last}..HEAD"
-          bump=patch
-          if git log "$range" --format='%s%n%b' | grep -qE 'BREAKING[ -]CHANGE|^[a-zA-Z]+(\([^)]*\))?!:'; then
-            bump=major
-          elif git log "$range" --format='%s' | grep -qE '^feat(\([^)]*\))?!?:'; then
-            bump=minor
-          fi
-          IFS=. read -r maj min pat <<< "$base"
-          case "$bump" in
-            major) maj=$((maj+1)); min=0; pat=0 ;;
-            minor) min=$((min+1)); pat=0 ;;
-            patch) pat=$((pat+1)) ;;
-          esac
-          ver="${maj}.${min}.${pat}"
-          echo "前の版 ${last} → ${ver}（${bump}、対象: ${range}）"
-          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+        # 判定の決まりとテストは .github/ci/next-version.sh と next-version.test.mjs にある
+        run: bash .github/ci/next-version.sh
 
       - name: Create tag and GitHub Release
         env:
